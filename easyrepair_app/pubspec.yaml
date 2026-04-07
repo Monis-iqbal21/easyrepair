@@ -1,0 +1,67 @@
+name: easyrepair_app
+description: "EasyRepair mobile app for clients and workers."
+publish_to: "none"
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.4
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+
+  # State management
+  flutter_riverpod: ^2.6.1
+
+  # Routing
+  go_router: ^16.2.0
+
+  # Networking
+  dio: ^5.9.0
+  pretty_dio_logger: ^1.4.0
+
+  # Local storage
+  flutter_secure_storage: ^9.2.4
+  shared_preferences: ^2.5.3
+
+  # Functional programming
+  fpdart: ^1.1.0
+
+  # Dependency injection
+  get_it: ^8.0.0
+
+  # Firebase
+  firebase_core: ^4.1.1
+  firebase_messaging: ^16.0.1
+
+  # Media & file handling
+  image_picker: ^1.1.2
+  path_provider: ^2.1.5
+
+  # Maps & Location
+  geolocator: ^13.0.2
+  google_maps_flutter: ^2.9.0
+  geocoding: ^3.0.0
+
+  # Audio recording & playback
+  record: ^6.2.0
+  audioplayers: ^6.4.0
+
+  # Date formatting
+  intl: ^0.19.0
+
+  # Video metadata (duration check before upload)
+  video_player: ^2.9.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/easyrepair_logo.png

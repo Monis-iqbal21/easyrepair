@@ -1,0 +1,319 @@
+generator client {
+  provider        = "prisma-client-js"
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+ 
+}
+
+enum Role {
+  CLIENT
+  WORKER
+  ADMIN
+}
+
+enum BookingStatus {
+  PENDING
+  ACCEPTED
+  EN_ROUTE
+  IN_PROGRESS
+  COMPLETED
+  REJECTED
+  CANCELLED
+}
+
+enum WorkerStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum VerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum BookingUrgency {
+  URGENT
+  NORMAL
+}
+
+enum TimeSlot {
+  MORNING
+  AFTERNOON
+  EVENING
+  NIGHT
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum AttachmentType {
+  IMAGE
+  VIDEO
+  AUDIO
+}
+
+enum AvailabilityStatus {
+  OFFLINE
+  ONLINE
+  BUSY
+}
+
+model User {
+  id           String   @id @default(uuid())
+  phone        String   @unique
+  email        String?  @unique
+  passwordHash String?
+  role         Role
+  isActive     Boolean  @default(true)
+  fcmToken     String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  clientProfile ClientProfile?
+  workerProfile WorkerProfile?
+  refreshTokens RefreshToken[]
+  sentMessages  Message[]      @relation("SentMessages")
+  notifications Notification[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model ClientProfile {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  firstName String
+  lastName  String
+  avatarUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  bookings  Booking[]
+  addresses ClientAddress[]
+
+  @@map("client_profiles")
+}
+
+model ClientAddress {
+  id              String        @id @default(uuid())
+  clientProfileId String
+  clientProfile   ClientProfile @relation(fields: [clientProfileId], references: [id], onDelete: Cascade)
+  label           String
+  addressLine     String
+  city            String
+  latitude        Float
+  longitude       Float
+  isDefault       Boolean       @default(false)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([clientProfileId])
+  @@map("client_addresses")
+}
+
+model WorkerProfile {
+  id                 String             @id @default(uuid())
+  userId             String             @unique
+  user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  firstName          String
+  lastName           String
+  avatarUrl          String?
+  bio                String?
+  status             WorkerStatus       @default(INACTIVE)
+  verificationStatus VerificationStatus @default(PENDING)
+  isOnline           Boolean            @default(false)
+  availabilityStatus AvailabilityStatus @default(OFFLINE)
+  currentlyWorking   Boolean            @default(false)
+  currentLat         Float?
+  currentLng         Float?
+  locationUpdatedAt  DateTime?          @db.Timestamptz(3)
+  rating             Float              @default(0)
+  totalRatings       Int                @default(0)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  skills    WorkerSkill[]
+  documents WorkerDocument[]
+  bookings  Booking[]
+
+  @@map("worker_profiles")
+}
+
+model WorkerSkill {
+  id              String          @id @default(uuid())
+  workerProfileId String
+  workerProfile   WorkerProfile   @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
+  categoryId      String
+  category        ServiceCategory @relation(fields: [categoryId], references: [id])
+  yearsExperience Int             @default(0)
+  createdAt       DateTime        @default(now())
+
+  @@unique([workerProfileId, categoryId])
+  @@index([categoryId])
+  @@map("worker_skills")
+}
+
+model WorkerDocument {
+  id              String        @id @default(uuid())
+  workerProfileId String
+  workerProfile   WorkerProfile @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
+  type            String
+  fileUrl         String
+  verifiedAt      DateTime?
+  createdAt       DateTime      @default(now())
+
+  @@index([workerProfileId])
+  @@map("worker_documents")
+}
+
+model ServiceCategory {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  iconUrl     String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  bookings     Booking[]
+  workerSkills WorkerSkill[]
+
+  @@map("service_categories")
+}
+
+model Booking {
+  id              String          @id @default(uuid())
+  clientProfileId String
+  clientProfile   ClientProfile   @relation(fields: [clientProfileId], references: [id], onDelete: Cascade)
+  workerProfileId String?
+  workerProfile   WorkerProfile?  @relation(fields: [workerProfileId], references: [id], onDelete: SetNull)
+  categoryId      String
+  category        ServiceCategory @relation(fields: [categoryId], references: [id])
+
+  status             BookingStatus  @default(PENDING)
+  urgency            BookingUrgency @default(NORMAL)
+  timeSlot           TimeSlot?
+  title              String?
+  description        String
+  addressLine        String
+  city               String
+  latitude           Float
+  longitude          Float
+  scheduledAt        DateTime?
+  acceptedAt         DateTime?
+  startedAt          DateTime?
+  completedAt        DateTime?
+  cancelledAt        DateTime?
+  cancellationReason String?
+
+  estimatedPrice Float?
+  finalPrice     Float?
+  platformFee    Float?
+
+  paymentStatus PaymentStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  statusHistory BookingStatusHistory[]
+  attachments   BookingAttachment[]
+  review        Review?
+  messages      Message[]
+
+  @@index([clientProfileId])
+  @@index([workerProfileId])
+  @@index([categoryId])
+  @@index([status])
+  @@index([urgency])
+  @@index([scheduledAt])
+  @@map("bookings")
+}
+
+model BookingStatusHistory {
+  id        String        @id @default(uuid())
+  bookingId String
+  booking   Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  status    BookingStatus
+  note      String?
+  createdAt DateTime      @default(now())
+
+  @@index([bookingId])
+  @@map("booking_status_history")
+}
+
+model BookingAttachment {
+  id        String         @id @default(uuid())
+  bookingId String
+  booking   Booking        @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  type      AttachmentType
+  url       String
+  fileName  String?
+  mimeType  String?
+  createdAt DateTime       @default(now())
+
+  @@index([bookingId])
+  @@map("booking_attachments")
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  bookingId String   @unique
+  booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("reviews")
+}
+
+model Message {
+  id        String    @id @default(uuid())
+  bookingId String
+  booking   Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  senderId  String
+  sender    User      @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  content   String
+  fileUrl   String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([bookingId])
+  @@index([senderId])
+  @@map("messages")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  body      String
+  data      Json?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("notifications")
+}

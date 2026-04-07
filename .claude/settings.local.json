@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(flutter pub:*)",
+      "Bash(flutter analyze:*)",
+      "Bash(ls:*)",
+      "Bash(find:*)",
+      "Bash(python -c \"import json,sys; data=json.load\\(sys.stdin\\); print\\(data[0][''''text'''']\\)\")",
+      "Bash(cat C:/monis/projects/easyrepair/backend/src/modules/storage/*.ts)",
+      "Bash(npx prisma:*)",
+      "Bash(cat C:/monis/projects/easyrepair/backend/src/common/interceptors/*.ts)",
+      "Bash(npx tsc:*)",
+      "Bash(psql -h localhost -p 5433 -U postgres -d easyrepair -c ':*)",
+      "Bash(PGPASSWORD=123456 psql:*)"
+    ]
+  }
+}

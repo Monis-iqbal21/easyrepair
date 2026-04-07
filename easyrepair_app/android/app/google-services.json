@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1044296974145",
+    "project_id": "easyrepair-12",
+    "storage_bucket": "easyrepair-12.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1044296974145:android:39eebc22f2eb6d246a6bc0",
+        "android_client_info": {
+          "package_name": "com.easyrepair.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBlse5JuMQ9PFLWQViFCgnrTcAsRvUcCPc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
