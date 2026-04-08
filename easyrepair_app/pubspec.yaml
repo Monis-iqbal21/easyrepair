@@ -36,6 +36,7 @@ dependencies:
   # Firebase
   firebase_core: ^4.1.1
   firebase_messaging: ^16.0.1
+  flutter_local_notifications: ^18.0.1
 
   # Media & file handling
   image_picker: ^1.1.2

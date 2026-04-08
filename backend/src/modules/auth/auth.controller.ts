@@ -51,4 +51,15 @@ export class AuthController {
   getMe(@CurrentUser() user: { id: string }) {
     return this.authService.getMe(user.id);
   }
+
+  /** POST /auth/fcm-token — save device FCM token for push notifications */
+  @Post('fcm-token')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  saveFcmToken(
+    @CurrentUser() user: { id: string },
+    @Body('token') token: string,
+  ) {
+    return this.authService.saveFcmToken(user.id, token);
+  }
 }

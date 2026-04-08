@@ -5,6 +5,7 @@ import '../../../../core/network/api_client.dart';
 import '../../../bookings/data/models/booking_model.dart';
 import '../models/worker_profile_model.dart';
 import '../models/category_model.dart';
+import '../models/worker_review_model.dart';
 
 abstract class WorkerRemoteDatasource {
   Future<WorkerProfileModel> getProfile();
@@ -24,6 +25,10 @@ abstract class WorkerRemoteDatasource {
   Future<BookingModel> getWorkerJobById(String bookingId);
 
   Future<BookingModel> completeWorkerJob(String bookingId);
+
+  Future<List<WorkerReviewModel>> getWorkerReviews({int? limit});
+
+  Future<WorkerReviewSummaryModel> getWorkerReviewSummary();
 }
 
 class WorkerRemoteDatasourceImpl implements WorkerRemoteDatasource {
@@ -107,6 +112,30 @@ class WorkerRemoteDatasourceImpl implements WorkerRemoteDatasource {
     );
     final data = response.data!['data'] as Map<String, dynamic>;
     return BookingModel.fromJson(data);
+  }
+
+  @override
+  Future<List<WorkerReviewModel>> getWorkerReviews({int? limit}) async {
+    final queryParams = <String, dynamic>{};
+    if (limit != null) queryParams['limit'] = limit;
+
+    final response = await _dio.get<Map<String, dynamic>>(
+      '/workers/reviews',
+      queryParameters: queryParams.isEmpty ? null : queryParams,
+    );
+    final list = response.data!['data'] as List<dynamic>;
+    return list
+        .map((e) => WorkerReviewModel.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  @override
+  Future<WorkerReviewSummaryModel> getWorkerReviewSummary() async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      '/workers/reviews/summary',
+    );
+    final data = response.data!['data'] as Map<String, dynamic>;
+    return WorkerReviewSummaryModel.fromJson(data);
   }
 }
 

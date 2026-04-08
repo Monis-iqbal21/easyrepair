@@ -26,6 +26,7 @@ export type WorkerProfileWithSkills = Prisma.WorkerProfileGetPayload<{
 
 const WORKER_JOB_INCLUDE = {
   category: { select: { name: true } },
+  clientProfile: { select: { firstName: true, lastName: true, userId: true } },
   attachments: {
     select: {
       id: true,
@@ -50,6 +51,24 @@ const WORKER_JOB_INCLUDE = {
 
 export type WorkerJobWithRelations = Prisma.BookingGetPayload<{
   include: typeof WORKER_JOB_INCLUDE;
+}>;
+
+// ---------------------------------------------------------------------------
+// Review include — used by worker review endpoints.
+// ---------------------------------------------------------------------------
+
+const WORKER_REVIEW_INCLUDE = {
+  booking: {
+    select: {
+      id: true,
+      category: { select: { name: true } },
+      clientProfile: { select: { firstName: true, lastName: true } },
+    },
+  },
+} satisfies Prisma.ReviewInclude;
+
+export type WorkerReviewWithBooking = Prisma.ReviewGetPayload<{
+  include: typeof WORKER_REVIEW_INCLUDE;
 }>;
 
 // ---------------------------------------------------------------------------
@@ -223,6 +242,111 @@ export class WorkersRepository {
   ): Promise<WorkerJobWithRelations | null> {
     return this.prisma.booking.findFirst({
       where: { id: bookingId, workerProfileId },
+      include: WORKER_JOB_INCLUDE,
+    });
+  }
+
+  // ── Worker reviews ───────────────────────────────────────────────────────
+
+  /**
+   * Fetch reviews left on bookings that were assigned to this worker.
+   * Sorted latest first.  Pass `limit` to cap the result set.
+   */
+  async findWorkerReviews(
+    workerProfileId: string,
+    limit?: number,
+  ): Promise<WorkerReviewWithBooking[]> {
+    return this.prisma.review.findMany({
+      where: { booking: { workerProfileId } },
+      include: WORKER_REVIEW_INCLUDE,
+      orderBy: { createdAt: 'desc' },
+      ...(limit !== undefined ? { take: limit } : {}),
+    });
+  }
+
+  /** Aggregate average rating and total review count for a worker. */
+  async getWorkerReviewSummary(
+    workerProfileId: string,
+  ): Promise<{ totalReviews: number; averageRating: number }> {
+    const agg = await this.prisma.review.aggregate({
+      where: { booking: { workerProfileId } },
+      _count: { id: true },
+      _avg: { rating: true },
+    });
+    return {
+      totalReviews: agg._count.id,
+      averageRating: Math.round((agg._avg.rating ?? 0) * 10) / 10,
+    };
+  }
+
+  /**
+   * Transition a job to EN_ROUTE or IN_PROGRESS.
+   * Re-fetches with full relations after commit.
+   */
+  async updateJobStatus(
+    bookingId: string,
+    workerProfileId: string,
+    status: 'EN_ROUTE' | 'IN_PROGRESS',
+  ): Promise<WorkerJobWithRelations> {
+    const noteMap: Record<string, string> = {
+      [BookingStatus.EN_ROUTE]: 'Worker is en route',
+      [BookingStatus.IN_PROGRESS]: 'Job started by worker',
+    };
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.booking.update({
+        where: { id: bookingId },
+        data: {
+          status,
+          ...(status === BookingStatus.IN_PROGRESS
+            ? { startedAt: new Date() }
+            : {}),
+        },
+      });
+      await tx.bookingStatusHistory.create({
+        data: { bookingId, status, note: noteMap[status] },
+      });
+    });
+
+    return this.prisma.booking.findUniqueOrThrow({
+      where: { id: bookingId },
+      include: WORKER_JOB_INCLUDE,
+    });
+  }
+
+  /**
+   * Cancel a job by the worker. Frees the worker and records history.
+   * Re-fetches with full relations after commit.
+   */
+  async cancelJobByWorker(
+    bookingId: string,
+    workerProfileId: string,
+    reason?: string,
+  ): Promise<WorkerJobWithRelations> {
+    await this.prisma.$transaction(async (tx) => {
+      await tx.booking.update({
+        where: { id: bookingId },
+        data: {
+          status: BookingStatus.CANCELLED,
+          cancelledAt: new Date(),
+          cancellationReason: reason ?? 'Cancelled by worker',
+        },
+      });
+      await tx.bookingStatusHistory.create({
+        data: {
+          bookingId,
+          status: BookingStatus.CANCELLED,
+          note: reason ?? 'Cancelled by worker',
+        },
+      });
+      await tx.workerProfile.update({
+        where: { id: workerProfileId },
+        data: { currentlyWorking: false },
+      });
+    });
+
+    return this.prisma.booking.findUniqueOrThrow({
+      where: { id: bookingId },
       include: WORKER_JOB_INCLUDE,
     });
   }

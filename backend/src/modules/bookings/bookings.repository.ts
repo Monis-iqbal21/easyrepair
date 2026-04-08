@@ -48,9 +48,13 @@ export const BOOKING_INCLUDE = {
   category: {
     select: { name: true },
   },
+  clientProfile: {
+    select: { userId: true },
+  },
   workerProfile: {
     select: {
       id: true,
+      userId: true,
       firstName: true,
       lastName: true,
       avatarUrl: true,
@@ -359,7 +363,7 @@ export class BookingsRepository {
   async findWorkerProfileById(workerProfileId: string) {
     return this.prisma.workerProfile.findUnique({
       where: { id: workerProfileId },
-      select: { id: true, availabilityStatus: true },
+      select: { id: true, userId: true, availabilityStatus: true },
     });
   }
 

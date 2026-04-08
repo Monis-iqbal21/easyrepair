@@ -213,13 +213,43 @@ class _JobCard extends ConsumerWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 3),
-                          Text(
-                            job.referenceId,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: _kLight,
-                              fontWeight: FontWeight.w500,
-                            ),
+                          Row(
+                            children: [
+                              Text(
+                                job.referenceId,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: _kLight,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              if (job.clientName != null &&
+                                  job.clientName!.isNotEmpty) ...[
+                                const Text(
+                                  ' · ',
+                                  style: TextStyle(
+                                      fontSize: 11, color: _kLight),
+                                ),
+                                const Icon(
+                                  Icons.person_outline_rounded,
+                                  size: 10,
+                                  color: _kLight,
+                                ),
+                                const SizedBox(width: 2),
+                                Flexible(
+                                  child: Text(
+                                    job.clientName!,
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: _kLight,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                         ],
                       ),

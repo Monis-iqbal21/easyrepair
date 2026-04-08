@@ -2,12 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:intl/intl.dart';
+
 import '../../../auth/presentation/providers/auth_providers.dart';
+import '../../../notifications/presentation/providers/notification_providers.dart';
 import '../../domain/entities/worker_profile_entity.dart';
 import '../../domain/entities/ongoing_job_entity.dart';
 import '../../domain/entities/worker_skill_entity.dart';
 import '../../domain/entities/category_entity.dart';
+import '../../domain/entities/worker_review_entity.dart';
 import '../providers/worker_providers.dart';
+import '../providers/worker_review_providers.dart';
 import '../widgets/worker_bottom_nav_bar.dart';
 
 class WorkerHomePage extends ConsumerStatefulWidget {
@@ -86,6 +91,66 @@ class _WorkerHomePageState extends ConsumerState<WorkerHomePage>
                       ],
                     ),
                   ),
+                  GestureDetector(
+                    onTap: () => context.push('/notifications'),
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.06),
+                                blurRadius: 8,
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.notifications_outlined,
+                            size: 20,
+                            color: Color(0xFF1A1A1A),
+                          ),
+                        ),
+                        Consumer(
+                          builder: (_, ref, __) {
+                            final count = ref
+                                .watch(unreadNotificationCountProvider)
+                                .valueOrNull ?? 0;
+                            if (count == 0) return const SizedBox.shrink();
+                            return Positioned(
+                              top: -2,
+                              right: -2,
+                              child: Container(
+                                width: 16,
+                                height: 16,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFF5F15),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                      color: Colors.white, width: 1.5),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    count > 9 ? '9+' : '$count',
+                                    style: const TextStyle(
+                                      fontSize: 8,
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 10),
                   GestureDetector(
                     onTap: () => ref.read(logoutNotifierProvider.notifier).logout(),
                     child: Container(
@@ -176,7 +241,11 @@ class _DashboardContent extends ConsumerWidget {
             _StatsSection(profile: profile),
             const SizedBox(height: 20),
 
-            // 5. Info Card
+            // 5. Reviews Section
+            _ReviewsSection(profile: profile),
+            const SizedBox(height: 20),
+
+            // 6. Info Card
             _InfoCard(status: profile.availabilityStatus, hasSkills: profile.skills.isNotEmpty),
             const SizedBox(height: 100), // nav clearance
           ],
@@ -1069,7 +1138,285 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-// ── 5. Info Card ─────────────────────────────────────────────────────────────
+// ── 5. Reviews Section ───────────────────────────────────────────────────────
+
+class _ReviewsSection extends ConsumerWidget {
+  final WorkerProfileEntity profile;
+  const _ReviewsSection({required this.profile});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final reviewsAsync = ref.watch(workerRecentReviewsProvider);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Header row ──────────────────────────────────────────────
+          Row(
+            children: [
+              const Text(
+                'Reviews',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF1A1A1A),
+                ),
+              ),
+              const Spacer(),
+              if (profile.totalRatings > 0)
+                GestureDetector(
+                  onTap: () => context.push('/worker/reviews'),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFF5F15).withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Text(
+                      'See all →',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFFFF5F15),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+
+          // ── Summary ─────────────────────────────────────────────────
+          if (profile.totalRatings > 0) ...[
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                const Icon(
+                  Icons.star_rounded,
+                  size: 14,
+                  color: Color(0xFFF59E0B),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  '${profile.rating.toStringAsFixed(1)}  ·  ${profile.totalRatings} ${profile.totalRatings == 1 ? 'review' : 'reviews'}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF6B7280),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ],
+
+          const SizedBox(height: 14),
+
+          // ── Recent reviews ───────────────────────────────────────────
+          reviewsAsync.when(
+            loading: () => const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            ),
+            error: (_, __) => const SizedBox.shrink(),
+            data: (reviews) => reviews.isEmpty
+                ? _ReviewEmptyState(hasRatings: profile.totalRatings > 0)
+                : Column(
+                    children: reviews
+                        .map((r) => _ReviewCard(review: r))
+                        .toList(),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ReviewEmptyState extends StatelessWidget {
+  final bool hasRatings;
+  const _ReviewEmptyState({required this.hasRatings});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: const Color(0xFFF1F5F9),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: const Icon(
+            Icons.star_outline_rounded,
+            color: Color(0xFF94A3B8),
+            size: 22,
+          ),
+        ),
+        const SizedBox(width: 12),
+        const Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'No reviews yet',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF6B7280),
+                ),
+              ),
+              Text(
+                'Reviews from clients will appear here',
+                style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ReviewCard extends StatelessWidget {
+  final WorkerReviewEntity review;
+  const _ReviewCard({required this.review});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9FAFB),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Stars + category + date ──────────────────────────────────
+          Row(
+            children: [
+              _StarRow(rating: review.rating),
+              const Spacer(),
+              Text(
+                DateFormat('MMM d, yyyy').format(review.createdAt),
+                style: const TextStyle(
+                  fontSize: 10,
+                  color: Color(0xFF94A3B8),
+                ),
+              ),
+            ],
+          ),
+
+          // ── Comment ──────────────────────────────────────────────────
+          if (review.comment != null && review.comment!.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              review.comment!,
+              style: const TextStyle(
+                fontSize: 13,
+                color: Color(0xFF374151),
+                height: 1.4,
+              ),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+
+          const SizedBox(height: 8),
+
+          // ── Footer: client name + category ───────────────────────────
+          Row(
+            children: [
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF5F15).withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  review.serviceCategory,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFFFF5F15),
+                  ),
+                ),
+              ),
+              if (review.clientName != null &&
+                  review.clientName!.isNotEmpty) ...[
+                const SizedBox(width: 8),
+                const Icon(
+                  Icons.person_outline_rounded,
+                  size: 11,
+                  color: Color(0xFF94A3B8),
+                ),
+                const SizedBox(width: 3),
+                Flexible(
+                  child: Text(
+                    review.clientName!,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: Color(0xFF6B7280),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StarRow extends StatelessWidget {
+  final int rating;
+  const _StarRow({required this.rating});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(5, (i) {
+        return Icon(
+          i < rating ? Icons.star_rounded : Icons.star_outline_rounded,
+          size: 14,
+          color: i < rating
+              ? const Color(0xFFF59E0B)
+              : const Color(0xFFD1D5DB),
+        );
+      }),
+    );
+  }
+}
+
+// ── 6. Info Card ─────────────────────────────────────────────────────────────
 
 class _InfoCard extends StatelessWidget {
   final AvailabilityStatus status;

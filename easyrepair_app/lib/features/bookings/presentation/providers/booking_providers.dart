@@ -54,18 +54,39 @@ class BookingsNotifier extends AsyncNotifier<List<BookingEntity>> {
     return result.fold((failure) => throw failure, (bookings) => bookings);
   }
 
+  /// Full network reload — only call when truly needed (e.g. first load / pull-
+  /// to-refresh). Sets AsyncLoading which resets scroll position.
   Future<void> refresh() async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(_fetch);
   }
 
+  /// Replace a single booking in the list without touching AsyncLoading.
+  /// Scroll position is preserved because the list widget is not rebuilt from
+  /// scratch — only the changed item re-renders.
+  void patchBooking(BookingEntity updated) {
+    final current = state.valueOrNull;
+    if (current == null) return;
+    final idx = current.indexWhere((b) => b.id == updated.id);
+    if (idx == -1) return; // not in list yet — ignore (create flow handles this)
+    final next = List<BookingEntity>.from(current);
+    next[idx] = updated;
+    state = AsyncData(next);
+  }
+
+  /// Prepend a newly created booking to the front of the list without a reload.
+  void prependBooking(BookingEntity booking) {
+    final current = state.valueOrNull ?? [];
+    state = AsyncData([booking, ...current]);
+  }
+
+  /// Cancel a booking: patches the list item and syncs the detail provider.
   Future<void> cancelBooking(String bookingId) async {
     final result = await ref.read(cancelBookingUseCaseProvider).call(bookingId);
     result.fold((failure) => throw failure, (updated) {
-      final current = state.valueOrNull ?? [];
-      state = AsyncData(
-        current.map((b) => b.id == bookingId ? updated : b).toList(),
-      );
+      patchBooking(updated);
+      // Sync detail page if it is alive.
+      ref.read(bookingDetailProvider(bookingId).notifier).push(updated);
     });
   }
 }
@@ -75,13 +96,44 @@ final bookingsNotifierProvider =
       BookingsNotifier.new,
     );
 
+// ── Booking detail notifier ───────────────────────────────────────────────────
+//
+// Converted from FutureProvider.family → AsyncNotifierProvider.family so that
+// mutation notifiers can call push() to update the cached state in-place
+// without a network round-trip or a loading-spinner flash.
+//
+// NOT autoDispose: keeps the cache alive so push() from a mutation notifier
+// always finds the provider ready, and navigating back to the same detail page
+// is instant.
+
+class BookingDetailNotifier
+    extends FamilyAsyncNotifier<BookingEntity, String> {
+  @override
+  Future<BookingEntity> build(String arg) async {
+    final result =
+        await ref.read(bookingRepositoryProvider).getBookingById(arg);
+    return result.fold((f) => throw f, (b) => b);
+  }
+
+  /// Push a fresh booking directly into state.
+  /// Called by mutation notifiers after a successful API call so the detail
+  /// page reflects the new status immediately — no extra network call needed.
+  void push(BookingEntity updated) {
+    state = AsyncData(updated);
+  }
+}
+
+final bookingDetailProvider =
+    AsyncNotifierProvider.family<BookingDetailNotifier, BookingEntity, String>(
+  BookingDetailNotifier.new,
+);
+
 // ── Create booking notifier ───────────────────────────────────────────────────
 
 class CreateBookingNotifier extends AsyncNotifier<BookingEntity?> {
   @override
   Future<BookingEntity?> build() async => null;
 
-  /// Returns the created [BookingEntity] on success, throws [Failure] on error.
   Future<BookingEntity> submit(CreateBookingRequest request) async {
     state = const AsyncLoading();
     final result = await ref.read(createBookingUseCaseProvider).call(request);
@@ -93,8 +145,8 @@ class CreateBookingNotifier extends AsyncNotifier<BookingEntity?> {
       },
       (booking) {
         state = AsyncData(booking);
-        // Refresh the bookings list so the new booking appears immediately.
-        ref.read(bookingsNotifierProvider.notifier).refresh();
+        // Prepend the new booking to the list without a full reload.
+        ref.read(bookingsNotifierProvider.notifier).prependBooking(booking);
         return booking;
       },
     );
@@ -182,18 +234,6 @@ final bookingFilterProvider =
       BookingFilterNotifier.new,
     );
 
-// ── Booking detail provider ───────────────────────────────────────────────────
-
-final bookingDetailProvider = FutureProvider.family<BookingEntity, String>((
-  ref,
-  bookingId,
-) async {
-  final result = await ref
-      .read(bookingRepositoryProvider)
-      .getBookingById(bookingId);
-  return result.fold((f) => throw f, (b) => b);
-});
-
 // ── Update booking notifier ───────────────────────────────────────────────────
 
 class UpdateBookingNotifier extends AsyncNotifier<void> {
@@ -212,9 +252,11 @@ class UpdateBookingNotifier extends AsyncNotifier<void> {
       },
       (updated) {
         state = const AsyncData(null);
-        // Refresh the list and the detail cache.
-        ref.read(bookingsNotifierProvider.notifier).refresh();
-        ref.invalidate(bookingDetailProvider(request.bookingId));
+        // Patch the list item in-place (no scroll jump) and sync the detail.
+        ref.read(bookingsNotifierProvider.notifier).patchBooking(updated);
+        ref
+            .read(bookingDetailProvider(request.bookingId).notifier)
+            .push(updated);
         return updated;
       },
     );
@@ -232,8 +274,6 @@ class AttachmentUploadNotifier extends AsyncNotifier<BookingAttachmentEntity?> {
   @override
   Future<BookingAttachmentEntity?> build() async => null;
 
-  /// Upload a single file attachment to the given booking.
-  /// Returns the created [BookingAttachmentEntity] on success, throws on error.
   Future<BookingAttachmentEntity> upload(
     String bookingId,
     File file,
@@ -279,8 +319,10 @@ class ReviewNotifier extends AsyncNotifier<void> {
       },
       (updated) {
         state = const AsyncData(null);
-        ref.read(bookingsNotifierProvider.notifier).refresh();
-        ref.invalidate(bookingDetailProvider(request.bookingId));
+        ref.read(bookingsNotifierProvider.notifier).patchBooking(updated);
+        ref
+            .read(bookingDetailProvider(request.bookingId).notifier)
+            .push(updated);
         return updated;
       },
     );
@@ -596,9 +638,6 @@ class AssignWorkerNotifier extends AsyncNotifier<void> {
   @override
   Future<void> build() async {}
 
-  /// Assign [workerProfileId] to [bookingId].
-  /// On success invalidates the booking detail and nearby workers caches
-  /// so the UI updates automatically.
   Future<void> assign(String bookingId, String workerProfileId) async {
     state = const AsyncLoading();
     final result = await ref
@@ -609,10 +648,13 @@ class AssignWorkerNotifier extends AsyncNotifier<void> {
         state = AsyncError(failure, StackTrace.current);
         throw failure;
       },
-      (_) {
+      (updated) {
         state = const AsyncData(null);
-        ref.read(bookingsNotifierProvider.notifier).refresh();
-        ref.invalidate(bookingDetailProvider(bookingId));
+        // Patch the list item in-place (no scroll jump).
+        ref.read(bookingsNotifierProvider.notifier).patchBooking(updated);
+        // Sync the detail page without a network round-trip.
+        ref.read(bookingDetailProvider(bookingId).notifier).push(updated);
+        // The nearby-workers sheet is no longer valid after assignment.
         ref.invalidate(nearbyWorkersNotifierProvider(bookingId));
       },
     );

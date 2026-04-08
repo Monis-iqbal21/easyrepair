@@ -17,6 +17,8 @@ import '../../features/worker/presentation/pages/worker_jobs_page.dart';
 import '../../features/worker/presentation/pages/worker_chat_page.dart';
 import '../../features/worker/presentation/pages/worker_profile_page.dart';
 import '../../features/worker/presentation/pages/worker_job_detail_page.dart';
+import '../../features/worker/presentation/pages/worker_reviews_page.dart';
+import '../../features/notifications/presentation/pages/notification_list_page.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authStateNotifier = ValueNotifier<bool>(false);
@@ -115,8 +117,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(
+        path: '/worker/reviews',
+        builder: (_, __) => const WorkerReviewsPage(),
+      ),
+      GoRoute(
         path: '/worker/verification-pending',
         builder: (_, __) => const VerificationPendingPage(),
+      ),
+      GoRoute(
+        path: '/notifications',
+        builder: (_, __) => const NotificationListPage(),
       ),
     ],
   );

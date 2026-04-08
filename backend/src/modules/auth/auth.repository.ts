@@ -87,4 +87,11 @@ export class AuthRepository {
       select: { firstName: true, lastName: true, verificationStatus: true },
     });
   }
+
+  async saveFcmToken(userId: string, token: string): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { fcmToken: token },
+    });
+  }
 }

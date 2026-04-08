@@ -246,6 +246,9 @@ class BookingEntity {
   final List<BookingAttachmentEntity> attachments;
   final BookingReviewEntity? review;
   final List<BookingStatusHistoryEntry> statusHistory;
+  /// Full name of the client who created the booking.
+  /// Populated on worker-facing responses; null on client-facing responses.
+  final String? clientName;
 
   const BookingEntity({
     required this.id,
@@ -274,6 +277,7 @@ class BookingEntity {
     this.attachments = const [],
     this.review,
     this.statusHistory = const [],
+    this.clientName,
   });
 
   BookingEntity copyWith({
@@ -315,6 +319,7 @@ class BookingEntity {
       attachments: attachments ?? this.attachments,
       review: review ?? this.review,
       statusHistory: statusHistory ?? this.statusHistory,
+      clientName: clientName,
     );
   }
 }

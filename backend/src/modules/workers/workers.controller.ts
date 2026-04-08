@@ -9,7 +9,9 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  BadRequestException,
 } from '@nestjs/common';
+import { BookingStatus } from '@prisma/client';
 import { WorkersService } from './workers.service';
 import { UpdateAvailabilityDto } from './dto/update-availability.dto';
 import { UpdateSkillsDto } from './dto/update-skills.dto';
@@ -77,6 +79,45 @@ export class WorkersController {
     return this.workersService.getWorkerJobById(user.id, id);
   }
 
+  /**
+   * PATCH /workers/jobs/:id/status
+   * Transition an accepted job to EN_ROUTE or IN_PROGRESS.
+   * Body: { status: 'EN_ROUTE' | 'IN_PROGRESS' }
+   */
+  @Patch('jobs/:id/status')
+  @HttpCode(HttpStatus.OK)
+  updateJobStatus(
+    @CurrentUser() user: { id: string },
+    @Param('id') id: string,
+    @Body('status') status: string,
+  ) {
+    if (status !== BookingStatus.EN_ROUTE && status !== BookingStatus.IN_PROGRESS) {
+      throw new BadRequestException(
+        "status must be 'EN_ROUTE' or 'IN_PROGRESS'",
+      );
+    }
+    return this.workersService.updateJobStatus(
+      user.id,
+      id,
+      status as 'EN_ROUTE' | 'IN_PROGRESS',
+    );
+  }
+
+  /**
+   * PATCH /workers/jobs/:id/cancel
+   * Worker cancels an accepted/en-route job.
+   * Body: { reason?: string }
+   */
+  @Patch('jobs/:id/cancel')
+  @HttpCode(HttpStatus.OK)
+  cancelJob(
+    @CurrentUser() user: { id: string },
+    @Param('id') id: string,
+    @Body('reason') reason?: string,
+  ) {
+    return this.workersService.cancelJob(user.id, id, reason);
+  }
+
   /** PATCH /workers/jobs/:id/complete — mark an active job as COMPLETED */
   @Patch('jobs/:id/complete')
   @HttpCode(HttpStatus.OK)
@@ -85,5 +126,31 @@ export class WorkersController {
     @Param('id') id: string,
   ) {
     return this.workersService.completeJob(user.id, id);
+  }
+
+  // ── Worker reviews ───────────────────────────────────────────────────────
+
+  /**
+   * GET /workers/reviews?limit=N
+   * Returns reviews for this worker's completed bookings, sorted latest first.
+   * Omit `limit` to get all reviews (used by the reviews page).
+   * Pass `limit=2` for the dashboard preview.
+   */
+  @Get('reviews')
+  getWorkerReviews(
+    @CurrentUser() user: { id: string },
+    @Query('limit') limit?: string,
+  ) {
+    const parsedLimit = limit !== undefined ? parseInt(limit, 10) : undefined;
+    return this.workersService.getWorkerReviews(
+      user.id,
+      Number.isFinite(parsedLimit) ? parsedLimit : undefined,
+    );
+  }
+
+  /** GET /workers/reviews/summary — aggregate rating + count */
+  @Get('reviews/summary')
+  getWorkerReviewSummary(@CurrentUser() user: { id: string }) {
+    return this.workersService.getWorkerReviewSummary(user.id);
   }
 }

@@ -1,14 +1,197 @@
+import 'dart:async';
+import 'dart:io';
+
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/notifications/local_notification_service.dart';
 import '../core/router/app_router.dart';
 import '../core/theme/app_theme.dart';
+import '../features/auth/presentation/providers/auth_providers.dart';
+import '../features/notifications/data/datasources/notification_remote_datasource.dart';
+import '../features/notifications/presentation/providers/notification_providers.dart';
 
-class EasyRepairApp extends ConsumerWidget {
+class EasyRepairApp extends ConsumerStatefulWidget {
   const EasyRepairApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<EasyRepairApp> createState() => _EasyRepairAppState();
+}
+
+class _EasyRepairAppState extends ConsumerState<EasyRepairApp> {
+  bool _fcmTokenRegistered = false;
+
+  /// Queues a notification data map that arrived before the user finished
+  /// authenticating (e.g. tapping a notification that cold-starts the app).
+  /// Drained once [authStateProvider] resolves to a logged-in user.
+  Map<String, dynamic>? _pendingNotificationData;
+
+  final List<StreamSubscription<dynamic>> _subs = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _setupFcmListeners();
+  }
+
+  @override
+  void dispose() {
+    for (final sub in _subs) {
+      sub.cancel();
+    }
+    super.dispose();
+  }
+
+  void _setupFcmListeners() {
+    // ── Background → foreground tap (app was running in background) ──────────
+    _subs.add(
+      FirebaseMessaging.onMessageOpenedApp.listen(_handleFcmMessage),
+    );
+
+    // ── Terminated-launch tap via FCM (not a local notification) ─────────────
+    // Checked once at startup; null if app was not opened from a notification.
+    FirebaseMessaging.instance.getInitialMessage().then((message) {
+      if (message != null) _handleFcmMessage(message);
+    });
+
+    // ── Foreground FCM message ────────────────────────────────────────────────
+    _subs.add(
+      FirebaseMessaging.onMessage.listen(_handleForegroundFcmMessage),
+    );
+
+    // ── FCM token refresh ─────────────────────────────────────────────────────
+    _subs.add(
+      FirebaseMessaging.instance.onTokenRefresh.listen(_onTokenRefresh),
+    );
+
+    // ── Local notification tap (from flutter_local_notifications) ────────────
+    // Covers: foreground tap, background tap, and terminated-launch tap.
+    // The setter drains any payload stored by LocalNotificationService.init()
+    // before this point (i.e. the terminated-launch case).
+    LocalNotificationService.onTap = _handleNotificationData;
+  }
+
+  // ── Message handlers ─────────────────────────────────────────────────────
+
+  void _handleFcmMessage(RemoteMessage message) {
+    _handleNotificationData(message.data);
+  }
+
+  void _handleForegroundFcmMessage(RemoteMessage message) {
+    // Always refresh in-app notification state so the list and badge update
+    // without requiring a manual pull-to-refresh.
+    ref.invalidate(notificationsProvider);
+    ref.invalidate(unreadNotificationCountProvider);
+
+    // On Android, FCM does NOT show a system-tray notification while the app
+    // is in the foreground — show a local notification to fill that gap.
+    // On iOS, setForegroundNotificationPresentationOptions handles visibility.
+    if (Platform.isAndroid) {
+      // Fire-and-forget; failures are logged inside the service.
+      LocalNotificationService.instance.showFromMessage(message).ignore();
+    }
+  }
+
+  /// Central navigation handler for ALL notification tap sources.
+  /// Safe to call from any context — queues navigation if auth is not ready.
+  void _handleNotificationData(Map<String, dynamic> data) {
+    final authState = ref.read(authStateProvider);
+    final user = authState.valueOrNull;
+
+    if (user == null) {
+      // Auth is not ready yet (e.g. app cold-started from a notification tap).
+      // Store and process once authentication completes.
+      _pendingNotificationData = data;
+      return;
+    }
+
+    _navigateFromData(data, isWorker: user.isWorker);
+  }
+
+  void _navigateFromData(
+    Map<String, dynamic> data, {
+    required bool isWorker,
+  }) {
+    final bookingId = data['bookingId'] as String?;
+    final route = data['route'] as String?;
+
+    final router = ref.read(routerProvider);
+
+    // bookingId takes priority; resolve role-aware destination.
+    if (bookingId != null && bookingId.isNotEmpty) {
+      final destination = isWorker
+          ? '/worker/job/$bookingId'
+          : '/client/booking/$bookingId';
+      router.go(destination);
+      return;
+    }
+
+    // Fallback: use explicit route from payload.
+    if (route != null && route.isNotEmpty) {
+      router.go(route);
+    }
+  }
+
+  // ── Token management ─────────────────────────────────────────────────────
+
+  Future<void> _registerFcmToken() async {
+    try {
+      final token = await FirebaseMessaging.instance.getToken();
+      if (token != null) await _saveFcmToken(token);
+    } catch (_) {
+      // Non-critical — silently ignore.
+    }
+  }
+
+  Future<void> _saveFcmToken(String token) async {
+    try {
+      await ref
+          .read(notificationRemoteDatasourceProvider)
+          .saveFcmToken(token);
+    } catch (_) {}
+  }
+
+  void _onTokenRefresh(String newToken) {
+    // Only update if the user is currently logged in.
+    if (ref.read(authStateProvider).valueOrNull != null) {
+      _saveFcmToken(newToken).ignore();
+    }
+  }
+
+  // ── Widget ───────────────────────────────────────────────────────────────
+
+  @override
+  Widget build(BuildContext context) {
+    ref.listen(authStateProvider, (_, next) {
+      final user = next.valueOrNull;
+
+      if (user != null) {
+        // Register FCM token on first login.
+        if (!_fcmTokenRegistered) {
+          _fcmTokenRegistered = true;
+          _registerFcmToken();
+        }
+
+        // Drain any notification that arrived before auth was ready.
+        final pending = _pendingNotificationData;
+        if (pending != null) {
+          _pendingNotificationData = null;
+          // addPostFrameCallback ensures the router has completed its initial
+          // redirect (e.g. from /auth/login to the home page) before we
+          // attempt to push a booking-detail route on top of it.
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _navigateFromData(pending, isWorker: user.isWorker);
+          });
+        }
+      }
+
+      if (user == null) {
+        _fcmTokenRegistered = false;
+        _pendingNotificationData = null;
+      }
+    });
+
     final router = ref.watch(routerProvider);
     return MaterialApp.router(
       title: 'EasyRepair',

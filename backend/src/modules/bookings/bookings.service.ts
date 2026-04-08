@@ -29,6 +29,7 @@ import {
 import { UpdateBookingDto } from './dto/update-booking.dto';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { StorageService } from '../storage/storage.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class BookingsService {
@@ -37,6 +38,7 @@ export class BookingsService {
   constructor(
     private readonly bookingsRepository: BookingsRepository,
     private readonly storageService: StorageService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async createBooking(
@@ -161,6 +163,23 @@ export class BookingsService {
       reason,
       booking.workerProfile?.id ?? null,
     );
+
+    // Notify assigned worker that the job was cancelled by client
+    if (updated.workerProfile?.userId) {
+      void this.notificationsService.notify({
+        userId: updated.workerProfile.userId,
+        eventKey: 'booking.cancelled.by_client',
+        title: 'Job Cancelled',
+        body: 'The client has cancelled the job.',
+        bookingId,
+        route: `/worker/job/${bookingId}`,
+        actorUserId: userId,
+        actorRole: 'CLIENT',
+        entityType: 'booking',
+        entityId: bookingId,
+      });
+    }
+
     return this._toDto(updated);
   }
 
@@ -295,6 +314,22 @@ export class BookingsService {
       comment: dto.comment,
       workerProfileId: booking.workerProfileId,
     });
+
+    // Notify worker of the new review
+    if (updated.workerProfile?.userId) {
+      void this.notificationsService.notify({
+        userId: updated.workerProfile.userId,
+        eventKey: 'booking.review.created',
+        title: 'New Review',
+        body: `Your client left you a ${dto.rating}-star review.`,
+        bookingId,
+        route: `/worker/job/${bookingId}`,
+        actorUserId: userId,
+        actorRole: 'CLIENT',
+        entityType: 'booking',
+        entityId: bookingId,
+      });
+    }
 
     return this._toDto(updated);
   }
@@ -494,6 +529,23 @@ export class BookingsService {
       bookingId,
       workerProfileId,
     );
+
+    // Notify the assigned worker
+    if (worker.userId) {
+      void this.notificationsService.notify({
+        userId: worker.userId,
+        eventKey: 'booking.assigned',
+        title: 'New Job Assigned',
+        body: "You've been assigned to a new job. Tap to view details.",
+        bookingId,
+        route: `/worker/job/${bookingId}`,
+        actorUserId: userId,
+        actorRole: 'CLIENT',
+        entityType: 'booking',
+        entityId: bookingId,
+      });
+    }
+
     return this._toDto(updated);
   }
 

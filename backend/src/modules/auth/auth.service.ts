@@ -195,4 +195,8 @@ export class AuthService {
       },
     };
   }
+
+  async saveFcmToken(userId: string, token: string): Promise<void> {
+    await this.authRepository.saveFcmToken(userId, token);
+  }
 }

@@ -139,6 +139,7 @@ class BookingModel {
   final List<BookingAttachmentModel> attachments;
   final BookingReviewModel? review;
   final List<_StatusHistoryModel> statusHistory;
+  final String? clientName;
 
   const BookingModel({
     required this.id,
@@ -165,6 +166,7 @@ class BookingModel {
     this.attachments = const [],
     this.review,
     this.statusHistory = const [],
+    this.clientName,
   });
 
   factory BookingModel.fromJson(Map<String, dynamic> json) {
@@ -211,6 +213,7 @@ class BookingModel {
       statusHistory: historyJson
           .map((e) => _StatusHistoryModel.fromJson(e as Map<String, dynamic>))
           .toList(),
+      clientName: json['clientName'] as String?,
     );
   }
 
@@ -258,6 +261,7 @@ class BookingModel {
       attachments: attachments.map((a) => a.toEntity()).toList(),
       review: review?.toEntity(),
       statusHistory: statusHistory.map((h) => h.toEntity()).toList(),
+      clientName: clientName,
     );
   }
 }

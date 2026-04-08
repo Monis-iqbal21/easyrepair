@@ -42,6 +42,8 @@ export class WorkerJobResponseDto {
   city: string;
   latitude: number;
   longitude: number;
+  /** First + last name of the client who created the booking. */
+  clientName: string | null;
   attachments: WorkerJobAttachmentDto[];
   statusHistory: WorkerJobStatusHistoryDto[];
 }

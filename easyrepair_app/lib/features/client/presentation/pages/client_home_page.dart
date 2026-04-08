@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../auth/presentation/providers/auth_providers.dart';
+import '../../../notifications/presentation/providers/notification_providers.dart';
 import '../widgets/client_bottom_nav_bar.dart';
 import '../widgets/service_card.dart';
 import '../widgets/service_data.dart';
@@ -50,6 +51,66 @@ class ClientHomePage extends ConsumerWidget {
                       ],
                     ),
                   ),
+                  GestureDetector(
+                    onTap: () => context.push('/notifications'),
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.06),
+                                blurRadius: 8,
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.notifications_outlined,
+                            size: 20,
+                            color: Color(0xFF1A1A1A),
+                          ),
+                        ),
+                        Consumer(
+                          builder: (_, ref, __) {
+                            final count = ref
+                                .watch(unreadNotificationCountProvider)
+                                .valueOrNull ?? 0;
+                            if (count == 0) return const SizedBox.shrink();
+                            return Positioned(
+                              top: -2,
+                              right: -2,
+                              child: Container(
+                                width: 16,
+                                height: 16,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFF5F15),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                      color: Colors.white, width: 1.5),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    count > 9 ? '9+' : '$count',
+                                    style: const TextStyle(
+                                      fontSize: 8,
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 10),
                   GestureDetector(
                     onTap: () =>
                         ref.read(logoutNotifierProvider.notifier).logout(),

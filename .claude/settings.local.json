@@ -11,7 +11,12 @@
       "Bash(cat C:/monis/projects/easyrepair/backend/src/common/interceptors/*.ts)",
       "Bash(npx tsc:*)",
       "Bash(psql -h localhost -p 5433 -U postgres -d easyrepair -c ':*)",
-      "Bash(PGPASSWORD=123456 psql:*)"
+      "Bash(PGPASSWORD=123456 psql:*)",
+      "Bash(./node_modules/.bin/prisma migrate:*)",
+      "Bash(cmd:*)",
+      "Bash(powershell:*)",
+      "Bash(npm run:*)",
+      "Bash(echo \"EXIT_CODE:$?\")"
     ]
   }
 }

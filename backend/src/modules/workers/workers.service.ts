@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { AvailabilityStatus, BookingStatus } from '@prisma/client';
 import { WorkerJobWithRelations, WorkersRepository } from './workers.repository';
+import { NotificationsService } from '../notifications/notifications.service';
 import { UpdateAvailabilityDto } from './dto/update-availability.dto';
 import { UpdateSkillsDto } from './dto/update-skills.dto';
 import {
@@ -14,12 +15,19 @@ import {
   WorkerJobResponseDto,
   WorkerJobStatusHistoryDto,
 } from './dto/worker-job-response.dto';
+import {
+  WorkerReviewResponseDto,
+  WorkerReviewSummaryDto,
+} from './dto/worker-review-response.dto';
 
 @Injectable()
 export class WorkersService {
   private readonly logger = new Logger(WorkersService.name);
 
-  constructor(private readonly workersRepository: WorkersRepository) {}
+  constructor(
+    private readonly workersRepository: WorkersRepository,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   // ── Profile & availability ───────────────────────────────────────────────
 
@@ -211,6 +219,146 @@ export class WorkersService {
       bookingId,
       profile.id,
     );
+
+    // Notify client that the job is complete
+    if (updated.clientProfile?.userId) {
+      void this.notificationsService.notify({
+        userId: updated.clientProfile.userId,
+        eventKey: 'booking.completed',
+        title: 'Job Completed',
+        body: 'Your worker has completed the job. Please leave a review.',
+        bookingId,
+        route: `/client/booking/${bookingId}`,
+        actorUserId: userId,
+        actorRole: 'WORKER',
+        entityType: 'booking',
+        entityId: bookingId,
+      });
+    }
+
+    return this._toJobDto(updated);
+  }
+
+  /**
+   * Transition an active job to EN_ROUTE or IN_PROGRESS.
+   * Notifies the client on each transition.
+   */
+  async updateJobStatus(
+    userId: string,
+    bookingId: string,
+    status: 'EN_ROUTE' | 'IN_PROGRESS',
+  ): Promise<WorkerJobResponseDto> {
+    const profile = await this.workersRepository.findByUserId(userId);
+    if (!profile) throw new NotFoundException('Worker profile not found');
+
+    const job = await this.workersRepository.findJobByIdAndWorkerProfileId(
+      bookingId,
+      profile.id,
+    );
+    if (!job) throw new NotFoundException('Job not found');
+
+    const validTransitions: Record<string, BookingStatus[]> = {
+      [BookingStatus.EN_ROUTE]: [BookingStatus.ACCEPTED],
+      [BookingStatus.IN_PROGRESS]: [
+        BookingStatus.ACCEPTED,
+        BookingStatus.EN_ROUTE,
+      ],
+    };
+
+    if (!validTransitions[status]?.includes(job.status)) {
+      throw new BadRequestException(
+        `Cannot transition job from ${job.status} to ${status}`,
+      );
+    }
+
+    const updated = await this.workersRepository.updateJobStatus(
+      bookingId,
+      profile.id,
+      status,
+    );
+
+    if (updated.clientProfile?.userId) {
+      if (status === BookingStatus.EN_ROUTE) {
+        void this.notificationsService.notify({
+          userId: updated.clientProfile.userId,
+          eventKey: 'booking.status.en_route',
+          title: 'Worker On the Way',
+          body: 'Your worker is on the way to your location.',
+          bookingId,
+          route: `/client/booking/${bookingId}`,
+          actorUserId: userId,
+          actorRole: 'WORKER',
+          entityType: 'booking',
+          entityId: bookingId,
+        });
+      } else {
+        void this.notificationsService.notify({
+          userId: updated.clientProfile.userId,
+          eventKey: 'booking.status.in_progress',
+          title: 'Job Started',
+          body: 'Your worker has started working on your request.',
+          bookingId,
+          route: `/client/booking/${bookingId}`,
+          actorUserId: userId,
+          actorRole: 'WORKER',
+          entityType: 'booking',
+          entityId: bookingId,
+        });
+      }
+    }
+
+    return this._toJobDto(updated);
+  }
+
+  /**
+   * Worker cancels an active job (ACCEPTED or EN_ROUTE).
+   * Notifies the client.
+   */
+  async cancelJob(
+    userId: string,
+    bookingId: string,
+    reason?: string,
+  ): Promise<WorkerJobResponseDto> {
+    const profile = await this.workersRepository.findByUserId(userId);
+    if (!profile) throw new NotFoundException('Worker profile not found');
+
+    const job = await this.workersRepository.findJobByIdAndWorkerProfileId(
+      bookingId,
+      profile.id,
+    );
+    if (!job) throw new NotFoundException('Job not found');
+
+    const cancellable: BookingStatus[] = [
+      BookingStatus.ACCEPTED,
+      BookingStatus.EN_ROUTE,
+    ];
+    if (!cancellable.includes(job.status)) {
+      throw new BadRequestException(
+        `Cannot cancel a job with status ${job.status}`,
+      );
+    }
+
+    const updated = await this.workersRepository.cancelJobByWorker(
+      bookingId,
+      profile.id,
+      reason,
+    );
+
+    if (updated.clientProfile?.userId) {
+      void this.notificationsService.notify({
+        userId: updated.clientProfile.userId,
+        eventKey: 'booking.cancelled.by_worker',
+        title: 'Job Cancelled',
+        body: 'The worker has cancelled the job.',
+        bookingId,
+        route: `/client/booking/${bookingId}`,
+        actorUserId: userId,
+        actorRole: 'WORKER',
+        entityType: 'booking',
+        entityId: bookingId,
+      });
+    }
+
     return this._toJobDto(updated);
   }
 
@@ -235,6 +383,11 @@ export class WorkersService {
       }),
     );
 
+    const cp = job.clientProfile;
+    const clientName = cp
+      ? `${cp.firstName} ${cp.lastName}`.trim()
+      : null;
+
     return {
       id: job.id,
       serviceCategory: job.category.name,
@@ -256,8 +409,47 @@ export class WorkersService {
       city: job.city,
       latitude: job.latitude,
       longitude: job.longitude,
+      clientName,
       attachments,
       statusHistory,
     };
+  }
+
+  // ── Worker reviews ──────────────────────────────────────────────────────
+
+  /**
+   * Return reviews for this worker's completed bookings.
+   * Pass `limit` to cap results (used for the dashboard preview).
+   */
+  async getWorkerReviews(
+    userId: string,
+    limit?: number,
+  ): Promise<WorkerReviewResponseDto[]> {
+    const profile = await this.workersRepository.findByUserId(userId);
+    if (!profile) throw new NotFoundException('Worker profile not found');
+
+    const reviews = await this.workersRepository.findWorkerReviews(
+      profile.id,
+      limit,
+    );
+
+    return reviews.map((r) => ({
+      id: r.id,
+      rating: r.rating,
+      comment: r.comment ?? null,
+      serviceCategory: r.booking.category.name,
+      clientName: r.booking.clientProfile
+        ? `${r.booking.clientProfile.firstName} ${r.booking.clientProfile.lastName}`.trim()
+        : null,
+      createdAt: r.createdAt.toISOString(),
+    }));
+  }
+
+  /** Return aggregate rating stats for this worker. */
+  async getWorkerReviewSummary(userId: string): Promise<WorkerReviewSummaryDto> {
+    const profile = await this.workersRepository.findByUserId(userId);
+    if (!profile) throw new NotFoundException('Worker profile not found');
+
+    return this.workersRepository.getWorkerReviewSummary(profile.id);
   }
 }
