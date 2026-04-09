@@ -13,7 +13,6 @@ import 'package:record/record.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../../../core/errors/failures.dart';
-import '../../../../core/services/geocoding_service.dart';
 import '../../../../features/bookings/domain/entities/booking_entity.dart';
 import '../../../../features/bookings/domain/entities/create_booking_request.dart';
 import '../../../../features/bookings/domain/entities/update_booking_request.dart';
@@ -24,21 +23,26 @@ import '../widgets/location_picker_sheet.dart';
 import '../widgets/service_card.dart';
 
 // ── Palette ───────────────────────────────────────────────────────────────────
-const _kGreen  = Color(0xFFFF5F15);
-const _kRed    = Color(0xFFDC2626);
-const _kDark   = Color(0xFF1A1A1A);
-const _kGray   = Color(0xFF6B7280);
+const _kGreen = Color(0xFFFF5F15);
+const _kRed = Color(0xFFDC2626);
+const _kDark = Color(0xFF1A1A1A);
+const _kGray = Color(0xFF6B7280);
 const _kBorder = Color(0xFFE2E8F0);
 const _kSurface = Color(0xFFF9FAFB);
 const _kMaxVideoSecs = 30;
 
 class BookServicePage extends ConsumerStatefulWidget {
   final String? preselectedService;
+
   /// When non-null, the page operates in edit mode and pre-fills the form from
   /// the existing booking identified by this id.
   final String? editBookingId;
 
-  const BookServicePage({super.key, this.preselectedService, this.editBookingId});
+  const BookServicePage({
+    super.key,
+    this.preselectedService,
+    this.editBookingId,
+  });
 
   @override
   ConsumerState<BookServicePage> createState() => _BookServicePageState();
@@ -54,8 +58,8 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
   String? _selectedTimeSlot;
   String? _urgentOption;
 
-  final _titleCtrl       = TextEditingController();
-  final _addressCtrl     = TextEditingController();
+  final _titleCtrl = TextEditingController();
+  final _addressCtrl = TextEditingController();
   final _descriptionCtrl = TextEditingController();
 
   double? _gpsLat;
@@ -78,9 +82,9 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
 
   // ── Voice note — new recording ───────────────────────────────────────────────
   final _recorder = AudioRecorder();
-  final _player   = AudioPlayer();
+  final _player = AudioPlayer();
   bool _isRecording = false;
-  bool _isPlaying   = false;
+  bool _isPlaying = false;
   String? _voiceNotePath; // path to newly recorded voice note
   StreamSubscription<PlayerState>? _playerStateSub;
 
@@ -120,23 +124,23 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         // Trigger the provider to load (reads current or fetches if not cached).
-        final bookingAsync =
-            ref.read(bookingDetailProvider(widget.editBookingId!));
+        final bookingAsync = ref.read(
+          bookingDetailProvider(widget.editBookingId!),
+        );
         bookingAsync.whenData((booking) {
           if (!_prefillDone) _prefillFromBooking(booking);
         });
 
         // Also listen for future emissions (e.g. loading → data transition).
-        ref.listenManual(
-          bookingDetailProvider(widget.editBookingId!),
-          (_, next) {
-            if (!mounted || _prefillDone) return;
-            next.whenData((booking) {
-              if (!_prefillDone) _prefillFromBooking(booking);
-            });
-          },
-          fireImmediately: false,
-        );
+        ref.listenManual(bookingDetailProvider(widget.editBookingId!), (
+          _,
+          next,
+        ) {
+          if (!mounted || _prefillDone) return;
+          next.whenData((booking) {
+            if (!_prefillDone) _prefillFromBooking(booking);
+          });
+        }, fireImmediately: false);
       });
     }
 
@@ -189,16 +193,21 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     _prefillDone = true;
 
     // Separate existing voice notes from image/video attachments.
-    final voiceAttachments =
-        booking.attachments.where((a) => a.type == AttachmentType.audio).toList();
-    final mediaAttachments =
-        booking.attachments.where((a) => a.type != AttachmentType.audio).toList();
+    final voiceAttachments = booking.attachments
+        .where((a) => a.type == AttachmentType.audio)
+        .toList();
+    final mediaAttachments = booking.attachments
+        .where((a) => a.type != AttachmentType.audio)
+        .toList();
 
     setState(() {
-      _selectedService  = booking.serviceCategory;
-      _isUrgent         = booking.urgency == BookingUrgency.urgent;
-      _selectedDate     = booking.scheduledDate;
-      _titleCtrl.text   = booking.title ?? '';
+      _selectedService = booking.serviceCategory;
+      _isUrgent = booking.urgency == BookingUrgency.urgent;
+      _selectedDate = booking.scheduledDate;
+      _titleCtrl.text = booking.title ?? '';
+      // In edit mode the stored address string goes into the street/address field.
+      // Area, house, and landmark fields are left empty so the user can optionally
+      // enrich them; the combined string will be re-built on save.
       _addressCtrl.text = booking.address ?? '';
       _descriptionCtrl.text = booking.description ?? '';
       _gpsLat = booking.latitude != 0 ? booking.latitude : null;
@@ -210,39 +219,55 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
 
       // Load existing media/voice into edit-mode state.
       _existingAttachments = List.of(mediaAttachments);
-      _existingVoiceNote   = voiceAttachments.isNotEmpty ? voiceAttachments.first : null;
+      _existingVoiceNote = voiceAttachments.isNotEmpty
+          ? voiceAttachments.first
+          : null;
     });
   }
 
   // ── Scheduling helpers ────────────────────────────────────────────────────
   int _slotStartHour(String slot) {
     switch (slot) {
-      case 'Morning':   return 9;
-      case 'Afternoon': return 12;
-      case 'Evening':   return 16;
-      case 'Night':     return 20;
-      default:          return 9;
+      case 'Morning':
+        return 9;
+      case 'Afternoon':
+        return 12;
+      case 'Evening':
+        return 16;
+      case 'Night':
+        return 20;
+      default:
+        return 9;
     }
   }
 
   TimeSlot _slotEnum(String slot) {
     switch (slot) {
-      case 'Morning':   return TimeSlot.morning;
-      case 'Afternoon': return TimeSlot.afternoon;
-      case 'Evening':   return TimeSlot.evening;
-      case 'Night':     return TimeSlot.night;
-      default:          return TimeSlot.morning;
+      case 'Morning':
+        return TimeSlot.morning;
+      case 'Afternoon':
+        return TimeSlot.afternoon;
+      case 'Evening':
+        return TimeSlot.evening;
+      case 'Night':
+        return TimeSlot.night;
+      default:
+        return TimeSlot.morning;
     }
   }
 
   String _computeLiveSummary() {
-    if (_isUrgent) return 'Job goes live immediately after you book the service.';
+    if (_isUrgent)
+      return 'Job goes live immediately after you book the service.';
     if (_selectedDate == null || _selectedTimeSlot == null) {
       return 'Select a date and arrival window to see when your job goes live.';
     }
     final liveHour = _slotStartHour(_selectedTimeSlot!) - 1;
     final liveTime = DateTime(
-      _selectedDate!.year, _selectedDate!.month, _selectedDate!.day, liveHour,
+      _selectedDate!.year,
+      _selectedDate!.month,
+      _selectedDate!.day,
+      liveHour,
     );
     final timeStr = DateFormat('h:mm a').format(liveTime);
     final dateStr = DateFormat('d MMMM').format(_selectedDate!);
@@ -252,18 +277,22 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
   // ── Snackbar helpers ──────────────────────────────────────────────────────
   void _showError(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(message),
-      behavior: SnackBarBehavior.floating,
-      backgroundColor: _kRed,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-    ));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: _kRed,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
   }
 
   // ── Attachment logic ──────────────────────────────────────────────────────
   int get _totalAttachmentCount =>
       _existingAttachments.length -
-      _existingAttachments.where((a) => _removedAttachmentIds.contains(a.id)).length +
+      _existingAttachments
+          .where((a) => _removedAttachmentIds.contains(a.id))
+          .length +
       _newAttachments.length;
 
   Future<void> _pickAttachment() async {
@@ -273,13 +302,17 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
 
     XFile? file;
     if (choice == 'image') {
-      file = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
+      file = await _picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 85,
+      );
     } else {
       file = await _picker.pickVideo(source: ImageSource.gallery);
       if (file != null) {
         final valid = await _checkVideoDuration(file);
         if (!valid) {
-          if (mounted) _showError('Video must be $_kMaxVideoSecs seconds or shorter.');
+          if (mounted)
+            _showError('Video must be $_kMaxVideoSecs seconds or shorter.');
           return;
         }
       }
@@ -312,9 +345,11 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
           children: [
             const SizedBox(height: 8),
             Container(
-              width: 40, height: 4,
+              width: 40,
+              height: 4,
               decoration: BoxDecoration(
-                color: _kBorder, borderRadius: BorderRadius.circular(2),
+                color: _kBorder,
+                borderRadius: BorderRadius.circular(2),
               ),
             ),
             const SizedBox(height: 12),
@@ -349,7 +384,9 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
         return;
       }
       final pos = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
       );
       if (mounted) {
         setState(() {
@@ -394,7 +431,10 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     if (_isRecording) {
       final path = await _recorder.stop();
       _pulseCtrl.stop();
-      setState(() { _isRecording = false; _voiceNotePath = path; });
+      setState(() {
+        _isRecording = false;
+        _voiceNotePath = path;
+      });
     } else {
       final hasPerm = await _recorder.hasPermission();
       if (!hasPerm) {
@@ -402,8 +442,12 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
         return;
       }
       final dir = await getTemporaryDirectory();
-      final path = '${dir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
-      await _recorder.start(const RecordConfig(encoder: AudioEncoder.aacLc), path: path);
+      final path =
+          '${dir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
+      await _recorder.start(
+        const RecordConfig(encoder: AudioEncoder.aacLc),
+        path: path,
+      );
       _pulseCtrl.repeat(reverse: true);
       setState(() => _isRecording = true);
     }
@@ -463,17 +507,13 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
       return;
     }
 
-    // Coordinates are required.
-    // Resolution order: (1) already have coords → use them,
-    //                   (2) GPS → use device location,
-    //                   (3) address geocoding → resolve typed address.
-    if (_gpsLat == null || _gpsLng == null ||
+    setState(() => _isSubmitting = true);
+
+    // Silently attempt GPS if coordinates are not yet captured.
+    // Coordinates improve nearby-worker matching but are not required for booking.
+    if (_gpsLat == null ||
+        _gpsLng == null ||
         (_gpsLat == 0.0 && _gpsLng == 0.0)) {
-      setState(() => _isSubmitting = true);
-
-      bool coordsResolved = false;
-
-      // ── Step 1: try GPS ───────────────────────────────────────────────────
       try {
         var perm = await Geolocator.checkPermission();
         if (perm == LocationPermission.denied) {
@@ -484,7 +524,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
           final pos = await Geolocator.getCurrentPosition(
             locationSettings: const LocationSettings(
               accuracy: LocationAccuracy.high,
-              timeLimit: Duration(seconds: 10),
+              timeLimit: Duration(seconds: 6),
             ),
           );
           if (mounted) {
@@ -493,50 +533,11 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
               _gpsLng = pos.longitude;
               _pickedAddress = null;
             });
-            coordsResolved = true;
-            debugPrint('[BookServicePage] Coords resolved via GPS.');
           }
-        } else {
-          debugPrint('[BookServicePage] GPS permission denied, will try address geocoding.');
         }
-      } catch (gpsErr) {
-        debugPrint('[BookServicePage] GPS failed ($gpsErr), will try address geocoding.');
+      } catch (_) {
+        // GPS is optional — the booking will proceed using the text address.
       }
-
-      // ── Step 2: address geocoding fallback ───────────────────────────────
-      if (!coordsResolved && address.isNotEmpty) {
-        debugPrint('[BookServicePage] Attempting address geocoding for: "$address"');
-        try {
-          final location = await GeocodingService.coordinatesFromAddress(address);
-          if (location != null && mounted) {
-            setState(() {
-              _gpsLat = location.latitude;
-              _gpsLng = location.longitude;
-              _pickedAddress = null;
-            });
-            coordsResolved = true;
-            debugPrint('[BookServicePage] Coords resolved via address geocoding.');
-          } else {
-            debugPrint('[BookServicePage] Geocoding returned no result for: "$address"');
-          }
-        } catch (geocodeErr) {
-          debugPrint('[BookServicePage] Address geocoding threw: $geocodeErr');
-        }
-      }
-
-      // ── Step 3: both failed → stop ───────────────────────────────────────
-      if (!coordsResolved) {
-        if (mounted) {
-          setState(() => _isSubmitting = false);
-          _showError(
-            'Could not determine your location. '
-            'Please use "Use Current Location" or "Pick on Map".',
-          );
-        }
-        return;
-      }
-    } else {
-      setState(() => _isSubmitting = true);
     }
 
     try {
@@ -560,8 +561,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
       timeSlot: (!_isUrgent && _selectedTimeSlot != null)
           ? _slotEnum(_selectedTimeSlot!)
           : null,
-      scheduledAt:
-          (!_isUrgent && _selectedDate != null) ? _selectedDate : null,
+      scheduledAt: (!_isUrgent && _selectedDate != null) ? _selectedDate : null,
       title: _titleCtrl.text.trim().isEmpty
           ? _selectedService
           : _titleCtrl.text.trim(),
@@ -595,14 +595,15 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
       timeSlot: (!_isUrgent && _selectedTimeSlot != null)
           ? _slotEnum(_selectedTimeSlot!)
           : null,
-      scheduledAt:
-          (!_isUrgent && _selectedDate != null) ? _selectedDate : null,
+      scheduledAt: (!_isUrgent && _selectedDate != null) ? _selectedDate : null,
       addressLine: address,
       latitude: _gpsLat,
       longitude: _gpsLng,
     );
 
-    await ref.read(updateBookingNotifierProvider.notifier).submitUpdate(updateRequest);
+    await ref
+        .read(updateBookingNotifierProvider.notifier)
+        .submitUpdate(updateRequest);
 
     // Delete removed existing attachments.
     for (final id in _removedAttachmentIds) {
@@ -648,9 +649,12 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
   }
 
   String _friendlyError(Object e) {
-    if (e is NetworkFailure) return 'No internet connection. Please check your network.';
+    if (e is NetworkFailure)
+      return 'No internet connection. Please check your network.';
     if (e is Failure) {
-      return e.message.isNotEmpty ? e.message : 'Unable to save booking. Please try again.';
+      return e.message.isNotEmpty
+          ? e.message
+          : 'Unable to save booking. Please try again.';
     }
     if (e.toString().contains('SocketException')) {
       return 'No internet connection. Please check your network.';
@@ -670,26 +674,40 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 72, height: 72,
+                width: 72,
+                height: 72,
                 decoration: BoxDecoration(
-                  color: _kGreen.withValues(alpha: 0.1), shape: BoxShape.circle,
+                  color: _kGreen.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.check_rounded, color: _kGreen, size: 40),
+                child: const Icon(
+                  Icons.check_rounded,
+                  color: _kGreen,
+                  size: 40,
+                ),
               ),
               const SizedBox(height: 20),
               Text(
                 _isEditMode ? 'Booking Updated!' : 'Booking Submitted!',
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: _kDark),
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: _kDark,
+                ),
               ),
               const SizedBox(height: 8),
               Text(
                 _isEditMode
                     ? 'Your booking details have been updated successfully.'
                     : _isUrgent
-                        ? 'Your job is live! Workers nearby will be notified immediately.'
-                        : 'Your job has been scheduled. Workers will be notified 1 hour before the arrival window.',
+                    ? 'Your job is live! Workers nearby will be notified immediately.'
+                    : 'Your job has been scheduled. Workers will be notified 1 hour before the arrival window.',
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 13, color: _kGray, height: 1.5),
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: _kGray,
+                  height: 1.5,
+                ),
               ),
               const SizedBox(height: 24),
               SizedBox(
@@ -707,7 +725,9 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                     backgroundColor: _kGreen,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                     elevation: 0,
                   ),
                   child: Text(
@@ -745,7 +765,9 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
           Text(
             title,
             style: const TextStyle(
-              fontSize: 15, fontWeight: FontWeight.w700, color: _kDark,
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: _kDark,
             ),
           ),
           const SizedBox(height: 14),
@@ -767,7 +789,9 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
         children: [
           Icon(Icons.info_outline_rounded, size: 14, color: color),
           const SizedBox(width: 8),
-          Expanded(child: Text(text, style: TextStyle(fontSize: 12, color: color))),
+          Expanded(
+            child: Text(text, style: TextStyle(fontSize: 12, color: color)),
+          ),
         ],
       ),
     );
@@ -782,7 +806,9 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
       child: categoriesAsync.when(
         loading: () => const SizedBox(
           height: 80,
-          child: Center(child: CircularProgressIndicator(color: _kGreen, strokeWidth: 2)),
+          child: Center(
+            child: CircularProgressIndicator(color: _kGreen, strokeWidth: 2),
+          ),
         ),
         error: (_, __) => const SizedBox(
           height: 40,
@@ -810,7 +836,8 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                         backgroundColor: categoryBgColor(left.name),
                         emojiBackgroundColor: categoryEmojiBgColor(left.name),
                         isSelected: _selectedService == left.name,
-                        onTap: () => setState(() => _selectedService = left.name),
+                        onTap: () =>
+                            setState(() => _selectedService = left.name),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -820,9 +847,12 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                               title: right.name,
                               emoji: right.emoji,
                               backgroundColor: categoryBgColor(right.name),
-                              emojiBackgroundColor: categoryEmojiBgColor(right.name),
+                              emojiBackgroundColor: categoryEmojiBgColor(
+                                right.name,
+                              ),
                               isSelected: _selectedService == right.name,
-                              onTap: () => setState(() => _selectedService = right.name),
+                              onTap: () =>
+                                  setState(() => _selectedService = right.name),
                             )
                           : const SizedBox.shrink(),
                     ),
@@ -868,7 +898,10 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
           decoration: BoxDecoration(
             color: selected ? activeColor : Colors.white,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: selected ? activeColor : _kBorder, width: 1.5),
+            border: Border.all(
+              color: selected ? activeColor : _kBorder,
+              width: 1.5,
+            ),
           ),
           alignment: Alignment.center,
           child: Row(
@@ -906,10 +939,10 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
   Widget _buildNormalSchedule() {
     const slots = ['Morning', 'Afternoon', 'Evening', 'Night'];
     const slotDesc = {
-      'Morning':   '9 AM – 12 PM',
+      'Morning': '9 AM – 12 PM',
       'Afternoon': '12 PM – 4 PM',
-      'Evening':   '4 PM – 8 PM',
-      'Night':     '8 PM – 11 PM',
+      'Evening': '4 PM – 8 PM',
+      'Night': '8 PM – 11 PM',
     };
 
     Widget slotChip(String slot) {
@@ -940,7 +973,10 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                 const SizedBox(height: 2),
                 Text(
                   slotDesc[slot]!,
-                  style: TextStyle(fontSize: 11, color: sel ? Colors.white70 : _kGray),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: sel ? Colors.white70 : _kGray,
+                  ),
                 ),
               ],
             ),
@@ -979,7 +1015,11 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
             ),
             child: Row(
               children: [
-                const Icon(Icons.calendar_today_rounded, size: 16, color: _kGreen),
+                const Icon(
+                  Icons.calendar_today_rounded,
+                  size: 16,
+                  color: _kGreen,
+                ),
                 const SizedBox(width: 10),
                 Text(
                   _selectedDate == null
@@ -988,7 +1028,9 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                   style: TextStyle(
                     fontSize: 14,
                     color: _selectedDate == null ? _kGray : _kDark,
-                    fontWeight: _selectedDate == null ? FontWeight.w400 : FontWeight.w500,
+                    fontWeight: _selectedDate == null
+                        ? FontWeight.w400
+                        : FontWeight.w500,
                   ),
                 ),
               ],
@@ -996,11 +1038,26 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
           ),
         ),
         const SizedBox(height: 14),
-        const Text('Arrival window', style: TextStyle(fontSize: 13, color: _kGray)),
+        const Text(
+          'Arrival window',
+          style: TextStyle(fontSize: 13, color: _kGray),
+        ),
         const SizedBox(height: 8),
-        Row(children: [slotChip(slots[0]), const SizedBox(width: 8), slotChip(slots[1])]),
+        Row(
+          children: [
+            slotChip(slots[0]),
+            const SizedBox(width: 8),
+            slotChip(slots[1]),
+          ],
+        ),
         const SizedBox(height: 8),
-        Row(children: [slotChip(slots[2]), const SizedBox(width: 8), slotChip(slots[3])]),
+        Row(
+          children: [
+            slotChip(slots[2]),
+            const SizedBox(width: 8),
+            slotChip(slots[3]),
+          ],
+        ),
         const SizedBox(height: 12),
         _infoNote(
           'Job goes live 1 hour before the scheduled time and notifies workers.',
@@ -1024,15 +1081,25 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 150),
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 13,
+                ),
                 decoration: BoxDecoration(
                   color: sel ? _kRed.withValues(alpha: 0.07) : _kSurface,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: sel ? _kRed : _kBorder, width: sel ? 1.5 : 1),
+                  border: Border.all(
+                    color: sel ? _kRed : _kBorder,
+                    width: sel ? 1.5 : 1,
+                  ),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.bolt_rounded, size: 16, color: sel ? _kRed : _kGray),
+                    Icon(
+                      Icons.bolt_rounded,
+                      size: 16,
+                      color: sel ? _kRed : _kGray,
+                    ),
                     const SizedBox(width: 10),
                     Text(
                       opt,
@@ -1044,7 +1111,11 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                     ),
                     if (sel) ...[
                       const Spacer(),
-                      const Icon(Icons.check_circle_rounded, size: 16, color: _kRed),
+                      const Icon(
+                        Icons.check_circle_rounded,
+                        size: 16,
+                        color: _kRed,
+                      ),
                     ],
                   ],
                 ),
@@ -1053,7 +1124,10 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
           );
         }),
         const SizedBox(height: 4),
-        _infoNote('Workers are notified immediately after booking.', color: _kRed),
+        _infoNote(
+          'Workers are notified immediately after booking.',
+          color: _kRed,
+        ),
       ],
     );
   }
@@ -1124,7 +1198,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
   // ── E. Location ───────────────────────────────────────────────────────────
   Widget _buildLocationSection() {
     return _sectionCard(
-      title: 'Location',
+      title: 'Service Address',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1132,9 +1206,13 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
             controller: _addressCtrl,
             textInputAction: TextInputAction.done,
             decoration: InputDecoration(
-              hintText: 'Enter your address',
+              hintText: 'e.g. House 12, Street 5, DHA Phase 6, Karachi',
               hintStyle: const TextStyle(color: _kGray, fontSize: 14),
-              prefixIcon: const Icon(Icons.location_on_rounded, size: 18, color: _kGreen),
+              prefixIcon: const Icon(
+                Icons.location_on_rounded,
+                size: 18,
+                color: _kGreen,
+              ),
               filled: true,
               fillColor: _kSurface,
               border: OutlineInputBorder(
@@ -1149,7 +1227,10 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                 borderRadius: BorderRadius.circular(12),
                 borderSide: const BorderSide(color: _kGreen, width: 1.4),
               ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 13,
+              ),
             ),
           ),
           const SizedBox(height: 10),
@@ -1178,7 +1259,9 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                             width: 18,
                             height: 18,
                             child: CircularProgressIndicator(
-                                strokeWidth: 2, color: _kGreen),
+                              strokeWidth: 2,
+                              color: _kGreen,
+                            ),
                           )
                         : Row(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -1263,15 +1346,18 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
             const SizedBox(height: 6),
             Row(
               children: [
-                const Icon(Icons.check_circle_outline_rounded,
-                    size: 13, color: _kGreen),
+                const Icon(
+                  Icons.check_circle_outline_rounded,
+                  size: 13,
+                  color: _kGreen,
+                ),
                 const SizedBox(width: 5),
                 Expanded(
                   child: Text(
                     _pickedAddress != null
                         ? 'Map: $_pickedAddress'
                         : 'GPS: ${_gpsLat!.toStringAsFixed(5)}, '
-                            '${_gpsLng!.toStringAsFixed(5)}',
+                              '${_gpsLng!.toStringAsFixed(5)}',
                     style: TextStyle(
                       fontSize: 11,
                       color: _kGreen.withValues(alpha: 0.85),
@@ -1286,8 +1372,11 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
             const SizedBox(height: 6),
             Row(
               children: const [
-                Icon(Icons.info_outline_rounded, size: 13,
-                    color: Color(0xFFD97706)),
+                Icon(
+                  Icons.info_outline_rounded,
+                  size: 13,
+                  color: Color(0xFFD97706),
+                ),
                 SizedBox(width: 5),
                 Expanded(
                   child: Text(
@@ -1329,17 +1418,24 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                       children: [
                         _ExistingAttachmentThumbnail(attachment: attachment),
                         Positioned(
-                          top: 4, right: 4,
+                          top: 4,
+                          right: 4,
                           child: GestureDetector(
                             onTap: () => setState(() {
                               _removedAttachmentIds.add(attachment.id);
                             }),
                             child: Container(
-                              width: 22, height: 22,
+                              width: 22,
+                              height: 22,
                               decoration: const BoxDecoration(
-                                color: Colors.black54, shape: BoxShape.circle,
+                                color: Colors.black54,
+                                shape: BoxShape.circle,
                               ),
-                              child: const Icon(Icons.close, size: 13, color: Colors.white),
+                              child: const Icon(
+                                Icons.close,
+                                size: 13,
+                                color: Colors.white,
+                              ),
                             ),
                           ),
                         ),
@@ -1354,8 +1450,8 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                   final file = e.value;
                   final isVideo =
                       file.mimeType?.startsWith('video') == true ||
-                          file.path.toLowerCase().endsWith('.mp4') ||
-                          file.path.toLowerCase().endsWith('.mov');
+                      file.path.toLowerCase().endsWith('.mp4') ||
+                      file.path.toLowerCase().endsWith('.mov');
                   return Padding(
                     padding: const EdgeInsets.only(right: 10),
                     child: Stack(
@@ -1364,27 +1460,40 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                           borderRadius: BorderRadius.circular(12),
                           child: isVideo
                               ? Container(
-                                  width: 90, height: 90, color: _kDark,
+                                  width: 90,
+                                  height: 90,
+                                  color: _kDark,
                                   child: const Icon(
                                     Icons.play_circle_fill_rounded,
-                                    color: Colors.white, size: 32,
+                                    color: Colors.white,
+                                    size: 32,
                                   ),
                                 )
                               : Image.file(
                                   File(file.path),
-                                  width: 90, height: 90, fit: BoxFit.cover,
+                                  width: 90,
+                                  height: 90,
+                                  fit: BoxFit.cover,
                                 ),
                         ),
                         Positioned(
-                          top: 4, right: 4,
+                          top: 4,
+                          right: 4,
                           child: GestureDetector(
-                            onTap: () => setState(() => _newAttachments.removeAt(idx)),
+                            onTap: () =>
+                                setState(() => _newAttachments.removeAt(idx)),
                             child: Container(
-                              width: 22, height: 22,
+                              width: 22,
+                              height: 22,
                               decoration: const BoxDecoration(
-                                color: Colors.black54, shape: BoxShape.circle,
+                                color: Colors.black54,
+                                shape: BoxShape.circle,
                               ),
-                              child: const Icon(Icons.close, size: 13, color: Colors.white),
+                              child: const Icon(
+                                Icons.close,
+                                size: 13,
+                                color: Colors.white,
+                              ),
                             ),
                           ),
                         ),
@@ -1398,7 +1507,8 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                   GestureDetector(
                     onTap: _pickAttachment,
                     child: Container(
-                      width: 90, height: 90,
+                      width: 90,
+                      height: 90,
                       decoration: BoxDecoration(
                         color: _kSurface,
                         borderRadius: BorderRadius.circular(12),
@@ -1409,7 +1519,10 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                         children: [
                           Icon(Icons.add_rounded, size: 24, color: _kGreen),
                           SizedBox(height: 4),
-                          Text('Add', style: TextStyle(fontSize: 11, color: _kGray)),
+                          Text(
+                            'Add',
+                            style: TextStyle(fontSize: 11, color: _kGray),
+                          ),
                         ],
                       ),
                     ),
@@ -1453,9 +1566,17 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
               child: Row(
                 children: [
                   Container(
-                    width: 36, height: 36,
-                    decoration: const BoxDecoration(color: _kGreen, shape: BoxShape.circle),
-                    child: const Icon(Icons.mic_rounded, color: Colors.white, size: 20),
+                    width: 36,
+                    height: 36,
+                    decoration: const BoxDecoration(
+                      color: _kGreen,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.mic_rounded,
+                      color: Colors.white,
+                      size: 20,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   const Expanded(
@@ -1465,7 +1586,9 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                         Text(
                           'Voice note attached',
                           style: TextStyle(
-                            fontSize: 13, fontWeight: FontWeight.w500, color: _kDark,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: _kDark,
                           ),
                         ),
                         Text(
@@ -1477,7 +1600,11 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                   ),
                   GestureDetector(
                     onTap: _removeExistingVoiceNote,
-                    child: const Icon(Icons.delete_outline_rounded, size: 20, color: _kGray),
+                    child: const Icon(
+                      Icons.delete_outline_rounded,
+                      size: 20,
+                      color: _kGray,
+                    ),
                   ),
                 ],
               ),
@@ -1509,11 +1636,16 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
             GestureDetector(
               onTap: _togglePlayback,
               child: Container(
-                width: 36, height: 36,
-                decoration: const BoxDecoration(color: _kGreen, shape: BoxShape.circle),
+                width: 36,
+                height: 36,
+                decoration: const BoxDecoration(
+                  color: _kGreen,
+                  shape: BoxShape.circle,
+                ),
                 child: Icon(
                   _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                  color: Colors.white, size: 20,
+                  color: Colors.white,
+                  size: 20,
                 ),
               ),
             ),
@@ -1521,12 +1653,20 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
             const Expanded(
               child: Text(
                 'Voice note recorded  ·  m4a',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: _kDark),
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: _kDark,
+                ),
               ),
             ),
             GestureDetector(
               onTap: _deleteVoiceNote,
-              child: const Icon(Icons.delete_outline_rounded, size: 20, color: _kGray),
+              child: const Icon(
+                Icons.delete_outline_rounded,
+                size: 20,
+                color: _kGray,
+              ),
             ),
           ],
         ),
@@ -1552,15 +1692,23 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                 builder: (context, child) => Opacity(
                   opacity: _pulseCtrl.value,
                   child: Container(
-                    width: 10, height: 10,
-                    decoration: const BoxDecoration(color: _kRed, shape: BoxShape.circle),
+                    width: 10,
+                    height: 10,
+                    decoration: const BoxDecoration(
+                      color: _kRed,
+                      shape: BoxShape.circle,
+                    ),
                   ),
                 ),
               ),
               const SizedBox(width: 10),
               const Text(
                 'Recording… tap to stop',
-                style: TextStyle(fontSize: 14, color: _kRed, fontWeight: FontWeight.w500),
+                style: TextStyle(
+                  fontSize: 14,
+                  color: _kRed,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
               const SizedBox(width: 10),
               const Icon(Icons.stop_rounded, color: _kRed, size: 20),
@@ -1587,7 +1735,11 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
             SizedBox(width: 8),
             Text(
               'Tap to record',
-              style: TextStyle(fontSize: 14, color: _kGreen, fontWeight: FontWeight.w500),
+              style: TextStyle(
+                fontSize: 14,
+                color: _kGreen,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ],
         ),
@@ -1598,7 +1750,8 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
   // ── H. Live timing summary ────────────────────────────────────────────────
   Widget _buildLiveSummary() {
     final text = _computeLiveSummary();
-    final isReady = _isUrgent || (_selectedDate != null && _selectedTimeSlot != null);
+    final isReady =
+        _isUrgent || (_selectedDate != null && _selectedTimeSlot != null);
     final color = _isUrgent ? _kRed : _kGreen;
 
     return AnimatedContainer(
@@ -1608,12 +1761,18 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
       decoration: BoxDecoration(
         color: isReady ? color.withValues(alpha: 0.07) : _kSurface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isReady ? color.withValues(alpha: 0.3) : _kBorder),
+        border: Border.all(
+          color: isReady ? color.withValues(alpha: 0.3) : _kBorder,
+        ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.schedule_rounded, size: 16, color: isReady ? color : _kGray),
+          Icon(
+            Icons.schedule_rounded,
+            size: 16,
+            color: isReady ? color : _kGray,
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
@@ -1641,17 +1800,26 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
           disabledBackgroundColor: _kGreen.withValues(alpha: 0.5),
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           elevation: 0,
         ),
         child: _isSubmitting
             ? const SizedBox(
-                width: 20, height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
               )
             : Text(
                 _isEditMode ? 'Save Changes' : 'Book Service',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
       ),
     );
@@ -1676,7 +1844,8 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                   GestureDetector(
                     onTap: () => context.pop(),
                     child: Container(
-                      width: 40, height: 40,
+                      width: 40,
+                      height: 40,
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(12),
@@ -1687,14 +1856,20 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                           ),
                         ],
                       ),
-                      child: const Icon(Icons.arrow_back_rounded, size: 18, color: _kDark),
+                      child: const Icon(
+                        Icons.arrow_back_rounded,
+                        size: 18,
+                        color: _kDark,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 14),
                   Text(
                     _isEditMode ? 'Edit Booking' : 'Book a Service',
                     style: const TextStyle(
-                      fontSize: 20, fontWeight: FontWeight.w700, color: _kDark,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: _kDark,
                     ),
                   ),
                 ],
@@ -1705,7 +1880,8 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
             Expanded(
               child: SingleChildScrollView(
                 padding: EdgeInsets.fromLTRB(20, 0, 20, 80 + bottomPad + 16),
-                keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -1759,24 +1935,30 @@ class _ExistingAttachmentThumbnail extends StatelessWidget {
           height: 90,
           fit: BoxFit.cover,
           errorBuilder: (_, __, ___) => Container(
-            width: 90, height: 90,
+            width: 90,
+            height: 90,
             decoration: BoxDecoration(
               color: const Color(0xFFF1F5F9),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.broken_image_outlined, color: Color(0xFF94A3B8)),
+            child: const Icon(
+              Icons.broken_image_outlined,
+              color: Color(0xFF94A3B8),
+            ),
           ),
           loadingBuilder: (_, child, progress) => progress == null
               ? child
               : Container(
-                  width: 90, height: 90,
+                  width: 90,
+                  height: 90,
                   decoration: BoxDecoration(
                     color: const Color(0xFFF1F5F9),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Center(
                     child: CircularProgressIndicator(
-                      strokeWidth: 2, color: _kGreen,
+                      strokeWidth: 2,
+                      color: _kGreen,
                     ),
                   ),
                 ),
@@ -1786,14 +1968,16 @@ class _ExistingAttachmentThumbnail extends StatelessWidget {
 
     // Video thumbnail
     return Container(
-      width: 90, height: 90,
+      width: 90,
+      height: 90,
       decoration: BoxDecoration(
         color: _kDark,
         borderRadius: BorderRadius.circular(12),
       ),
       child: const Icon(
         Icons.play_circle_fill_rounded,
-        color: Colors.white, size: 32,
+        color: Colors.white,
+        size: 32,
       ),
     );
   }

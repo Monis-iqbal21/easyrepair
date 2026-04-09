@@ -328,23 +328,7 @@ class _DetailBody extends ConsumerWidget {
                 ],
 
                 // Location
-                _InfoCard(
-                  title: 'Location',
-                  children: [
-                    _InfoRow(
-                      icon: Icons.location_on_outlined,
-                      label: 'Address',
-                      value: booking.address ?? 'Not specified',
-                      multiline: true,
-                    ),
-                    if (booking.city.isNotEmpty)
-                      _InfoRow(
-                        icon: Icons.location_city_outlined,
-                        label: 'City',
-                        value: booking.city,
-                      ),
-                  ],
-                ),
+                _LocationCard(booking: booking),
                 const SizedBox(height: 16),
 
                 // Pricing
@@ -490,6 +474,91 @@ class _StatusCard extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Location card ─────────────────────────────────────────────────────────────
+
+class _LocationCard extends StatelessWidget {
+  final BookingEntity booking;
+
+  const _LocationCard({required this.booking});
+
+  @override
+  Widget build(BuildContext context) {
+    final address = booking.address;
+    final hasAddress = address != null && address.isNotEmpty;
+    final hasCity = booking.city.isNotEmpty;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _kBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Service Address',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: _kDark,
+            ),
+          ),
+          const SizedBox(height: 12),
+          // Address block with pin icon
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF0EB),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.location_on_rounded,
+                  size: 18,
+                  color: Color(0xFFFF5F15),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      hasAddress ? address : 'No address provided',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: hasAddress ? _kDark : _kGray,
+                        height: 1.4,
+                      ),
+                    ),
+                    if (hasCity) ...[
+                      const SizedBox(height: 3),
+                      Text(
+                        booking.city,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: _kGray,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
