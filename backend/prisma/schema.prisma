@@ -61,6 +61,15 @@ enum AttachmentType {
   AUDIO
 }
 
+enum MessageType {
+  TEXT
+  IMAGE
+  VIDEO
+  VOICE
+  LOCATION
+  SYSTEM
+}
+
 enum AvailabilityStatus {
   OFFLINE
   ONLINE
@@ -81,8 +90,11 @@ model User {
   clientProfile ClientProfile?
   workerProfile WorkerProfile?
   refreshTokens RefreshToken[]
-  sentMessages  Message[]      @relation("SentMessages")
   notifications Notification[]
+
+  conversationsAsClient Conversation[] @relation("ClientConversations")
+  conversationsAsWorker Conversation[] @relation("WorkerConversations")
+  chatMessages          Message[]      @relation("ChatMessages")
 
   @@map("users")
 }
@@ -239,7 +251,6 @@ model Booking {
   statusHistory BookingStatusHistory[]
   attachments   BookingAttachment[]
   review        Review?
-  messages      Message[]
 
   @@index([clientProfileId])
   @@index([workerProfileId])
@@ -288,20 +299,54 @@ model Review {
   @@map("reviews")
 }
 
-model Message {
-  id        String    @id @default(uuid())
-  bookingId String
-  booking   Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  senderId  String
-  sender    User      @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
-  content   String
-  fileUrl   String?
-  readAt    DateTime?
-  createdAt DateTime  @default(now())
+model Conversation {
+  id                 String    @id @default(uuid())
+  clientUserId       String
+  clientUser         User      @relation("ClientConversations", fields: [clientUserId], references: [id], onDelete: Cascade)
+  workerUserId       String
+  workerUser         User      @relation("WorkerConversations", fields: [workerUserId], references: [id], onDelete: Cascade)
+  /// The userId of whoever triggered the conversation creation
+  createdByUserId    String
+  lastMessageAt      DateTime?
+  lastMessagePreview String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
-  @@index([bookingId])
-  @@index([senderId])
-  @@map("messages")
+  messages Message[]
+
+  @@unique([clientUserId, workerUserId])
+  @@index([clientUserId])
+  @@index([workerUserId])
+  @@map("conversations")
+}
+
+model Message {
+  id               String       @id @default(uuid())
+  conversationId   String
+  conversation     Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderUserId     String
+  sender           User         @relation("ChatMessages", fields: [senderUserId], references: [id], onDelete: Cascade)
+  senderRole       Role
+  type             MessageType  @default(TEXT)
+  text             String?
+  mediaUrl         String?
+  thumbnailUrl     String?
+  latitude         Float?
+  longitude        Float?
+  /// Optional reference to a booking — for context only, not a hard FK
+  bookingId        String?
+  replyToMessageId String?
+  replyTo          Message?     @relation("MessageReplies", fields: [replyToMessageId], references: [id], onDelete: SetNull)
+  replies          Message[]    @relation("MessageReplies")
+  editedAt         DateTime?
+  deletedAt        DateTime?
+  seenAt           DateTime?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  @@index([conversationId])
+  @@index([senderUserId])
+  @@map("chat_messages")
 }
 
 model Notification {

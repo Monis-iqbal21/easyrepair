@@ -11,6 +11,7 @@ import '../../domain/entities/update_booking_request.dart';
 import '../providers/booking_providers.dart';
 import '../widgets/status_badge.dart';
 import '../widgets/urgency_badge.dart';
+import '../../../../features/chat/presentation/providers/chat_providers.dart';
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 const _kGreen  = Color(0xFFFF5F15);
@@ -1809,32 +1810,9 @@ class _NearbyWorkerCard extends ConsumerWidget {
                 // Action buttons
                 Row(
                   children: [
-                    // Chat placeholder
+                    // Chat button
                     Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () => ScaffoldMessenger.of(context)
-                            .showSnackBar(const SnackBar(
-                          content: Text('Chat coming soon'),
-                          duration: Duration(seconds: 2),
-                        )),
-                        icon: const Icon(
-                          Icons.chat_bubble_outline_rounded,
-                          size: 15,
-                        ),
-                        label: const Text('Chat'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: _kGray,
-                          side: const BorderSide(color: _kBorder),
-                          padding: const EdgeInsets.symmetric(vertical: 9),
-                          textStyle: const TextStyle(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                      ),
+                      child: _ChatButton(workerProfileId: worker.id),
                     ),
                     const SizedBox(width: 10),
                     // Assign button
@@ -1942,6 +1920,75 @@ class _Initials extends StatelessWidget {
           color: Colors.white,
           fontSize: 16,
           fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
+// ── Chat button ───────────────────────────────────────────────────────────────
+
+class _ChatButton extends ConsumerStatefulWidget {
+  final String workerProfileId;
+
+  const _ChatButton({required this.workerProfileId});
+
+  @override
+  ConsumerState<_ChatButton> createState() => _ChatButtonState();
+}
+
+class _ChatButtonState extends ConsumerState<_ChatButton> {
+  bool _loading = false;
+
+  Future<void> _openChat() async {
+    if (_loading) return;
+    setState(() => _loading = true);
+    try {
+      final conversation = await ref
+          .read(getOrCreateConversationProvider.notifier)
+          .getOrCreate(widget.workerProfileId);
+      if (mounted) {
+        context.push('/client/chat/${conversation.id}');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString()),
+            backgroundColor: const Color(0xFFEF4444),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton.icon(
+      onPressed: _loading ? null : _openChat,
+      icon: _loading
+          ? const SizedBox(
+              width: 12,
+              height: 12,
+              child: CircularProgressIndicator(
+                strokeWidth: 1.5,
+                valueColor: AlwaysStoppedAnimation(_kGray),
+              ),
+            )
+          : const Icon(Icons.chat_bubble_outline_rounded, size: 15),
+      label: const Text('Chat'),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: _kGray,
+        side: const BorderSide(color: _kBorder),
+        padding: const EdgeInsets.symmetric(vertical: 9),
+        textStyle: const TextStyle(
+          fontSize: 12.5,
+          fontWeight: FontWeight.w600,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
         ),
       ),
     );

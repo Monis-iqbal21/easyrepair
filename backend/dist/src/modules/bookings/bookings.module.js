@@ -13,12 +13,13 @@ const bookings_controller_1 = require("./bookings.controller");
 const bookings_repository_1 = require("./bookings.repository");
 const storage_module_1 = require("../storage/storage.module");
 const notifications_module_1 = require("../notifications/notifications.module");
+const chat_module_1 = require("../chat/chat.module");
 let BookingsModule = class BookingsModule {
 };
 exports.BookingsModule = BookingsModule;
 exports.BookingsModule = BookingsModule = __decorate([
     (0, common_1.Module)({
-        imports: [storage_module_1.StorageModule, notifications_module_1.NotificationsModule],
+        imports: [storage_module_1.StorageModule, notifications_module_1.NotificationsModule, chat_module_1.ChatModule],
         controllers: [bookings_controller_1.BookingsController],
         providers: [bookings_service_1.BookingsService, bookings_repository_1.BookingsRepository],
     })

@@ -13,6 +13,7 @@ import { UpdateSkillsDto } from './dto/update-skills.dto';
 import {
   WorkerJobAttachmentDto,
   WorkerJobResponseDto,
+  WorkerJobReviewDto,
   WorkerJobStatusHistoryDto,
 } from './dto/worker-job-response.dto';
 import {
@@ -412,6 +413,14 @@ export class WorkersService {
       clientName,
       attachments,
       statusHistory,
+      review: job.review
+        ? {
+            id: job.review.id,
+            rating: job.review.rating,
+            comment: job.review.comment ?? null,
+            createdAt: job.review.createdAt.toISOString(),
+          } satisfies WorkerJobReviewDto
+        : null,
     };
   }
 
@@ -435,6 +444,7 @@ export class WorkersService {
 
     return reviews.map((r) => ({
       id: r.id,
+      bookingId: r.booking.id,
       rating: r.rating,
       comment: r.comment ?? null,
       serviceCategory: r.booking.category.name,

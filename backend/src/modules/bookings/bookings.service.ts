@@ -30,6 +30,7 @@ import { UpdateBookingDto } from './dto/update-booking.dto';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { StorageService } from '../storage/storage.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { ChatService } from '../chat/chat.service';
 
 @Injectable()
 export class BookingsService {
@@ -39,6 +40,7 @@ export class BookingsService {
     private readonly bookingsRepository: BookingsRepository,
     private readonly storageService: StorageService,
     private readonly notificationsService: NotificationsService,
+    private readonly chatService: ChatService,
   ) {}
 
   async createBooking(
@@ -544,6 +546,11 @@ export class BookingsService {
         entityType: 'booking',
         entityId: bookingId,
       });
+
+      // Ensure a chat conversation exists for this client-worker pair.
+      // Fire-and-forget: errors are caught inside the method and never
+      // propagate to the booking response.
+      void this.chatService.ensureConversationForBooking(userId, worker.userId);
     }
 
     return this._toDto(updated);

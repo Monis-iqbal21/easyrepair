@@ -53,12 +53,21 @@ let FirebaseService = FirebaseService_1 = class FirebaseService {
         this.logger = new common_1.Logger(FirebaseService_1.name);
     }
     onModuleInit() {
+        const projectId = this.config.get('firebase.projectId');
+        const clientEmail = this.config.get('firebase.clientEmail');
+        const privateKey = this.config
+            .get('firebase.privateKey')
+            ?.replace(/\\n/g, '\n');
+        if (!projectId || !clientEmail || !privateKey) {
+            this.logger.warn('Firebase Admin not initialized. Missing firebase.projectId, firebase.clientEmail, or firebase.privateKey.');
+            return;
+        }
         if (!admin.apps.length) {
             admin.initializeApp({
                 credential: admin.credential.cert({
-                    projectId: this.config.get('firebase.projectId'),
-                    privateKey: this.config.get('firebase.privateKey'),
-                    clientEmail: this.config.get('firebase.clientEmail'),
+                    projectId,
+                    clientEmail,
+                    privateKey,
                 }),
             });
         }
@@ -66,6 +75,10 @@ let FirebaseService = FirebaseService_1 = class FirebaseService {
         this.logger.log('Firebase Admin initialized');
     }
     async sendPush(fcmToken, title, body, data) {
+        if (!this.messaging) {
+            this.logger.warn('Firebase messaging is not initialized. Skipping push.');
+            return;
+        }
         await this.messaging.send({
             token: fcmToken,
             notification: { title, body },

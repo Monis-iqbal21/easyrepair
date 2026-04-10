@@ -1,5 +1,6 @@
 export declare class WorkerReviewResponseDto {
     id: string;
+    bookingId: string;
     rating: number;
     comment: string | null;
     serviceCategory: string;

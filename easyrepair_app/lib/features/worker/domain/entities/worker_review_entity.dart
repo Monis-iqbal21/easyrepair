@@ -5,6 +5,7 @@ class WorkerReviewEntity {
   final String serviceCategory;
   final String? clientName;
   final DateTime createdAt;
+  final String? bookingId;
 
   const WorkerReviewEntity({
     required this.id,
@@ -13,6 +14,7 @@ class WorkerReviewEntity {
     required this.serviceCategory,
     this.clientName,
     required this.createdAt,
+    this.bookingId,
   });
 }
 

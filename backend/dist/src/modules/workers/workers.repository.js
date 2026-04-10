@@ -45,6 +45,9 @@ const WORKER_JOB_INCLUDE = {
         },
         orderBy: { createdAt: 'asc' },
     },
+    review: {
+        select: { id: true, rating: true, comment: true, createdAt: true },
+    },
 };
 const WORKER_REVIEW_INCLUDE = {
     booking: {

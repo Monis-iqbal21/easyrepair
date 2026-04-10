@@ -16,6 +16,13 @@ export class WorkerJobStatusHistoryDto {
   createdAt: string;
 }
 
+export class WorkerJobReviewDto {
+  id: string;
+  rating: number;
+  comment: string | null;
+  createdAt: string;
+}
+
 /**
  * Response shape for worker job endpoints.
  * Field names intentionally mirror BookingResponseDto (address / scheduledDate)
@@ -46,4 +53,5 @@ export class WorkerJobResponseDto {
   clientName: string | null;
   attachments: WorkerJobAttachmentDto[];
   statusHistory: WorkerJobStatusHistoryDto[];
+  review: WorkerJobReviewDto | null;
 }

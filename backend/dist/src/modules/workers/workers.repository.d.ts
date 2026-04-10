@@ -53,6 +53,14 @@ declare const WORKER_JOB_INCLUDE: {
             createdAt: "asc";
         };
     };
+    review: {
+        select: {
+            id: true;
+            rating: true;
+            comment: true;
+            createdAt: true;
+        };
+    };
 };
 export type WorkerJobWithRelations = Prisma.BookingGetPayload<{
     include: typeof WORKER_JOB_INCLUDE;

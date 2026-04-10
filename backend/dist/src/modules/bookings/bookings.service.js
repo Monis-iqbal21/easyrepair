@@ -16,11 +16,13 @@ const client_1 = require("@prisma/client");
 const bookings_repository_1 = require("./bookings.repository");
 const storage_service_1 = require("../storage/storage.service");
 const notifications_service_1 = require("../notifications/notifications.service");
+const chat_service_1 = require("../chat/chat.service");
 let BookingsService = BookingsService_1 = class BookingsService {
-    constructor(bookingsRepository, storageService, notificationsService) {
+    constructor(bookingsRepository, storageService, notificationsService, chatService) {
         this.bookingsRepository = bookingsRepository;
         this.storageService = storageService;
         this.notificationsService = notificationsService;
+        this.chatService = chatService;
         this.logger = new common_1.Logger(BookingsService_1.name);
     }
     async createBooking(userId, dto) {
@@ -336,6 +338,7 @@ let BookingsService = BookingsService_1 = class BookingsService {
                 entityType: 'booking',
                 entityId: bookingId,
             });
+            void this.chatService.ensureConversationForBooking(userId, worker.userId);
         }
         return this._toDto(updated);
     }
@@ -408,6 +411,7 @@ exports.BookingsService = BookingsService = BookingsService_1 = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [bookings_repository_1.BookingsRepository,
         storage_service_1.StorageService,
-        notifications_service_1.NotificationsService])
+        notifications_service_1.NotificationsService,
+        chat_service_1.ChatService])
 ], BookingsService);
 //# sourceMappingURL=bookings.service.js.map

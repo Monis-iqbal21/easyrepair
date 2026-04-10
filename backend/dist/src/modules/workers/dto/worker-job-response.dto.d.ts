@@ -13,6 +13,12 @@ export declare class WorkerJobStatusHistoryDto {
     note: string | null;
     createdAt: string;
 }
+export declare class WorkerJobReviewDto {
+    id: string;
+    rating: number;
+    comment: string | null;
+    createdAt: string;
+}
 export declare class WorkerJobResponseDto {
     id: string;
     serviceCategory: string;
@@ -35,4 +41,5 @@ export declare class WorkerJobResponseDto {
     clientName: string | null;
     attachments: WorkerJobAttachmentDto[];
     statusHistory: WorkerJobStatusHistoryDto[];
+    review: WorkerJobReviewDto | null;
 }

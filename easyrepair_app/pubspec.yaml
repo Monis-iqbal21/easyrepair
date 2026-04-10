@@ -52,6 +52,9 @@ dependencies:
   record: ^6.2.0
   audioplayers: ^6.4.0
 
+  # WebSocket (Socket.IO v4 client)
+  socket_io_client: ^2.0.3+1
+
   # Date formatting
   intl: ^0.19.0
 

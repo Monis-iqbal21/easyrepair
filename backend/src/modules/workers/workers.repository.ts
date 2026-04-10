@@ -47,6 +47,9 @@ const WORKER_JOB_INCLUDE = {
     },
     orderBy: { createdAt: 'asc' as const },
   },
+  review: {
+    select: { id: true, rating: true, comment: true, createdAt: true },
+  },
 } satisfies Prisma.BookingInclude;
 
 export type WorkerJobWithRelations = Prisma.BookingGetPayload<{

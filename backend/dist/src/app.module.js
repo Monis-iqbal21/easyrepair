@@ -24,6 +24,7 @@ const bookings_module_1 = require("./modules/bookings/bookings.module");
 const categories_module_1 = require("./modules/categories/categories.module");
 const workers_module_1 = require("./modules/workers/workers.module");
 const notifications_module_1 = require("./modules/notifications/notifications.module");
+const chat_module_1 = require("./modules/chat/chat.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -44,6 +45,7 @@ exports.AppModule = AppModule = __decorate([
             categories_module_1.CategoriesModule,
             workers_module_1.WorkersModule,
             notifications_module_1.NotificationsModule,
+            chat_module_1.ChatModule,
         ],
         controllers: [app_controller_1.AppController],
         providers: [app_service_1.AppService],

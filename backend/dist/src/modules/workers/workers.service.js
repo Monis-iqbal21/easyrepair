@@ -272,6 +272,14 @@ let WorkersService = WorkersService_1 = class WorkersService {
             clientName,
             attachments,
             statusHistory,
+            review: job.review
+                ? {
+                    id: job.review.id,
+                    rating: job.review.rating,
+                    comment: job.review.comment ?? null,
+                    createdAt: job.review.createdAt.toISOString(),
+                }
+                : null,
         };
     }
     async getWorkerReviews(userId, limit) {
@@ -281,6 +289,7 @@ let WorkersService = WorkersService_1 = class WorkersService {
         const reviews = await this.workersRepository.findWorkerReviews(profile.id, limit);
         return reviews.map((r) => ({
             id: r.id,
+            bookingId: r.booking.id,
             rating: r.rating,
             comment: r.comment ?? null,
             serviceCategory: r.booking.category.name,

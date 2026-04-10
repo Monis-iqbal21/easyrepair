@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../domain/entities/worker_review_entity.dart';
@@ -61,7 +62,10 @@ class WorkerReviewsPage extends ConsumerWidget {
                     child: summaryAsync.when(
                       loading: () => const SizedBox.shrink(),
                       error: (_, __) => const SizedBox.shrink(),
-                      data: (summary) => _SummaryBanner(summary: summary),
+                      data: (summary) => _SummaryBanner(
+                        summary: summary,
+                        reviews: reviews,
+                      ),
                     ),
                   ),
 
@@ -86,10 +90,18 @@ class WorkerReviewsPage extends ConsumerWidget {
 
 class _SummaryBanner extends StatelessWidget {
   final WorkerReviewSummaryEntity summary;
-  const _SummaryBanner({required this.summary});
+  final List<WorkerReviewEntity> reviews;
+  const _SummaryBanner({required this.summary, required this.reviews});
 
   @override
   Widget build(BuildContext context) {
+    final maxRating = reviews.isNotEmpty
+        ? reviews.map((r) => r.rating).reduce((a, b) => a > b ? a : b)
+        : 0;
+    final minRating = reviews.isNotEmpty
+        ? reviews.map((r) => r.rating).reduce((a, b) => a < b ? a : b)
+        : 0;
+
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 4),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -105,50 +117,91 @@ class _SummaryBanner extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
         children: [
-          // Average rating
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Row(
             children: [
-              Text(
-                summary.averageRating.toStringAsFixed(1),
-                style: const TextStyle(
-                  fontSize: 36,
-                  fontWeight: FontWeight.w800,
-                  color: _kDark,
-                  height: 1,
-                ),
+              // Average rating
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    summary.averageRating.toStringAsFixed(1),
+                    style: const TextStyle(
+                      fontSize: 36,
+                      fontWeight: FontWeight.w800,
+                      color: _kDark,
+                      height: 1,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  _StarRow(rating: summary.averageRating.round()),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${summary.totalReviews} ${summary.totalReviews == 1 ? 'review' : 'reviews'}',
+                    style: const TextStyle(fontSize: 12, color: _kGray),
+                  ),
+                ],
               ),
-              const SizedBox(height: 4),
-              _StarRow(rating: summary.averageRating.round()),
-              const SizedBox(height: 4),
-              Text(
-                '${summary.totalReviews} ${summary.totalReviews == 1 ? 'review' : 'reviews'}',
-                style: const TextStyle(fontSize: 12, color: _kGray),
+              const SizedBox(width: 20),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.verified_rounded, color: _kOrange, size: 28),
+                    SizedBox(height: 6),
+                    Text(
+                      'Reviews from clients for jobs you completed',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: _kGray,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
-          const SizedBox(width: 20),
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          if (reviews.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            Container(height: 1, color: _kBorder),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                Icon(Icons.verified_rounded, color: _kOrange, size: 28),
-                SizedBox(height: 6),
-                Text(
-                  'Reviews from clients for jobs you completed',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: _kGray,
-                    height: 1.4,
-                  ),
-                ),
+                _RatingStat(label: 'Avg', value: summary.averageRating.toStringAsFixed(1)),
+                _RatingStat(label: 'Max', value: '$maxRating'),
+                _RatingStat(label: 'Min', value: '$minRating'),
               ],
             ),
-          ),
+          ],
         ],
       ),
+    );
+  }
+}
+
+class _RatingStat extends StatelessWidget {
+  final String label;
+  final String value;
+  const _RatingStat({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            color: _kDark,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(label, style: const TextStyle(fontSize: 11, color: _kGray)),
+      ],
     );
   }
 }
@@ -161,7 +214,11 @@ class _ReviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return GestureDetector(
+      onTap: review.bookingId != null
+          ? () => context.push('/worker/job/${review.bookingId}')
+          : null,
+      child: Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -258,6 +315,7 @@ class _ReviewCard extends StatelessWidget {
             ],
           ),
         ],
+      ),
       ),
     );
   }

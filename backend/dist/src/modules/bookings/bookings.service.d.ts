@@ -5,12 +5,14 @@ import { UpdateBookingDto } from './dto/update-booking.dto';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { StorageService } from '../storage/storage.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { ChatService } from '../chat/chat.service';
 export declare class BookingsService {
     private readonly bookingsRepository;
     private readonly storageService;
     private readonly notificationsService;
+    private readonly chatService;
     private readonly logger;
-    constructor(bookingsRepository: BookingsRepository, storageService: StorageService, notificationsService: NotificationsService);
+    constructor(bookingsRepository: BookingsRepository, storageService: StorageService, notificationsService: NotificationsService, chatService: ChatService);
     createBooking(userId: string, dto: CreateBookingDto): Promise<BookingResponseDto>;
     getClientBookings(userId: string): Promise<BookingResponseDto[]>;
     cancelBooking(userId: string, bookingId: string, reason?: string): Promise<BookingResponseDto>;

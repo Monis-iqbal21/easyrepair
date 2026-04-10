@@ -19,6 +19,7 @@ import '../../features/worker/presentation/pages/worker_profile_page.dart';
 import '../../features/worker/presentation/pages/worker_job_detail_page.dart';
 import '../../features/worker/presentation/pages/worker_reviews_page.dart';
 import '../../features/notifications/presentation/pages/notification_list_page.dart';
+import '../../features/chat/presentation/pages/chat_detail_page.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authStateNotifier = ValueNotifier<bool>(false);
@@ -75,6 +76,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, __) => const ClientChatPage(),
       ),
       GoRoute(
+        path: '/client/chat/:id',
+        builder: (_, state) =>
+            ChatDetailPage(conversationId: state.pathParameters['id']!),
+      ),
+      GoRoute(
         path: '/client/profile',
         builder: (_, __) => const ClientProfilePage(),
       ),
@@ -105,6 +111,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/worker/chat',
         builder: (_, __) => const WorkerChatPage(),
+      ),
+      GoRoute(
+        path: '/worker/chat/:id',
+        builder: (_, state) =>
+            ChatDetailPage(conversationId: state.pathParameters['id']!),
       ),
       GoRoute(
         path: '/worker/profile',

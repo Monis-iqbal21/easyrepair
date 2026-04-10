@@ -7,6 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/notifications/local_notification_service.dart';
 import '../core/router/app_router.dart';
+import '../core/services/chat_socket_service.dart';
+import '../core/storage/secure_storage_service.dart';
 import '../core/theme/app_theme.dart';
 import '../features/auth/presentation/providers/auth_providers.dart';
 import '../features/notifications/data/datasources/notification_remote_datasource.dart';
@@ -135,6 +137,18 @@ class _EasyRepairAppState extends ConsumerState<EasyRepairApp> {
 
   // ── Token management ─────────────────────────────────────────────────────
 
+  /// Connect the chat socket using the stored access token.
+  /// Non-critical — failures are silently ignored.
+  Future<void> _connectChatSocket() async {
+    try {
+      final token =
+          await ref.read(secureStorageServiceProvider).getAccessToken();
+      if (token != null) {
+        ChatSocketService.instance.connect(token);
+      }
+    } catch (_) {}
+  }
+
   Future<void> _registerFcmToken() async {
     try {
       final token = await FirebaseMessaging.instance.getToken();
@@ -167,6 +181,9 @@ class _EasyRepairAppState extends ConsumerState<EasyRepairApp> {
       final user = next.valueOrNull;
 
       if (user != null) {
+        // Connect chat socket on login.
+        _connectChatSocket();
+
         // Register FCM token on first login.
         if (!_fcmTokenRegistered) {
           _fcmTokenRegistered = true;
@@ -189,6 +206,8 @@ class _EasyRepairAppState extends ConsumerState<EasyRepairApp> {
       if (user == null) {
         _fcmTokenRegistered = false;
         _pendingNotificationData = null;
+        // Disconnect chat socket on logout.
+        ChatSocketService.instance.disconnect();
       }
     });
 

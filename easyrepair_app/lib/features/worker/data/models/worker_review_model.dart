@@ -7,6 +7,7 @@ class WorkerReviewModel {
   final String serviceCategory;
   final String? clientName;
   final DateTime createdAt;
+  final String? bookingId;
 
   const WorkerReviewModel({
     required this.id,
@@ -15,6 +16,7 @@ class WorkerReviewModel {
     required this.serviceCategory,
     this.clientName,
     required this.createdAt,
+    this.bookingId,
   });
 
   factory WorkerReviewModel.fromJson(Map<String, dynamic> json) {
@@ -26,6 +28,7 @@ class WorkerReviewModel {
       clientName: json['clientName'] as String?,
       createdAt:
           DateTime.tryParse(json['createdAt'] as String? ?? '') ?? DateTime.now(),
+      bookingId: json['bookingId'] as String?,
     );
   }
 
@@ -36,6 +39,7 @@ class WorkerReviewModel {
         serviceCategory: serviceCategory,
         clientName: clientName,
         createdAt: createdAt,
+        bookingId: bookingId,
       );
 }
 

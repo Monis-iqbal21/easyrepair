@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/errors/failures.dart';
@@ -13,6 +14,16 @@ const _kGray   = Color(0xFF6B7280);
 const _kLight  = Color(0xFF94A3B8);
 const _kBorder = Color(0xFFE2E8F0);
 const _kBg     = Color(0xFFF9FAFB);
+
+// ── Navigation helper ─────────────────────────────────────────────────────────
+
+void _goBackOrHome(BuildContext context) {
+  if (context.canPop()) {
+    context.pop();
+  } else {
+    context.go('/worker/home');
+  }
+}
 
 class WorkerJobDetailPage extends ConsumerWidget {
   final String jobId;
@@ -50,7 +61,7 @@ class _AppBar extends StatelessWidget implements PreferredSizeWidget {
       elevation: 0,
       scrolledUnderElevation: 0,
       leading: GestureDetector(
-        onTap: () => Navigator.pop(context),
+        onTap: () => _goBackOrHome(context),
         child: Container(
           margin: const EdgeInsets.all(8),
           decoration: BoxDecoration(
@@ -250,7 +261,19 @@ class _JobBody extends ConsumerWidget {
 
                 // ── Status history ────────────────────────────────────────
                 if (job.statusHistory.isNotEmpty) ...[
-                  _StatusHistorySection(history: job.statusHistory),
+                  _StatusHistorySection(
+                    history: job.statusHistory,
+                    review: job.review,
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
+                // ── Review ────────────────────────────────────────────────
+                if (job.review != null) ...[
+                  _ReviewSection(
+                    review: job.review!,
+                    clientName: job.clientName,
+                  ),
                   const SizedBox(height: 16),
                 ],
               ],
@@ -589,77 +612,134 @@ class _MediaRow extends StatelessWidget {
 
 class _StatusHistorySection extends StatelessWidget {
   final List<BookingStatusHistoryEntry> history;
-  const _StatusHistorySection({required this.history});
+  final BookingReviewEntity? review;
+  const _StatusHistorySection({required this.history, this.review});
 
   @override
   Widget build(BuildContext context) {
+    final hasReview = review != null;
     return _Section(
       title: 'Status History',
       child: Column(
-        children: history.asMap().entries.map((e) {
-          final isLast = e.key == history.length - 1;
-          final entry = e.value;
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Column(
-                children: [
-                  Container(
-                    width: 10,
-                    height: 10,
-                    margin: const EdgeInsets.only(top: 3),
-                    decoration: BoxDecoration(
-                      color: isLast ? _kGreen : _kLight,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  if (!isLast)
+        children: [
+          ...history.asMap().entries.map((e) {
+            // When a review row follows, no history entry is the visual last
+            final isLast = !hasReview && e.key == history.length - 1;
+            final entry = e.value;
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Column(
+                  children: [
                     Container(
-                      width: 1,
-                      height: 28,
-                      color: _kBorder,
+                      width: 10,
+                      height: 10,
+                      margin: const EdgeInsets.only(top: 3),
+                      decoration: BoxDecoration(
+                        color: isLast ? _kGreen : _kLight,
+                        shape: BoxShape.circle,
+                      ),
                     ),
-                ],
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        entry.status.workerLabel,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: isLast ? _kGreen : _kDark,
-                        ),
+                    if (!isLast)
+                      Container(
+                        width: 1,
+                        height: 28,
+                        color: _kBorder,
                       ),
-                      if (entry.note != null && entry.note!.isNotEmpty)
+                  ],
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         Text(
-                          entry.note!,
-                          style: const TextStyle(
-                            fontSize: 11.5,
-                            color: _kGray,
+                          entry.status.workerLabel,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: isLast ? _kGreen : _kDark,
                           ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
                         ),
-                      Text(
-                        DateFormat('d MMM, h:mm a').format(entry.createdAt),
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: _kLight,
+                        if (entry.note != null && entry.note!.isNotEmpty)
+                          Text(
+                            entry.note!,
+                            style: const TextStyle(
+                              fontSize: 11.5,
+                              color: _kGray,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        Text(
+                          DateFormat('d MMM, h:mm a').format(entry.createdAt),
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: _kLight,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
-          );
-        }).toList(),
+              ],
+            );
+          }),
+          if (hasReview)
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 10,
+                  height: 10,
+                  margin: const EdgeInsets.only(top: 3),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF59E0B),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Text(
+                              'Reviewed',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFFF59E0B),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            ...List.generate(5, (i) => Icon(
+                              i < review!.rating
+                                  ? Icons.star_rounded
+                                  : Icons.star_outline_rounded,
+                              size: 12,
+                              color: i < review!.rating
+                                  ? const Color(0xFFF59E0B)
+                                  : _kBorder,
+                            )),
+                          ],
+                        ),
+                        Text(
+                          DateFormat('d MMM, h:mm a').format(review!.createdAt),
+                          style: const TextStyle(fontSize: 11, color: _kLight),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+        ],
       ),
     );
   }
@@ -762,11 +842,92 @@ class _CompleteJobBar extends ConsumerWidget {
             ),
           );
         } else {
-          // Pop back to jobs list after successful completion.
-          Navigator.pop(context);
+          // Navigate back (or to home if opened directly from notification).
+          _goBackOrHome(context);
         }
       }
     }
+  }
+}
+
+// ── Review section ────────────────────────────────────────────────────────────
+
+class _ReviewSection extends StatelessWidget {
+  final BookingReviewEntity review;
+  final String? clientName;
+  const _ReviewSection({required this.review, this.clientName});
+
+  @override
+  Widget build(BuildContext context) {
+    return _Section(
+      title: 'Client Review',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Stars + date
+          Row(
+            children: [
+              ...List.generate(5, (i) => Icon(
+                i < review.rating
+                    ? Icons.star_rounded
+                    : Icons.star_outline_rounded,
+                size: 18,
+                color: i < review.rating
+                    ? const Color(0xFFF59E0B)
+                    : const Color(0xFFD1D5DB),
+              )),
+              const SizedBox(width: 8),
+              Text(
+                '${review.rating}/5',
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: _kDark,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                DateFormat('d MMM yyyy').format(review.createdAt),
+                style: const TextStyle(fontSize: 11, color: _kLight),
+              ),
+            ],
+          ),
+
+          // Comment
+          if (review.comment != null && review.comment!.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(
+              review.comment!,
+              style: const TextStyle(
+                fontSize: 13.5,
+                color: Color(0xFF374151),
+                height: 1.5,
+              ),
+            ),
+          ],
+
+          // Client name
+          if (clientName != null && clientName!.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                const Icon(Icons.person_outline_rounded,
+                    size: 13, color: _kLight),
+                const SizedBox(width: 4),
+                Text(
+                  clientName!,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: _kGray,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
   }
 }
 
