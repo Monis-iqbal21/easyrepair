@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:http_parser/http_parser.dart';
 
 import '../../../../core/errors/failures.dart';
 import '../../../../core/network/api_client.dart';
@@ -13,6 +14,29 @@ abstract class ChatRemoteDataSource {
     String? before,
   });
   Future<MessageModel> sendMessage(String conversationId, String text);
+  Future<MessageModel> sendMediaMessage(
+    String conversationId,
+    String filePath,
+    String mimeType,
+  );
+  Future<MessageModel> sendVoiceMessage(
+    String conversationId,
+    String filePath,
+  );
+  Future<MessageModel> sendLocationMessage(
+    String conversationId,
+    double latitude,
+    double longitude,
+  );
+  Future<MessageModel> editMessage(
+    String conversationId,
+    String messageId,
+    String text,
+  );
+  Future<MessageModel> deleteMessage(
+    String conversationId,
+    String messageId,
+  );
 }
 
 class ChatRemoteDataSourceImpl implements ChatRemoteDataSource {
@@ -81,6 +105,116 @@ class ChatRemoteDataSourceImpl implements ChatRemoteDataSource {
       final response = await _dio.post(
         '/chat/conversations/$conversationId/messages',
         data: {'text': text},
+      );
+      final data = response.data['data'] as Map<String, dynamic>;
+      return MessageModel.fromJson(data);
+    } on DioException catch (e) {
+      throw dioExceptionToFailure(e);
+    }
+  }
+
+  @override
+  Future<MessageModel> sendMediaMessage(
+    String conversationId,
+    String filePath,
+    String mimeType,
+  ) async {
+    try {
+      final fileName = filePath.split('/').last;
+      final parts = mimeType.split('/');
+      final contentType =
+          parts.length == 2 ? MediaType(parts[0], parts[1]) : null;
+
+      final formData = FormData.fromMap({
+        'file': await MultipartFile.fromFile(
+          filePath,
+          filename: fileName,
+          contentType: contentType,
+        ),
+      });
+
+      final response = await _dio.post(
+        '/chat/conversations/$conversationId/messages/media',
+        data: formData,
+      );
+      final data = response.data['data'] as Map<String, dynamic>;
+      return MessageModel.fromJson(data);
+    } on DioException catch (e) {
+      throw dioExceptionToFailure(e);
+    }
+  }
+
+  @override
+  Future<MessageModel> sendVoiceMessage(
+    String conversationId,
+    String filePath,
+  ) async {
+    try {
+      final fileName = filePath.split('/').last;
+
+      final formData = FormData.fromMap({
+        'file': await MultipartFile.fromFile(
+          filePath,
+          filename: fileName,
+          contentType: MediaType('audio', 'm4a'),
+        ),
+      });
+
+      final response = await _dio.post(
+        '/chat/conversations/$conversationId/messages/voice',
+        data: formData,
+      );
+      final data = response.data['data'] as Map<String, dynamic>;
+      return MessageModel.fromJson(data);
+    } on DioException catch (e) {
+      throw dioExceptionToFailure(e);
+    }
+  }
+
+  @override
+  Future<MessageModel> sendLocationMessage(
+    String conversationId,
+    double latitude,
+    double longitude,
+  ) async {
+    try {
+      final response = await _dio.post(
+        '/chat/conversations/$conversationId/messages/location',
+        data: {'latitude': latitude, 'longitude': longitude},
+      );
+      final data = response.data['data'] as Map<String, dynamic>;
+      return MessageModel.fromJson(data);
+    } on DioException catch (e) {
+      throw dioExceptionToFailure(e);
+    }
+  }
+
+  @override
+  Future<MessageModel> editMessage(
+    String conversationId,
+    String messageId,
+    String text,
+  ) async {
+    try {
+      final response = await _dio.put(
+        '/chat/conversations/$conversationId/messages/$messageId',
+        data: {'text': text},
+      );
+      final data = response.data['data'] as Map<String, dynamic>;
+      return MessageModel.fromJson(data);
+    } on DioException catch (e) {
+      throw dioExceptionToFailure(e);
+    }
+  }
+
+  @override
+  Future<MessageModel> deleteMessage(
+    String conversationId,
+    String messageId,
+  ) async {
+    try {
+      final response = await _dio.delete(
+        '/chat/conversations/$conversationId/messages/$messageId',
       );
       final data = response.data['data'] as Map<String, dynamic>;
       return MessageModel.fromJson(data);

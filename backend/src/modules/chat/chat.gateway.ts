@@ -180,12 +180,31 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         await this.chatRepository.findConversationParticipants(conversationId);
       if (!participants) return;
 
-      const preview =
-        message.text != null
-          ? message.text.length > 80
+      // Build a human-readable preview based on message type.
+      let preview = '';
+      if (message.text != null) {
+        preview =
+          message.text.length > 80
             ? message.text.slice(0, 80) + '…'
-            : message.text
-          : '';
+            : message.text;
+      } else {
+        switch (message.type) {
+          case 'IMAGE':
+            preview = '📷 Image';
+            break;
+          case 'VIDEO':
+            preview = '🎥 Video';
+            break;
+          case 'VOICE':
+            preview = '🎙️ Voice message';
+            break;
+          case 'LOCATION':
+            preview = '📍 Location';
+            break;
+          default:
+            preview = '';
+        }
+      }
 
       const updatePayload = {
         conversationId,
@@ -202,6 +221,46 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     } catch (err) {
       this.logger.warn(
         `[chat] broadcastNewMessage failed: ${(err as Error)?.message}`,
+      );
+    }
+  }
+
+  /**
+   * Broadcast an edited message to all sockets in the conversation room.
+   * Emits 'message_edited' with the full updated MessageResponseDto so
+   * clients can replace the message in-place.
+   */
+  async broadcastMessageEdited(
+    conversationId: string,
+    message: MessageResponseDto,
+  ): Promise<void> {
+    try {
+      this.server
+        .to(`conversation:${conversationId}`)
+        .emit('message_edited', message);
+    } catch (err) {
+      this.logger.warn(
+        `[chat] broadcastMessageEdited failed: ${(err as Error)?.message}`,
+      );
+    }
+  }
+
+  /**
+   * Broadcast a soft-deleted message to all sockets in the conversation room.
+   * Emits 'message_deleted' with { messageId, deletedAt } so clients can
+   * mark the bubble as deleted without a full message reload.
+   */
+  async broadcastMessageDeleted(
+    conversationId: string,
+    payload: { messageId: string; deletedAt: string },
+  ): Promise<void> {
+    try {
+      this.server
+        .to(`conversation:${conversationId}`)
+        .emit('message_deleted', payload);
+    } catch (err) {
+      this.logger.warn(
+        `[chat] broadcastMessageDeleted failed: ${(err as Error)?.message}`,
       );
     }
   }

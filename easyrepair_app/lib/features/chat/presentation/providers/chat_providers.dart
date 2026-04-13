@@ -94,11 +94,15 @@ class ChatMessagesNotifier
     extends FamilyAsyncNotifier<List<MessageEntity>, String> {
   StreamSubscription<Map<String, dynamic>>? _newMsgSub;
   StreamSubscription<Map<String, dynamic>>? _seenSub;
+  StreamSubscription<Map<String, dynamic>>? _editedSub;
+  StreamSubscription<Map<String, dynamic>>? _deletedSub;
 
   @override
   Future<List<MessageEntity>> build(String arg) async {
     _newMsgSub?.cancel();
     _seenSub?.cancel();
+    _editedSub?.cancel();
+    _deletedSub?.cancel();
 
     // ── new_message ──────────────────────────────────────────────────────────
     _newMsgSub = ChatSocketService.instance.onNewMessage.listen((data) {
@@ -126,9 +130,38 @@ class ChatMessagesNotifier
       state = AsyncData(next);
     });
 
+    // ── message_edited ───────────────────────────────────────────────────────
+    _editedSub = ChatSocketService.instance.onMessageEdited.listen((data) {
+      if ((data['conversationId'] as String?) != arg) return;
+      try {
+        final updated = MessageModel.fromJson(data).toEntity();
+        final current = state.valueOrNull ?? [];
+        final idx = current.indexWhere((m) => m.id == updated.id);
+        if (idx == -1) return;
+        final next = List<MessageEntity>.from(current);
+        next[idx] = updated;
+        state = AsyncData(next);
+      } catch (_) {}
+    });
+
+    // ── message_deleted ──────────────────────────────────────────────────────
+    _deletedSub = ChatSocketService.instance.onMessageDeleted.listen((data) {
+      final messageId = data['messageId'] as String?;
+      final deletedAt = data['deletedAt'] as String?;
+      if (messageId == null || deletedAt == null) return;
+      final current = state.valueOrNull ?? [];
+      final idx = current.indexWhere((m) => m.id == messageId);
+      if (idx == -1) return;
+      final next = List<MessageEntity>.from(current);
+      next[idx] = current[idx].withDeleted(deletedAt);
+      state = AsyncData(next);
+    });
+
     ref.onDispose(() {
       _newMsgSub?.cancel();
       _seenSub?.cancel();
+      _editedSub?.cancel();
+      _deletedSub?.cancel();
     });
 
     return _fetch(arg);
@@ -156,6 +189,26 @@ class ChatMessagesNotifier
     if (current.any((m) => m.id == message.id)) return;
     state = AsyncData([...current, message]);
   }
+
+  /// Replace an existing message by id (used after edit).
+  void updateMessage(MessageEntity updated) {
+    final current = state.valueOrNull ?? [];
+    final idx = current.indexWhere((m) => m.id == updated.id);
+    if (idx == -1) return;
+    final next = List<MessageEntity>.from(current);
+    next[idx] = updated;
+    state = AsyncData(next);
+  }
+
+  /// Soft-delete a message in the local list (used after delete).
+  void markDeleted(String messageId, String deletedAt) {
+    final current = state.valueOrNull ?? [];
+    final idx = current.indexWhere((m) => m.id == messageId);
+    if (idx == -1) return;
+    final next = List<MessageEntity>.from(current);
+    next[idx] = current[idx].withDeleted(deletedAt);
+    state = AsyncData(next);
+  }
 }
 
 final chatMessagesProvider =
@@ -164,7 +217,7 @@ final chatMessagesProvider =
   ChatMessagesNotifier.new,
 );
 
-// ── Send message notifier ──────────────────────────────────────────────────────
+// ── Send text message notifier ─────────────────────────────────────────────────
 
 class SendMessageNotifier extends AsyncNotifier<void> {
   @override

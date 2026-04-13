@@ -17,4 +17,27 @@ abstract class ChatRepository {
     String conversationId,
     String text,
   );
+  Future<Either<Failure, MessageEntity>> sendMediaMessage(
+    String conversationId,
+    String filePath,
+    String mimeType,
+  );
+  Future<Either<Failure, MessageEntity>> sendVoiceMessage(
+    String conversationId,
+    String filePath,
+  );
+  Future<Either<Failure, MessageEntity>> sendLocationMessage(
+    String conversationId,
+    double latitude,
+    double longitude,
+  );
+  Future<Either<Failure, MessageEntity>> editMessage(
+    String conversationId,
+    String messageId,
+    String text,
+  );
+  Future<Either<Failure, MessageEntity>> deleteMessage(
+    String conversationId,
+    String messageId,
+  );
 }

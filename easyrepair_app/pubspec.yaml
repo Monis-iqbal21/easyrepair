@@ -61,6 +61,9 @@ dependencies:
   # Video metadata (duration check before upload)
   video_player: ^2.9.2
 
+  # External URL / maps launching
+  url_launcher: ^6.3.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -30,10 +30,19 @@ class ChatSocketService {
   final StreamController<Map<String, dynamic>> _messageSeenCtrl =
       StreamController<Map<String, dynamic>>.broadcast();
 
+  final StreamController<Map<String, dynamic>> _messageEditedCtrl =
+      StreamController<Map<String, dynamic>>.broadcast();
+
+  final StreamController<Map<String, dynamic>> _messageDeletedCtrl =
+      StreamController<Map<String, dynamic>>.broadcast();
+
   Stream<Map<String, dynamic>> get onNewMessage => _newMessageCtrl.stream;
   Stream<Map<String, dynamic>> get onConversationUpdated =>
       _conversationUpdatedCtrl.stream;
   Stream<Map<String, dynamic>> get onMessageSeen => _messageSeenCtrl.stream;
+  Stream<Map<String, dynamic>> get onMessageEdited => _messageEditedCtrl.stream;
+  Stream<Map<String, dynamic>> get onMessageDeleted =>
+      _messageDeletedCtrl.stream;
 
   bool get isConnected => _socket?.connected ?? false;
 
@@ -75,6 +84,16 @@ class ChatSocketService {
       ..on('message_seen', (data) {
         if (data is Map) {
           _messageSeenCtrl.add(Map<String, dynamic>.from(data));
+        }
+      })
+      ..on('message_edited', (data) {
+        if (data is Map) {
+          _messageEditedCtrl.add(Map<String, dynamic>.from(data));
+        }
+      })
+      ..on('message_deleted', (data) {
+        if (data is Map) {
+          _messageDeletedCtrl.add(Map<String, dynamic>.from(data));
         }
       });
 

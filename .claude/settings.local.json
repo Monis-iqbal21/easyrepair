@@ -16,7 +16,8 @@
       "Bash(cmd:*)",
       "Bash(powershell:*)",
       "Bash(npm run:*)",
-      "Bash(echo \"EXIT_CODE:$?\")"
+      "Bash(echo \"EXIT_CODE:$?\")",
+      "Bash(git:*)"
     ]
   }
 }

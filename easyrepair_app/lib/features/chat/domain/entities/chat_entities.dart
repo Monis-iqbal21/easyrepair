@@ -89,8 +89,50 @@ class MessageEntity {
 
   bool get isDeleted => deletedAt != null;
 
-  /// Return a copy of this message with [seenAt] set.
+  /// Return a copy with [seenAt] set.
   MessageEntity withSeenAt(String seenAt) => MessageEntity(
+        id: id,
+        conversationId: conversationId,
+        senderUserId: senderUserId,
+        senderRole: senderRole,
+        type: type,
+        text: text,
+        mediaUrl: mediaUrl,
+        thumbnailUrl: thumbnailUrl,
+        latitude: latitude,
+        longitude: longitude,
+        bookingId: bookingId,
+        replyToMessageId: replyToMessageId,
+        editedAt: editedAt,
+        deletedAt: deletedAt,
+        seenAt: seenAt,
+        createdAt: createdAt,
+        updatedAt: updatedAt,
+      );
+
+  /// Return a copy with [editedAt] and updated [text].
+  MessageEntity withEdited(String editedAt, String newText) => MessageEntity(
+        id: id,
+        conversationId: conversationId,
+        senderUserId: senderUserId,
+        senderRole: senderRole,
+        type: type,
+        text: newText,
+        mediaUrl: mediaUrl,
+        thumbnailUrl: thumbnailUrl,
+        latitude: latitude,
+        longitude: longitude,
+        bookingId: bookingId,
+        replyToMessageId: replyToMessageId,
+        editedAt: editedAt,
+        deletedAt: deletedAt,
+        seenAt: this.seenAt,
+        createdAt: createdAt,
+        updatedAt: updatedAt,
+      );
+
+  /// Return a copy with [deletedAt] set (soft delete).
+  MessageEntity withDeleted(String deletedAt) => MessageEntity(
         id: id,
         conversationId: conversationId,
         senderUserId: senderUserId,
