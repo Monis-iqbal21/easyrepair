@@ -43,7 +43,13 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
   void initState() {
     super.initState();
     ChatSocketService.instance.joinConversation(widget.conversationId);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _markLastSeen());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      // Invalidate so the notifier re-fetches fresh messages every time this
+      // screen is (re-)opened, instead of showing a stale cached list.
+      ref.invalidate(chatMessagesProvider(widget.conversationId));
+      _markLastSeen();
+    });
   }
 
   @override
