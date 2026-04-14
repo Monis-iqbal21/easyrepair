@@ -607,9 +607,10 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
 
     // Delete removed existing attachments.
     for (final id in _removedAttachmentIds) {
-      await ref
+      final result = await ref
           .read(bookingRepositoryProvider)
           .deleteAttachment(widget.editBookingId!, id);
+      result.fold((failure) => throw failure, (_) {});
     }
 
     // Upload newly added file attachments.
@@ -623,9 +624,10 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     for (final xfile in _newAttachments) {
       final file = File(xfile.path);
       final mimeType = _mimeTypeForFile(xfile);
-      await ref
+      final result = await ref
           .read(bookingRepositoryProvider)
           .uploadAttachment(bookingId, file, mimeType);
+      result.fold((failure) => throw failure, (_) {});
     }
   }
 
@@ -633,9 +635,10 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     if (_voiceNotePath == null) return;
     final file = File(_voiceNotePath!);
     if (!file.existsSync()) return;
-    await ref
+    final result = await ref
         .read(bookingRepositoryProvider)
         .uploadAttachment(bookingId, file, 'audio/x-m4a');
+    result.fold((failure) => throw failure, (_) {});
   }
 
   String _mimeTypeForFile(XFile file) {

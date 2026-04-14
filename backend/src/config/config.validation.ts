@@ -1,6 +1,5 @@
 import { plainToInstance } from 'class-transformer';
 import {
-  IsEnum,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -8,9 +7,6 @@ import {
   validateSync,
 } from 'class-validator';
 
-enum StorageProvider {
-  S3 = 's3',
-}
 
 class EnvironmentVariables {
   @IsNumber()
@@ -53,25 +49,29 @@ class EnvironmentVariables {
   @IsOptional()
   SMS_API_KEY: string;
 
-  @IsEnum(StorageProvider)
+  @IsString()
   @IsOptional()
-  STORAGE_PROVIDER: StorageProvider = StorageProvider.S3;
+  R2_BUCKET: string;
 
   @IsString()
   @IsOptional()
-  AWS_BUCKET: string;
+  R2_ACCOUNT_ID: string;
 
   @IsString()
   @IsOptional()
-  AWS_REGION: string;
+  R2_ACCESS_KEY_ID: string;
 
   @IsString()
   @IsOptional()
-  AWS_ACCESS_KEY: string;
+  R2_SECRET_ACCESS_KEY: string;
 
   @IsString()
   @IsOptional()
-  AWS_SECRET_KEY: string;
+  R2_PUBLIC_URL: string;
+
+  @IsString()
+  @IsOptional()
+  R2_ENDPOINT: string;
 
   @IsNumber()
   @IsOptional()

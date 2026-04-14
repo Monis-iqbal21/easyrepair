@@ -13,14 +13,20 @@ export class StorageService {
   private readonly logger = new Logger(StorageService.name);
   private readonly s3: S3Client;
   private readonly bucket: string;
-  private readonly region: string;
+  private readonly publicUrl: string;
 
   constructor(private readonly config: ConfigService) {
     this.bucket = this.config.get<string>('storage.bucket') ?? '';
-    this.region = this.config.get<string>('storage.region') ?? 'us-east-1';
+    this.publicUrl = this.config.get<string>('storage.publicUrl') ?? '';
+
+    const accountId = this.config.get<string>('storage.accountId') ?? '';
+    const endpoint =
+      this.config.get<string>('storage.endpoint') ||
+      `https://${accountId}.r2.cloudflarestorage.com`;
 
     this.s3 = new S3Client({
-      region: this.region,
+      region: 'auto', // R2 does not use regions
+      endpoint,
       credentials: {
         accessKeyId: this.config.get<string>('storage.accessKey') ?? '',
         secretAccessKey: this.config.get<string>('storage.secretKey') ?? '',
@@ -50,7 +56,7 @@ export class StorageService {
       }),
     );
 
-    const url = `https://${this.bucket}.s3.${this.region}.amazonaws.com/${key}`;
+    const url = `${this.publicUrl}/${key}`;
     this.logger.log(`[StorageService] uploaded: ${url}`);
     return url;
   }
@@ -61,7 +67,7 @@ export class StorageService {
    */
   async deleteByUrl(url: string): Promise<void> {
     try {
-      const prefix = `https://${this.bucket}.s3.${this.region}.amazonaws.com/`;
+      const prefix = `${this.publicUrl}/`;
       if (!url.startsWith(prefix)) return;
       const key = url.slice(prefix.length);
       await this.s3.send(

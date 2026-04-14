@@ -20,11 +20,12 @@ export default () => ({
     apiKey: process.env.SMS_API_KEY,
   },
   storage: {
-    provider: process.env.STORAGE_PROVIDER || 's3',
-    bucket: process.env.AWS_BUCKET,
-    region: process.env.AWS_REGION,
-    accessKey: process.env.AWS_ACCESS_KEY,
-    secretKey: process.env.AWS_SECRET_KEY,
+    bucket: process.env.R2_BUCKET,
+    accountId: process.env.R2_ACCOUNT_ID,
+    accessKey: process.env.R2_ACCESS_KEY_ID,
+    secretKey: process.env.R2_SECRET_ACCESS_KEY,
+    publicUrl: (process.env.R2_PUBLIC_URL ?? '').replace(/\/$/, ''),
+    endpoint: process.env.R2_ENDPOINT, // optional override; derived from accountId if omitted
   },
   platform: {
     feePercent: parseInt(process.env.PLATFORM_FEE_PERCENT || '10', 10),
