@@ -562,8 +562,9 @@ export class BookingsService {
     if (mimeType.startsWith('image/')) return AttachmentType.IMAGE;
     if (mimeType.startsWith('video/')) return AttachmentType.VIDEO;
     if (mimeType.startsWith('audio/')) return AttachmentType.AUDIO;
-    // Fallback — treat unknown mime types as image to avoid blocking the upload.
-    return AttachmentType.IMAGE;
+    throw new BadRequestException(
+      `Unsupported file type: ${mimeType}. Allowed: image, video, or audio.`,
+    );
   }
 
   private _toDto(booking: BookingWithRelations): BookingResponseDto {

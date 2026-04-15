@@ -97,13 +97,17 @@ export class WorkersRepository {
     lat?: number,
     lng?: number,
   ) {
+    const goingOnline = status === AvailabilityStatus.ONLINE;
+    const goingOffline = status === AvailabilityStatus.OFFLINE;
     return this.prisma.workerProfile.update({
       where: { id: workerProfileId },
       data: {
         availabilityStatus: status,
-        isOnline:
-          status === AvailabilityStatus.ONLINE ||
-          status === AvailabilityStatus.BUSY,
+        isOnline: goingOnline || status === AvailabilityStatus.BUSY,
+        // Record session start when going online; clear it when going offline.
+        // BUSY transitions (set by booking flow) leave onlineAt untouched.
+        ...(goingOnline ? { onlineAt: new Date() } : {}),
+        ...(goingOffline ? { onlineAt: null } : {}),
         ...(lat !== undefined && lng !== undefined
           ? {
               currentLat: lat,
@@ -117,6 +121,28 @@ export class WorkersRepository {
         currentLat: true,
         currentLng: true,
         locationUpdatedAt: true,
+      },
+    });
+  }
+
+  /** Fetch minimal worker profile fields needed by the auto-offline processor. */
+  async findById(
+    id: string,
+  ): Promise<{ id: string; userId: string; availabilityStatus: AvailabilityStatus } | null> {
+    return this.prisma.workerProfile.findUnique({
+      where: { id },
+      select: { id: true, userId: true, availabilityStatus: true },
+    });
+  }
+
+  /** Unconditionally set a worker offline and clear onlineAt. Used by auto-offline processor. */
+  async setOfflineById(workerProfileId: string): Promise<void> {
+    await this.prisma.workerProfile.update({
+      where: { id: workerProfileId },
+      data: {
+        availabilityStatus: AvailabilityStatus.OFFLINE,
+        isOnline: false,
+        onlineAt: null,
       },
     });
   }

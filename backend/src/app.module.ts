@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { BullModule } from '@nestjs/bull';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import configuration from './config/configuration';
@@ -21,6 +22,12 @@ import { ChatModule } from './modules/chat/chat.module';
       load: [configuration],
       validate,
       envFilePath: '.env',
+    }),
+    BullModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        url: config.getOrThrow<string>('redis.url'),
+      }),
     }),
     PrismaModule,
     RedisModule,

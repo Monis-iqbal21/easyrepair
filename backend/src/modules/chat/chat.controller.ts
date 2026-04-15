@@ -14,6 +14,7 @@ import {
   UploadedFile,
   ParseFilePipe,
   MaxFileSizeValidator,
+  BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Role } from '@prisma/client';
@@ -107,9 +108,28 @@ export class ChatController {
    * POST /chat/conversations/:id/messages/media
    * Both CLIENT and WORKER — multipart file upload (image or video).
    * Field name: "file". Max size: 50 MB.
+   * Allowed: image/* and video/* MIME types only.
    */
   @Post('conversations/:id/messages/media')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', {
+      fileFilter: (_req, file, cb) => {
+        if (
+          file.mimetype.startsWith('image/') ||
+          file.mimetype.startsWith('video/')
+        ) {
+          cb(null, true);
+        } else {
+          cb(
+            new BadRequestException(
+              `Unsupported file type: ${file.mimetype}. Allowed: image or video.`,
+            ),
+            false,
+          );
+        }
+      },
+    }),
+  )
   @HttpCode(HttpStatus.CREATED)
   async sendMediaMessage(
     @CurrentUser() user: { id: string; role: Role },
@@ -137,9 +157,25 @@ export class ChatController {
    * POST /chat/conversations/:id/messages/voice
    * Both CLIENT and WORKER — multipart audio upload.
    * Field name: "file". Max size: 10 MB.
+   * Allowed: audio/* MIME types only.
    */
   @Post('conversations/:id/messages/voice')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', {
+      fileFilter: (_req, file, cb) => {
+        if (file.mimetype.startsWith('audio/')) {
+          cb(null, true);
+        } else {
+          cb(
+            new BadRequestException(
+              `Unsupported file type: ${file.mimetype}. Allowed: audio only.`,
+            ),
+            false,
+          );
+        }
+      },
+    }),
+  )
   @HttpCode(HttpStatus.CREATED)
   async sendVoiceMessage(
     @CurrentUser() user: { id: string; role: Role },

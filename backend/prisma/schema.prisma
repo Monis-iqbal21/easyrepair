@@ -156,6 +156,7 @@ model WorkerProfile {
   verificationStatus VerificationStatus @default(PENDING)
   isOnline           Boolean            @default(false)
   availabilityStatus AvailabilityStatus @default(OFFLINE)
+  onlineAt           DateTime?          @db.Timestamptz(3)
   currentlyWorking   Boolean            @default(false)
   currentLat         Float?
   currentLng         Float?

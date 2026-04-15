@@ -5,10 +5,17 @@ import {
   BadRequestException,
   UnprocessableEntityException,
 } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bull';
 import { AvailabilityStatus, BookingStatus } from '@prisma/client';
+import { Queue } from 'bull';
 import { WorkerJobWithRelations, WorkersRepository } from './workers.repository';
 import { NotificationsService } from '../notifications/notifications.service';
 import { UpdateAvailabilityDto } from './dto/update-availability.dto';
+import {
+  AUTO_OFFLINE_JOB,
+  AutoOfflineJobData,
+  WORKERS_QUEUE,
+} from './workers.processor';
 import { UpdateSkillsDto } from './dto/update-skills.dto';
 import {
   WorkerJobAttachmentDto,
@@ -21,6 +28,9 @@ import {
   WorkerReviewSummaryDto,
 } from './dto/worker-review-response.dto';
 
+/** 7 hours in milliseconds — delay before auto-offline job fires. */
+const AUTO_OFFLINE_DELAY_MS = 7 * 60 * 60 * 1000;
+
 @Injectable()
 export class WorkersService {
   private readonly logger = new Logger(WorkersService.name);
@@ -28,6 +38,7 @@ export class WorkersService {
   constructor(
     private readonly workersRepository: WorkersRepository,
     private readonly notificationsService: NotificationsService,
+    @InjectQueue(WORKERS_QUEUE) private readonly autoOfflineQueue: Queue,
   ) {}
 
   // ── Profile & availability ───────────────────────────────────────────────
@@ -102,12 +113,51 @@ export class WorkersService {
       throw new BadRequestException('Location is required when going online');
     }
 
-    return this.workersRepository.updateAvailability(
+    const result = await this.workersRepository.updateAvailability(
       profile.id,
       dto.status,
       dto.lat,
       dto.lng,
     );
+
+    await this._syncAutoOfflineJob(profile.id, userId, dto.status);
+
+    return result;
+  }
+
+  /**
+   * Cancel any pending auto-offline job, then schedule a new one if the
+   * worker just went ONLINE. The fixed jobId ensures only one delayed job
+   * per worker exists in Redis at any time.
+   */
+  private async _syncAutoOfflineJob(
+    workerProfileId: string,
+    userId: string,
+    status: AvailabilityStatus,
+  ): Promise<void> {
+    const jobId = `auto-offline:${workerProfileId}`;
+
+    // Always remove existing job first (idempotent — no-op if absent).
+    const existing = await this.autoOfflineQueue.getJob(jobId);
+    if (existing) {
+      await existing.remove();
+      this.logger.log(
+        `[auto-offline] removed existing job for workerProfileId=${workerProfileId}`,
+      );
+    }
+
+    if (status === AvailabilityStatus.ONLINE) {
+      const data: AutoOfflineJobData = { workerProfileId, userId };
+      await this.autoOfflineQueue.add(AUTO_OFFLINE_JOB, data, {
+        jobId,
+        delay: AUTO_OFFLINE_DELAY_MS,
+        removeOnComplete: true,
+        removeOnFail: false, // keep failed jobs for inspection
+      });
+      this.logger.log(
+        `[auto-offline] scheduled in 7 h for workerProfileId=${workerProfileId}`,
+      );
+    }
   }
 
   /** Replace all skills for a worker. */
