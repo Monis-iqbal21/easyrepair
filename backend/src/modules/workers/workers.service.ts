@@ -29,7 +29,7 @@ import {
 } from './dto/worker-review-response.dto';
 
 /** 7 hours in milliseconds — delay before auto-offline job fires. */
-const AUTO_OFFLINE_DELAY_MS = 7 * 60 * 60 * 1000;
+const AUTO_OFFLINE_DELAY_MS = 2 * 60 * 1000;
 
 @Injectable()
 export class WorkersService {
