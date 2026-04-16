@@ -113,6 +113,10 @@ export class WorkersService {
       throw new BadRequestException('Location is required when going online');
     }
 
+    // Capture the previous status BEFORE the DB update so we can detect a
+    // true OFFLINE → ONLINE transition vs. a repeated ONLINE refresh.
+    const previousStatus = profile.availabilityStatus;
+
     const result = await this.workersRepository.updateAvailability(
       profile.id,
       dto.status,
@@ -120,43 +124,69 @@ export class WorkersService {
       dto.lng,
     );
 
-    await this._syncAutoOfflineJob(profile.id, userId, dto.status);
+    await this._syncAutoOfflineJob(
+      profile.id,
+      userId,
+      previousStatus,
+      dto.status,
+    );
 
     return result;
   }
 
   /**
-   * Cancel any pending auto-offline job, then schedule a new one if the
-   * worker just went ONLINE. The fixed jobId ensures only one delayed job
-   * per worker exists in Redis at any time.
+   * Manage the auto-offline delayed job based on a true status transition.
+   *
+   * Rules:
+   *  - previousStatus != ONLINE  AND  newStatus == ONLINE  → start the timer
+   *  - previousStatus == ONLINE  AND  newStatus == ONLINE  → do nothing (timer keeps running)
+   *  - newStatus != ONLINE (going OFFLINE / BUSY)          → cancel any pending timer
+   *
+   * This ensures repeated ONLINE location-refresh calls never reset the clock.
    */
   private async _syncAutoOfflineJob(
     workerProfileId: string,
     userId: string,
-    status: AvailabilityStatus,
+    previousStatus: AvailabilityStatus,
+    newStatus: AvailabilityStatus,
   ): Promise<void> {
     const jobId = `auto-offline:${workerProfileId}`;
 
-    // Always remove existing job first (idempotent — no-op if absent).
-    const existing = await this.autoOfflineQueue.getJob(jobId);
-    if (existing) {
-      await existing.remove();
-      this.logger.log(
-        `[auto-offline] removed existing job for workerProfileId=${workerProfileId}`,
-      );
-    }
-
-    if (status === AvailabilityStatus.ONLINE) {
-      const data: AutoOfflineJobData = { workerProfileId, userId };
-      await this.autoOfflineQueue.add(AUTO_OFFLINE_JOB, data, {
-        jobId,
-        delay: AUTO_OFFLINE_DELAY_MS,
-        removeOnComplete: true,
-        removeOnFail: false, // keep failed jobs for inspection
-      });
-      this.logger.log(
-        `[auto-offline] scheduled in 7 h for workerProfileId=${workerProfileId}`,
-      );
+    if (newStatus === AvailabilityStatus.ONLINE) {
+      if (previousStatus !== AvailabilityStatus.ONLINE) {
+        // True transition into ONLINE — remove any stale job and start a fresh timer.
+        const existing = await this.autoOfflineQueue.getJob(jobId);
+        if (existing) {
+          await existing.remove();
+          this.logger.log(
+            `[auto-offline] removed stale job on ONLINE transition for workerProfileId=${workerProfileId}`,
+          );
+        }
+        const data: AutoOfflineJobData = { workerProfileId, userId };
+        await this.autoOfflineQueue.add(AUTO_OFFLINE_JOB, data, {
+          jobId,
+          delay: AUTO_OFFLINE_DELAY_MS,
+          removeOnComplete: true,
+          removeOnFail: false,
+        });
+        this.logger.log(
+          `[auto-offline] scheduled in 7 h for workerProfileId=${workerProfileId}`,
+        );
+      } else {
+        // Already ONLINE — leave the existing delayed job untouched.
+        this.logger.debug(
+          `[auto-offline] already online, timer preserved for workerProfileId=${workerProfileId}`,
+        );
+      }
+    } else {
+      // Worker going OFFLINE or BUSY — cancel any pending auto-offline job.
+      const existing = await this.autoOfflineQueue.getJob(jobId);
+      if (existing) {
+        await existing.remove();
+        this.logger.log(
+          `[auto-offline] cancelled job (worker → ${newStatus}) for workerProfileId=${workerProfileId}`,
+        );
+      }
     }
   }
 
