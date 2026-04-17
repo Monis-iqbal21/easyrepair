@@ -9,10 +9,12 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../../../core/errors/failures.dart';
+import '../../../../core/presentation/responsive_utils.dart';
 import '../../../../features/bookings/domain/entities/booking_entity.dart';
 import '../../../../features/bookings/domain/entities/create_booking_request.dart';
 import '../../../../features/bookings/domain/entities/update_booking_request.dart';
@@ -23,7 +25,8 @@ import '../widgets/location_picker_sheet.dart';
 import '../widgets/service_card.dart';
 
 // ── Palette ───────────────────────────────────────────────────────────────────
-const _kGreen = Color(0xFFFF5F15);
+// Changed from 0xFFDE7356 → 0xFFDE7356 to match brand accent throughout.
+const _kGreen = Color(0xFFDE7356);
 const _kRed = Color(0xFFDC2626);
 const _kDark = Color(0xFF1A1A1A);
 const _kGray = Color(0xFF6B7280);
@@ -64,8 +67,6 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
 
   double? _gpsLat;
   double? _gpsLng;
-  // Address label returned by the map picker (reverse-geocoded).
-  // Only non-null when the user picked via map; GPS capture uses the typed address.
   String? _pickedAddress;
   bool _locationLoading = false;
 
@@ -77,7 +78,6 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
 
   // ── Existing attachments from API (edit mode) ───────────────────────────────
   List<BookingAttachmentEntity> _existingAttachments = [];
-  // IDs of existing attachments the user wants to remove on save.
   final Set<String> _removedAttachmentIds = {};
 
   // ── Voice note — new recording ───────────────────────────────────────────────
@@ -85,7 +85,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
   final _player = AudioPlayer();
   bool _isRecording = false;
   bool _isPlaying = false;
-  String? _voiceNotePath; // path to newly recorded voice note
+  String? _voiceNotePath;
   StreamSubscription<PlayerState>? _playerStateSub;
 
   // ── Voice note — existing (edit mode) ────────────────────────────────────────
@@ -97,13 +97,9 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     duration: const Duration(milliseconds: 700),
   );
 
-  // Tracks whether category preselection has been applied.
   bool _preselectionApplied = false;
   ProviderSubscription<AsyncValue<dynamic>>? _categoriesSubscription;
 
-  // ── Edit-mode prefill guard ───────────────────────────────────────────────
-  // Set to true after the form has been prefilled exactly once.
-  // Prevents repeated prefills if the provider fires multiple times.
   bool _prefillDone = false;
 
   bool get _isEditMode => widget.editBookingId != null;
@@ -118,12 +114,9 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
       if (mounted) setState(() => _isPlaying = s == PlayerState.playing);
     });
 
-    // In edit mode: explicitly read the detail provider once the frame is
-    // built, then prefill exactly once using _prefillDone guard.
     if (_isEditMode) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        // Trigger the provider to load (reads current or fetches if not cached).
         final bookingAsync = ref.read(
           bookingDetailProvider(widget.editBookingId!),
         );
@@ -131,7 +124,6 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
           if (!_prefillDone) _prefillFromBooking(booking);
         });
 
-        // Also listen for future emissions (e.g. loading → data transition).
         ref.listenManual(bookingDetailProvider(widget.editBookingId!), (
           _,
           next,
@@ -144,7 +136,6 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
       });
     }
 
-    // Category preselection (create mode with a pre-selected service).
     if (!_isEditMode && widget.preselectedService != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
@@ -189,10 +180,8 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
 
   // ── Edit prefill ─────────────────────────────────────────────────────────────
   void _prefillFromBooking(BookingEntity booking) {
-    // Guard: run exactly once.
     _prefillDone = true;
 
-    // Separate existing voice notes from image/video attachments.
     final voiceAttachments = booking.attachments
         .where((a) => a.type == AttachmentType.audio)
         .toList();
@@ -205,9 +194,6 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
       _isUrgent = booking.urgency == BookingUrgency.urgent;
       _selectedDate = booking.scheduledDate;
       _titleCtrl.text = booking.title ?? '';
-      // In edit mode the stored address string goes into the street/address field.
-      // Area, house, and landmark fields are left empty so the user can optionally
-      // enrich them; the combined string will be re-built on save.
       _addressCtrl.text = booking.address ?? '';
       _descriptionCtrl.text = booking.description ?? '';
       _gpsLat = booking.latitude != 0 ? booking.latitude : null;
@@ -217,7 +203,6 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
         _selectedTimeSlot = booking.timeSlot!.label;
       }
 
-      // Load existing media/voice into edit-mode state.
       _existingAttachments = List.of(mediaAttachments);
       _existingVoiceNote = voiceAttachments.isNotEmpty
           ? voiceAttachments.first
@@ -257,8 +242,9 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
   }
 
   String _computeLiveSummary() {
-    if (_isUrgent)
+    if (_isUrgent) {
       return 'Job goes live immediately after you book the service.';
+    }
     if (_selectedDate == null || _selectedTimeSlot == null) {
       return 'Select a date and arrival window to see when your job goes live.';
     }
@@ -311,13 +297,25 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
       if (file != null) {
         final valid = await _checkVideoDuration(file);
         if (!valid) {
-          if (mounted)
+          if (mounted) {
             _showError('Video must be $_kMaxVideoSecs seconds or shorter.');
+          }
           return;
         }
       }
     }
     if (file != null && mounted) setState(() => _newAttachments.add(file!));
+  }
+
+  // Opens the device camera and adds the captured photo to attachments.
+  // Uses the already-present image_picker package — no additional package required.
+  Future<void> _pickFromCamera() async {
+    if (_totalAttachmentCount >= 4) return;
+    final file = await _picker.pickImage(
+      source: ImageSource.camera,
+      imageQuality: 85,
+    );
+    if (file != null && mounted) setState(() => _newAttachments.add(file));
   }
 
   Future<bool> _checkVideoDuration(XFile file) async {
@@ -392,7 +390,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
         setState(() {
           _gpsLat = pos.latitude;
           _gpsLng = pos.longitude;
-          _pickedAddress = null; // GPS capture; use typed address field
+          _pickedAddress = null;
         });
       }
     } catch (_) {
@@ -402,7 +400,6 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     }
   }
 
-  // ── Map picker ────────────────────────────────────────────────────────────
   Future<void> _openMapPicker() async {
     final initial = (_gpsLat != null && _gpsLng != null)
         ? PickedLocation(
@@ -418,7 +415,6 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
         _gpsLat = result.latitude;
         _gpsLng = result.longitude;
         _pickedAddress = result.address;
-        // Pre-fill address field if it's empty or was auto-filled by previous pick
         if (_addressCtrl.text.trim().isEmpty || _pickedAddress != null) {
           _addressCtrl.text = result.address;
         }
@@ -436,8 +432,17 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
         _voiceNotePath = path;
       });
     } else {
-      final hasPerm = await _recorder.hasPermission();
-      if (!hasPerm) {
+      final status = await Permission.microphone.request();
+      if (status.isPermanentlyDenied) {
+        if (mounted) {
+          _showError(
+            'Microphone access is permanently denied. Enable it in Settings.',
+          );
+          openAppSettings();
+        }
+        return;
+      }
+      if (!status.isGranted) {
         if (mounted) _showError('Microphone permission denied.');
         return;
       }
@@ -509,8 +514,6 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
 
     setState(() => _isSubmitting = true);
 
-    // Silently attempt GPS if coordinates are not yet captured.
-    // Coordinates improve nearby-worker matching but are not required for booking.
     if (_gpsLat == null ||
         _gpsLng == null ||
         (_gpsLat == 0.0 && _gpsLng == 0.0)) {
@@ -577,9 +580,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
         .read(createBookingNotifierProvider.notifier)
         .submit(request);
 
-    // Upload any attachments that were picked before submission.
     await _uploadNewAttachments(booking.id);
-    // Upload new voice note if recorded.
     await _uploadVoiceNote(booking.id);
   }
 
@@ -605,7 +606,6 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
         .read(updateBookingNotifierProvider.notifier)
         .submitUpdate(updateRequest);
 
-    // Delete removed existing attachments.
     for (final id in _removedAttachmentIds) {
       final result = await ref
           .read(bookingRepositoryProvider)
@@ -613,10 +613,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
       result.fold((failure) => throw failure, (_) {});
     }
 
-    // Upload newly added file attachments.
     await _uploadNewAttachments(widget.editBookingId!);
-
-    // Upload new voice note (if recorded, replacing the old one already removed above).
     await _uploadVoiceNote(widget.editBookingId!);
   }
 
@@ -652,8 +649,9 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
   }
 
   String _friendlyError(Object e) {
-    if (e is NetworkFailure)
+    if (e is NetworkFailure) {
       return 'No internet connection. Please check your network.';
+    }
     if (e is Failure) {
       return e.message.isNotEmpty
           ? e.message
@@ -800,6 +798,18 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     );
   }
 
+  // ── Image path lookup for service cards (mirrors kServices in service_data) ──
+  // Returns null for unknown services, which falls back to emoji layout in ServiceCard.
+  String? _serviceImagePath(String name) {
+    return switch (name.toLowerCase()) {
+      'ac technician' => 'assets/images/ac.jpg',
+      'electrician' => 'assets/images/electrician.jpg',
+      'plumber' => 'assets/images/plumber.jpg',
+      'handyman' => 'assets/images/handyman.jpg',
+      _ => null,
+    };
+  }
+
   // ── A. Service selection ──────────────────────────────────────────────────
   Widget _buildServiceSection() {
     final categoriesAsync = ref.watch(clientBookingCategoriesProvider);
@@ -813,7 +823,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
             child: CircularProgressIndicator(color: _kGreen, strokeWidth: 2),
           ),
         ),
-        error: (_, __) => const SizedBox(
+        error: (_, _) => const SizedBox(
           height: 40,
           child: Center(
             child: Text(
@@ -823,48 +833,51 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
           ),
         ),
         data: (categories) {
-          final rows = <Widget>[];
-          for (var i = 0; i < categories.length; i += 2) {
-            final left = categories[i];
-            final right = i + 1 < categories.length ? categories[i + 1] : null;
-            rows.add(
-              Padding(
-                padding: EdgeInsets.only(top: i == 0 ? 0 : 12),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: ServiceCard(
-                        title: left.name,
-                        emoji: left.emoji,
-                        backgroundColor: categoryBgColor(left.name),
-                        emojiBackgroundColor: categoryEmojiBgColor(left.name),
-                        isSelected: _selectedService == left.name,
-                        onTap: () =>
-                            setState(() => _selectedService = left.name),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: right != null
-                          ? ServiceCard(
-                              title: right.name,
-                              emoji: right.emoji,
-                              backgroundColor: categoryBgColor(right.name),
-                              emojiBackgroundColor: categoryEmojiBgColor(
-                                right.name,
-                              ),
-                              isSelected: _selectedService == right.name,
-                              onTap: () =>
-                                  setState(() => _selectedService = right.name),
-                            )
-                          : const SizedBox.shrink(),
-                    ),
-                  ],
+          // Use the same responsive GridView + aspect-ratio approach as the
+          // home page so image-based cards render without overflow.
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              const crossAxisCount = 2;
+              const spacing = 12.0;
+              const cardBaseW = 170.0;
+
+              final cardWidth =
+                  (constraints.maxWidth - spacing) / crossAxisCount;
+              final imageHeight = cardWidth / 1.6;
+              final titleSize =
+                  rFont(cardWidth, 15, min: 13, max: 17, baseWidth: cardBaseW);
+              final subtitleSize =
+                  rFont(cardWidth, 12, min: 11, max: 13, baseWidth: cardBaseW);
+              final textAreaHeight =
+                  20.0 + titleSize * 1.6 + 3.0 + subtitleSize * 1.6 + 6.0;
+              final childAspectRatio =
+                  cardWidth / (imageHeight + textAreaHeight);
+
+              return GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: categories.length,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: crossAxisCount,
+                  crossAxisSpacing: spacing,
+                  mainAxisSpacing: spacing,
+                  childAspectRatio: childAspectRatio,
                 ),
-              ),
-            );
-          }
-          return Column(children: rows);
+                itemBuilder: (_, i) {
+                  final cat = categories[i];
+                  return ServiceCard(
+                    title: cat.name,
+                    emoji: cat.emoji,
+                    backgroundColor: categoryBgColor(cat.name),
+                    emojiBackgroundColor: categoryEmojiBgColor(cat.name),
+                    imagePath: _serviceImagePath(cat.name),
+                    isSelected: _selectedService == cat.name,
+                    onTap: () => setState(() => _selectedService = cat.name),
+                  );
+                },
+              );
+            },
+          );
         },
       ),
     );
@@ -931,11 +944,18 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     );
   }
 
-  // ── C. Scheduling ─────────────────────────────────────────────────────────
+  // ── C. Scheduling (includes live timing summary at bottom) ────────────────
   Widget _buildSchedulingSection() {
     return _sectionCard(
       title: 'Schedule',
-      child: _isUrgent ? _buildUrgentSchedule() : _buildNormalSchedule(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _isUrgent ? _buildUrgentSchedule() : _buildNormalSchedule(),
+          const SizedBox(height: 12),
+          _buildLiveSummary(),
+        ],
+      ),
     );
   }
 
@@ -1061,11 +1081,6 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
             slotChip(slots[3]),
           ],
         ),
-        const SizedBox(height: 12),
-        _infoNote(
-          'Job goes live 1 hour before the scheduled time and notifies workers.',
-          color: _kGreen,
-        ),
       ],
     );
   }
@@ -1135,10 +1150,10 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     );
   }
 
-  // ── Title field (shown in both modes) ─────────────────────────────────────
+  // ── D. Issue title ────────────────────────────────────────────────────────
   Widget _buildTitleSection() {
     return _sectionCard(
-      title: 'Issue Title',
+      title: "What's the issue",
       child: TextFormField(
         controller: _titleCtrl,
         textInputAction: TextInputAction.next,
@@ -1167,38 +1182,38 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     );
   }
 
-  // ── D. Description ────────────────────────────────────────────────────────
-  Widget _buildDescriptionSection() {
-    return _sectionCard(
-      title: 'Description',
-      child: TextFormField(
-        controller: _descriptionCtrl,
-        maxLines: 4,
-        textInputAction: TextInputAction.done,
-        decoration: InputDecoration(
-          hintText: 'Describe the issue (optional)',
-          hintStyle: const TextStyle(color: _kGray, fontSize: 14),
-          filled: true,
-          fillColor: _kSurface,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: _kBorder),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: _kBorder),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: _kGreen, width: 1.4),
-          ),
-          contentPadding: const EdgeInsets.all(14),
-        ),
-      ),
-    );
-  }
+  // ── E. Description (commented out — kept for future use) ─────────────────
+  // Widget _buildDescriptionSection() {
+  //   return _sectionCard(
+  //     title: 'Description',
+  //     child: TextFormField(
+  //       controller: _descriptionCtrl,
+  //       maxLines: 4,
+  //       textInputAction: TextInputAction.done,
+  //       decoration: InputDecoration(
+  //         hintText: 'Describe the issue (optional)',
+  //         hintStyle: const TextStyle(color: _kGray, fontSize: 14),
+  //         filled: true,
+  //         fillColor: _kSurface,
+  //         border: OutlineInputBorder(
+  //           borderRadius: BorderRadius.circular(12),
+  //           borderSide: const BorderSide(color: _kBorder),
+  //         ),
+  //         enabledBorder: OutlineInputBorder(
+  //           borderRadius: BorderRadius.circular(12),
+  //           borderSide: const BorderSide(color: _kBorder),
+  //         ),
+  //         focusedBorder: OutlineInputBorder(
+  //           borderRadius: BorderRadius.circular(12),
+  //           borderSide: const BorderSide(color: _kGreen, width: 1.4),
+  //         ),
+  //         contentPadding: const EdgeInsets.all(14),
+  //       ),
+  //     ),
+  //   );
+  // }
 
-  // ── E. Location ───────────────────────────────────────────────────────────
+  // ── F. Location ───────────────────────────────────────────────────────────
   Widget _buildLocationSection() {
     return _sectionCard(
       title: 'Service Address',
@@ -1239,7 +1254,6 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
           const SizedBox(height: 10),
           Row(
             children: [
-              // ── Use Current Location ──────────────────────────────────────
               Expanded(
                 child: GestureDetector(
                   onTap: _locationLoading ? null : _captureCurrentLocation,
@@ -1296,7 +1310,6 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                 ),
               ),
               const SizedBox(width: 10),
-              // ── Pick on Map ───────────────────────────────────────────────
               Expanded(
                 child: GestureDetector(
                   onTap: _openMapPicker,
@@ -1395,144 +1408,99 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     );
   }
 
-  // ── F. Attachments ────────────────────────────────────────────────────────
-  Widget _buildAttachmentsSection() {
-    // Visible existing attachments (not yet removed)
+  // ── G. Voice note + attachments (combined media section) ──────────────────
+  Widget _buildMediaSection() {
     final visibleExisting = _existingAttachments
         .where((a) => !_removedAttachmentIds.contains(a.id))
         .toList();
     final canAddMore = _totalAttachmentCount < 4;
+    final hasMedia = visibleExisting.isNotEmpty || _newAttachments.isNotEmpty;
 
     return _sectionCard(
-      title: 'Attachments (optional)',
+      title: 'Voice Note & Attachments',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            height: 90,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              children: [
-                // Existing attachments (edit mode)
-                ...visibleExisting.map((attachment) {
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 10),
-                    child: Stack(
-                      children: [
-                        _ExistingAttachmentThumbnail(attachment: attachment),
-                        Positioned(
-                          top: 4,
-                          right: 4,
-                          child: GestureDetector(
-                            onTap: () => setState(() {
-                              _removedAttachmentIds.add(attachment.id);
-                            }),
-                            child: Container(
-                              width: 22,
-                              height: 22,
-                              decoration: const BoxDecoration(
-                                color: Colors.black54,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.close,
-                                size: 13,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
+          // Existing voice note row (edit mode only)
+          if (_existingVoiceNote != null && _voiceNotePath == null) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: _kGreen.withValues(alpha: 0.07),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: _kGreen.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: const BoxDecoration(
+                      color: _kGreen,
+                      shape: BoxShape.circle,
                     ),
-                  );
-                }),
-
-                // Newly picked files
-                ..._newAttachments.asMap().entries.map((e) {
-                  final idx = e.key;
-                  final file = e.value;
-                  final isVideo =
-                      file.mimeType?.startsWith('video') == true ||
-                      file.path.toLowerCase().endsWith('.mp4') ||
-                      file.path.toLowerCase().endsWith('.mov');
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 10),
-                    child: Stack(
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: isVideo
-                              ? Container(
-                                  width: 90,
-                                  height: 90,
-                                  color: _kDark,
-                                  child: const Icon(
-                                    Icons.play_circle_fill_rounded,
-                                    color: Colors.white,
-                                    size: 32,
-                                  ),
-                                )
-                              : Image.file(
-                                  File(file.path),
-                                  width: 90,
-                                  height: 90,
-                                  fit: BoxFit.cover,
-                                ),
-                        ),
-                        Positioned(
-                          top: 4,
-                          right: 4,
-                          child: GestureDetector(
-                            onTap: () =>
-                                setState(() => _newAttachments.removeAt(idx)),
-                            child: Container(
-                              width: 22,
-                              height: 22,
-                              decoration: const BoxDecoration(
-                                color: Colors.black54,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.close,
-                                size: 13,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
+                    child: const Icon(
+                      Icons.mic_rounded,
+                      color: Colors.white,
+                      size: 17,
                     ),
-                  );
-                }),
-
-                // Add button
-                if (canAddMore)
-                  GestureDetector(
-                    onTap: _pickAttachment,
-                    child: Container(
-                      width: 90,
-                      height: 90,
-                      decoration: BoxDecoration(
-                        color: _kSurface,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: _kBorder),
-                      ),
-                      child: const Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.add_rounded, size: 24, color: _kGreen),
-                          SizedBox(height: 4),
-                          Text(
-                            'Add',
-                            style: TextStyle(fontSize: 11, color: _kGray),
-                          ),
-                        ],
+                  ),
+                  const SizedBox(width: 10),
+                  const Expanded(
+                    child: Text(
+                      'Voice note attached',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: _kDark,
                       ),
                     ),
                   ),
-              ],
+                  GestureDetector(
+                    onTap: _removeExistingVoiceNote,
+                    child: const Icon(
+                      Icons.delete_outline_rounded,
+                      size: 18,
+                      color: _kGray,
+                    ),
+                  ),
+                ],
+              ),
             ),
+            const SizedBox(height: 8),
+          ],
+
+          // WhatsApp-style voice bar
+          _buildVoiceBar(),
+          const SizedBox(height: 12),
+
+          // Action row: file attachment + camera
+          Row(
+            children: [
+              Expanded(
+                child: _buildActionButton(
+                  icon: Icons.attach_file_rounded,
+                  label: 'Attach File',
+                  onTap: canAddMore ? _pickAttachment : null,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _buildActionButton(
+                  icon: Icons.camera_alt_outlined,
+                  label: 'Camera',
+                  onTap: canAddMore ? _pickFromCamera : null,
+                ),
+              ),
+            ],
           ),
+
+          // Media previews (larger, 2-col, tap to expand)
+          if (hasMedia) ...[
+            const SizedBox(height: 14),
+            _buildAttachmentPreviews(visibleExisting),
+          ],
+
           const SizedBox(height: 8),
           Text(
             '$_totalAttachmentCount/4  ·  jpg, png, mp4 (max ${_kMaxVideoSecs}s)',
@@ -1550,97 +1518,24 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     );
   }
 
-  // ── G. Voice note ─────────────────────────────────────────────────────────
-  Widget _buildVoiceNoteSection() {
-    return _sectionCard(
-      title: 'Voice Note (optional)',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Show existing voice note in edit mode
-          if (_existingVoiceNote != null && _voiceNotePath == null) ...[
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              decoration: BoxDecoration(
-                color: _kGreen.withValues(alpha: 0.07),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: _kGreen.withValues(alpha: 0.3)),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: const BoxDecoration(
-                      color: _kGreen,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.mic_rounded,
-                      color: Colors.white,
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Voice note attached',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                            color: _kDark,
-                          ),
-                        ),
-                        Text(
-                          'Tap × to remove or record a new one to replace',
-                          style: TextStyle(fontSize: 11, color: _kGray),
-                        ),
-                      ],
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: _removeExistingVoiceNote,
-                    child: const Icon(
-                      Icons.delete_outline_rounded,
-                      size: 20,
-                      color: _kGray,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 10),
-            _infoNote(
-              'Record a new voice note to replace the existing one.',
-              color: _kGreen,
-            ),
-            const SizedBox(height: 10),
-          ],
-          _buildVoiceNoteContent(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildVoiceNoteContent() {
+  // WhatsApp-inspired voice note bar — handles all three states.
+  Widget _buildVoiceBar() {
+    // ── State: playback ready ─────────────────────────────────────────────
     if (_voiceNotePath != null) {
       return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
           color: _kGreen.withValues(alpha: 0.07),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: _kGreen.withValues(alpha: 0.3)),
+          borderRadius: BorderRadius.circular(50),
+          border: Border.all(color: _kGreen.withValues(alpha: 0.35)),
         ),
         child: Row(
           children: [
             GestureDetector(
               onTap: _togglePlayback,
               child: Container(
-                width: 36,
-                height: 36,
+                width: 32,
+                height: 32,
                 decoration: const BoxDecoration(
                   color: _kGreen,
                   shape: BoxShape.circle,
@@ -1648,26 +1543,43 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                 child: Icon(
                   _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
                   color: Colors.white,
-                  size: 20,
+                  size: 18,
                 ),
               ),
             ),
-            const SizedBox(width: 12),
-            const Expanded(
-              child: Text(
-                'Voice note recorded  ·  m4a',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: _kDark,
-                ),
+            const SizedBox(width: 10),
+            // Decorative waveform bars
+            Expanded(
+              child: Row(
+                children: [
+                  ...List.generate(22, (i) {
+                    final heights = [6.0, 10.0, 14.0, 8.0, 16.0, 10.0, 6.0];
+                    final h = heights[i % heights.length];
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 1),
+                      child: Container(
+                        width: 3,
+                        height: h,
+                        decoration: BoxDecoration(
+                          color: _kGreen.withValues(alpha: 0.55),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    );
+                  }),
+                  const SizedBox(width: 6),
+                  const Text(
+                    'm4a',
+                    style: TextStyle(fontSize: 11, color: _kGray),
+                  ),
+                ],
               ),
             ),
             GestureDetector(
               onTap: _deleteVoiceNote,
               child: const Icon(
                 Icons.delete_outline_rounded,
-                size: 20,
+                size: 18,
                 color: _kGray,
               ),
             ),
@@ -1676,72 +1588,326 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
       );
     }
 
+    // ── State: recording ──────────────────────────────────────────────────
     if (_isRecording) {
       return GestureDetector(
         onTap: _toggleRecording,
         child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
             color: _kRed.withValues(alpha: 0.07),
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(50),
             border: Border.all(color: _kRed),
           ),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               AnimatedBuilder(
                 animation: _pulseCtrl,
-                builder: (context, child) => Opacity(
-                  opacity: _pulseCtrl.value,
-                  child: Container(
-                    width: 10,
-                    height: 10,
-                    decoration: const BoxDecoration(
-                      color: _kRed,
-                      shape: BoxShape.circle,
+                builder: (_, _) => Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: _kRed.withValues(
+                      alpha: 0.5 + _pulseCtrl.value * 0.5,
                     ),
+                    shape: BoxShape.circle,
                   ),
                 ),
               ),
               const SizedBox(width: 10),
-              const Text(
-                'Recording… tap to stop',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: _kRed,
-                  fontWeight: FontWeight.w500,
+              const Expanded(
+                child: Text(
+                  'Recording…  tap to stop',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: _kRed,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
-              const SizedBox(width: 10),
-              const Icon(Icons.stop_rounded, color: _kRed, size: 20),
+              Container(
+                width: 30,
+                height: 30,
+                decoration: const BoxDecoration(
+                  color: _kRed,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.stop_rounded,
+                  color: Colors.white,
+                  size: 16,
+                ),
+              ),
             ],
           ),
         ),
       );
     }
 
+    // ── State: idle ───────────────────────────────────────────────────────
     return GestureDetector(
       onTap: _toggleRecording,
       child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           color: _kSurface,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(50),
           border: Border.all(color: _kBorder),
         ),
-        child: const Row(
+        child: Row(
+          children: [
+            const Icon(Icons.mic_none_rounded, size: 18, color: _kGray),
+            const SizedBox(width: 10),
+            const Expanded(
+              child: Text(
+                'Tap mic to record a voice note',
+                style: TextStyle(fontSize: 13, color: _kGray),
+              ),
+            ),
+            Container(
+              width: 30,
+              height: 30,
+              decoration: BoxDecoration(
+                color: _kGreen.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.mic_rounded, size: 16, color: _kGreen),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionButton({
+    required IconData icon,
+    required String label,
+    VoidCallback? onTap,
+  }) {
+    final enabled = onTap != null;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 11),
+        decoration: BoxDecoration(
+          color: _kSurface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: enabled ? _kBorder : _kBorder.withValues(alpha: 0.4),
+          ),
+        ),
+        child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.mic_rounded, color: _kGreen, size: 20),
-            SizedBox(width: 8),
+            Icon(
+              icon,
+              size: 16,
+              color: enabled ? _kGreen : _kGray,
+            ),
+            const SizedBox(width: 6),
             Text(
-              'Tap to record',
+              label,
               style: TextStyle(
-                fontSize: 14,
-                color: _kGreen,
+                fontSize: 13,
                 fontWeight: FontWeight.w500,
+                color: enabled ? _kDark : _kGray,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 2-column preview grid with tap-to-expand and ×-remove.
+  Widget _buildAttachmentPreviews(
+    List<BookingAttachmentEntity> visibleExisting,
+  ) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final tileW = (constraints.maxWidth - 12) / 2;
+        final tileH = tileW * 0.72; // ~4:3
+
+        final tiles = <Widget>[
+          ...visibleExisting.asMap().entries.map((e) {
+            final attachment = e.value;
+            final isVideo = attachment.type == AttachmentType.video;
+            return _buildPreviewTile(
+              w: tileW,
+              h: tileH,
+              isVideo: isVideo,
+              networkUrl: attachment.url,
+              onTap: () => _openPreviewDialog(
+                networkUrl: attachment.url,
+                isVideo: isVideo,
+              ),
+              onRemove: () =>
+                  setState(() => _removedAttachmentIds.add(attachment.id)),
+            );
+          }),
+          ..._newAttachments.asMap().entries.map((e) {
+            final idx = e.key;
+            final file = e.value;
+            final isVideo =
+                file.mimeType?.startsWith('video') == true ||
+                file.path.toLowerCase().endsWith('.mp4') ||
+                file.path.toLowerCase().endsWith('.mov');
+            return _buildPreviewTile(
+              w: tileW,
+              h: tileH,
+              isVideo: isVideo,
+              localPath: file.path,
+              onTap: () =>
+                  _openPreviewDialog(localPath: file.path, isVideo: isVideo),
+              onRemove: () =>
+                  setState(() => _newAttachments.removeAt(idx)),
+            );
+          }),
+        ];
+
+        return Wrap(spacing: 12, runSpacing: 12, children: tiles);
+      },
+    );
+  }
+
+  Widget _buildPreviewTile({
+    required double w,
+    required double h,
+    required bool isVideo,
+    String? localPath,
+    String? networkUrl,
+    required VoidCallback onTap,
+    required VoidCallback onRemove,
+  }) {
+    return SizedBox(
+      width: w,
+      height: h,
+      child: Stack(
+        children: [
+          GestureDetector(
+            onTap: onTap,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: SizedBox.expand(
+                child: isVideo
+                    ? Container(
+                        color: _kDark,
+                        child: const Icon(
+                          Icons.play_circle_fill_rounded,
+                          color: Colors.white54,
+                          size: 40,
+                        ),
+                      )
+                    : localPath != null
+                    ? Image.file(File(localPath), fit: BoxFit.cover)
+                    : networkUrl != null
+                    ? Image.network(
+                        networkUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => Container(
+                          color: const Color(0xFFF1F5F9),
+                          child: const Icon(
+                            Icons.broken_image_outlined,
+                            color: Color(0xFF94A3B8),
+                          ),
+                        ),
+                        loadingBuilder: (_, child, prog) => prog == null
+                            ? child
+                            : Container(
+                                color: const Color(0xFFF1F5F9),
+                                child: const Center(
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: _kGreen,
+                                  ),
+                                ),
+                              ),
+                      )
+                    : Container(color: _kSurface),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 6,
+            right: 6,
+            child: GestureDetector(
+              onTap: onRemove,
+              child: Container(
+                width: 24,
+                height: 24,
+                decoration: const BoxDecoration(
+                  color: Colors.black54,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.close, size: 14, color: Colors.white),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Full-screen preview dialog with × close button.
+  // Supports local files (new attachments) and network URLs (existing).
+  void _openPreviewDialog({
+    String? localPath,
+    String? networkUrl,
+    required bool isVideo,
+  }) {
+    showDialog<void>(
+      context: context,
+      barrierColor: Colors.black87,
+      builder: (ctx) => Scaffold(
+        backgroundColor: Colors.black,
+        body: Stack(
+          children: [
+            Center(
+              child: isVideo
+                  ? const Icon(
+                      Icons.play_circle_fill_rounded,
+                      size: 80,
+                      color: Colors.white38,
+                    )
+                  : localPath != null
+                  ? InteractiveViewer(
+                      child: Image.file(
+                        File(localPath),
+                        fit: BoxFit.contain,
+                      ),
+                    )
+                  : networkUrl != null
+                  ? InteractiveViewer(
+                      child: Image.network(
+                        networkUrl,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, _, _) => const Icon(
+                          Icons.broken_image_outlined,
+                          color: Colors.white38,
+                          size: 48,
+                        ),
+                      ),
+                    )
+                  : const SizedBox.shrink(),
+            ),
+            Positioned(
+              top: 48,
+              right: 16,
+              child: GestureDetector(
+                onTap: () => Navigator.of(ctx).pop(),
+                child: Container(
+                  width: 38,
+                  height: 38,
+                  decoration: const BoxDecoration(
+                    color: Colors.white24,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.close,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
               ),
             ),
           ],
@@ -1760,10 +1926,10 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     return AnimatedContainer(
       duration: const Duration(milliseconds: 250),
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: isReady ? color.withValues(alpha: 0.07) : _kSurface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: isReady ? color.withValues(alpha: 0.3) : _kBorder,
         ),
@@ -1773,15 +1939,15 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
         children: [
           Icon(
             Icons.schedule_rounded,
-            size: 16,
+            size: 15,
             color: isReady ? color : _kGray,
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
               text,
               style: TextStyle(
-                fontSize: 13,
+                fontSize: 12,
                 fontWeight: FontWeight.w500,
                 color: isReady ? color : _kGray,
               ),
@@ -1879,7 +2045,14 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
               ),
             ),
             const SizedBox(height: 20),
-            // Scrollable form
+            // Scrollable form — section order:
+            // 1. Select Service
+            // 2. Job Type
+            // 3. Schedule  (live summary folded inside)
+            // 4. What's the issue
+            // 5. Voice Note & Attachments
+            // 6. Service Address
+            // 7. Book Service
             Expanded(
               child: SingleChildScrollView(
                 padding: EdgeInsets.fromLTRB(20, 0, 20, 80 + bottomPad + 16),
@@ -1896,15 +2069,11 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                     const SizedBox(height: 16),
                     _buildTitleSection(),
                     const SizedBox(height: 16),
-                    _buildDescriptionSection(),
+                    // _buildDescriptionSection(),   // kept in code, removed from form
+                    // const SizedBox(height: 16),
+                    _buildMediaSection(),
                     const SizedBox(height: 16),
                     _buildLocationSection(),
-                    const SizedBox(height: 16),
-                    _buildAttachmentsSection(),
-                    const SizedBox(height: 16),
-                    _buildVoiceNoteSection(),
-                    const SizedBox(height: 16),
-                    _buildLiveSummary(),
                     const SizedBox(height: 20),
                     _buildSubmitButton(),
                   ],
@@ -1916,72 +2085,6 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
       ),
       extendBody: true,
       bottomNavigationBar: const ClientBottomNavBar(currentIndex: 0),
-    );
-  }
-}
-
-// ── Existing attachment thumbnail (network image / video card) ────────────────
-
-class _ExistingAttachmentThumbnail extends StatelessWidget {
-  final BookingAttachmentEntity attachment;
-
-  const _ExistingAttachmentThumbnail({required this.attachment});
-
-  @override
-  Widget build(BuildContext context) {
-    if (attachment.type == AttachmentType.image) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: Image.network(
-          attachment.url,
-          width: 90,
-          height: 90,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => Container(
-            width: 90,
-            height: 90,
-            decoration: BoxDecoration(
-              color: const Color(0xFFF1F5F9),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(
-              Icons.broken_image_outlined,
-              color: Color(0xFF94A3B8),
-            ),
-          ),
-          loadingBuilder: (_, child, progress) => progress == null
-              ? child
-              : Container(
-                  width: 90,
-                  height: 90,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF1F5F9),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Center(
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: _kGreen,
-                    ),
-                  ),
-                ),
-        ),
-      );
-    }
-
-    // Video thumbnail
-    return Container(
-      width: 90,
-      height: 90,
-      decoration: BoxDecoration(
-        color: _kDark,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: const Icon(
-        Icons.play_circle_fill_rounded,
-        color: Colors.white,
-        size: 32,
-      ),
     );
   }
 }

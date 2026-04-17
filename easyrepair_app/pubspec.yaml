@@ -47,6 +47,7 @@ dependencies:
   google_maps_flutter: ^2.9.0
   google_maps_flutter_android: ^2.14.16
   geocoding: ^3.0.0
+  permission_handler: ^11.3.1
 
   # Audio recording & playback
   record: ^6.2.0
@@ -72,4 +73,4 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - assets/images/easyrepair_logo.png
+    - assets/images/

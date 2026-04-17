@@ -5,11 +5,12 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/errors/failures.dart';
 import '../../../bookings/domain/entities/booking_entity.dart';
+import '../../../bookings/presentation/widgets/booking_skeleton.dart';
 import '../providers/worker_job_providers.dart';
 import '../widgets/worker_bottom_nav_bar.dart';
 
 // ── Palette ───────────────────────────────────────────────────────────────────
-const _kGreen  = Color(0xFFFF5F15);
+const _kGreen  = Color(0xFFDE7356);
 const _kDark   = Color(0xFF1A1A1A);
 const _kGray   = Color(0xFF6B7280);
 const _kLight  = Color(0xFF94A3B8);
@@ -41,8 +42,9 @@ class WorkerJobsPage extends ConsumerWidget {
                 'My Jobs',
                 style: const TextStyle(
                   fontSize: 22,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w800,
                   color: _kDark,
+                  letterSpacing: -0.3,
                 ),
               ),
             ),
@@ -57,8 +59,10 @@ class WorkerJobsPage extends ConsumerWidget {
             // ── List ─────────────────────────────────────────────────────
             Expanded(
               child: jobsAsync.when(
-                loading: () =>
-                    const Center(child: CircularProgressIndicator()),
+                loading: () => const Padding(
+                  padding: EdgeInsets.fromLTRB(16, 4, 16, 0),
+                  child: BookingSkeleton(),
+                ),
                 error: (err, _) => _ErrorState(
                   message: err is Failure
                       ? err.message
@@ -142,7 +146,6 @@ class _JobCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final canComplete = job.status.isWorkerActive;
-    final statusColor = _statusColor(job.status);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -152,7 +155,7 @@ class _JobCard extends ConsumerWidget {
         border: Border.all(color: _kBorder),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 3),
           ),
@@ -358,12 +361,6 @@ class _JobCard extends ConsumerWidget {
     );
   }
 
-  Color _statusColor(BookingStatus s) {
-    if (s.isWorkerActive) return _kGreen;
-    if (s == BookingStatus.completed) return const Color(0xFF15803D);
-    return _kLight;
-  }
-
   String _fmtDate(DateTime dt) {
     final now = DateTime.now();
     if (dt.year == now.year && dt.month == now.month && dt.day == now.day) {
@@ -386,7 +383,8 @@ class _CompleteBtn extends ConsumerWidget {
     return GestureDetector(
       onTap: isLoading ? null : () => _confirm(context, ref),
       child: Container(
-        height: 38,
+        constraints: const BoxConstraints(minHeight: 38),
+        padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
           color: _kGreen,
           borderRadius: BorderRadius.circular(10),
@@ -570,7 +568,8 @@ class _OutlineBtn extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        height: 38,
+        constraints: const BoxConstraints(minHeight: 38),
+        padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
           color: const Color(0xFFF9FAFB),
           borderRadius: BorderRadius.circular(10),
@@ -602,33 +601,54 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final message = switch (filter) {
-      WorkerJobFilter.active => 'No active jobs right now.',
-      WorkerJobFilter.completed => 'No completed jobs yet.',
-      WorkerJobFilter.cancelled => 'No cancelled jobs.',
-      WorkerJobFilter.all => 'No jobs assigned yet.',
+    final title = switch (filter) {
+      WorkerJobFilter.active => 'No active jobs',
+      WorkerJobFilter.completed => 'No completed jobs yet',
+      WorkerJobFilter.cancelled => 'No cancelled jobs',
+      WorkerJobFilter.all => 'No jobs assigned yet',
+    };
+    final subtitle = switch (filter) {
+      WorkerJobFilter.active => 'New requests will appear here',
+      WorkerJobFilter.completed => 'Completed jobs will show up here',
+      WorkerJobFilter.cancelled => 'Cancelled jobs will show up here',
+      WorkerJobFilter.all => 'Accept a booking request to get started',
     };
 
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.symmetric(horizontal: 40),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.work_outline_rounded,
-              size: 56,
-              color: Color(0xFFCBD5E1),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              message,
-              style: const TextStyle(
-                fontSize: 15,
-                color: _kGray,
-                fontWeight: FontWeight.w500,
+            Container(
+              width: 80,
+              height: 80,
+              decoration: const BoxDecoration(
+                color: Color(0xFFFFF0EB),
+                shape: BoxShape.circle,
               ),
+              child: const Center(
+                child: Text('🔧', style: TextStyle(fontSize: 36)),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: _kDark,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              subtitle,
               textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 13,
+                color: _kLight,
+                height: 1.4,
+              ),
             ),
           ],
         ),
@@ -646,29 +666,61 @@ class _ErrorState extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.symmetric(horizontal: 40),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline_rounded,
-                size: 48, color: Color(0xFFCBD5E1)),
-            const SizedBox(height: 12),
-            Text(
-              message,
-              style: const TextStyle(color: _kGray, fontSize: 14),
-              textAlign: TextAlign.center,
+            Container(
+              width: 70,
+              height: 70,
+              decoration: const BoxDecoration(
+                color: Color(0xFFFFF1F2),
+                shape: BoxShape.circle,
+              ),
+              child: const Center(
+                child: Text('⚠️', style: TextStyle(fontSize: 30)),
+              ),
             ),
             const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: onRetry,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _kGreen,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10)),
+            const Text(
+              'Something went wrong',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: _kDark,
               ),
-              child: const Text('Retry'),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 12.5,
+                color: _kLight,
+                height: 1.4,
+              ),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 20),
+            GestureDetector(
+              onTap: onRetry,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 24, vertical: 12),
+                decoration: BoxDecoration(
+                  color: _kGreen,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Text(
+                  'Retry',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
             ),
           ],
         ),

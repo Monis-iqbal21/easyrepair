@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/utils/distance_utils.dart';
 import '../../domain/entities/booking_entity.dart';
+import '../widgets/media_attachment_widgets.dart';
 import '../../domain/entities/nearby_worker_entity.dart';
 import '../../domain/entities/update_booking_request.dart';
 import '../providers/booking_providers.dart';
@@ -14,7 +15,7 @@ import '../widgets/urgency_badge.dart';
 import '../../../../features/chat/presentation/providers/chat_providers.dart';
 
 // ── Palette ───────────────────────────────────────────────────────────────────
-const _kGreen  = Color(0xFFFF5F15);
+const _kGreen  = Color(0xFFDE7356);
 const _kDark   = Color(0xFF1A1A1A);
 const _kGray   = Color(0xFF6B7280);
 const _kLight  = Color(0xFF94A3B8);
@@ -528,7 +529,7 @@ class _LocationCard extends StatelessWidget {
                 child: const Icon(
                   Icons.location_on_rounded,
                   size: 18,
-                  color: Color(0xFFFF5F15),
+                  color: Color(0xFFDE7356),
                 ),
               ),
               const SizedBox(width: 10),
@@ -696,16 +697,8 @@ class _AttachmentsCard extends StatelessWidget {
               icon: Icons.image_outlined,
               label: 'Photos (${images.length})',
             ),
-            const SizedBox(height: 8),
-            SizedBox(
-              height: 100,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: images.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 8),
-                itemBuilder: (ctx, i) => _ImageThumbnail(url: images[i].url),
-              ),
-            ),
+            const SizedBox(height: 10),
+            BookingImageGrid(images: images),
           ],
 
           // ── Videos ──────────────────────────────────────────────────────
@@ -716,14 +709,10 @@ class _AttachmentsCard extends StatelessWidget {
               label: 'Videos (${videos.length})',
             ),
             const SizedBox(height: 8),
-            Column(
-              children: videos
-                  .map((v) => Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: _VideoTile(attachment: v),
-                      ))
-                  .toList(),
-            ),
+            ...videos.map((v) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: BookingVideoTile(attachment: v),
+                )),
           ],
 
           // ── Audio ────────────────────────────────────────────────────────
@@ -737,7 +726,7 @@ class _AttachmentsCard extends StatelessWidget {
             const SizedBox(height: 8),
             ...audios.map((a) => Padding(
                   padding: const EdgeInsets.only(bottom: 8),
-                  child: _AudioTile(attachment: a),
+                  child: BookingAudioPlayerCard(attachment: a),
                 )),
           ],
         ],
@@ -766,178 +755,6 @@ class _AttachmentsCard extends StatelessWidget {
   }
 }
 
-class _ImageThumbnail extends StatelessWidget {
-  final String url;
-  const _ImageThumbnail({required this.url});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => _showFullImage(context, url),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(10),
-        child: Image.network(
-          url,
-          width: 100,
-          height: 100,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => Container(
-            width: 100,
-            height: 100,
-            decoration: BoxDecoration(
-              color: const Color(0xFFF1F5F9),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(Icons.broken_image_outlined, color: _kLight),
-          ),
-          loadingBuilder: (_, child, progress) => progress == null
-              ? child
-              : Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF1F5F9),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Center(
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: _kGreen,
-                    ),
-                  ),
-                ),
-        ),
-      ),
-    );
-  }
-
-  void _showFullImage(BuildContext context, String url) {
-    showDialog<void>(
-      context: context,
-      barrierColor: Colors.black87,
-      builder: (_) => GestureDetector(
-        onTap: () => Navigator.pop(context),
-        child: Center(
-          child: InteractiveViewer(
-            child: Image.network(url, fit: BoxFit.contain),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _VideoTile extends StatelessWidget {
-  final BookingAttachmentEntity attachment;
-  const _VideoTile({required this.attachment});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF9FAFB),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: _kBorder),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFF0EB),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Icon(
-              Icons.play_circle_outline_rounded,
-              color: Color(0xFFFF5F15),
-              size: 22,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  attachment.fileName ?? 'Video',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: _kDark,
-                  ),
-                ),
-                const Text(
-                  'Video attachment',
-                  style: TextStyle(fontSize: 11, color: _kLight),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AudioTile extends StatelessWidget {
-  final BookingAttachmentEntity attachment;
-  const _AudioTile({required this.attachment});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF0FDF4),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFBBF7D0)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: const Color(0xFFDCFCE7),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Icon(
-              Icons.mic_rounded,
-              color: Color(0xFF15803D),
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  attachment.fileName ?? 'Voice Note',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF166534),
-                  ),
-                ),
-                const Text(
-                  'Audio recording',
-                  style: TextStyle(fontSize: 11, color: Color(0xFF4ADE80)),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 // ── Pricing card ──────────────────────────────────────────────────────────────
 
@@ -1059,7 +876,7 @@ class _WorkerCard extends StatelessWidget {
                         child: Image.network(
                           worker.avatarUrl!,
                           fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) =>
+                          errorBuilder: (_, _, _) =>
                               _InitialsText(worker.initials),
                         ),
                       )
@@ -1162,7 +979,7 @@ class _WorkerMapSection extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 16,
             offset: const Offset(0, 4),
           ),
@@ -1335,7 +1152,7 @@ class _StaticMap extends StatelessWidget {
       child: Image.network(
         _mapUrl,
         fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => const _MapFallback(hasLocation: true),
+        errorBuilder: (_, _, _) => const _MapFallback(hasLocation: true),
         loadingBuilder: (_, child, progress) {
           if (progress == null) return child;
           return Container(
@@ -1442,7 +1259,7 @@ class _DistanceBar extends StatelessWidget {
               size: 18,
               color: isClose
                   ? const Color(0xFF16A34A)
-                  : const Color(0xFFFF5F15),
+                  : const Color(0xFFDE7356),
             ),
           ),
           const SizedBox(width: 12),
@@ -1563,7 +1380,7 @@ class _NearbyWorkersSection extends ConsumerWidget {
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 16,
             offset: const Offset(0, 4),
           ),
@@ -1899,7 +1716,7 @@ class _WorkerAvatar extends StatelessWidget {
               child: Image.network(
                 worker.avatarUrl!,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => _Initials(worker.initials),
+                errorBuilder: (_, _, _) => _Initials(worker.initials),
               ),
             )
           : _Initials(worker.initials),
@@ -2319,7 +2136,7 @@ class _ActionButtons extends ConsumerWidget {
           _FullBtn(
             label: 'Chat with Worker',
             icon: Icons.chat_bubble_outline_rounded,
-            color: const Color(0xFFFF5F15),
+            color: const Color(0xFFDE7356),
             bgColor: const Color(0xFFFFF0EB),
             onTap: () => context.push('/client/chat'),
           ),

@@ -1,0 +1,20 @@
+# Copy this file to key.properties and fill in your actual values.
+# key.properties is gitignored — never commit it.
+#
+# Generate a keystore with:
+#   keytool -genkey -v -keystore easyrepair-release.jks \
+#     -alias easyrepair -keyalg RSA -keysize 2048 -validity 10000
+#
+# storeFile   — path to the .jks/.keystore file
+#               Use an absolute path OR a path relative to the android/ directory.
+#               Example (absolute): /Users/you/keys/easyrepair-release.jks
+#               Example (relative): ../keys/easyrepair-release.jks
+#
+# storePassword — password chosen during keytool -genkey
+# keyAlias      — alias chosen during keytool -genkey (e.g. "easyrepair")
+# keyPassword   — key password chosen during keytool -genkey
+
+storeFile=../keys/easyrepair-release.jks
+storePassword=YOUR_STORE_PASSWORD
+keyAlias=easyrepair
+keyPassword=YOUR_KEY_PASSWORD

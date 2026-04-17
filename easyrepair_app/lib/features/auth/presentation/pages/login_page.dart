@@ -15,7 +15,7 @@ class LoginPage extends ConsumerStatefulWidget {
 }
 
 class _LoginPageState extends ConsumerState<LoginPage> {
-  static const _accent = Color(0xFFFF5F15);
+  static const _accent = Color(0xFFDE7356);
   static const _slate = Color(0xFF6B7280);
 
   final _formKey = GlobalKey<FormState>();
@@ -86,7 +86,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   children: [
                     Center(
                       child: Image.asset(
-                        'assets/images/easyrepair_logo.png',
+                        'assets/images/er-icon.png',
                         height: 56,
                       ),
                     ),
@@ -216,13 +216,13 @@ class _PrimaryButton extends StatelessWidget {
       child: ElevatedButton(
         onPressed: isLoading ? null : onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFFFF5F15),
+          backgroundColor: const Color(0xFFDE7356),
           foregroundColor: Colors.white,
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
-          disabledBackgroundColor: const Color(0xFFFF5F15).withAlpha(150),
+          disabledBackgroundColor: const Color(0xFFDE7356).withAlpha(150),
         ),
         child: isLoading
             ? const SizedBox(

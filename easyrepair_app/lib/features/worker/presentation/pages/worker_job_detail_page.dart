@@ -5,10 +5,11 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/errors/failures.dart';
 import '../../../bookings/domain/entities/booking_entity.dart';
+import '../../../bookings/presentation/widgets/media_attachment_widgets.dart';
 import '../providers/worker_job_providers.dart';
 
 // ── Palette ───────────────────────────────────────────────────────────────────
-const _kGreen  = Color(0xFFFF5F15);
+const _kGreen  = Color(0xFFDE7356);
 const _kDark   = Color(0xFF1A1A1A);
 const _kGray   = Color(0xFF6B7280);
 const _kLight  = Color(0xFF94A3B8);
@@ -69,7 +70,7 @@ class _AppBar extends StatelessWidget implements PreferredSizeWidget {
             borderRadius: BorderRadius.circular(10),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.06),
+                color: Colors.black.withValues(alpha: 0.06),
                 blurRadius: 8,
               ),
             ],
@@ -496,68 +497,43 @@ class _AttachmentsSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ── Photos ──────────────────────────────────────────────────────
           if (images.isNotEmpty) ...[
             const Text(
               'Photos',
               style: TextStyle(fontSize: 12, color: _kLight),
             ),
-            const SizedBox(height: 8),
-            SizedBox(
-              height: 80,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: images.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 8),
-                itemBuilder: (_, i) => ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: Image.network(
-                    images[i].url,
-                    width: 80,
-                    height: 80,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
-                      width: 80,
-                      height: 80,
-                      color: const Color(0xFFF1F5F9),
-                      child: const Icon(
-                        Icons.broken_image_outlined,
-                        color: _kLight,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
+            BookingImageGrid(images: images),
           ],
+
+          // ── Videos ──────────────────────────────────────────────────────
           if (videos.isNotEmpty) ...[
+            if (images.isNotEmpty) const SizedBox(height: 14),
             const Text(
               'Videos',
               style: TextStyle(fontSize: 12, color: _kLight),
             ),
             const SizedBox(height: 8),
-            ...videos.map(
-              (v) => _MediaRow(
-                icon: Icons.videocam_outlined,
-                label: v.fileName ?? 'Video',
-                color: const Color(0xFF7C3AED),
-              ),
-            ),
-            const SizedBox(height: 4),
+            ...videos.map((v) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: BookingVideoTile(attachment: v),
+                )),
           ],
+
+          // ── Voice Notes ──────────────────────────────────────────────────
           if (audios.isNotEmpty) ...[
+            if (images.isNotEmpty || videos.isNotEmpty)
+              const SizedBox(height: 14),
             const Text(
               'Voice Notes',
               style: TextStyle(fontSize: 12, color: _kLight),
             ),
             const SizedBox(height: 8),
-            ...audios.map(
-              (a) => _MediaRow(
-                icon: Icons.mic_outlined,
-                label: a.fileName ?? 'Audio',
-                color: const Color(0xFF0891B2),
-              ),
-            ),
+            ...audios.map((a) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: BookingAudioPlayerCard(attachment: a),
+                )),
           ],
         ],
       ),
@@ -565,48 +541,6 @@ class _AttachmentsSection extends StatelessWidget {
   }
 }
 
-class _MediaRow extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-
-  const _MediaRow({
-    required this.icon,
-    required this.label,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 6),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.06),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withOpacity(0.15)),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, size: 16, color: color),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 13,
-                color: color.withOpacity(0.9),
-                fontWeight: FontWeight.w500,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 // ── Status history ────────────────────────────────────────────────────────────
 

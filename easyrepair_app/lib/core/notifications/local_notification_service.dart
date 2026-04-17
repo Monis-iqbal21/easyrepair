@@ -28,6 +28,10 @@ class LocalNotificationService {
   static const _kChannelDesc =
       'Notifications for booking status changes and job assignments';
 
+  static const chatChannelId = 'easyrepair_chat';
+  static const _kChatChannelName = 'Chat Messages';
+  static const _kChatChannelDesc = 'Notifications for new chat messages';
+
   // ── Tap callback ─────────────────────────────────────────────────────────
 
   /// Stores a payload that arrived before [onTap] was registered.
@@ -69,21 +73,31 @@ class LocalNotificationService {
       onDidReceiveBackgroundNotificationResponse: _backgroundHandler,
     );
 
-    // ── Android notification channel ──────────────────────────────────────
+    // ── Android notification channels ─────────────────────────────────────
     if (Platform.isAndroid) {
-      await _plugin
+      final androidPlugin = _plugin
           .resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>()
-          ?.createNotificationChannel(
-            const AndroidNotificationChannel(
-              channelId,
-              _kChannelName,
-              description: _kChannelDesc,
-              importance: Importance.high,
-              playSound: true,
-              enableVibration: true,
-            ),
-          );
+              AndroidFlutterLocalNotificationsPlugin>();
+      await androidPlugin?.createNotificationChannel(
+        const AndroidNotificationChannel(
+          channelId,
+          _kChannelName,
+          description: _kChannelDesc,
+          importance: Importance.high,
+          playSound: true,
+          enableVibration: true,
+        ),
+      );
+      await androidPlugin?.createNotificationChannel(
+        const AndroidNotificationChannel(
+          chatChannelId,
+          _kChatChannelName,
+          description: _kChatChannelDesc,
+          importance: Importance.high,
+          playSound: true,
+          enableVibration: true,
+        ),
+      );
     }
 
     // ── Terminated-launch: check if app was opened by tapping a local notif ─
@@ -118,23 +132,28 @@ class LocalNotificationService {
         n?.title ?? (message.data['title'] as String?) ?? 'EasyRepair';
     final body = n?.body ?? (message.data['body'] as String?) ?? '';
 
+    // Route chat messages to the dedicated chat channel.
+    final isChat = message.data.containsKey('conversationId');
+    final androidChannelId = isChat ? chatChannelId : channelId;
+    final androidChannelName = isChat ? _kChatChannelName : _kChannelName;
+    final androidChannelDesc = isChat ? _kChatChannelDesc : _kChannelDesc;
+
     await _plugin.show(
-      // Use a stable int derived from messageId; fall back to timestamp if null.
       message.messageId?.hashCode ?? DateTime.now().millisecondsSinceEpoch,
       title,
       body,
-      const NotificationDetails(
+      NotificationDetails(
         android: AndroidNotificationDetails(
-          channelId,
-          _kChannelName,
-          channelDescription: _kChannelDesc,
+          androidChannelId,
+          androidChannelName,
+          channelDescription: androidChannelDesc,
           importance: Importance.high,
           priority: Priority.high,
           icon: '@mipmap/ic_launcher',
           playSound: true,
           enableVibration: true,
         ),
-        iOS: DarwinNotificationDetails(
+        iOS: const DarwinNotificationDetails(
           presentAlert: true,
           presentBadge: true,
           presentSound: true,

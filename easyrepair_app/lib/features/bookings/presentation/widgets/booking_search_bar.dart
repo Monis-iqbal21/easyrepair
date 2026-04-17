@@ -57,7 +57,7 @@ class _BookingSearchBarState extends State<BookingSearchBar> {
               border: Border.all(color: const Color(0xFFE2E8F0)),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
+                  color: Colors.black.withValues(alpha: 0.04),
                   blurRadius: 6,
                   offset: const Offset(0, 2),
                 ),
@@ -130,17 +130,17 @@ class _FilterButton extends StatelessWidget {
         height: 46,
         decoration: BoxDecoration(
           color: hasActiveFilters
-              ? const Color(0xFFFF5F15)
+              ? const Color(0xFFDE7356)
               : Colors.white,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: hasActiveFilters
-                ? const Color(0xFFFF5F15)
+                ? const Color(0xFFDE7356)
                 : const Color(0xFFE2E8F0),
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 6,
               offset: const Offset(0, 2),
             ),
@@ -168,7 +168,7 @@ class _FilterButton extends StatelessWidget {
                     shape: BoxShape.circle,
                     border: Border.all(
                       color: hasActiveFilters
-                          ? const Color(0xFFFF5F15)
+                          ? const Color(0xFFDE7356)
                           : Colors.white,
                       width: 1,
                     ),

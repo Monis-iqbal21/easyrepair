@@ -45,7 +45,7 @@ class ChatListPage extends ConsumerWidget {
               child: conversationsAsync.when(
                 loading: () => const Center(
                   child: CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation(Color(0xFFFF5F15)),
+                    valueColor: AlwaysStoppedAnimation(Color(0xFFDE7356)),
                   ),
                 ),
                 error: (err, _) => _ErrorView(
@@ -57,7 +57,7 @@ class ChatListPage extends ConsumerWidget {
                 data: (conversations) => conversations.isEmpty
                     ? _EmptyView()
                     : RefreshIndicator(
-                        color: const Color(0xFFFF5F15),
+                        color: const Color(0xFFDE7356),
                         onRefresh: () => ref
                             .read(chatConversationsProvider.notifier)
                             .refresh(),
@@ -205,7 +205,7 @@ class _Avatar extends StatelessWidget {
     }
     return CircleAvatar(
       radius: 26,
-      backgroundColor: const Color(0xFFFF5F15),
+      backgroundColor: const Color(0xFFDE7356),
       child: Text(
         participant.initials.isNotEmpty ? participant.initials : '?',
         style: const TextStyle(
@@ -276,7 +276,7 @@ class _ErrorView extends StatelessWidget {
               onPressed: onRetry,
               child: const Text(
                 'Retry',
-                style: TextStyle(color: Color(0xFFFF5F15)),
+                style: TextStyle(color: Color(0xFFDE7356)),
               ),
             ),
           ],

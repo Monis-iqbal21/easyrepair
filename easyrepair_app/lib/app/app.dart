@@ -21,7 +21,8 @@ class EasyRepairApp extends ConsumerStatefulWidget {
   ConsumerState<EasyRepairApp> createState() => _EasyRepairAppState();
 }
 
-class _EasyRepairAppState extends ConsumerState<EasyRepairApp> {
+class _EasyRepairAppState extends ConsumerState<EasyRepairApp>
+    with WidgetsBindingObserver {
   bool _fcmTokenRegistered = false;
 
   /// Queues a notification data map that arrived before the user finished
@@ -34,15 +35,44 @@ class _EasyRepairAppState extends ConsumerState<EasyRepairApp> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _setupFcmListeners();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     for (final sub in _subs) {
       sub.cancel();
     }
     super.dispose();
+  }
+
+  // ── App lifecycle ────────────────────────────────────────────────────────
+  //
+  // paused  = app fully backgrounded/minimized
+  //   → disconnect chat socket so socket.io stops its internal reconnect loop
+  //     and OS-suspended DNS calls stop producing SocketException spam.
+  //
+  // resumed = app returned to foreground
+  //   → re-establish connection once if the user is authenticated.
+  //     connect() is a no-op when the socket is already connected, so
+  //     calling it here is safe even on brief inactive→resumed transitions.
+  //
+  // FCM background delivery is independent: it runs in its own Dart isolate
+  // (_firebaseMessagingBackgroundHandler in main.dart) and is unaffected by
+  // anything we do here.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.paused:
+        ChatSocketService.instance.disconnect();
+      case AppLifecycleState.resumed:
+        final user = ref.read(authStateProvider).valueOrNull;
+        if (user != null) _connectChatSocket();
+      default:
+        break;
+    }
   }
 
   void _setupFcmListeners() {
@@ -116,15 +146,25 @@ class _EasyRepairAppState extends ConsumerState<EasyRepairApp> {
     required bool isWorker,
   }) {
     final bookingId = data['bookingId'] as String?;
+    final conversationId = data['conversationId'] as String?;
     final route = data['route'] as String?;
 
     final router = ref.read(routerProvider);
 
-    // bookingId takes priority; resolve role-aware destination.
+    // bookingId takes priority.
     if (bookingId != null && bookingId.isNotEmpty) {
       final destination = isWorker
           ? '/worker/job/$bookingId'
           : '/client/booking/$bookingId';
+      router.go(destination);
+      return;
+    }
+
+    // Chat message tap — navigate to the conversation.
+    if (conversationId != null && conversationId.isNotEmpty) {
+      final destination = isWorker
+          ? '/worker/chat/$conversationId'
+          : '/client/chat/$conversationId';
       router.go(destination);
       return;
     }

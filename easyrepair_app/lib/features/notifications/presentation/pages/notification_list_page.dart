@@ -6,7 +6,7 @@ import 'package:intl/intl.dart';
 import '../../domain/entities/notification_entity.dart';
 import '../providers/notification_providers.dart';
 
-const _kOrange = Color(0xFFFF5F15);
+const _kOrange = Color(0xFFDE7356);
 const _kDark   = Color(0xFF1A1A1A);
 const _kGray   = Color(0xFF6B7280);
 const _kBorder = Color(0xFFE2E8F0);

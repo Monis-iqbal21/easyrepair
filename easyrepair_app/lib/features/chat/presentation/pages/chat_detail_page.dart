@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:video_player/video_player.dart';
@@ -221,11 +222,19 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
   // ── Voice recording ───────────────────────────────────────────────────────
 
   Future<void> _startVoiceRecording() async {
-    _recorder ??= AudioRecorder();
-    if (!await _recorder!.hasPermission()) {
-      _showError('Microphone permission required');
+    final status = await Permission.microphone.request();
+    if (status.isPermanentlyDenied) {
+      _showError(
+        'Microphone access is permanently denied. Enable it in Settings.',
+      );
+      openAppSettings();
       return;
     }
+    if (!status.isGranted) {
+      _showError('Microphone permission denied.');
+      return;
+    }
+    _recorder ??= AudioRecorder();
 
     final dir = await getTemporaryDirectory();
     _recordingPath =
@@ -457,7 +466,7 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
             },
             child: const Text('Save',
                 style: TextStyle(
-                    color: Color(0xFFFF5F15), fontWeight: FontWeight.w600)),
+                    color: Color(0xFFDE7356), fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -662,7 +671,7 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
             child: messagesAsync.when(
               loading: () => const Center(
                 child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation(Color(0xFFFF5F15)),
+                  valueColor: AlwaysStoppedAnimation(Color(0xFFDE7356)),
                 ),
               ),
               error: (err, _) => Center(
@@ -684,7 +693,7 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
                                 .notifier)
                             .refresh(),
                         child: const Text('Retry',
-                            style: TextStyle(color: Color(0xFFFF5F15))),
+                            style: TextStyle(color: Color(0xFFDE7356))),
                       ),
                     ],
                   ),
@@ -758,7 +767,7 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
                       valueColor:
-                          AlwaysStoppedAnimation(Color(0xFFFF5F15)),
+                          AlwaysStoppedAnimation(Color(0xFFDE7356)),
                     ),
                   ),
                   SizedBox(width: 10),
@@ -867,7 +876,7 @@ class _TrayAvatar extends StatelessWidget {
     }
     return CircleAvatar(
       radius: 42,
-      backgroundColor: const Color(0xFFFF5F15),
+      backgroundColor: const Color(0xFFDE7356),
       child: Text(
         participant.initials.isNotEmpty ? participant.initials : '?',
         style: const TextStyle(
@@ -934,7 +943,7 @@ class _AppBarAvatar extends StatelessWidget {
     }
     return CircleAvatar(
       radius: 18,
-      backgroundColor: const Color(0xFFFF5F15),
+      backgroundColor: const Color(0xFFDE7356),
       child: Text(
         initials.isNotEmpty ? initials : '?',
         style: const TextStyle(
@@ -1067,7 +1076,7 @@ class _MessageBubble extends StatelessWidget {
                 right: isMe ? 0 : 64,
               ),
               decoration: BoxDecoration(
-                color: isMe ? const Color(0xFFFF5F15) : Colors.white,
+                color: isMe ? const Color(0xFFDE7356) : Colors.white,
                 borderRadius: borderRadius,
                 boxShadow: [
                   BoxShadow(
@@ -1266,7 +1275,7 @@ class _ImageContent extends StatelessWidget {
                           ? progress.cumulativeBytesLoaded /
                               progress.expectedTotalBytes!
                           : null,
-                      color: const Color(0xFFFF5F15),
+                      color: const Color(0xFFDE7356),
                       strokeWidth: 2,
                     ),
                   ),
@@ -1459,7 +1468,7 @@ class _VideoPlayerDialogState extends State<_VideoPlayerDialog> {
                     height: 200,
                     child: Center(
                       child: CircularProgressIndicator(
-                        color: Color(0xFFFF5F15),
+                        color: Color(0xFFDE7356),
                       ),
                     ),
                   ),
@@ -1472,7 +1481,7 @@ class _VideoPlayerDialogState extends State<_VideoPlayerDialog> {
                   _controller,
                   allowScrubbing: true,
                   colors: const VideoProgressColors(
-                    playedColor: Color(0xFFFF5F15),
+                    playedColor: Color(0xFFDE7356),
                     backgroundColor: Colors.white24,
                     bufferedColor: Colors.white38,
                   ),
@@ -1594,7 +1603,7 @@ class _VoiceContentState extends State<_VoiceContent> {
                     ? Icons.pause_circle_filled_rounded
                     : Icons.play_circle_filled_rounded,
                 size: 36,
-                color: widget.isMe ? Colors.white : const Color(0xFFFF5F15),
+                color: widget.isMe ? Colors.white : const Color(0xFFDE7356),
               ),
             ),
             const SizedBox(width: 8),
@@ -1609,7 +1618,7 @@ class _VoiceContentState extends State<_VoiceContent> {
                         ? Colors.white.withValues(alpha: 0.3)
                         : const Color(0xFFE2E8F0),
                     valueColor: AlwaysStoppedAnimation(
-                      widget.isMe ? Colors.white : const Color(0xFFFF5F15),
+                      widget.isMe ? Colors.white : const Color(0xFFDE7356),
                     ),
                     minHeight: 3,
                     borderRadius: BorderRadius.circular(2),
@@ -1693,7 +1702,7 @@ class _LocationContent extends StatelessWidget {
                 Icon(
                   Icons.location_on_rounded,
                   size: 18,
-                  color: isMe ? Colors.white : const Color(0xFFFF5F15),
+                  color: isMe ? Colors.white : const Color(0xFFDE7356),
                 ),
                 const SizedBox(width: 4),
                 Text(
@@ -1832,8 +1841,8 @@ class _InputBar extends StatelessWidget {
               height: 44,
               decoration: BoxDecoration(
                 color: isSending
-                    ? const Color(0xFFFF5F15).withValues(alpha: 0.5)
-                    : const Color(0xFFFF5F15),
+                    ? const Color(0xFFDE7356).withValues(alpha: 0.5)
+                    : const Color(0xFFDE7356),
                 shape: BoxShape.circle,
               ),
               child: isSending
@@ -1938,7 +1947,7 @@ class _VoiceRecordBar extends StatelessWidget {
               padding:
                   const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: BoxDecoration(
-                color: const Color(0xFFFF5F15),
+                color: const Color(0xFFDE7356),
                 borderRadius: BorderRadius.circular(24),
               ),
               child: const Text(
@@ -2025,7 +2034,7 @@ class _AttachmentSheet extends StatelessWidget {
                 _AttachOption(
                   icon: Icons.location_on_rounded,
                   label: 'Location',
-                  color: const Color(0xFFFF5F15),
+                  color: const Color(0xFFDE7356),
                   onTap: onLocation,
                 ),
               ],

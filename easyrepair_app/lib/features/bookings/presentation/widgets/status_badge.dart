@@ -52,7 +52,7 @@ class StatusBadge extends StatelessWidget {
       BookingTab.live => const _BadgeConfig(
           bg: Color(0xFFFFF0EB),
           text: Color(0xFFCC4A0D),
-          dot: Color(0xFFFF5F15),
+          dot: Color(0xFFDE7356),
         ),
       BookingTab.assigned => const _BadgeConfig(
           bg: Color(0xFFF0FDF4),

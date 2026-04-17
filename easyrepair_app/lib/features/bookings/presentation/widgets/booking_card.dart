@@ -45,7 +45,7 @@ class BookingCard extends StatelessWidget {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.045),
+              color: Colors.black.withValues(alpha: 0.045),
               blurRadius: 10,
               offset: const Offset(0, 3),
             ),
@@ -472,7 +472,7 @@ class _WorkerSection extends StatelessWidget {
                   'Searching for workers...',
                   style: TextStyle(
                     fontSize: 12,
-                    color: Color(0xFFFF5F15),
+                    color: Color(0xFFDE7356),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -514,7 +514,7 @@ class _WorkerAvatar extends StatelessWidget {
       width: 34,
       height: 34,
       decoration: BoxDecoration(
-        color: const Color(0xFFFF5F15),
+        color: const Color(0xFFDE7356),
         shape: BoxShape.circle,
       ),
       child: worker.avatarUrl != null
@@ -522,7 +522,7 @@ class _WorkerAvatar extends StatelessWidget {
               child: Image.network(
                 worker.avatarUrl!,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => _Initials(worker.initials),
+                errorBuilder: (_, _, _) => _Initials(worker.initials),
               ),
             )
           : _Initials(worker.initials),
@@ -593,7 +593,7 @@ class _SearchingDotState extends State<_SearchingDot>
           child: Icon(
             Icons.search_rounded,
             size: 16,
-            color: Color(0xFFFF5F15),
+            color: Color(0xFFDE7356),
           ),
         ),
       ),
@@ -666,7 +666,7 @@ class _QuickActions extends StatelessWidget {
             child: _ActionBtn(
               label: 'Chat',
               icon: Icons.chat_bubble_outline_rounded,
-              color: const Color(0xFFFF5F15),
+              color: const Color(0xFFDE7356),
               bgColor: const Color(0xFFFFF0EB),
               onTap: onChat!,
             ),

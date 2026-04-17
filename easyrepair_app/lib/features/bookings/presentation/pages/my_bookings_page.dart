@@ -49,7 +49,7 @@ class MyBookingsPage extends ConsumerWidget {
                             filter.hasActiveFilters,
                       )
                     : RefreshIndicator(
-                        color: const Color(0xFFFF5F15),
+                        color: const Color(0xFFDE7356),
                         backgroundColor: Colors.white,
                         onRefresh: () => ref
                             .read(bookingsNotifierProvider.notifier)
@@ -208,7 +208,7 @@ class _Header extends ConsumerWidget {
               ),
               // Total count badge
               Consumer(
-                builder: (_, ref, __) {
+                builder: (_, ref, _) {
                   final all = ref
                           .watch(bookingsNotifierProvider)
                           .valueOrNull
@@ -219,7 +219,7 @@ class _Header extends ConsumerWidget {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFF5F15),
+                      color: const Color(0xFFDE7356),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
@@ -290,7 +290,7 @@ class _StatusTabs extends ConsumerWidget {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         itemCount: _tabs.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (_, i) {
           final tab = _tabs[i];
           final isActive = tab == activeTab;
@@ -309,12 +309,12 @@ class _StatusTabs extends ConsumerWidget {
                   const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
                 color: isActive
-                    ? const Color(0xFFFF5F15)
+                    ? const Color(0xFFDE7356)
                     : Colors.white,
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
                   color: isActive
-                      ? const Color(0xFFFF5F15)
+                      ? const Color(0xFFDE7356)
                       : const Color(0xFFE2E8F0),
                 ),
               ),
@@ -338,7 +338,7 @@ class _StatusTabs extends ConsumerWidget {
                           horizontal: 5, vertical: 1),
                       decoration: BoxDecoration(
                         color: isActive
-                            ? Colors.white.withOpacity(0.2)
+                            ? Colors.white.withValues(alpha: 0.2)
                             : const Color(0xFFF1F5F9),
                         borderRadius: BorderRadius.circular(10),
                       ),
@@ -421,7 +421,7 @@ class _EmptyState extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(
                       horizontal: 24, vertical: 13),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFF5F15),
+                    color: const Color(0xFFDE7356),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: const Text(
@@ -497,7 +497,7 @@ class _ErrorState extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(
                     horizontal: 24, vertical: 12),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFF5F15),
+                  color: const Color(0xFFDE7356),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Text(

@@ -20,6 +20,7 @@ import '../../features/worker/presentation/pages/worker_job_detail_page.dart';
 import '../../features/worker/presentation/pages/worker_reviews_page.dart';
 import '../../features/notifications/presentation/pages/notification_list_page.dart';
 import '../../features/chat/presentation/pages/chat_detail_page.dart';
+import '../presentation/pages/splash_page.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authStateNotifier = ValueNotifier<bool>(false);
@@ -29,21 +30,24 @@ final routerProvider = Provider<GoRouter>((ref) {
   });
 
   return GoRouter(
-    initialLocation: '/auth/login',
+    initialLocation: '/splash',
     refreshListenable: authStateNotifier,
     redirect: (context, state) {
       final authState = ref.read(authStateProvider);
+      final isSplash = state.matchedLocation == '/splash';
       final isAuthRoute = state.matchedLocation.startsWith('/auth');
 
-      // Still loading — stay where we are
-      if (authState.isLoading) return null;
+      // Auth still resolving → show splash
+      if (authState.isLoading) {
+        return isSplash ? null : '/splash';
+      }
 
       final user = authState.valueOrNull;
       final isLoggedIn = user != null;
 
-      if (!isLoggedIn && !isAuthRoute) return '/auth/login';
-
-      if (isLoggedIn && isAuthRoute) {
+      // From splash or auth route: dispatch to correct home
+      if (isSplash || (isLoggedIn && isAuthRoute)) {
+        if (!isLoggedIn) return '/auth/login';
         if (user!.isWorker) {
           return user.isVerifiedWorker
               ? '/worker/home'
@@ -52,9 +56,15 @@ final routerProvider = Provider<GoRouter>((ref) {
         return '/client/home';
       }
 
+      if (!isLoggedIn && !isAuthRoute) return '/auth/login';
+
       return null;
     },
     routes: [
+      GoRoute(
+        path: '/splash',
+        builder: (_, __) => const SplashPage(),
+      ),
       GoRoute(
         path: '/auth/login',
         builder: (_, __) => const LoginPage(),

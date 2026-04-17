@@ -15,7 +15,7 @@ class RegisterPage extends ConsumerStatefulWidget {
 }
 
 class _RegisterPageState extends ConsumerState<RegisterPage> {
-  static const _accent = Color(0xFFFF5F15);
+  static const _accent = Color(0xFFDE7356);
   static const _slate = Color(0xFF6B7280);
 
   final _formKey = GlobalKey<FormState>();
@@ -112,7 +112,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   children: [
                     Center(
                       child: Image.asset(
-                        'assets/images/easyrepair_logo.png',
+                        'assets/images/er-icon.png',
                         height: 56,
                       ),
                     ),
@@ -293,7 +293,7 @@ class _RoleSelector extends StatelessWidget {
 }
 
 class _RoleButton extends StatelessWidget {
-  static const _accent = Color(0xFFFF5F15);
+  static const _accent = Color(0xFFDE7356);
   static const _border = Color(0xFFE2E8F0);
 
   final String role;
@@ -330,7 +330,7 @@ class _RoleButton extends StatelessWidget {
           boxShadow: isSelected
               ? [
                   const BoxShadow(
-                    color: Color(0x33FF5F15),
+                    color: Color(0x33DE7356),
                     blurRadius: 12,
                     offset: Offset(0, 4),
                   ),
@@ -400,13 +400,13 @@ class _PrimaryButton extends StatelessWidget {
       child: ElevatedButton(
         onPressed: isLoading ? null : onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFFFF5F15),
+          backgroundColor: const Color(0xFFDE7356),
           foregroundColor: Colors.white,
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
-          disabledBackgroundColor: const Color(0xFFFF5F15).withAlpha(150),
+          disabledBackgroundColor: const Color(0xFFDE7356).withAlpha(150),
         ),
         child: isLoading
             ? const SizedBox(
