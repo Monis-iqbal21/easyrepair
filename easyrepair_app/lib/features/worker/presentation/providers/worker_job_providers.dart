@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../bookings/domain/entities/booking_entity.dart';
@@ -32,7 +34,13 @@ class WorkerJobsNotifier extends AsyncNotifier<List<BookingEntity>> {
   WorkerJobFilter get currentFilter => _filter;
 
   @override
-  Future<List<BookingEntity>> build() => _fetch();
+  Future<List<BookingEntity>> build() {
+    final timer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (state is! AsyncLoading) _reload();
+    });
+    ref.onDispose(timer.cancel);
+    return _fetch();
+  }
 
   Future<List<BookingEntity>> _fetch() async {
     final result = await ref

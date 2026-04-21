@@ -17,11 +17,36 @@ const _kLight  = Color(0xFF94A3B8);
 const _kBorder = Color(0xFFE2E8F0);
 const _kBg     = Color(0xFFF9FAFB);
 
-class WorkerJobsPage extends ConsumerWidget {
+class WorkerJobsPage extends ConsumerStatefulWidget {
   const WorkerJobsPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<WorkerJobsPage> createState() => _WorkerJobsPageState();
+}
+
+class _WorkerJobsPageState extends ConsumerState<WorkerJobsPage>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      ref.invalidate(workerJobsProvider);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final jobsAsync = ref.watch(workerJobsProvider);
     final notifier  = ref.read(workerJobsProvider.notifier);
     final filter    = ref.watch(workerJobsProvider.notifier
@@ -147,7 +172,11 @@ class _JobCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final canComplete = job.status.isWorkerActive;
 
-    return Container(
+    return GestureDetector(
+      onTap: () => context.push('/worker/job/${job.id}').then((_) {
+        ref.invalidate(workerJobsProvider);
+      }),
+      child: Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -331,33 +360,16 @@ class _JobCard extends ConsumerWidget {
                   ),
                 ],
 
-                const SizedBox(height: 12),
-
-                // ── Action buttons ────────────────────────────────────────
-                Row(
-                  children: [
-                    // View Details
-                    Expanded(
-                      child: _OutlineBtn(
-                        label: 'View Details',
-                        icon: Icons.open_in_new_rounded,
-                        onTap: () =>
-                            context.push('/worker/job/${job.id}'),
-                      ),
-                    ),
-                    if (canComplete) ...[
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _CompleteBtn(jobId: job.id),
-                      ),
-                    ],
-                  ],
-                ),
+                if (canComplete) ...[
+                  const SizedBox(height: 12),
+                  _CompleteBtn(jobId: job.id),
+                ],
               ],
             ),
           ),
         ],
       ),
+    ),
     );
   }
 
@@ -547,49 +559,6 @@ class _UrgencyPill extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _OutlineBtn extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final VoidCallback onTap;
-
-  const _OutlineBtn({
-    required this.label,
-    required this.icon,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 38),
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF9FAFB),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: _kBorder),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 13, color: _kGray),
-            const SizedBox(width: 5),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: _kGray,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

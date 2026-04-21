@@ -17,6 +17,7 @@ import {
   WORKERS_QUEUE,
 } from './workers.processor';
 import { UpdateSkillsDto } from './dto/update-skills.dto';
+import { UpdateLocationDto } from './dto/update-location.dto';
 import {
   WorkerJobAttachmentDto,
   WorkerJobResponseDto,
@@ -29,7 +30,7 @@ import {
 } from './dto/worker-review-response.dto';
 
 /** 7 hours in milliseconds — delay before auto-offline job fires. */
-const AUTO_OFFLINE_DELAY_MS = 2 * 60 * 1000;
+const AUTO_OFFLINE_DELAY_MS = 7 * 60 * 60 * 1000;
 
 @Injectable()
 export class WorkersService {
@@ -150,7 +151,7 @@ export class WorkersService {
     previousStatus: AvailabilityStatus,
     newStatus: AvailabilityStatus,
   ): Promise<void> {
-    const jobId = `auto-offline:${workerProfileId}`;
+    const jobId = `auto-offline-${workerProfileId}`;
 
     if (newStatus === AvailabilityStatus.ONLINE) {
       if (previousStatus !== AvailabilityStatus.ONLINE) {
@@ -188,6 +189,23 @@ export class WorkersService {
         );
       }
     }
+  }
+
+  /**
+   * Location-only ping — updates lat/lng without touching availabilityStatus.
+   * Called by the worker app's periodic location tracker so that it can never
+   * re-online a worker who was auto-offlined.  Silently no-ops if offline.
+   */
+  async updateLocation(userId: string, dto: UpdateLocationDto): Promise<void> {
+    const profile = await this.workersRepository.findByUserId(userId);
+    if (!profile) {
+      throw new NotFoundException('Worker profile not found');
+    }
+    await this.workersRepository.updateLocationOnly(
+      profile.id,
+      dto.lat,
+      dto.lng,
+    );
   }
 
   /** Replace all skills for a worker. */

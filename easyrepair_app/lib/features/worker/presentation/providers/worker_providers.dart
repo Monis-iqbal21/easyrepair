@@ -287,19 +287,14 @@ class LocationTrackerNotifier extends Notifier<LocationTrackingState> {
                 : 'heartbeat');
 
     try {
-      await _pushToServer(
-        status: AvailabilityStatus.online,
-        lat: lat,
-        lng: lng,
-        reason: syncReason,
-      );
+      await _pushLocationOnly(lat: lat, lng: lng, reason: syncReason);
       state = state.copyWith(
         lastSyncedLat: lat,
         lastSyncedLng: lng,
         lastSyncedAt: now,
       );
     } catch (e) {
-      debugPrint('[LocationTracker] Server update FAILED ($syncReason): $e');
+      debugPrint('[LocationTracker] Location ping FAILED ($syncReason): $e');
     }
   }
 
@@ -330,6 +325,33 @@ class LocationTrackerNotifier extends Notifier<LocationTrackingState> {
             'status=${newStatus.raw}');
         return newStatus;
       },
+    );
+  }
+
+  /// Periodic location-only ping — uses the dedicated /workers/location
+  /// endpoint that never changes availabilityStatus on the server.
+  /// Silently skips if coordinates are unavailable.
+  Future<void> _pushLocationOnly({
+    double? lat,
+    double? lng,
+    required String reason,
+  }) async {
+    if (lat == null || lng == null) {
+      debugPrint(
+          '[LocationTracker] No coords — skipping location ping ($reason)');
+      return;
+    }
+    final result = await ref.read(workerRepositoryProvider).updateLocationOnly(
+          lat: lat,
+          lng: lng,
+        );
+    result.fold(
+      (failure) {
+        debugPrint(
+            '[LocationTracker] Location ping FAILED ($reason): ${failure.message}');
+        throw failure;
+      },
+      (_) => debugPrint('[LocationTracker] Location ping OK ($reason)'),
     );
   }
 

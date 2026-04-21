@@ -16,6 +16,12 @@ abstract class WorkerRepository {
     double? lng,
   });
 
+  /// Location-only ping — never changes availabilityStatus.
+  Future<Either<Failure, void>> updateLocationOnly({
+    required double lat,
+    required double lng,
+  });
+
   Future<Either<Failure, List<WorkerSkillEntity>>> updateSkills(
     List<String> categoryIds,
   );

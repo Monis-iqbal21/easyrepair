@@ -16,6 +16,9 @@ abstract class WorkerRemoteDatasource {
     double? lng,
   });
 
+  /// Location-only ping — never changes availabilityStatus on the server.
+  Future<void> updateLocationOnly({required double lat, required double lng});
+
   Future<List<WorkerSkillModel>> updateSkills(List<String> categoryIds);
 
   Future<List<CategoryModel>> getCategories();
@@ -58,6 +61,17 @@ class WorkerRemoteDatasourceImpl implements WorkerRemoteDatasource {
       data: body,
     );
     return response.data!['data'] as Map<String, dynamic>;
+  }
+
+  @override
+  Future<void> updateLocationOnly({
+    required double lat,
+    required double lng,
+  }) async {
+    await _dio.patch<void>(
+      '/workers/location',
+      data: {'lat': lat, 'lng': lng},
+    );
   }
 
   @override

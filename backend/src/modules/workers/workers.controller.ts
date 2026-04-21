@@ -14,6 +14,7 @@ import {
 import { BookingStatus } from '@prisma/client';
 import { WorkersService } from './workers.service';
 import { UpdateAvailabilityDto } from './dto/update-availability.dto';
+import { UpdateLocationDto } from './dto/update-location.dto';
 import { UpdateSkillsDto } from './dto/update-skills.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -43,6 +44,20 @@ export class WorkersController {
     @Body() dto: UpdateAvailabilityDto,
   ) {
     return this.workersService.updateAvailability(user.id, dto);
+  }
+
+  /**
+   * PATCH /workers/location — periodic location-only ping.
+   * Updates lat/lng only; never changes availabilityStatus.
+   * Workers who are OFFLINE (including auto-offlined) are silently ignored.
+   */
+  @Patch('location')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  updateLocation(
+    @CurrentUser() user: { id: string },
+    @Body() dto: UpdateLocationDto,
+  ) {
+    return this.workersService.updateLocation(user.id, dto);
   }
 
   /** PUT /workers/skills — replace all skills */

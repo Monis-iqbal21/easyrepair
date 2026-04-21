@@ -57,7 +57,7 @@
         <!-- Google Maps API key -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="${MAPS_API_KEY}" />
+            android:value="AIzaSyA04SazaTVlndDbjXR2c3sb7GY-EjJc9gk" />
     </application>
     <queries>
         <intent>

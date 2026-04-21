@@ -135,6 +135,29 @@ export class WorkersRepository {
     });
   }
 
+  /**
+   * Update lat/lng only — never changes availabilityStatus.
+   * Used by periodic location pings so they cannot re-online a worker that was
+   * auto-offlined. Silently no-ops if the worker is not currently ONLINE.
+   */
+  async updateLocationOnly(
+    workerProfileId: string,
+    lat: number,
+    lng: number,
+  ): Promise<void> {
+    await this.prisma.workerProfile.updateMany({
+      where: {
+        id: workerProfileId,
+        availabilityStatus: AvailabilityStatus.ONLINE,
+      },
+      data: {
+        currentLat: lat,
+        currentLng: lng,
+        locationUpdatedAt: new Date(),
+      },
+    });
+  }
+
   /** Unconditionally set a worker offline and clear onlineAt. Used by auto-offline processor. */
   async setOfflineById(workerProfileId: string): Promise<void> {
     await this.prisma.workerProfile.update({

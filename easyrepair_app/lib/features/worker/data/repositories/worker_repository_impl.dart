@@ -50,6 +50,21 @@ class WorkerRepositoryImpl implements WorkerRepository {
   }
 
   @override
+  Future<Either<Failure, void>> updateLocationOnly({
+    required double lat,
+    required double lng,
+  }) async {
+    try {
+      await _datasource.updateLocationOnly(lat: lat, lng: lng);
+      return const Right(null);
+    } on DioException catch (e) {
+      return Left(dioExceptionToFailure(e));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
   Future<Either<Failure, List<WorkerSkillEntity>>> updateSkills(
     List<String> categoryIds,
   ) async {
