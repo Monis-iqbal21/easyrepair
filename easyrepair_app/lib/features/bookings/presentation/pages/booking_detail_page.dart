@@ -13,6 +13,7 @@ import '../providers/booking_providers.dart';
 import '../widgets/status_badge.dart';
 import '../widgets/urgency_badge.dart';
 import '../../../../features/chat/presentation/providers/chat_providers.dart';
+import 'worker_discovery_map_page.dart';
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 const _kGreen  = Color(0xFFDE7356);
@@ -351,7 +352,7 @@ class _DetailBody extends ConsumerWidget {
                   ),
                 ] else if (booking.status == BookingStatus.pending) ...[
                   const SizedBox(height: 16),
-                  _NearbyWorkersSection(bookingId: booking.id),
+                  _FindWorkersButton(booking: booking),
                 ],
                 const SizedBox(height: 16),
 
@@ -1303,8 +1304,65 @@ class _DistanceBar extends StatelessWidget {
   }
 }
 
-// ── Nearby workers section ────────────────────────────────────────────────────
+// ── Find workers button ───────────────────────────────────────────────────────
 
+class _FindWorkersButton extends StatelessWidget {
+  final BookingEntity booking;
+  const _FindWorkersButton({required this.booking});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _kBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Available Workers',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: _kDark,
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => WorkerDiscoveryMapPage(booking: booking),
+                  fullscreenDialog: true,
+                ),
+              ),
+              icon: const Icon(Icons.manage_search_rounded, size: 18),
+              label: const Text('Find Available Workers'),
+              style: FilledButton.styleFrom(
+                backgroundColor: _kGreen,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                textStyle: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Nearby workers section (legacy — superseded by WorkerDiscoveryMapPage) ──────
+
+// ignore: unused_element
 class _NearbyWorkersSection extends ConsumerWidget {
   final String bookingId;
 

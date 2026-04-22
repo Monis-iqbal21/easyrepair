@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:audioplayers/audioplayers.dart';
@@ -13,6 +14,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
 import 'package:video_player/video_player.dart';
 
+import '../../../../core/config/app_config.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/presentation/responsive_utils.dart';
 import '../../../../features/bookings/domain/entities/booking_entity.dart';
@@ -25,8 +27,7 @@ import '../widgets/location_picker_sheet.dart';
 import '../widgets/service_card.dart';
 
 // ── Palette ───────────────────────────────────────────────────────────────────
-// Changed from 0xFFDE7356 → 0xFFDE7356 to match brand accent throughout.
-const _kGreen = Color(0xFFDE7356);
+const _kGreen = Color(0xFF0D7A5F);
 const _kRed = Color(0xFFDC2626);
 const _kDark = Color(0xFF1A1A1A);
 const _kGray = Color(0xFF6B7280);
@@ -71,6 +72,8 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
   bool _locationLoading = false;
 
   bool _isSubmitting = false;
+  int _currentStep = 0;
+  String? _createdBookingId;
 
   // ── New file attachments (locally picked, not yet uploaded) ─────────────────
   final _picker = ImagePicker();
@@ -369,6 +372,28 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
   }
 
   // ── Location logic ────────────────────────────────────────────────────────
+  Future<String?> _reverseGeocode(double lat, double lng) async {
+    try {
+      final key = AppConfig.googleMapsApiKey;
+      final uri = Uri.parse(
+        'https://maps.googleapis.com/maps/api/geocode/json?latlng=$lat,$lng&key=$key',
+      );
+      final client = HttpClient();
+      final request = await client.getUrl(uri);
+      final response = await request.close();
+      final body = await response.transform(utf8.decoder).join();
+      client.close();
+      final json = jsonDecode(body) as Map<String, dynamic>;
+      if (json['status'] == 'OK') {
+        final results = json['results'] as List<dynamic>;
+        if (results.isNotEmpty) {
+          return results.first['formatted_address'] as String?;
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
+
   Future<void> _captureCurrentLocation() async {
     setState(() => _locationLoading = true);
     try {
@@ -386,11 +411,13 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
           accuracy: LocationAccuracy.high,
         ),
       );
+      final addr = await _reverseGeocode(pos.latitude, pos.longitude);
       if (mounted) {
         setState(() {
           _gpsLat = pos.latitude;
           _gpsLng = pos.longitude;
-          _pickedAddress = null;
+          _pickedAddress = addr;
+          if (addr != null) _addressCtrl.text = addr;
         });
       }
     } catch (_) {
@@ -579,7 +606,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     final booking = await ref
         .read(createBookingNotifierProvider.notifier)
         .submit(request);
-
+    _createdBookingId = booking.id;
     await _uploadNewAttachments(booking.id);
     await _uploadVoiceNote(booking.id);
   }
@@ -718,6 +745,8 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                     Navigator.pop(ctx);
                     if (_isEditMode) {
                       context.pop();
+                    } else if (_createdBookingId != null) {
+                      context.go('/client/booking/$_createdBookingId');
                     } else {
                       context.go('/client/jobs');
                     }
@@ -1958,7 +1987,8 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     );
   }
 
-  // ── I. Submit button ──────────────────────────────────────────────────────
+  // ── I. Submit button (superseded by _buildStepNavButtons on step 3) ─────────
+  // ignore: unused_element
   Widget _buildSubmitButton() {
     return SizedBox(
       width: double.infinity,
@@ -1994,10 +2024,228 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     );
   }
 
-  // ── Build ─────────────────────────────────────────────────────────────────
+  // ── Step validation ──────────────────────────────────────────────────────────
+  bool _validateStep1() {
+    if (_selectedService == null) {
+      _showError('Please select a service.');
+      return false;
+    }
+    if (!_isUrgent) {
+      if (_selectedDate == null) {
+        _showError('Please select a date.');
+        return false;
+      }
+      if (_selectedTimeSlot == null) {
+        _showError('Please select an arrival window.');
+        return false;
+      }
+    } else {
+      if (_urgentOption == null) {
+        _showError('Please select an urgency window.');
+        return false;
+      }
+    }
+    return true;
+  }
+
+  void _nextStep() {
+    FocusScope.of(context).unfocus();
+    if (_currentStep == 0 && !_validateStep1()) return;
+    if (_currentStep < 2) setState(() => _currentStep++);
+  }
+
+  void _prevStep() {
+    FocusScope.of(context).unfocus();
+    if (_currentStep > 0) {
+      setState(() => _currentStep--);
+    } else {
+      context.pop();
+    }
+  }
+
+  // ── Step indicator ────────────────────────────────────────────────────────────
+  Widget _buildStepIndicator() {
+    const labels = ['Schedule', 'Details', 'Address'];
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Row(
+        children: List.generate(3, (i) {
+          final isDone = i < _currentStep;
+          final isActive = i == _currentStep;
+          return Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(right: i < 2 ? 8 : 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 250),
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: (isDone || isActive) ? _kGreen : _kBorder,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    labels[i],
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight:
+                          isActive ? FontWeight.w600 : FontWeight.w400,
+                      color: (isDone || isActive) ? _kGreen : _kGray,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  // ── Step 1: Service + job type + schedule ─────────────────────────────────────
+  Widget _buildStep1() {
+    return SingleChildScrollView(
+      key: const ValueKey(0),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildServiceSection(),
+          const SizedBox(height: 16),
+          _buildJobTypeToggle(),
+          const SizedBox(height: 16),
+          _buildSchedulingSection(),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+
+  // ── Step 2: Issue title + voice note + attachments ────────────────────────────
+  Widget _buildStep2() {
+    return SingleChildScrollView(
+      key: const ValueKey(1),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildTitleSection(),
+          const SizedBox(height: 16),
+          _buildMediaSection(),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+
+  // ── Step 3: Service address + submit ──────────────────────────────────────────
+  Widget _buildStep3() {
+    return SingleChildScrollView(
+      key: const ValueKey(2),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildLocationSection(),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+
+  // ── Step navigation buttons ───────────────────────────────────────────────────
+  Widget _buildStepNavButtons() {
+    final isLast = _currentStep == 2;
+    final isFirst = _currentStep == 0;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 12,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
+      child: Row(
+        children: [
+          if (!isFirst) ...[
+            Expanded(
+              child: OutlinedButton(
+                onPressed: _prevStep,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: _kGreen,
+                  side: const BorderSide(color: _kGreen),
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                child: const Text(
+                  'Back',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+          ],
+          Expanded(
+            flex: isFirst ? 1 : 2,
+            child: ElevatedButton(
+              onPressed: isLast
+                  ? (_isSubmitting ? null : _validateAndSubmit)
+                  : _nextStep,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _kGreen,
+                disabledBackgroundColor: _kGreen.withValues(alpha: 0.5),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 15),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                elevation: 0,
+              ),
+              child: isLast
+                  ? (_isSubmitting
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(
+                          _isEditMode ? 'Save Changes' : 'Book Service',
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ))
+                  : const Text(
+                      'Next',
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                    ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Build ─────────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    final bottomPad = MediaQuery.of(context).viewPadding.bottom;
+    const stepTitles = ['Schedule', 'Details', 'Address'];
 
     return Scaffold(
       backgroundColor: _kSurface,
@@ -2005,13 +2253,13 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
         bottom: false,
         child: Column(
           children: [
-            // Header
+            // ── Header ───────────────────────────────────────────────────────────
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
               child: Row(
                 children: [
                   GestureDetector(
-                    onTap: () => context.pop(),
+                    onTap: _prevStep,
                     child: Container(
                       width: 40,
                       height: 40,
@@ -2033,57 +2281,52 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                     ),
                   ),
                   const SizedBox(width: 14),
-                  Text(
-                    _isEditMode ? 'Edit Booking' : 'Book a Service',
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
-                      color: _kDark,
-                    ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _isEditMode ? 'Edit Booking' : 'Book a Service',
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          color: _kDark,
+                        ),
+                      ),
+                      Text(
+                        'Step ${_currentStep + 1} of 3  ·  ${stepTitles[_currentStep]}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: _kGray,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 20),
-            // Scrollable form — section order:
-            // 1. Select Service
-            // 2. Job Type
-            // 3. Schedule  (live summary folded inside)
-            // 4. What's the issue
-            // 5. Voice Note & Attachments
-            // 6. Service Address
-            // 7. Book Service
+
+            // ── Step indicator ────────────────────────────────────────────────────
+            _buildStepIndicator(),
+            const SizedBox(height: 12),
+
+            // ── Step content ──────────────────────────────────────────────────────
             Expanded(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.fromLTRB(20, 0, 20, 80 + bottomPad + 16),
-                keyboardDismissBehavior:
-                    ScrollViewKeyboardDismissBehavior.onDrag,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildServiceSection(),
-                    const SizedBox(height: 16),
-                    _buildJobTypeToggle(),
-                    const SizedBox(height: 16),
-                    _buildSchedulingSection(),
-                    const SizedBox(height: 16),
-                    _buildTitleSection(),
-                    const SizedBox(height: 16),
-                    // _buildDescriptionSection(),   // kept in code, removed from form
-                    // const SizedBox(height: 16),
-                    _buildMediaSection(),
-                    const SizedBox(height: 16),
-                    _buildLocationSection(),
-                    const SizedBox(height: 20),
-                    _buildSubmitButton(),
-                  ],
-                ),
-              ),
+              child: switch (_currentStep) {
+                0 => _buildStep1(),
+                1 => _buildStep2(),
+                _ => _buildStep3(),
+              },
             ),
+
+            // ── Navigation buttons ────────────────────────────────────────────────
+            _buildStepNavButtons(),
+
+            // Safe-area spacer so buttons clear the system navigation bar
+            SizedBox(height: MediaQuery.of(context).viewPadding.bottom),
           ],
         ),
       ),
-      extendBody: true,
       bottomNavigationBar: const ClientBottomNavBar(currentIndex: 0),
     );
   }
