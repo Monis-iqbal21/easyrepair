@@ -374,23 +374,78 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
   // ── Location logic ────────────────────────────────────────────────────────
   Future<String?> _reverseGeocode(double lat, double lng) async {
     try {
+      // DIAG-1: API key presence
       final key = AppConfig.googleMapsApiKey;
+      if (key.isEmpty) {
+        debugPrint('[ReverseGeocode] ERROR: googleMapsApiKey is EMPTY — '
+            'check dart-define GOOGLE_MAPS_API_KEY');
+      } else {
+        final masked = key.length > 8
+            ? '${key.substring(0, 4)}...${key.substring(key.length - 4)}'
+            : '****';
+        debugPrint('[ReverseGeocode] API key loaded (masked): $masked');
+      }
+
+      // DIAG-2: request URL (key masked)
+      final maskedKey = key.length > 8
+          ? '${key.substring(0, 4)}...${key.substring(key.length - 4)}'
+          : '****';
+      debugPrint(
+        '[ReverseGeocode] Request URL: '
+        'https://maps.googleapis.com/maps/api/geocode/json'
+        '?latlng=$lat,$lng&key=$maskedKey',
+      );
+
       final uri = Uri.parse(
         'https://maps.googleapis.com/maps/api/geocode/json?latlng=$lat,$lng&key=$key',
       );
       final client = HttpClient();
       final request = await client.getUrl(uri);
       final response = await request.close();
+
+      // DIAG-3: HTTP status
+      debugPrint('[ReverseGeocode] HTTP status: ${response.statusCode}');
+
       final body = await response.transform(utf8.decoder).join();
       client.close();
+
+      // DIAG-4: raw response body (truncated to 500 chars)
+      debugPrint('[ReverseGeocode] Raw body (first 500 chars): '
+          '${body.length > 500 ? body.substring(0, 500) : body}');
+
       final json = jsonDecode(body) as Map<String, dynamic>;
-      if (json['status'] == 'OK') {
-        final results = json['results'] as List<dynamic>;
-        if (results.isNotEmpty) {
-          return results.first['formatted_address'] as String?;
+      final status = json['status'] as String? ?? 'UNKNOWN';
+
+      // DIAG-5: parsed geocode status
+      debugPrint('[ReverseGeocode] Geocode status: $status');
+
+      if (status != 'OK') {
+        final errMsg = json['error_message'] as String? ?? '';
+        if (status == 'REQUEST_DENIED') {
+          debugPrint('[ReverseGeocode] ERROR: REQUEST_DENIED — '
+              'Google Geocoding API is likely not enabled for this key, '
+              'or the key is invalid/restricted. error_message: $errMsg');
+        } else {
+          debugPrint('[ReverseGeocode] Non-OK status "$status". '
+              'error_message: $errMsg');
         }
+        return null;
       }
-    } catch (_) {}
+
+      final results = json['results'] as List<dynamic>;
+      if (results.isEmpty) {
+        debugPrint('[ReverseGeocode] status=OK but results list is empty');
+        return null;
+      }
+
+      final addr = results.first['formatted_address'] as String?;
+
+      // DIAG-6: final parsed address
+      debugPrint('[ReverseGeocode] Parsed address: $addr');
+      return addr;
+    } catch (e, st) {
+      debugPrint('[ReverseGeocode] Exception: $e\n$st');
+    }
     return null;
   }
 
@@ -411,13 +466,26 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
           accuracy: LocationAccuracy.high,
         ),
       );
+      debugPrint(
+        '[CaptureLocation] GPS position: lat=${pos.latitude}, lng=${pos.longitude}',
+      );
       final addr = await _reverseGeocode(pos.latitude, pos.longitude);
+
+      // DIAG-7: address controller assignment
+      debugPrint(
+        '[CaptureLocation] addr from _reverseGeocode: $addr — '
+        '${addr != null ? "setting _addressCtrl.text" : "address is null, field NOT updated"}',
+      );
+
       if (mounted) {
         setState(() {
           _gpsLat = pos.latitude;
           _gpsLng = pos.longitude;
           _pickedAddress = addr;
-          if (addr != null) _addressCtrl.text = addr;
+          if (addr != null) {
+            _addressCtrl.text = addr;
+            debugPrint('[CaptureLocation] _addressCtrl.text set to: $addr');
+          }
         });
       }
     } catch (_) {

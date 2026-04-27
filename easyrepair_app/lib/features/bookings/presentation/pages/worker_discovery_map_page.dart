@@ -4,13 +4,14 @@ import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../../../core/errors/failures.dart';
-import '../../domain/entities/booking_entity.dart';
-import '../../domain/entities/nearby_worker_entity.dart';
-import '../providers/booking_providers.dart';
-import '../../../../features/chat/presentation/providers/chat_providers.dart';
+import '../../../bids/domain/entities/bid_entity.dart';
+import '../../../bids/domain/repositories/bid_repository.dart';
+import '../../../bids/presentation/providers/bid_providers.dart';
+import '../../../bookings/domain/entities/booking_entity.dart';
+import '../../../chat/presentation/providers/chat_providers.dart';
 
 // ── Palette ───────────────────────────────────────────────────────────────────
-const _kBrand  = Color(0xFFDE7356);
+const _kGreen  = Color(0xFF0D7A5F);
 const _kDark   = Color(0xFF1A1A1A);
 const _kGray   = Color(0xFF6B7280);
 const _kLight  = Color(0xFF94A3B8);
@@ -56,8 +57,7 @@ class _WorkerDiscoveryMapPageState
                 position: jobPos,
                 infoWindow: InfoWindow(
                   title: 'Job Location',
-                  snippet: widget.booking.address ??
-                      widget.booking.city,
+                  snippet: widget.booking.address ?? widget.booking.city,
                 ),
               ),
             },
@@ -79,8 +79,7 @@ class _WorkerDiscoveryMapPageState
                   onTap: () => Navigator.of(context).pop(),
                   child: const Padding(
                     padding: EdgeInsets.all(10),
-                    child: Icon(Icons.arrow_back_ios_new_rounded,
-                        size: 16, color: _kDark),
+                    child: Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: _kDark),
                   ),
                 ),
               ),
@@ -94,8 +93,8 @@ class _WorkerDiscoveryMapPageState
             maxChildSize: 1.0,
             snap: true,
             snapSizes: const [0.22, 0.55, 1.0],
-            builder: (ctx, scrollCtrl) => _WorkerSheet(
-              bookingId: widget.booking.id,
+            builder: (ctx, scrollCtrl) => _BidsSheet(
+              booking: widget.booking,
               scrollController: scrollCtrl,
             ),
           ),
@@ -105,20 +104,17 @@ class _WorkerDiscoveryMapPageState
   }
 }
 
-// ── Draggable sheet container ─────────────────────────────────────────────────
+// ── Draggable sheet ────────────────────────────────────────────────────────────
 
-class _WorkerSheet extends ConsumerWidget {
-  final String bookingId;
+class _BidsSheet extends ConsumerWidget {
+  final BookingEntity booking;
   final ScrollController scrollController;
 
-  const _WorkerSheet({
-    required this.bookingId,
-    required this.scrollController,
-  });
+  const _BidsSheet({required this.booking, required this.scrollController});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(nearbyWorkersNotifierProvider(bookingId));
+    final bidsAsync = ref.watch(bookingBidsProvider(booking.id));
 
     return Container(
       decoration: const BoxDecoration(
@@ -157,7 +153,7 @@ class _WorkerSheet extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'Available Workers',
+                        'Worker Bids',
                         style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
@@ -166,16 +162,14 @@ class _WorkerSheet extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(height: 2),
-                      _SheetSubtitle(state: state),
+                      _SheetSubtitle(bidsAsync: bidsAsync),
                     ],
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.refresh_rounded,
-                      size: 18, color: _kLight),
+                  icon: const Icon(Icons.refresh_rounded, size: 18, color: _kLight),
                   tooltip: 'Refresh',
-                  onPressed: () =>
-                      ref.invalidate(nearbyWorkersNotifierProvider(bookingId)),
+                  onPressed: () => ref.invalidate(bookingBidsProvider(booking.id)),
                 ),
               ],
             ),
@@ -185,12 +179,31 @@ class _WorkerSheet extends ConsumerWidget {
 
           // Content
           Expanded(
-            child: _SheetBody(
-              state: state,
-              bookingId: bookingId,
-              scrollController: scrollController,
-              onRetry: () =>
-                  ref.invalidate(nearbyWorkersNotifierProvider(bookingId)),
+            child: bidsAsync.when(
+              loading: () => _LoadingState(),
+              error: (err, _) => _ErrorState(
+                message: err is Failure ? err.message : 'Could not load bids.',
+                onRetry: () => ref.invalidate(bookingBidsProvider(booking.id)),
+              ),
+              data: (bids) {
+                final pending = bids
+                    .where((b) => b.bid.status == BidStatus.pending)
+                    .toList()
+                  ..sort((a, b) => a.bid.amount.compareTo(b.bid.amount));
+
+                if (pending.isEmpty) return const _EmptyState();
+
+                return ListView.separated(
+                  controller: scrollController,
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+                  itemCount: pending.length,
+                  separatorBuilder: (context2, i2) => const SizedBox(height: 10),
+                  itemBuilder: (ctx, i) => _BidOfferCard(
+                    bidWorker: pending[i],
+                    bookingId: booking.id,
+                  ),
+                );
+              },
             ),
           ),
         ],
@@ -202,97 +215,35 @@ class _WorkerSheet extends ConsumerWidget {
 // ── Sheet subtitle ────────────────────────────────────────────────────────────
 
 class _SheetSubtitle extends StatelessWidget {
-  final NearbyWorkersState state;
-  const _SheetSubtitle({required this.state});
+  final AsyncValue<List<BidWithWorkerEntity>> bidsAsync;
+  const _SheetSubtitle({required this.bidsAsync});
 
   @override
   Widget build(BuildContext context) {
-    final String text;
-    if (state.hasError && state.workers.isEmpty) {
-      text = 'Could not load workers';
-    } else if (state.workers.isEmpty && state.isExpanding) {
-      text = 'Searching nearby workers...';
-    } else if (state.workers.isNotEmpty && state.isExpanding) {
-      text = '${state.workers.length} found · expanding search...';
-    } else if (state.workers.isEmpty) {
-      text = 'No workers found within 20 km';
-    } else {
-      final r = state.searchedRadiusKm.toStringAsFixed(0);
-      text = '${state.workers.length} available · within $r km';
-    }
-    return Text(
-      text,
-      style: const TextStyle(fontSize: 12, color: _kLight),
-    );
-  }
-}
-
-// ── Sheet body ────────────────────────────────────────────────────────────────
-
-class _SheetBody extends StatelessWidget {
-  final NearbyWorkersState state;
-  final String bookingId;
-  final ScrollController scrollController;
-  final VoidCallback onRetry;
-
-  const _SheetBody({
-    required this.state,
-    required this.bookingId,
-    required this.scrollController,
-    required this.onRetry,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    if (state.hasError && state.workers.isEmpty) {
-      return _ErrorState(
-        message: state.error is Failure
-            ? (state.error as Failure).message
-            : 'Could not load workers.',
-        onRetry: onRetry,
-      );
-    }
-    if (state.workers.isEmpty && state.isExpanding) {
-      return const _LoadingState();
-    }
-    if (state.workers.isEmpty) {
-      return const _EmptyState();
-    }
-
-    final itemCount = state.workers.length + (state.isExpanding ? 1 : 0);
-
-    return ListView.separated(
-      controller: scrollController,
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-      itemCount: itemCount,
-      separatorBuilder: (_, _) => const SizedBox(height: 10),
-      itemBuilder: (ctx, i) {
-        if (i == state.workers.length) {
-          return const _SearchingMoreBanner();
-        }
-        return _WorkerOfferCard(
-          worker: state.workers[i],
-          bookingId: bookingId,
-        );
+    final text = bidsAsync.when(
+      loading: () => 'Loading bids...',
+      error: (e, st) => 'Could not load bids',
+      data: (bids) {
+        final count = bids.where((b) => b.bid.status == BidStatus.pending).length;
+        if (count == 0) return 'No bids yet';
+        return '$count pending ${count == 1 ? 'bid' : 'bids'} · sorted by price';
       },
     );
+    return Text(text, style: const TextStyle(fontSize: 12, color: _kLight));
   }
 }
 
-// ── Worker offer card ─────────────────────────────────────────────────────────
+// ── Bid offer card ─────────────────────────────────────────────────────────────
 
-class _WorkerOfferCard extends ConsumerWidget {
-  final NearbyWorkerEntity worker;
+class _BidOfferCard extends ConsumerWidget {
+  final BidWithWorkerEntity bidWorker;
   final String bookingId;
 
-  const _WorkerOfferCard({
-    required this.worker,
-    required this.bookingId,
-  });
+  const _BidOfferCard({required this.bidWorker, required this.bookingId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isAssigning = ref.watch(assignWorkerNotifierProvider).isLoading;
+    final isHiring = ref.watch(acceptBidProvider).isLoading;
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -311,18 +262,18 @@ class _WorkerOfferCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Top row: avatar + info + distance ──────────────────────────────
+          // ── Top row: avatar + info + bid amount ────────────────────────────
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              _DiscoveryAvatar(worker: worker),
+              _BidAvatar(bidWorker: bidWorker),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      worker.fullName,
+                      bidWorker.fullName,
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
@@ -333,11 +284,10 @@ class _WorkerOfferCard extends ConsumerWidget {
                     const SizedBox(height: 3),
                     Row(
                       children: [
-                        const Icon(Icons.star_rounded,
-                            size: 13, color: Color(0xFFF59E0B)),
+                        const Icon(Icons.star_rounded, size: 13, color: Color(0xFFF59E0B)),
                         const SizedBox(width: 3),
                         Text(
-                          worker.ratingLabel,
+                          bidWorker.ratingLabel,
                           style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
@@ -349,27 +299,29 @@ class _WorkerOfferCard extends ConsumerWidget {
                   ],
                 ),
               ),
-              // Distance badge
+              // Bid amount badge
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFF0EB),
+                  color: _kGreen.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: _kGreen.withValues(alpha: 0.25)),
                 ),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.near_me_rounded,
-                        size: 10, color: _kBrand),
-                    const SizedBox(width: 3),
                     Text(
-                      worker.distanceLabel,
+                      'PKR ${bidWorker.bid.amount.toStringAsFixed(0)}',
                       style: const TextStyle(
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w600,
-                        color: _kBrand,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: _kGreen,
                       ),
+                    ),
+                    const Text(
+                      'bid',
+                      style: TextStyle(fontSize: 10, color: _kGreen),
                     ),
                   ],
                 ),
@@ -377,14 +329,48 @@ class _WorkerOfferCard extends ConsumerWidget {
             ],
           ),
 
+          // ── Distance ───────────────────────────────────────────────────────
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              const Icon(Icons.near_me_rounded, size: 12, color: _kLight),
+              const SizedBox(width: 4),
+              Text(
+                bidWorker.distanceLabel,
+                style: const TextStyle(fontSize: 11.5, color: _kLight),
+              ),
+            ],
+          ),
+
           // ── Skills ─────────────────────────────────────────────────────────
-          if (worker.skills.isNotEmpty) ...[
-            const SizedBox(height: 8),
+          if (bidWorker.skills.isNotEmpty) ...[
+            const SizedBox(height: 4),
             Text(
-              worker.skills.take(3).join(' · '),
+              bidWorker.skills.take(3).join(' · '),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontSize: 11.5, color: _kLight),
+            ),
+          ],
+
+          // ── Worker message ─────────────────────────────────────────────────
+          if (bidWorker.bid.message != null &&
+              bidWorker.bid.message!.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: _kBorder),
+              ),
+              child: Text(
+                bidWorker.bid.message!,
+                style: const TextStyle(fontSize: 12.5, color: _kGray, height: 1.4),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ],
 
@@ -394,15 +380,16 @@ class _WorkerOfferCard extends ConsumerWidget {
           Row(
             children: [
               Expanded(
-                child: _DiscoveryChatButton(workerProfileId: worker.id),
+                child: _ChatButton(workerProfileId: bidWorker.workerProfileId),
               ),
               const SizedBox(width: 10),
               Expanded(
                 flex: 2,
                 child: FilledButton.icon(
-                  onPressed:
-                      isAssigning ? null : () => _confirmHire(context, ref),
-                  icon: isAssigning
+                  onPressed: isHiring
+                      ? null
+                      : () => _confirmHire(context, ref),
+                  icon: isHiring
                       ? const SizedBox(
                           width: 14,
                           height: 14,
@@ -411,16 +398,14 @@ class _WorkerOfferCard extends ConsumerWidget {
                             color: Colors.white,
                           ),
                         )
-                      : const Icon(
-                          Icons.check_circle_outline_rounded,
-                          size: 16,
-                        ),
-                  label: Text(isAssigning ? 'Hiring…' : 'Hire'),
+                      : const Icon(Icons.check_circle_outline_rounded, size: 16),
+                  label: Text(isHiring ? 'Hiring…' : 'Hire'),
                   style: FilledButton.styleFrom(
-                    backgroundColor: _kBrand,
+                    backgroundColor: _kGreen,
                     padding: const EdgeInsets.symmetric(vertical: 10),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                     textStyle: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
@@ -439,10 +424,9 @@ class _WorkerOfferCard extends ConsumerWidget {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
-          'Hire ${worker.firstName}?',
+          'Hire ${bidWorker.firstName}?',
           style: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w700,
@@ -450,18 +434,17 @@ class _WorkerOfferCard extends ConsumerWidget {
           ),
         ),
         content: Text(
-          'Assign ${worker.fullName} to this job?',
+          'Accept ${bidWorker.fullName}\'s bid of PKR ${bidWorker.bid.amount.toStringAsFixed(0)}?',
           style: const TextStyle(fontSize: 13, color: _kGray),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel',
-                style: TextStyle(color: _kGray)),
+            child: const Text('Cancel', style: TextStyle(color: _kGray)),
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            style: FilledButton.styleFrom(backgroundColor: _kBrand),
+            style: FilledButton.styleFrom(backgroundColor: _kGreen),
             child: const Text('Hire'),
           ),
         ],
@@ -471,18 +454,18 @@ class _WorkerOfferCard extends ConsumerWidget {
     if (confirm != true || !context.mounted) return;
 
     try {
-      await ref
-          .read(assignWorkerNotifierProvider.notifier)
-          .assign(bookingId, worker.id);
+      await ref.read(acceptBidProvider.notifier).accept(
+            bidId: bidWorker.bid.id,
+            bookingId: bookingId,
+          );
       if (context.mounted) {
-        Navigator.of(context).pop(); // close the map page
+        Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${worker.firstName} has been assigned to your job.'),
-            backgroundColor: _kBrand,
+            content: Text('${bidWorker.firstName} has been hired!'),
+            backgroundColor: _kGreen,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             duration: const Duration(seconds: 3),
           ),
         );
@@ -491,12 +474,10 @@ class _WorkerOfferCard extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content:
-                Text(e is Failure ? e.message : 'Failed to hire worker.'),
+            content: Text(e is Failure ? e.message : 'Failed to hire worker.'),
             backgroundColor: const Color(0xFFEF4444),
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             duration: const Duration(seconds: 3),
           ),
         );
@@ -507,29 +488,25 @@ class _WorkerOfferCard extends ConsumerWidget {
 
 // ── Avatar ────────────────────────────────────────────────────────────────────
 
-class _DiscoveryAvatar extends StatelessWidget {
-  final NearbyWorkerEntity worker;
-  const _DiscoveryAvatar({required this.worker});
+class _BidAvatar extends StatelessWidget {
+  final BidWithWorkerEntity bidWorker;
+  const _BidAvatar({required this.bidWorker});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: 46,
       height: 46,
-      decoration: const BoxDecoration(
-        color: _kBrand,
-        shape: BoxShape.circle,
-      ),
-      child: worker.avatarUrl != null
+      decoration: const BoxDecoration(color: _kGreen, shape: BoxShape.circle),
+      child: bidWorker.avatarUrl != null
           ? ClipOval(
               child: Image.network(
-                worker.avatarUrl!,
+                bidWorker.avatarUrl!,
                 fit: BoxFit.cover,
-                errorBuilder: (_, _, _) =>
-                    _InitialsLabel(worker.initials),
+                errorBuilder: (_, _, _) => _InitialsLabel(bidWorker.initials),
               ),
             )
-          : _InitialsLabel(worker.initials),
+          : _InitialsLabel(bidWorker.initials),
     );
   }
 }
@@ -555,17 +532,15 @@ class _InitialsLabel extends StatelessWidget {
 
 // ── Chat button ───────────────────────────────────────────────────────────────
 
-class _DiscoveryChatButton extends ConsumerStatefulWidget {
+class _ChatButton extends ConsumerStatefulWidget {
   final String workerProfileId;
-  const _DiscoveryChatButton({required this.workerProfileId});
+  const _ChatButton({required this.workerProfileId});
 
   @override
-  ConsumerState<_DiscoveryChatButton> createState() =>
-      _DiscoveryChatButtonState();
+  ConsumerState<_ChatButton> createState() => _ChatButtonState();
 }
 
-class _DiscoveryChatButtonState
-    extends ConsumerState<_DiscoveryChatButton> {
+class _ChatButtonState extends ConsumerState<_ChatButton> {
   bool _loading = false;
 
   Future<void> _openChat() async {
@@ -611,51 +586,16 @@ class _DiscoveryChatButtonState
         foregroundColor: _kGray,
         side: const BorderSide(color: _kBorder),
         padding: const EdgeInsets.symmetric(vertical: 10),
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        textStyle: const TextStyle(
-          fontSize: 12.5,
-          fontWeight: FontWeight.w600,
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        textStyle: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
       ),
     );
   }
 }
 
-// ── Supplementary states ──────────────────────────────────────────────────────
-
-class _SearchingMoreBanner extends StatelessWidget {
-  const _SearchingMoreBanner();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: const [
-          SizedBox(
-            width: 11,
-            height: 11,
-            child: CircularProgressIndicator(
-              strokeWidth: 1.5,
-              valueColor: AlwaysStoppedAnimation<Color>(_kLight),
-            ),
-          ),
-          SizedBox(width: 8),
-          Text(
-            'Searching wider area for more workers...',
-            style: TextStyle(fontSize: 11.5, color: _kLight),
-          ),
-        ],
-      ),
-    );
-  }
-}
+// ── States ────────────────────────────────────────────────────────────────────
 
 class _LoadingState extends StatelessWidget {
-  const _LoadingState();
-
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -666,7 +606,7 @@ class _LoadingState extends StatelessWidget {
           (_) => Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: Container(
-              height: 110,
+              height: 120,
               decoration: BoxDecoration(
                 color: const Color(0xFFF1F5F9),
                 borderRadius: BorderRadius.circular(14),
@@ -694,15 +634,14 @@ class _EmptyState extends StatelessWidget {
               width: 56,
               height: 56,
               decoration: BoxDecoration(
-                color: const Color(0xFFFFF0EB),
+                color: _kGreen.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: const Icon(Icons.person_search_rounded,
-                  size: 28, color: _kBrand),
+              child: const Icon(Icons.gavel_rounded, size: 28, color: _kGreen),
             ),
             const SizedBox(height: 14),
             const Text(
-              'No workers found nearby',
+              'No bids yet',
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
@@ -711,7 +650,7 @@ class _EmptyState extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             const Text(
-              'We searched up to 20 km.\nTry again in a few minutes as more workers come online.',
+              'Workers who apply will appear here.\nCheck back shortly.',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 12, color: _kLight, height: 1.5),
             ),
@@ -746,9 +685,8 @@ class _ErrorState extends StatelessWidget {
               icon: const Icon(Icons.refresh_rounded, size: 16),
               label: const Text('Try again'),
               style: FilledButton.styleFrom(
-                backgroundColor: _kBrand,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10)),
+                backgroundColor: _kGreen,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
             ),
           ],

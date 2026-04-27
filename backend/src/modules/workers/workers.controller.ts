@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common';
 import { BookingStatus } from '@prisma/client';
 import { WorkersService } from './workers.service';
+import { BidsService } from '../bids/bids.service';
 import { UpdateAvailabilityDto } from './dto/update-availability.dto';
 import { UpdateLocationDto } from './dto/update-location.dto';
 import { UpdateSkillsDto } from './dto/update-skills.dto';
@@ -26,7 +27,10 @@ import { Role } from '../../common/enums/role.enum';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(Role.WORKER)
 export class WorkersController {
-  constructor(private readonly workersService: WorkersService) {}
+  constructor(
+    private readonly workersService: WorkersService,
+    private readonly bidsService: BidsService,
+  ) {}
 
   // ── Profile & availability ───────────────────────────────────────────────
 
@@ -71,6 +75,17 @@ export class WorkersController {
   }
 
   // ── Worker jobs ──────────────────────────────────────────────────────────
+
+  /**
+   * GET /workers/jobs/new
+   * Returns PENDING bookings that match the worker's skills and where
+   * the worker has not already placed a bid (new job feed).
+   * Must be defined BEFORE /workers/jobs/:id so the router matches correctly.
+   */
+  @Get('jobs/new')
+  getNewJobs(@CurrentUser() user: { id: string }) {
+    return this.bidsService.getNewJobsForWorker(user.id);
+  }
 
   /**
    * GET /workers/jobs?filter=active|completed|cancelled

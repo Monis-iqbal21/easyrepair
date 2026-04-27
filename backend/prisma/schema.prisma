@@ -61,6 +61,12 @@ enum AttachmentType {
   AUDIO
 }
 
+enum BidStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
 enum MessageType {
   TEXT
   IMAGE
@@ -169,6 +175,7 @@ model WorkerProfile {
   skills    WorkerSkill[]
   documents WorkerDocument[]
   bookings  Booking[]
+  bids      Bid[]
 
   @@map("worker_profiles")
 }
@@ -252,6 +259,7 @@ model Booking {
   statusHistory BookingStatusHistory[]
   attachments   BookingAttachment[]
   review        Review?
+  bids          Bid[]
 
   @@index([clientProfileId])
   @@index([workerProfileId])
@@ -372,4 +380,23 @@ model Notification {
   @@index([userId])
   @@index([userId, isRead])
   @@map("notifications")
+}
+
+model Bid {
+  id              String        @id @default(uuid())
+  bookingId       String
+  booking         Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  workerProfileId String
+  workerProfile   WorkerProfile @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
+  amount          Decimal       @db.Decimal(10, 2)
+  message         String?
+  status          BidStatus     @default(PENDING)
+  editCount       Int           @default(0)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@unique([bookingId, workerProfileId])
+  @@index([bookingId])
+  @@index([workerProfileId])
+  @@map("bids")
 }

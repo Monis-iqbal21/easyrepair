@@ -14,6 +14,7 @@ import { CategoriesModule } from './modules/categories/categories.module';
 import { WorkersModule } from './modules/workers/workers.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { ChatModule } from './modules/chat/chat.module';
+import { BidsModule } from './modules/bids/bids.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { ChatModule } from './modules/chat/chat.module';
     WorkersModule,
     NotificationsModule,
     ChatModule,
+    BidsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

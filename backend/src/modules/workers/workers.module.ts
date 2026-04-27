@@ -5,10 +5,12 @@ import { WorkersService } from './workers.service';
 import { WorkersRepository } from './workers.repository';
 import { WorkersProcessor, WORKERS_QUEUE } from './workers.processor';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { BidsModule } from '../bids/bids.module';
 
 @Module({
   imports: [
     NotificationsModule,
+    BidsModule,
     BullModule.registerQueue({ name: WORKERS_QUEUE }),
   ],
   controllers: [WorkersController],
