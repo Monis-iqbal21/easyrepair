@@ -111,7 +111,7 @@ class _WorkerJobsPageState extends ConsumerState<WorkerJobsPage>
           ],
         ),
       ),
-      bottomNavigationBar: const WorkerBottomNavBar(currentIndex: 1),
+      bottomNavigationBar: const WorkerBottomNavBar(currentIndex: 2),
     );
   }
 }

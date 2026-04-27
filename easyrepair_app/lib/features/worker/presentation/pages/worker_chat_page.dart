@@ -10,7 +10,7 @@ class WorkerChatPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return const ChatListPage(
       detailRoutePrefix: '/worker/chat',
-      bottomNavigationBar: WorkerBottomNavBar(currentIndex: 2),
+      bottomNavigationBar: WorkerBottomNavBar(currentIndex: 3),
     );
   }
 }

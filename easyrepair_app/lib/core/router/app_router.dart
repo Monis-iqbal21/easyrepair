@@ -17,6 +17,7 @@ import '../../features/worker/presentation/pages/worker_jobs_page.dart';
 import '../../features/worker/presentation/pages/worker_chat_page.dart';
 import '../../features/worker/presentation/pages/worker_profile_page.dart';
 import '../../features/worker/presentation/pages/worker_job_detail_page.dart';
+import '../../features/worker/presentation/pages/worker_new_jobs_page.dart';
 import '../../features/worker/presentation/pages/worker_reviews_page.dart';
 import '../../features/notifications/presentation/pages/notification_list_page.dart';
 import '../../features/chat/presentation/pages/chat_detail_page.dart';
@@ -113,6 +114,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/worker/home',
         builder: (_, __) => const WorkerHomePage(),
+      ),
+      GoRoute(
+        path: '/worker/new-jobs',
+        builder: (_, __) => const WorkerNewJobsPage(),
       ),
       GoRoute(
         path: '/worker/jobs',

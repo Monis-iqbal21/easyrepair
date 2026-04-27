@@ -1,0 +1,22 @@
+Fix Flutter build error in booking_detail_page.dart.
+
+Error:
+ReviewRequest is undefined in _ReviewSectionState after recent cleanup.
+
+Cause likely:
+The import for update_booking_request.dart was removed, but ReviewRequest is still used.
+
+Task:
+
+* Find ReviewRequest usage in booking_detail_page.dart
+* Restore the correct import if ReviewRequest exists there:
+  ../../domain/entities/update_booking_request.dart
+* If ReviewRequest was renamed, use the correct existing class
+* Do not change review logic
+* Do not redesign anything
+* Minimal safe fix only
+
+After:
+
+* run flutter analyze on booking_detail_page.dart
+* show exact diff

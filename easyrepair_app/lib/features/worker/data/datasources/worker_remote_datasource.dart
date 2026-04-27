@@ -10,6 +10,8 @@ import '../models/worker_review_model.dart';
 abstract class WorkerRemoteDatasource {
   Future<WorkerProfileModel> getProfile();
 
+  Future<List<Map<String, dynamic>>> getNewJobs();
+
   Future<Map<String, dynamic>> updateAvailability({
     required String status,
     double? lat,
@@ -44,6 +46,13 @@ class WorkerRemoteDatasourceImpl implements WorkerRemoteDatasource {
     final response = await _dio.get<Map<String, dynamic>>('/workers/profile');
     final data = response.data!['data'] as Map<String, dynamic>;
     return WorkerProfileModel.fromJson(data);
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getNewJobs() async {
+    final response = await _dio.get<Map<String, dynamic>>('/workers/jobs/new');
+    final list = response.data!['data'] as List<dynamic>? ?? [];
+    return list.cast<Map<String, dynamic>>();
   }
 
   @override

@@ -5,6 +5,7 @@ import '../../../bookings/domain/entities/booking_entity.dart';
 import '../entities/worker_profile_entity.dart';
 import '../entities/worker_skill_entity.dart';
 import '../entities/category_entity.dart';
+import '../entities/new_job_entity.dart';
 import '../entities/worker_review_entity.dart';
 
 abstract class WorkerRepository {
@@ -27,6 +28,8 @@ abstract class WorkerRepository {
   );
 
   Future<Either<Failure, List<CategoryEntity>>> getCategories();
+
+  Future<Either<Failure, List<NewJobEntity>>> getNewJobs();
 
   Future<Either<Failure, List<BookingEntity>>> getWorkerJobs(
     String? statusFilter,

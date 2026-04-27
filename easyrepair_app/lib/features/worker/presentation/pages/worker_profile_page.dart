@@ -289,7 +289,7 @@ class _WorkerProfilePageState extends ConsumerState<WorkerProfilePage> {
           ),
         ),
       ),
-      bottomNavigationBar: const WorkerBottomNavBar(currentIndex: 3),
+      bottomNavigationBar: const WorkerBottomNavBar(currentIndex: 4),
     );
   }
 

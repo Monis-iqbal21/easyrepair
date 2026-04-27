@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../bookings/domain/entities/booking_entity.dart';
 import '../../data/repositories/worker_repository_impl.dart';
+import '../../domain/entities/new_job_entity.dart';
 import 'worker_providers.dart'; // for workerProfileProvider
 
 // ── Filter ────────────────────────────────────────────────────────────────────
@@ -106,3 +107,37 @@ class CompleteJobNotifier extends AsyncNotifier<void> {
 
 final completeJobProvider =
     AsyncNotifierProvider<CompleteJobNotifier, void>(CompleteJobNotifier.new);
+
+// ── New jobs feed ─────────────────────────────────────────────────────────────
+
+/// Fetches PENDING bookings matching the worker's skills via GET /workers/jobs/new.
+/// Auto-refreshes every 30 s while the provider is alive.
+class NewJobsNotifier extends AsyncNotifier<List<NewJobEntity>> {
+  @override
+  Future<List<NewJobEntity>> build() {
+    final timer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (state is! AsyncLoading) _reload();
+    });
+    ref.onDispose(timer.cancel);
+    return _fetch();
+  }
+
+  Future<List<NewJobEntity>> _fetch() async {
+    final result = await ref.read(workerRepositoryProvider).getNewJobs();
+    return result.fold((f) => throw f, (jobs) => jobs);
+  }
+
+  Future<void> refresh() async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(_fetch);
+  }
+
+  Future<void> _reload() async {
+    state = await AsyncValue.guard(_fetch);
+  }
+}
+
+final newJobsProvider =
+    AsyncNotifierProvider<NewJobsNotifier, List<NewJobEntity>>(
+  NewJobsNotifier.new,
+);

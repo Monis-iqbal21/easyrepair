@@ -8,10 +8,11 @@ import '../../../bids/domain/entities/bid_entity.dart';
 import '../../../bids/domain/repositories/bid_repository.dart';
 import '../../../bids/presentation/providers/bid_providers.dart';
 import '../../../bookings/domain/entities/booking_entity.dart';
+import '../../../bookings/presentation/providers/booking_providers.dart';
 import '../../../chat/presentation/providers/chat_providers.dart';
 
 // ── Palette ───────────────────────────────────────────────────────────────────
-const _kGreen  = Color(0xFF0D7A5F);
+const _kGreen  = Color(0xFFDE7356);
 const _kDark   = Color(0xFF1A1A1A);
 const _kGray   = Color(0xFF6B7280);
 const _kLight  = Color(0xFF94A3B8);
@@ -459,6 +460,7 @@ class _BidOfferCard extends ConsumerWidget {
             bookingId: bookingId,
           );
       if (context.mounted) {
+        ref.invalidate(bookingDetailProvider(bookingId));
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

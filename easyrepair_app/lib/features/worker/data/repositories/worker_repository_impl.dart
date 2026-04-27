@@ -7,6 +7,7 @@ import '../../../bookings/domain/entities/booking_entity.dart';
 import '../../domain/entities/worker_profile_entity.dart';
 import '../../domain/entities/worker_skill_entity.dart';
 import '../../domain/entities/category_entity.dart';
+import '../../domain/entities/new_job_entity.dart';
 import '../../domain/entities/worker_review_entity.dart';
 import '../../domain/repositories/worker_repository.dart';
 import '../datasources/worker_remote_datasource.dart';
@@ -88,6 +89,65 @@ class WorkerRepositoryImpl implements WorkerRepository {
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
+  }
+
+  @override
+  Future<Either<Failure, List<NewJobEntity>>> getNewJobs() async {
+    try {
+      final maps = await _datasource.getNewJobs();
+      return Right(maps.map(_parseNewJob).toList());
+    } on DioException catch (e) {
+      return Left(dioExceptionToFailure(e));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  NewJobEntity _parseNewJob(Map<String, dynamic> j) {
+    final cat = j['category'] as Map<String, dynamic>;
+    final cli = j['client'] as Map<String, dynamic>;
+    return NewJobEntity(
+      id: j['id'] as String,
+      title: j['title'] as String?,
+      description: j['description'] as String?,
+      status: BookingStatus.pending,
+      urgency: (j['urgency'] as String?) == 'URGENT'
+          ? BookingUrgency.urgent
+          : BookingUrgency.normal,
+      timeSlot: _parseTimeSlot(j['timeSlot'] as String?),
+      addressLine: j['addressLine'] as String? ?? '',
+      city: j['city'] as String? ?? '',
+      latitude: (j['latitude'] as num?)?.toDouble() ?? 0,
+      longitude: (j['longitude'] as num?)?.toDouble() ?? 0,
+      scheduledAt: j['scheduledAt'] != null
+          ? DateTime.tryParse(j['scheduledAt'] as String)
+          : null,
+      createdAt: DateTime.parse(j['createdAt'] as String),
+      category: NewJobCategoryEntity(
+        id: cat['id'] as String,
+        name: cat['name'] as String,
+        iconUrl: cat['iconUrl'] as String?,
+      ),
+      client: NewJobClientEntity(
+        id: cli['id'] as String,
+        firstName: cli['firstName'] as String,
+        lastName: cli['lastName'] as String,
+        avatarUrl: cli['avatarUrl'] as String?,
+      ),
+      bidCount: (j['bidCount'] as num?)?.toInt() ?? 0,
+      distanceKm: (j['distanceKm'] as num?)?.toDouble(),
+    );
+  }
+
+  TimeSlot? _parseTimeSlot(String? raw) {
+    if (raw == null) return null;
+    return switch (raw.toUpperCase()) {
+      'MORNING' => TimeSlot.morning,
+      'AFTERNOON' => TimeSlot.afternoon,
+      'EVENING' => TimeSlot.evening,
+      'NIGHT' => TimeSlot.night,
+      _ => null,
+    };
   }
 
   @override

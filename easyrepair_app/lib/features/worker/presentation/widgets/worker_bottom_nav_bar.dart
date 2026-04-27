@@ -11,10 +11,11 @@ class WorkerBottomNavBar extends StatelessWidget {
   const WorkerBottomNavBar({super.key, required this.currentIndex});
 
   static const _tabs = [
-    _NavTab(label: 'Home',    icon: Icons.home_outlined,       route: '/worker/home'),
-    _NavTab(label: 'My Jobs', icon: Icons.build_outlined,      route: '/worker/jobs'),
-    _NavTab(label: 'Chat',    icon: Icons.chat_bubble_outline, route: '/worker/chat'),
-    _NavTab(label: 'Profile', icon: Icons.person_outline,      route: '/worker/profile'),
+    _NavTab(label: 'Home',     icon: Icons.home_outlined,          route: '/worker/home'),
+    _NavTab(label: 'New Jobs', icon: Icons.work_outline_rounded,   route: '/worker/new-jobs'),
+    _NavTab(label: 'My Jobs',  icon: Icons.build_outlined,         route: '/worker/jobs'),
+    _NavTab(label: 'Chat',     icon: Icons.chat_bubble_outline,    route: '/worker/chat'),
+    _NavTab(label: 'Profile',  icon: Icons.person_outline,         route: '/worker/profile'),
   ];
 
   @override
