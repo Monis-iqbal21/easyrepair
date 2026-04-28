@@ -33,7 +33,7 @@ export class BidsRepository {
   async findBookingById(bookingId: string) {
     return this.prisma.booking.findUnique({
       where: { id: bookingId },
-      select: { id: true, status: true, clientProfileId: true, latitude: true, longitude: true },
+      select: { id: true, status: true, clientProfileId: true, categoryId: true, latitude: true, longitude: true },
     });
   }
 
@@ -63,6 +63,7 @@ export class BidsRepository {
   async findExistingBid(bookingId: string, workerProfileId: string) {
     return this.prisma.bid.findUnique({
       where: { bookingId_workerProfileId: { bookingId, workerProfileId } },
+      select: { id: true, updatedAt: true, status: true },
     });
   }
 
@@ -109,6 +110,48 @@ export class BidsRepository {
     return this.prisma.bid.findUniqueOrThrow({
       where: { id: bidId },
       include: BID_INCLUDE,
+    });
+  }
+
+  /** Update bid amount/message in-place, resetting the cooldown window (updatedAt). */
+  async updateBidAmountAndMessage(
+    bidId: string,
+    amount: number,
+    message?: string,
+  ) {
+    await this.prisma.bid.update({
+      where: { id: bidId },
+      data: { amount, message: message ?? null },
+    });
+    return this.prisma.bid.findUniqueOrThrow({
+      where: { id: bidId },
+      include: BID_INCLUDE,
+    });
+  }
+
+  /** Find all bids for a booking, sorted by createdAt descending (newest first — live feed). */
+  async findBidsByBookingIdNewestFirst(bookingId: string) {
+    return this.prisma.bid.findMany({
+      where: { bookingId },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        workerProfile: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            avatarUrl: true,
+            rating: true,
+            totalRatings: true,
+            currentLat: true,
+            currentLng: true,
+            bookings: {
+              where: { status: BookingStatus.COMPLETED },
+              select: { id: true },
+            },
+          },
+        },
+      },
     });
   }
 

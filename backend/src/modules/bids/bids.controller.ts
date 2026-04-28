@@ -73,14 +73,18 @@ export class BidsController {
 
   /**
    * GET /bookings/:id/bids
-   * Client lists all bids on their booking, sorted by lowest amount first.
+   * Client lists all bids on their booking (sorted lowest-amount first).
+   * Worker lists the live bid feed for an eligible job (sorted newest first).
    */
   @Get('bookings/:id/bids')
-  @Roles(Role.CLIENT)
+  @Roles(Role.CLIENT, Role.WORKER)
   getBidsForBooking(
-    @CurrentUser() user: { id: string },
+    @CurrentUser() user: { id: string; role: string },
     @Param('id') bookingId: string,
   ) {
+    if (user.role === Role.WORKER) {
+      return this.bidsService.getBidsForBookingAsWorker(user.id, bookingId);
+    }
     return this.bidsService.getBidsForBooking(user.id, bookingId);
   }
 

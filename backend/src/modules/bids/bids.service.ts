@@ -3,7 +3,8 @@ import {
   NotFoundException,
   ForbiddenException,
   BadRequestException,
-  ConflictException,
+  HttpException,
+  HttpStatus,
   Logger,
 } from '@nestjs/common';
 import { BookingStatus, VerificationStatus, WorkerStatus } from '@prisma/client';
@@ -22,7 +23,7 @@ export class BidsService {
     private readonly chatService: ChatService,
   ) {}
 
-  // ── Worker: create bid ───────────────────────────────────────────────────
+  // ── Worker: submit or re-submit bid (upsert with 1-minute cooldown) ────────
 
   async createBid(
     userId: string,
@@ -51,8 +52,27 @@ export class BidsService {
     }
 
     const existing = await this.bidsRepository.findExistingBid(bookingId, workerProfile.id);
+
     if (existing) {
-      throw new ConflictException('You have already placed a bid on this booking');
+      // Enforce 1-minute cooldown before allowing a re-submit/update.
+      const secondsSinceUpdate =
+        (Date.now() - new Date(existing.updatedAt).getTime()) / 1000;
+      if (secondsSinceUpdate < 60) {
+        const waitSecs = Math.ceil(60 - secondsSinceUpdate);
+        throw new HttpException(
+          `Please wait ${waitSecs} second${waitSecs === 1 ? '' : 's'} before updating your bid`,
+          HttpStatus.TOO_MANY_REQUESTS,
+        );
+      }
+
+      // Update existing bid in-place instead of creating a duplicate.
+      const updated = await this.bidsRepository.updateBidAmountAndMessage(
+        existing.id,
+        amount,
+        message,
+      );
+      this.logger.log(`[createBid] updated existing bidId=${existing.id}`);
+      return updated;
     }
 
     const bid = await this.bidsRepository.createBid({
@@ -150,6 +170,90 @@ export class BidsService {
     }
 
     const bids = await this.bidsRepository.findBidsByBookingId(bookingId);
+
+    return bids.map((bid) => {
+      const wp = bid.workerProfile;
+      const completedJobs = wp.bookings.length;
+      const distanceKm = this._haversineKm(
+        booking.latitude,
+        booking.longitude,
+        wp.currentLat,
+        wp.currentLng,
+      );
+
+      const worker: BidWorkerDto = {
+        id: wp.id,
+        firstName: wp.firstName,
+        lastName: wp.lastName,
+        avatarUrl: wp.avatarUrl,
+        rating: Number(wp.rating),
+        completedJobs,
+        distanceKm,
+      };
+
+      return {
+        id: bid.id,
+        bookingId: bid.bookingId,
+        amount: Number(bid.amount),
+        message: bid.message,
+        status: bid.status,
+        editCount: bid.editCount,
+        createdAt: bid.createdAt,
+        updatedAt: bid.updatedAt,
+        worker,
+      };
+    });
+  }
+
+  // ── Worker: live bid feed for a booking ─────────────────────────────────
+
+  async getBidsForBookingAsWorker(
+    userId: string,
+    bookingId: string,
+  ): Promise<BidResponseDto[]> {
+    this.logger.log(`[getBidsForBookingAsWorker] userId=${userId} bookingId=${bookingId}`);
+
+    const workerProfile = await this.bidsRepository.findWorkerProfileByUserId(userId);
+    if (!workerProfile) {
+      this.logger.warn(`[getBidsForBookingAsWorker] no worker profile for userId=${userId}`);
+      throw new ForbiddenException('Worker profile not found');
+    }
+
+    this.logger.log(`[getBidsForBookingAsWorker] workerProfileId=${workerProfile.id}`);
+
+    const booking = await this.bidsRepository.findBookingById(bookingId);
+    if (!booking) {
+      throw new NotFoundException(`Booking ${bookingId} not found`);
+    }
+
+    this.logger.log(
+      `[getBidsForBookingAsWorker] booking.status=${booking.status} booking.categoryId=${booking.categoryId}`,
+    );
+
+    // Booking must still be PENDING (unassigned) for a worker to view the feed.
+    if (booking.status !== BookingStatus.PENDING) {
+      this.logger.log(
+        `[getBidsForBookingAsWorker] booking not PENDING (${booking.status}) — returning []`,
+      );
+      return [];
+    }
+
+    // Worker must have a skill matching this booking's category.
+    const categoryIds = workerProfile.skills.map((s) => s.categoryId);
+    this.logger.log(
+      `[getBidsForBookingAsWorker] worker categoryIds=${JSON.stringify(categoryIds)}`,
+    );
+
+    const categoryMatch = categoryIds.includes(booking.categoryId);
+    this.logger.log(
+      `[getBidsForBookingAsWorker] categoryMatch=${categoryMatch} (booking.categoryId=${booking.categoryId})`,
+    );
+
+    if (!categoryMatch) {
+      throw new ForbiddenException('You are not allowed to view bids for this job');
+    }
+
+    const bids = await this.bidsRepository.findBidsByBookingIdNewestFirst(bookingId);
 
     return bids.map((bid) => {
       const wp = bid.workerProfile;
