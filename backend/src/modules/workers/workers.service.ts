@@ -273,15 +273,38 @@ export class WorkersService {
     userId: string,
     bookingId: string,
   ): Promise<WorkerJobResponseDto> {
+    this.logger.debug(`[getWorkerJobById] userId=${userId} bookingId=${bookingId}`);
+
     const profile = await this.workersRepository.findByUserId(userId);
     if (!profile) throw new NotFoundException('Worker profile not found');
 
-    const job = await this.workersRepository.findJobByIdAndWorkerProfileId(
+    // Try assigned job first (accepted, en-route, in-progress, completed).
+    let job = await this.workersRepository.findJobByIdAndWorkerProfileId(
       bookingId,
       profile.id,
     );
-    if (!job) throw new NotFoundException('Job not found');
 
+    // Fall back to an eligible PENDING available job (same visibility rules as new-jobs feed).
+    if (!job) {
+      const categoryIds = profile.skills.map((s) => s.categoryId);
+      this.logger.debug(
+        `[getWorkerJobById] not an assigned job — checking eligible pending job bookingId=${bookingId} categories=${categoryIds.join(',')}`,
+      );
+      if (categoryIds.length > 0) {
+        job = await this.workersRepository.findAvailablePendingJobById(
+          bookingId,
+          profile.id,
+          categoryIds,
+        );
+      }
+    }
+
+    if (!job) {
+      this.logger.warn(`[getWorkerJobById] job not found bookingId=${bookingId} workerProfileId=${profile.id}`);
+      throw new NotFoundException('Job not found');
+    }
+
+    this.logger.debug(`[getWorkerJobById] found job bookingId=${bookingId} status=${job.status}`);
     return this._toJobDto(job);
   }
 

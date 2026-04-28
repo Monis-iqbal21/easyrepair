@@ -298,6 +298,31 @@ export class WorkersRepository {
     });
   }
 
+  /**
+   * Fetch a PENDING available booking by id, applying the same visibility
+   * rules as findAvailableJobsForWorker:
+   *   1. status = PENDING
+   *   2. workerProfileId is null (not yet assigned)
+   *   3. categoryId matches one of the worker's skill categories
+   *   4. worker has not already placed a bid on this booking
+   */
+  async findAvailablePendingJobById(
+    bookingId: string,
+    workerProfileId: string,
+    categoryIds: string[],
+  ): Promise<WorkerJobWithRelations | null> {
+    return this.prisma.booking.findFirst({
+      where: {
+        id: bookingId,
+        status: BookingStatus.PENDING,
+        workerProfileId: null,
+        categoryId: { in: categoryIds },
+        bids: { none: { workerProfileId } },
+      },
+      include: WORKER_JOB_INCLUDE,
+    });
+  }
+
   // ── Worker reviews ───────────────────────────────────────────────────────
 
   /**
