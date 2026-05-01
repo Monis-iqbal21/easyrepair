@@ -10,7 +10,7 @@ import '../providers/worker_job_providers.dart';
 import '../widgets/worker_bottom_nav_bar.dart';
 
 // ── Palette ───────────────────────────────────────────────────────────────────
-const _kAccent = Color(0xFFDE7356);
+const _kAccent = Color(0xFF1D9E75);
 const _kDark   = Color(0xFF1A1A1A);
 const _kGray   = Color(0xFF6B7280);
 const _kLight  = Color(0xFF94A3B8);
@@ -84,7 +84,7 @@ class _WorkerNewJobsPageState extends ConsumerState<WorkerNewJobsPage>
                       ],
                     ),
                   ),
-                  // Refresh button
+                  // Refresh button — always visible
                   GestureDetector(
                     onTap: notifier.refresh,
                     child: Container(
@@ -106,7 +106,12 @@ class _WorkerNewJobsPageState extends ConsumerState<WorkerNewJobsPage>
               ),
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
+
+            // ── Filter bar ───────────────────────────────────────────────
+            _FilterBar(notifier: notifier),
+
+            const SizedBox(height: 8),
 
             // ── List ─────────────────────────────────────────────────────
             Expanded(
@@ -142,6 +147,56 @@ class _WorkerNewJobsPageState extends ConsumerState<WorkerNewJobsPage>
   }
 }
 
+// ── Filter bar ────────────────────────────────────────────────────────────────
+
+class _FilterBar extends ConsumerWidget {
+  final NewJobsNotifier notifier;
+  const _FilterBar({required this.notifier});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Watch the provider to rebuild when filter changes.
+    ref.watch(newJobsProvider);
+    final current = notifier.currentFilter;
+
+    return SizedBox(
+      height: 36,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        children: NewJobFilter.values.map((f) {
+          final selected = f == current;
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: GestureDetector(
+              onTap: () => notifier.setFilter(f),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                decoration: BoxDecoration(
+                  color: selected ? _kAccent : Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: selected ? _kAccent : _kBorder,
+                  ),
+                ),
+                child: Text(
+                  f.label,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: selected ? Colors.white : _kGray,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+
 // ── Job card ──────────────────────────────────────────────────────────────────
 
 class _NewJobCard extends StatelessWidget {
@@ -153,7 +208,10 @@ class _NewJobCard extends StatelessWidget {
     final isUrgent = job.urgency == BookingUrgency.urgent;
 
     return GestureDetector(
-      onTap: () => context.push('/worker/job/${job.id}'),
+      onTap: () {
+        debugPrint('[NewJobCard] card tapped job.id=${job.id} — navigating to details');
+        context.push('/worker/job/${job.id}');
+      },
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
@@ -186,7 +244,7 @@ class _NewJobCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ── Top row: category icon + title + urgency ──────────
+                  // ── Top row: category icon + title + urgency + bid badge ──
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -195,7 +253,7 @@ class _NewJobCard extends StatelessWidget {
                         width: 46,
                         height: 46,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFFF0EB),
+                          color: _kAccent.withValues(alpha: 0.10),
                           borderRadius: BorderRadius.circular(14),
                         ),
                         child: const Center(
@@ -237,7 +295,16 @@ class _NewJobCard extends StatelessWidget {
                       ),
 
                       const SizedBox(width: 8),
-                      _UrgencyChip(isUrgent: isUrgent),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          _UrgencyChip(isUrgent: isUrgent),
+                          if (job.hasMyBid) ...[
+                            const SizedBox(height: 4),
+                            const _BidPlacedBadge(),
+                          ],
+                        ],
+                      ),
                     ],
                   ),
 
@@ -292,27 +359,59 @@ class _NewJobCard extends StatelessWidget {
 
                   const SizedBox(height: 12),
 
-                  // ── Place bid CTA ─────────────────────────────────────
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () => context.push('/worker/job/${job.id}'),
-                      icon: const Icon(Icons.gavel_rounded, size: 15),
-                      label: const Text('View & Place Bid'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _kAccent,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(vertical: 11),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        textStyle: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
+                  // ── Action buttons ────────────────────────────────────
+                  Row(
+                    children: [
+                      // View Details
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            debugPrint('[NewJobCard] "View Details" pressed job.id=${job.id}');
+                            context.push('/worker/job/${job.id}');
+                          },
+                          icon: const Icon(Icons.info_outline_rounded, size: 14),
+                          label: const Text('View Details'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: _kAccent,
+                            side: const BorderSide(color: _kAccent),
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            textStyle: const TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
+                      const SizedBox(width: 8),
+                      // Bid Now / Update Bid
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            debugPrint('[NewJobCard] bid button pressed job.id=${job.id}');
+                            final title = Uri.encodeComponent(job.displayTitle);
+                            context.push('/worker/job/${job.id}/bid?title=$title');
+                          },
+                          icon: const Icon(Icons.gavel_rounded, size: 14),
+                          label: Text(job.hasMyBid ? 'Update Bid' : 'Bid Now'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _kAccent,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            textStyle: const TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -329,6 +428,38 @@ class _NewJobCard extends StatelessWidget {
     if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
     if (diff.inHours < 24) return '${diff.inHours}h ago';
     return DateFormat('MMM d').format(dt);
+  }
+}
+
+// ── Bid placed badge ──────────────────────────────────────────────────────────
+
+class _BidPlacedBadge extends StatelessWidget {
+  const _BidPlacedBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: _kAccent,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: const [
+          Icon(Icons.check_circle_rounded, size: 11, color: Colors.white),
+          SizedBox(width: 3),
+          Text(
+            'Bid placed',
+            style: TextStyle(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -411,7 +542,7 @@ class _EmptyState extends StatelessWidget {
               width: 80,
               height: 80,
               decoration: const BoxDecoration(
-                color: Color(0xFFFFF0EB),
+                color: Color(0xFFE6F5F0),
                 shape: BoxShape.circle,
               ),
               child: const Center(

@@ -78,8 +78,9 @@ export class WorkersController {
 
   /**
    * GET /workers/jobs/new
-   * Returns PENDING bookings that match the worker's skills and where
-   * the worker has not already placed a bid (new job feed).
+   * Returns all PENDING bookings matching the worker's skills — including ones
+   * the worker already bid on. Each item includes hasMyBid so the frontend
+   * can show a "Bid placed" badge. Sorted newest first.
    * Must be defined BEFORE /workers/jobs/:id so the router matches correctly.
    */
   @Get('jobs/new')

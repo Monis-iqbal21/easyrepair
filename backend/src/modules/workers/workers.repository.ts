@@ -304,7 +304,6 @@ export class WorkersRepository {
    *   1. status = PENDING
    *   2. workerProfileId is null (not yet assigned)
    *   3. categoryId matches one of the worker's skill categories
-   *   4. worker has not already placed a bid on this booking
    */
   async findAvailablePendingJobById(
     bookingId: string,
@@ -317,7 +316,6 @@ export class WorkersRepository {
         status: BookingStatus.PENDING,
         workerProfileId: null,
         categoryId: { in: categoryIds },
-        bids: { none: { workerProfileId } },
       },
       include: WORKER_JOB_INCLUDE,
     });

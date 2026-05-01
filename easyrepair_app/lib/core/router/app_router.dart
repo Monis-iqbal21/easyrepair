@@ -16,6 +16,7 @@ import '../../features/worker/presentation/pages/worker_home_page.dart';
 import '../../features/worker/presentation/pages/worker_jobs_page.dart';
 import '../../features/worker/presentation/pages/worker_chat_page.dart';
 import '../../features/worker/presentation/pages/worker_profile_page.dart';
+import '../../features/worker/presentation/pages/worker_bid_page.dart';
 import '../../features/worker/presentation/pages/worker_job_detail_page.dart';
 import '../../features/worker/presentation/pages/worker_new_jobs_page.dart';
 import '../../features/worker/presentation/pages/worker_reviews_page.dart';
@@ -140,6 +141,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/worker/job/:id',
         builder: (_, state) => WorkerJobDetailPage(
           jobId: state.pathParameters['id']!,
+        ),
+      ),
+      GoRoute(
+        path: '/worker/job/:id/bid',
+        builder: (_, state) => WorkerBidPage(
+          jobId: state.pathParameters['id']!,
+          jobTitle: state.uri.queryParameters['title'] ?? 'Job',
         ),
       ),
       GoRoute(

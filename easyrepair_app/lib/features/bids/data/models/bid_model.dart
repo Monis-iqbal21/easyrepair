@@ -1,6 +1,12 @@
 import '../../domain/entities/bid_entity.dart';
 import '../../domain/repositories/bid_repository.dart';
 
+double _parseDouble(dynamic value) {
+  if (value is num) return value.toDouble();
+  if (value is String) return double.tryParse(value) ?? 0.0;
+  return 0.0;
+}
+
 class BidModel {
   final String id;
   final String bookingId;
@@ -26,15 +32,15 @@ class BidModel {
 
   factory BidModel.fromJson(Map<String, dynamic> json) {
     return BidModel(
-      id: json['id'] as String,
-      bookingId: json['bookingId'] as String,
-      workerProfileId: json['workerProfileId'] as String,
-      amount: (json['amount'] as num).toDouble(),
+      id: json['id'] as String? ?? '',
+      bookingId: json['bookingId'] as String? ?? '',
+      workerProfileId: json['workerProfileId'] as String? ?? '',
+      amount: _parseDouble(json['amount']),
       message: json['message'] as String?,
       status: json['status'] as String? ?? 'PENDING',
-      editCount: json['editCount'] as int? ?? 0,
-      createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ?? DateTime.now(),
-      updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ?? DateTime.now(),
+      editCount: (json['editCount'] as num?)?.toInt() ?? 0,
+      createdAt: DateTime.tryParse(json['createdAt']?.toString() ?? '') ?? DateTime.now(),
+      updatedAt: DateTime.tryParse(json['updatedAt']?.toString() ?? '') ?? DateTime.now(),
     );
   }
 
@@ -82,15 +88,16 @@ class BidWithWorkerModel {
       bid: BidModel.fromJson(bidJson),
       workerProfileId: json['workerProfileId'] as String? ??
           workerJson['id'] as String? ??
-          bidJson['workerProfileId'] as String,
+          bidJson['workerProfileId'] as String? ??
+          '',
       firstName: workerJson['firstName'] as String? ?? '',
       lastName: workerJson['lastName'] as String? ?? '',
       avatarUrl: workerJson['avatarUrl'] as String?,
-      rating: (workerJson['rating'] as num?)?.toDouble() ?? 0.0,
+      rating: _parseDouble(workerJson['rating']),
       completedJobs: (workerJson['completedJobs'] as num?)?.toInt() ?? 0,
-      distanceKm: (json['distanceKm'] as num?)?.toDouble() ?? 0.0,
+      distanceKm: _parseDouble(json['distanceKm']),
       skills: (workerJson['skills'] as List<dynamic>?)
-              ?.map((e) => e as String)
+              ?.map((e) => e?.toString() ?? '')
               .toList() ??
           const [],
     );

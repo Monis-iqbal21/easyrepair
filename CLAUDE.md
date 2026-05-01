@@ -2,7 +2,7 @@
 
 🎨 Design System (NEW)
 Primary Colors
-Primary: #FF5F15 (Brand Orange)
+Primary: #1D9E75 (Brand Orange)
 Secondary: #FFFFFF (White)
 Text Dark: #1A1A1A
 Text Light: #6B7280

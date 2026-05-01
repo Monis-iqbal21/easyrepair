@@ -47,6 +47,7 @@ class NewJobEntity {
   final NewJobClientEntity client;
   final int bidCount;
   final double? distanceKm;
+  final bool hasMyBid;
 
   const NewJobEntity({
     required this.id,
@@ -65,6 +66,7 @@ class NewJobEntity {
     required this.client,
     required this.bidCount,
     this.distanceKm,
+    this.hasMyBid = false,
   });
 
   String get displayTitle => title?.isNotEmpty == true ? title! : category.name;

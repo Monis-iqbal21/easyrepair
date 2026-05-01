@@ -359,26 +359,43 @@ export class BidsService {
 
     this._assertWorkerEligible(workerProfile);
 
-    if (workerProfile.currentlyWorking) {
+    const categoryIds = workerProfile.skills.map((s) => s.categoryId);
+
+    this.logger.log(
+      `[getNewJobsForWorker] workerId=${workerProfile.id} currentlyWorking=${workerProfile.currentlyWorking} skillCategoryIds=${JSON.stringify(categoryIds)}`,
+    );
+
+    if (categoryIds.length === 0) {
+      this.logger.log(`[getNewJobsForWorker] workerId=${workerProfile.id} — no skills set, returning []`);
       return [];
     }
 
-    const categoryIds = workerProfile.skills.map((s) => s.categoryId);
-    if (categoryIds.length === 0) {
-      return [];
-    }
+    this.logger.log(
+      `[getNewJobsForWorker] querying PENDING bookings for categoryIds=${JSON.stringify(categoryIds)}`,
+    );
 
     const bookings = await this.bidsRepository.findAvailableJobsForWorker(
       workerProfile.id,
       categoryIds,
     );
 
-    return bookings.map((b) => {
+    this.logger.log(
+      `[getNewJobsForWorker] workerId=${workerProfile.id} — total PENDING jobs found after status+category filter: ${bookings.length}`,
+    );
+
+    const result = bookings.map((b) => {
       const distanceKm = this._haversineKm(
         b.latitude,
         b.longitude,
         workerProfile.currentLat,
         workerProfile.currentLng,
+      );
+
+      const myBid = b.bids?.[0] ?? null;
+      const hasMyBid = myBid !== null;
+
+      this.logger.log(
+        `[getNewJobsForWorker] bookingId=${b.id} status=${b.status} categoryId=${b.categoryId} hasMyBid=${hasMyBid}`,
       );
 
       return {
@@ -398,8 +415,16 @@ export class BidsService {
         client: b.clientProfile,
         bidCount: b._count.bids,
         distanceKm,
+        hasMyBid,
+        myBidUpdatedAt: myBid?.updatedAt ?? null,
       };
     });
+
+    this.logger.log(
+      `[getNewJobsForWorker] workerId=${workerProfile.id} — returning ${result.length} jobs (bidded + non-bidded)`,
+    );
+
+    return result;
   }
 
   // ── Helpers ──────────────────────────────────────────────────────────────

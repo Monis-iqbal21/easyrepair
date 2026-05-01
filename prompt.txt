@@ -1,22 +1,23 @@
-Fix Flutter build error in booking_detail_page.dart.
+Now verify and fix the Flutter side.
 
-Error:
-ReviewRequest is undefined in _ReviewSectionState after recent cleanup.
+The New Jobs tab must call GET /api/v1/workers/jobs/new, not GET /api/v1/workers/jobs.
 
-Cause likely:
-The import for update_booking_request.dart was removed, but ReviewRequest is still used.
+Earlier logs showed GET /api/v1/workers/jobs, which returns completed/old worker jobs. That endpoint is not for the New Jobs tab.
 
-Task:
+Please check:
+1. worker_new_jobs_page.dart
+2. worker_job_providers.dart
+3. worker_jobs_repository.dart / repository_impl
+4. API service method names
 
-* Find ReviewRequest usage in booking_detail_page.dart
-* Restore the correct import if ReviewRequest exists there:
-  ../../domain/entities/update_booking_request.dart
-* If ReviewRequest was renamed, use the correct existing class
-* Do not change review logic
-* Do not redesign anything
-* Minimal safe fix only
+Make sure NewJobsNotifier or New Jobs tab uses getNewJobs / /workers/jobs/new only.
 
-After:
+Also add a Flutter debug log before API call:
+[NewJobs] Fetching /workers/jobs/new
 
-* run flutter analyze on booking_detail_page.dart
-* show exact diff
+And after response:
+[NewJobs] received count = X
+[NewJobs] first job status = Y
+[NewJobs] first job hasMyBid = true/false
+
+Do not change UI except necessary endpoint wiring.

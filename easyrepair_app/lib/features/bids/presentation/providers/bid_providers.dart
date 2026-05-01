@@ -43,8 +43,9 @@ class SubmitBidNotifier extends AsyncNotifier<BidEntity?> {
       },
       (bid) {
         state = AsyncData(bid);
-        // Invalidate so the detail page re-fetches the bid state.
+        // Refresh own-bid and live feed.
         ref.invalidate(myBidProvider(bookingId));
+        ref.invalidate(jobBidsFeedProvider(bookingId));
         return bid;
       },
     );
@@ -92,6 +93,16 @@ final editBidProvider =
 // ── Client: fetch all bids for a booking ──────────────────────────────────────
 
 final bookingBidsProvider = FutureProvider.autoDispose
+    .family<List<BidWithWorkerEntity>, String>((ref, bookingId) async {
+  final result =
+      await ref.read(bidRepositoryProvider).getBidsForBooking(bookingId);
+  return result.fold((f) => throw f, (bids) => bids);
+});
+
+// ── Worker: live bid feed for an available job ────────────────────────────────
+// Not autoDispose — prevents repeated re-fetch loops on error.
+
+final jobBidsFeedProvider = FutureProvider
     .family<List<BidWithWorkerEntity>, String>((ref, bookingId) async {
   final result =
       await ref.read(bidRepositoryProvider).getBidsForBooking(bookingId);

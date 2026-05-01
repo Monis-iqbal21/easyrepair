@@ -22,6 +22,8 @@ Failure dioExceptionToFailure(DioException e) {
         );
       } else if (statusCode == 409) {
         return ConflictFailure(message ?? 'Conflict occurred');
+      } else if (statusCode == 429) {
+        return ServerFailure(message ?? 'Too many requests. Please wait.');
       } else if (statusCode == 500) {
         return const ServerFailure('Server error. Try again later.');
       }

@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/network/api_client.dart';
@@ -50,9 +51,16 @@ class WorkerRemoteDatasourceImpl implements WorkerRemoteDatasource {
 
   @override
   Future<List<Map<String, dynamic>>> getNewJobs() async {
+    debugPrint('[NewJobs] Fetching /workers/jobs/new');
     final response = await _dio.get<Map<String, dynamic>>('/workers/jobs/new');
-    final list = response.data!['data'] as List<dynamic>? ?? [];
-    return list.cast<Map<String, dynamic>>();
+    final list = (response.data!['data'] as List<dynamic>? ?? [])
+        .cast<Map<String, dynamic>>();
+    debugPrint('[NewJobs] received count = ${list.length}');
+    if (list.isNotEmpty) {
+      debugPrint('[NewJobs] first job status = ${list.first['status']}');
+      debugPrint('[NewJobs] first job hasMyBid = ${list.first['hasMyBid']}');
+    }
+    return list;
   }
 
   @override
@@ -121,10 +129,13 @@ class WorkerRemoteDatasourceImpl implements WorkerRemoteDatasource {
 
   @override
   Future<BookingModel> getWorkerJobById(String bookingId) async {
+    debugPrint('[WorkerDatasource] getWorkerJobById called with bookingId=$bookingId');
+    debugPrint('[WorkerDatasource] API endpoint: GET /workers/jobs/$bookingId');
     final response = await _dio.get<Map<String, dynamic>>(
       '/workers/jobs/$bookingId',
     );
     final data = response.data!['data'] as Map<String, dynamic>;
+    debugPrint('[WorkerDatasource] getWorkerJobById success, returned id=${data['id']} status=${data['status']}');
     return BookingModel.fromJson(data);
   }
 

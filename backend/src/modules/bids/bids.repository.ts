@@ -241,17 +241,15 @@ export class BidsRepository {
   }
 
   /**
-   * Find PENDING bookings that match the worker's skills
-   * and where the worker has not already placed a bid.
+   * Find PENDING bookings that match the worker's skills.
+   * Includes all jobs regardless of whether the worker already bid.
+   * Returns `myBid` so callers can compute `hasMyBid`.
    */
   async findAvailableJobsForWorker(workerProfileId: string, categoryIds: string[]) {
     return this.prisma.booking.findMany({
       where: {
         status: BookingStatus.PENDING,
         categoryId: { in: categoryIds },
-        bids: {
-          none: { workerProfileId },
-        },
       },
       orderBy: { createdAt: 'desc' },
       include: {
@@ -265,6 +263,11 @@ export class BidsRepository {
           },
         },
         _count: { select: { bids: true } },
+        bids: {
+          where: { workerProfileId },
+          select: { id: true, updatedAt: true },
+          take: 1,
+        },
       },
     });
   }
