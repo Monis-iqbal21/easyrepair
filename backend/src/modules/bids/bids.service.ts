@@ -417,6 +417,7 @@ export class BidsService {
         distanceKm,
         hasMyBid,
         myBidUpdatedAt: myBid?.updatedAt ?? null,
+        workerProfileId: b.workerProfileId ?? null,
       };
     });
 

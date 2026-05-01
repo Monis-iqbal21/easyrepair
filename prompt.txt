@@ -1,23 +1,40 @@
-Now verify and fix the Flutter side.
+Add two improvements to the Worker Place Bid page.
 
-The New Jobs tab must call GET /api/v1/workers/jobs/new, not GET /api/v1/workers/jobs.
+Context:
+The worker New Jobs flow is now using /workers/jobs/new. Each job has latitude/longitude/address/status fields. On the Place Bid page, I want the worker to see a small map preview of the job location near the top.
 
-Earlier logs showed GET /api/v1/workers/jobs, which returns completed/old worker jobs. That endpoint is not for the New Jobs tab.
+Tasks:
 
-Please check:
-1. worker_new_jobs_page.dart
-2. worker_job_providers.dart
-3. worker_jobs_repository.dart / repository_impl
-4. API service method names
+1. Add job location map preview on Place Bid page
+- Find the page/screen used when worker taps a New Job and opens the Place Bid page.
+- Add a map preview below the price/budget section near the top of the page.
+- The map should use the job latitude and longitude.
+- Show a marker at the job location.
+- Show the address text below or above the map.
+- Keep the map height around 180–220px.
+- Use rounded corners and match the current UI style.
+- The map preview should be non-intrusive. If direct interaction causes issues, disable scroll/zoom gestures or keep it simple.
+- If latitude or longitude is missing/null, hide the map and only show address text.
+- Do not break the existing bid form, validation, or submit flow.
 
-Make sure NewJobsNotifier or New Jobs tab uses getNewJobs / /workers/jobs/new only.
+2. Show “Live” instead of “Pending” for open jobs
+- In the New Jobs / Place Bid UI, when a job has status PENDING and no worker is assigned, show user-facing label as “Live”.
+- Do not change the backend database status value.
+- This is only a display/UI label change.
+- Example:
+  backend status: PENDING
+  assigned worker: null / no assigned worker
+  UI label: Live
+- Other statuses should keep their normal labels.
+- Add a helper if needed, something like getWorkerJobDisplayStatus(job), so we don’t hardcode this in many places.
 
-Also add a Flutter debug log before API call:
-[NewJobs] Fetching /workers/jobs/new
+3. Check model/parsing
+- Make sure the NewJob model contains latitude, longitude, address, and assigned worker/workerProfileId if available.
+- If assigned worker info is not returned from backend, update backend /workers/jobs/new response to include workerProfileId or assignedWorkerId as nullable.
+- Use that field only to decide whether PENDING should display as Live.
 
-And after response:
-[NewJobs] received count = X
-[NewJobs] first job status = Y
-[NewJobs] first job hasMyBid = true/false
-
-Do not change UI except necessary endpoint wiring.
+4. Keep changes minimal
+- Do not redesign the whole page.
+- Do not change existing colors except matching the current theme.
+- Do not change bid API behavior.
+- Add debugPrint only if useful, but avoid noisy logs.

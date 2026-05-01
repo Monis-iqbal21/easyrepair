@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/errors/failures.dart';
 import '../../../bids/domain/entities/bid_entity.dart';
 import '../../../bids/domain/repositories/bid_repository.dart';
 import '../../../bids/presentation/providers/bid_providers.dart';
+import '../../domain/entities/new_job_entity.dart';
 import '../providers/worker_job_providers.dart';
 
 // ── Palette ───────────────────────────────────────────────────────────────────
@@ -18,6 +20,18 @@ const _kLight  = Color(0xFF94A3B8);
 const _kBorder = Color(0xFFE2E8F0);
 const _kBg     = Color(0xFFF9FAFB);
 const _kRed    = Color(0xFFEF4444);
+
+// ── Provider: look up job from cached new-jobs list by id ────────────────────
+final _newJobByIdProvider =
+    Provider.family<NewJobEntity?, String>((ref, jobId) {
+  final jobs = ref.watch(newJobsProvider).valueOrNull;
+  if (jobs == null) return null;
+  try {
+    return jobs.firstWhere((j) => j.id == jobId);
+  } catch (_) {
+    return null;
+  }
+});
 
 class WorkerBidPage extends ConsumerStatefulWidget {
   final String jobId;
@@ -92,6 +106,7 @@ class _WorkerBidPageState extends ConsumerState<WorkerBidPage> {
     final myBidAsync   = ref.watch(myBidProvider(widget.jobId));
     final feedAsync    = ref.watch(jobBidsFeedProvider(widget.jobId));
     final isSubmitting = ref.watch(submitBidProvider).isLoading;
+    final job          = ref.watch(_newJobByIdProvider(widget.jobId));
 
     return Scaffold(
       backgroundColor: _kBg,
@@ -128,7 +143,7 @@ class _WorkerBidPageState extends ConsumerState<WorkerBidPage> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         children: [
-          // ── Job title ────────────────────────────────────────────────────
+          // ── Job title + status ───────────────────────────────────────────
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -160,11 +175,21 @@ class _WorkerBidPageState extends ConsumerState<WorkerBidPage> {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
+                if (job != null) ...[
+                  const SizedBox(width: 8),
+                  _StatusBadge(label: job.displayStatus),
+                ],
               ],
             ),
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
+
+          // ── Job location map preview ──────────────────────────────────────
+          if (job != null)
+            _JobLocationCard(job: job),
+
+          if (job != null) const SizedBox(height: 12),
 
           // ── My current bid (if any) ───────────────────────────────────────
           myBidAsync.when(
@@ -227,6 +252,127 @@ class _WorkerBidPageState extends ConsumerState<WorkerBidPage> {
                         .map((b) => _BidFeedTile(bidWithWorker: b))
                         .toList(),
                   ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Status badge ─────────────────────────────────────────────────────────────
+
+class _StatusBadge extends StatelessWidget {
+  final String label;
+  const _StatusBadge({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    final isLive = label == 'Live';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      decoration: BoxDecoration(
+        color: isLive
+            ? _kGreen.withValues(alpha: 0.12)
+            : _kLight.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (isLive)
+            Container(
+              width: 6,
+              height: 6,
+              margin: const EdgeInsets.only(right: 4),
+              decoration: const BoxDecoration(
+                color: _kGreen,
+                shape: BoxShape.circle,
+              ),
+            ),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: isLive ? _kGreen : _kGray,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Job location card (map preview + address) ─────────────────────────────────
+
+class _JobLocationCard extends StatelessWidget {
+  final NewJobEntity job;
+  const _JobLocationCard({required this.job});
+
+  @override
+  Widget build(BuildContext context) {
+    final hasCoords = job.latitude != 0 || job.longitude != 0;
+    final position  = LatLng(job.latitude, job.longitude);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _kBorder),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Map (only when coordinates are valid)
+          if (hasCoords)
+            SizedBox(
+              height: 190,
+              child: GoogleMap(
+                initialCameraPosition: CameraPosition(
+                  target: position,
+                  zoom: 15,
+                ),
+                markers: {
+                  Marker(
+                    markerId: const MarkerId('job'),
+                    position: position,
+                  ),
+                },
+                // Disable interactions so it doesn't fight the scroll view
+                zoomGesturesEnabled: false,
+                scrollGesturesEnabled: false,
+                rotateGesturesEnabled: false,
+                tiltGesturesEnabled: false,
+                myLocationButtonEnabled: false,
+                zoomControlsEnabled: false,
+                mapToolbarEnabled: false,
+                liteModeEnabled: true,
+              ),
+            ),
+
+          // Address row
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.location_on_rounded, size: 16, color: _kGreen),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    job.addressLine.isNotEmpty
+                        ? '${job.addressLine}, ${job.city}'
+                        : job.city,
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      color: _kGray,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),

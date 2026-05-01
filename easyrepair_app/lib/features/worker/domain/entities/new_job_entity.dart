@@ -48,6 +48,8 @@ class NewJobEntity {
   final int bidCount;
   final double? distanceKm;
   final bool hasMyBid;
+  /// Null means no worker assigned yet (booking is open / Live).
+  final String? workerProfileId;
 
   const NewJobEntity({
     required this.id,
@@ -67,6 +69,7 @@ class NewJobEntity {
     required this.bidCount,
     this.distanceKm,
     this.hasMyBid = false,
+    this.workerProfileId,
   });
 
   String get displayTitle => title?.isNotEmpty == true ? title! : category.name;
@@ -75,5 +78,12 @@ class NewJobEntity {
     if (distanceKm == null) return '';
     if (distanceKm! < 1) return '${(distanceKm! * 1000).round()} m away';
     return '${distanceKm!.toStringAsFixed(1)} km away';
+  }
+
+  /// User-facing status label.
+  /// PENDING with no assigned worker → "Live" (open for bids).
+  String get displayStatus {
+    if (status == BookingStatus.pending && workerProfileId == null) return 'Live';
+    return status.workerLabel;
   }
 }
