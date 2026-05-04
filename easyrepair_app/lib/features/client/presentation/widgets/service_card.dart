@@ -32,12 +32,12 @@ class ServiceCard extends StatelessWidget {
           color: imagePath != null ? Colors.white : backgroundColor,
           borderRadius: BorderRadius.circular(20),
           border: isSelected
-              ? Border.all(color: const Color(0xFFDE7356), width: 2)
+              ? Border.all(color: const Color(0xFF1D9E75), width: 2)
               : null,
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: const Color(0xFFDE7356).withValues(alpha: 0.18),
+                    color: const Color(0xFF1D9E75).withValues(alpha: 0.18),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
@@ -137,7 +137,7 @@ class _ImageLayout extends StatelessWidget {
                     isSelected ? 'Selected ✓' : 'Book now →',
                     style: TextStyle(
                       fontSize: subtitleSize,
-                      color: const Color(0xFFDE7356),
+                      color: const Color(0xFF1D9E75),
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -198,7 +198,7 @@ class _EmojiLayout extends StatelessWidget {
             isSelected ? 'Selected ✓' : 'Book now →',
             style: const TextStyle(
               fontSize: 12,
-              color: Color(0xFFDE7356),
+              color: Color(0xFF1D9E75),
               fontWeight: FontWeight.w500,
             ),
           ),

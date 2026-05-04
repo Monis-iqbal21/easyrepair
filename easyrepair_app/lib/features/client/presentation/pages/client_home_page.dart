@@ -11,7 +11,7 @@ import '../widgets/client_bottom_nav_bar.dart';
 import '../widgets/service_card.dart';
 import '../widgets/service_data.dart';
 
-const _kOrange = Color(0xFFDE7356);
+const _kOrange = Color(0xFF1D9E75);
 const _kDark = Color(0xFF1A1A1A);
 const _kGray = Color(0xFF6B7280);
 

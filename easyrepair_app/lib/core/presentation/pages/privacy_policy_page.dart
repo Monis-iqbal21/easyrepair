@@ -258,7 +258,7 @@ class _BulletPoint extends StatelessWidget {
             padding: EdgeInsets.only(top: 6),
             child: CircleAvatar(
               radius: 3,
-              backgroundColor: Color(0xFFDE7356),
+              backgroundColor: Color(0xFF1D9E75),
             ),
           ),
           const SizedBox(width: 10),
@@ -304,7 +304,7 @@ class _NumberedPoint extends StatelessWidget {
             style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: Color(0xFFDE7356),
+              color: Color(0xFF1D9E75),
             ),
           ),
           const SizedBox(width: 8),

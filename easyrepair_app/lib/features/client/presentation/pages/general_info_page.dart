@@ -180,7 +180,7 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
             child: ElevatedButton(
               onPressed: null, // disabled — feature not yet wired to backend
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFDE7356),
+                backgroundColor: const Color(0xFF1D9E75),
                 disabledBackgroundColor: const Color(0xFFFFB899),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 14),
@@ -239,7 +239,7 @@ class _PasswordField extends StatelessWidget {
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide:
-              const BorderSide(color: Color(0xFFDE7356), width: 1.5),
+              const BorderSide(color: Color(0xFF1D9E75), width: 1.5),
         ),
         suffixIcon: IconButton(
           icon: Icon(

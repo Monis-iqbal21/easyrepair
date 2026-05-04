@@ -67,6 +67,9 @@ class BidWithWorkerModel {
   final int completedJobs;
   final double distanceKm;
   final List<String> skills;
+  final double? currentLat;
+  final double? currentLng;
+  final DateTime? locationUpdatedAt;
 
   const BidWithWorkerModel({
     required this.bid,
@@ -78,6 +81,9 @@ class BidWithWorkerModel {
     required this.completedJobs,
     required this.distanceKm,
     required this.skills,
+    this.currentLat,
+    this.currentLng,
+    this.locationUpdatedAt,
   });
 
   factory BidWithWorkerModel.fromJson(Map<String, dynamic> json) {
@@ -100,6 +106,15 @@ class BidWithWorkerModel {
               ?.map((e) => e?.toString() ?? '')
               .toList() ??
           const [],
+      currentLat: workerJson['currentLat'] != null
+          ? _parseDouble(workerJson['currentLat'])
+          : null,
+      currentLng: workerJson['currentLng'] != null
+          ? _parseDouble(workerJson['currentLng'])
+          : null,
+      locationUpdatedAt: workerJson['locationUpdatedAt'] != null
+          ? DateTime.tryParse(workerJson['locationUpdatedAt'].toString())
+          : null,
     );
   }
 
@@ -113,5 +128,8 @@ class BidWithWorkerModel {
         completedJobs: completedJobs,
         distanceKm: distanceKm,
         skills: skills,
+        currentLat: currentLat,
+        currentLng: currentLng,
+        locationUpdatedAt: locationUpdatedAt,
       );
 }

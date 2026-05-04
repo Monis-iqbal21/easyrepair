@@ -145,6 +145,7 @@ export class BidsRepository {
             totalRatings: true,
             currentLat: true,
             currentLng: true,
+            locationUpdatedAt: true,
             bookings: {
               where: { status: BookingStatus.COMPLETED },
               select: { id: true },
@@ -171,6 +172,7 @@ export class BidsRepository {
             totalRatings: true,
             currentLat: true,
             currentLng: true,
+            locationUpdatedAt: true,
             bookings: {
               where: { status: BookingStatus.COMPLETED },
               select: { id: true },

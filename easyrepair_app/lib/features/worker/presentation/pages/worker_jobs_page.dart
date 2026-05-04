@@ -10,7 +10,7 @@ import '../providers/worker_job_providers.dart';
 import '../widgets/worker_bottom_nav_bar.dart';
 
 // ── Palette ───────────────────────────────────────────────────────────────────
-const _kGreen  = Color(0xFFDE7356);
+const _kGreen  = Color(0xFF1D9E75);
 const _kDark   = Color(0xFF1A1A1A);
 const _kGray   = Color(0xFF6B7280);
 const _kLight  = Color(0xFF94A3B8);

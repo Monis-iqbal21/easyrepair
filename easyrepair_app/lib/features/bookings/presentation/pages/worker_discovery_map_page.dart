@@ -12,7 +12,7 @@ import '../../../bookings/presentation/providers/booking_providers.dart';
 import '../../../chat/presentation/providers/chat_providers.dart';
 
 // ── Palette ───────────────────────────────────────────────────────────────────
-const _kGreen  = Color(0xFFDE7356);
+const _kGreen  = Color(0xFF1D9E75);
 const _kDark   = Color(0xFF1A1A1A);
 const _kGray   = Color(0xFF6B7280);
 const _kLight  = Color(0xFF94A3B8);
@@ -29,14 +29,100 @@ class WorkerDiscoveryMapPage extends ConsumerStatefulWidget {
       _WorkerDiscoveryMapPageState();
 }
 
-class _WorkerDiscoveryMapPageState
-    extends ConsumerState<WorkerDiscoveryMapPage> {
+class _WorkerDiscoveryMapPageState extends ConsumerState<WorkerDiscoveryMapPage> {
   GoogleMapController? _mapCtrl;
+
+  // Deduplication: track workers already logged for missing location.
+  final Set<String> _loggedMissingLocationWorkers = {};
+
+  // Cache previous marker set to avoid rebuilding map when bids haven't changed.
+  Set<Marker>? _cachedMarkers;
+  List<BidWithWorkerEntity> _prevPendingBids = [];
 
   @override
   void dispose() {
     _mapCtrl?.dispose();
     super.dispose();
+  }
+
+  Set<Circle> _buildCircles(LatLng jobPos) {
+    return {
+      Circle(
+        circleId: const CircleId('job_search_radius_outer'),
+        center: jobPos,
+        radius: 400,
+        fillColor: _kGreen.withValues(alpha: 0.08),
+        strokeColor: _kGreen.withValues(alpha: 0.22),
+        strokeWidth: 2,
+      ),
+      Circle(
+        circleId: const CircleId('job_search_radius_inner'),
+        center: jobPos,
+        radius: 180,
+        fillColor: _kGreen.withValues(alpha: 0.10),
+        strokeColor: _kGreen.withValues(alpha: 0.28),
+        strokeWidth: 1,
+      ),
+    };
+  }
+
+  Set<Marker> _buildMarkers(
+    LatLng jobPos,
+    List<BidWithWorkerEntity> pending,
+  ) {
+    // Only rebuild when bids actually changed.
+    if (_cachedMarkers != null &&
+        _listsEqual(_prevPendingBids, pending)) {
+      return _cachedMarkers!;
+    }
+    _prevPendingBids = pending;
+
+    final markers = <Marker>{
+      Marker(
+        markerId: const MarkerId('job'),
+        position: jobPos,
+        infoWindow: InfoWindow(
+          title: 'Job Location',
+          snippet: widget.booking.address ?? widget.booking.city,
+        ),
+      ),
+    };
+
+    int count = 0;
+    for (final bw in pending) {
+      if (bw.currentLat == null || bw.currentLng == null) {
+        if (_loggedMissingLocationWorkers.add(bw.workerProfileId)) {
+          debugPrint(
+              '[WorkerOffersMap] missing location for worker = ${bw.workerProfileId}');
+        }
+        continue;
+      }
+      count++;
+      markers.add(
+        Marker(
+          markerId: MarkerId('worker_${bw.workerProfileId}'),
+          position: LatLng(bw.currentLat!, bw.currentLng!),
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
+          infoWindow: InfoWindow(
+            title: bw.firstName,
+            snippet: 'PKR ${bw.bid.amount.toStringAsFixed(0)}',
+          ),
+        ),
+      );
+    }
+    debugPrint('[WorkerOffersMap] worker markers count = $count');
+    _cachedMarkers = markers;
+    return markers;
+  }
+
+  bool _listsEqual(
+      List<BidWithWorkerEntity> a, List<BidWithWorkerEntity> b) {
+    if (a.length != b.length) return false;
+    for (int i = 0; i < a.length; i++) {
+      if (a[i].workerProfileId != b[i].workerProfileId ||
+          a[i].bid.amount != b[i].bid.amount) { return false; }
+    }
+    return true;
   }
 
   @override
@@ -45,23 +131,26 @@ class _WorkerDiscoveryMapPageState
     final jobLng = widget.booking.longitude;
     final jobPos = LatLng(jobLat, jobLng);
 
+    final bidsAsync = ref.watch(bookingBidsProvider(widget.booking.id));
+    final pendingBids = bidsAsync.whenOrNull(
+          data: (bids) => bids
+              .where((b) => b.bid.status == BidStatus.pending)
+              .toList(),
+        ) ??
+        [];
+
+    final markers = _buildMarkers(jobPos, pendingBids);
+    final circles = _buildCircles(jobPos);
+
     return Scaffold(
       body: Stack(
         children: [
-          // ── Full-screen map ────────────────────────────────────────────────
+          // ── Full-screen map with static circles fixed to job coordinates ──
           GoogleMap(
             initialCameraPosition: CameraPosition(target: jobPos, zoom: 13.5),
             onMapCreated: (c) => _mapCtrl = c,
-            markers: {
-              Marker(
-                markerId: const MarkerId('job'),
-                position: jobPos,
-                infoWindow: InfoWindow(
-                  title: 'Job Location',
-                  snippet: widget.booking.address ?? widget.booking.city,
-                ),
-              ),
-            },
+            markers: markers,
+            circles: circles,
             myLocationButtonEnabled: false,
             zoomControlsEnabled: false,
             mapToolbarEnabled: false,
@@ -88,15 +177,38 @@ class _WorkerDiscoveryMapPageState
           ),
 
           // ── Draggable bottom sheet ─────────────────────────────────────────
-          DraggableScrollableSheet(
-            initialChildSize: 0.22,
-            minChildSize: 0.22,
-            maxChildSize: 1.0,
-            snap: true,
-            snapSizes: const [0.22, 0.55, 1.0],
-            builder: (ctx, scrollCtrl) => _BidsSheet(
-              booking: widget.booking,
-              scrollController: scrollCtrl,
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: DraggableScrollableSheet(
+              initialChildSize: 0.20,
+              minChildSize: 0.20,
+              maxChildSize: 0.60,
+              snap: true,
+              snapSizes: const [0.20, 0.40, 0.60],
+              expand: false,
+              builder: (ctx, scrollCtrl) {
+                return Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(22),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.12),
+                        blurRadius: 16,
+                        offset: const Offset(0, -4),
+                      ),
+                    ],
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: _BidsSheet(
+                    booking: widget.booking,
+                    scrollController: scrollCtrl,
+                  ),
+                );
+              },
             ),
           ),
         ],
@@ -117,98 +229,110 @@ class _BidsSheet extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final bidsAsync = ref.watch(bookingBidsProvider(booking.id));
 
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x18000000),
-            blurRadius: 24,
-            offset: Offset(0, -4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // Drag handle
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 10),
-            child: Container(
-              width: 38,
-              height: 4,
-              decoration: BoxDecoration(
-                color: _kBorder,
-                borderRadius: BorderRadius.circular(2),
+    return CustomScrollView(
+      controller: scrollController,
+      slivers: [
+        // ── Fixed header (drag handle + title + divider) ──────────────────
+        SliverToBoxAdapter(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Drag handle
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                child: Container(
+                  width: 38,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: _kBorder,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
               ),
-            ),
-          ),
-
-          // Header
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 2, 12, 10),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Worker Bids',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: _kDark,
-                          letterSpacing: -0.3,
-                        ),
+              // Header row
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 2, 12, 10),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Live Worker Offers',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: _kDark,
+                              letterSpacing: -0.3,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          _SheetSubtitle(bidsAsync: bidsAsync),
+                        ],
                       ),
-                      const SizedBox(height: 2),
-                      _SheetSubtitle(bidsAsync: bidsAsync),
-                    ],
-                  ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.refresh_rounded,
+                          size: 18, color: _kLight),
+                      tooltip: 'Refresh',
+                      onPressed: () =>
+                          ref.invalidate(bookingBidsProvider(booking.id)),
+                    ),
+                  ],
                 ),
-                IconButton(
-                  icon: const Icon(Icons.refresh_rounded, size: 18, color: _kLight),
-                  tooltip: 'Refresh',
-                  onPressed: () => ref.invalidate(bookingBidsProvider(booking.id)),
-                ),
-              ],
-            ),
-          ),
-
-          const Divider(height: 1, thickness: 1, color: _kBorder),
-
-          // Content
-          Expanded(
-            child: bidsAsync.when(
-              loading: () => _LoadingState(),
-              error: (err, _) => _ErrorState(
-                message: err is Failure ? err.message : 'Could not load bids.',
-                onRetry: () => ref.invalidate(bookingBidsProvider(booking.id)),
               ),
-              data: (bids) {
-                final pending = bids
-                    .where((b) => b.bid.status == BidStatus.pending)
-                    .toList()
-                  ..sort((a, b) => a.bid.amount.compareTo(b.bid.amount));
+              const Divider(height: 1, thickness: 1, color: _kBorder),
+            ],
+          ),
+        ),
 
-                if (pending.isEmpty) return const _EmptyState();
-
-                return ListView.separated(
-                  controller: scrollController,
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-                  itemCount: pending.length,
-                  separatorBuilder: (context2, i2) => const SizedBox(height: 10),
-                  itemBuilder: (ctx, i) => _BidOfferCard(
-                    bidWorker: pending[i],
-                    bookingId: booking.id,
-                  ),
-                );
-              },
+        // ── Bid list / states ─────────────────────────────────────────────
+        bidsAsync.when(
+          loading: () =>
+              SliverToBoxAdapter(child: _LoadingState()),
+          error: (err, _) => SliverToBoxAdapter(
+            child: _ErrorState(
+              message:
+                  err is Failure ? err.message : 'Could not load bids.',
+              onRetry: () =>
+                  ref.invalidate(bookingBidsProvider(booking.id)),
             ),
           ),
-        ],
-      ),
+          data: (bids) {
+            final pending = bids
+                .where((b) => b.bid.status == BidStatus.pending)
+                .toList()
+              ..sort((a, b) => a.bid.amount.compareTo(b.bid.amount));
+
+            debugPrint(
+                '[WorkerOffersDrawer] bids count = ${pending.length}');
+
+            if (pending.isEmpty) {
+              return const SliverToBoxAdapter(child: _EmptyState());
+            }
+
+            return SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (ctx, i) {
+                    final index = i ~/ 2;
+                    if (i.isOdd) {
+                      return const SizedBox(height: 10);
+                    }
+                    return _BidOfferCard(
+                      bidWorker: pending[index],
+                      bookingId: booking.id,
+                    );
+                  },
+                  childCount: pending.length * 2 - 1,
+                ),
+              ),
+            );
+          },
+        ),
+      ],
     );
   }
 }
@@ -453,6 +577,8 @@ class _BidOfferCard extends ConsumerWidget {
     );
 
     if (confirm != true || !context.mounted) return;
+
+    debugPrint('[WorkerOffersDrawer] accept bid tapped = ${bidWorker.bid.id}');
 
     try {
       await ref.read(acceptBidProvider.notifier).accept(

@@ -7,7 +7,7 @@ import '../../domain/entities/worker_review_entity.dart';
 import '../providers/worker_review_providers.dart';
 
 // ── Palette (matches existing worker UI) ─────────────────────────────────────
-const _kOrange = Color(0xFFDE7356);
+const _kOrange = Color(0xFF1D9E75);
 const _kDark   = Color(0xFF1A1A1A);
 const _kGray   = Color(0xFF6B7280);
 const _kLight  = Color(0xFF94A3B8);

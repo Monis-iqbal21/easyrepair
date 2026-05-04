@@ -22,7 +22,8 @@
       "Bash(dart --version)",
       "Bash(xargs grep *)",
       "Bash(node_modules/.bin/tsc --noEmit)",
-      "Bash(grep -E \"\\\\.\\(controller|service\\)\\\\.ts$\")"
+      "Bash(grep -E \"\\\\.\\(controller|service\\)\\\\.ts$\")",
+      "Bash(xargs sed *)"
     ]
   }
 }

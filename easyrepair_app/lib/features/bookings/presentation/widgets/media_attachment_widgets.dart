@@ -7,7 +7,7 @@ import 'package:video_player/video_player.dart';
 import '../../domain/entities/booking_entity.dart';
 
 // ── Palette (matches booking-detail pages) ────────────────────────────────────
-const _kAccent  = Color(0xFFDE7356);
+const _kAccent  = Color(0xFF1D9E75);
 const _kDark    = Color(0xFF1A1A1A);
 const _kGray    = Color(0xFF6B7280);
 const _kLight   = Color(0xFF94A3B8);

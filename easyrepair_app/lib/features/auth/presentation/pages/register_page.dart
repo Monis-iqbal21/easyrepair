@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/errors/failures.dart';
 import '../providers/auth_providers.dart';
 import '../widgets/auth_text_field.dart';
-import '../widgets/welcome_toast.dart';
 
 class RegisterPage extends ConsumerStatefulWidget {
   const RegisterPage({super.key});
@@ -15,30 +14,28 @@ class RegisterPage extends ConsumerStatefulWidget {
 }
 
 class _RegisterPageState extends ConsumerState<RegisterPage> {
-  static const _accent = Color(0xFFDE7356);
+  static const _accent = Color(0xFF1D9E75);
   static const _slate = Color(0xFF6B7280);
 
   final _formKey = GlobalKey<FormState>();
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
   final _phoneController = TextEditingController();
-  final _fullNameController = TextEditingController();
   final _passwordController = TextEditingController();
-
   String _selectedRole = 'CLIENT';
 
   @override
   void dispose() {
+    _firstNameController.dispose();
+    _lastNameController.dispose();
     _phoneController.dispose();
-    _fullNameController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
-  /// Splits "John Doe Smith" → firstName: "John", lastName: "Doe Smith".
-  /// Single-word names map to firstName with an empty lastName.
-  (String firstName, String lastName) _splitFullName(String fullName) {
-    final parts = fullName.trim().split(RegExp(r'\s+'));
-    if (parts.length == 1) return (parts[0], '');
-    return (parts.first, parts.skip(1).join(' '));
+  String? _validateRequired(String? value, String fieldName) {
+    if (value == null || value.trim().isEmpty) return '$fieldName is required';
+    return null;
   }
 
   String? _validatePhone(String? value) {
@@ -50,12 +47,6 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     return null;
   }
 
-  String? _validateFullName(String? value) {
-    if (value == null || value.trim().isEmpty) return 'Full name is required';
-    if (value.trim().length < 2) return 'Enter your full name';
-    return null;
-  }
-
   String? _validatePassword(String? value) {
     if (value == null || value.isEmpty) return 'Password is required';
     if (value.length < 8) return 'Password must be at least 8 characters';
@@ -64,19 +55,18 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    final (firstName, lastName) = _splitFullName(_fullNameController.text);
     await ref.read(registerNotifierProvider.notifier).register(
           phone: _phoneController.text.trim(),
           password: _passwordController.text,
-          firstName: firstName,
-          lastName: lastName,
+          firstName: _firstNameController.text.trim(),
+          lastName: _lastNameController.text.trim(),
           role: _selectedRole,
         );
   }
 
   @override
   Widget build(BuildContext context) {
-    ref.listen(registerNotifierProvider, (previous, state) {
+    ref.listen(registerNotifierProvider, (_, state) {
       if (state is AsyncError) {
         final failure = state.error;
         final message =
@@ -84,11 +74,6 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
         ScaffoldMessenger.of(context)
           ..hideCurrentSnackBar()
           ..showSnackBar(SnackBar(content: Text(message)));
-      }
-      // Show welcome toast exactly once: when loading → data transition
-      if (previous?.isLoading == true && state is AsyncData) {
-        final (firstName, _) = _splitFullName(_fullNameController.text);
-        showWelcomeToast(context, firstName);
       }
     });
 
@@ -130,10 +115,18 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                     const Text(
                       'Create\naccount',
                       style: TextStyle(
-                        fontSize: 38,
+                        fontSize: 40,
                         fontWeight: FontWeight.w800,
                         color: Colors.white,
                         height: 1.15,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      'Join EasyRepair and get started today',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.white.withAlpha(190),
                       ),
                     ),
                   ],
@@ -153,13 +146,40 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                 ),
               ),
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
+                padding: const EdgeInsets.fromLTRB(24, 36, 24, 24),
                 child: Form(
                   key: _formKey,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // ── 1. Phone ────────────────────────────────────────
+                      // ── Name row ───────────────────────────────────────────
+                      Row(
+                        children: [
+                          Expanded(
+                            child: AuthTextField(
+                              controller: _firstNameController,
+                              label: 'First Name',
+                              hint: 'Ali',
+                              prefixIcon: Icons.person_outline_rounded,
+                              validator: (v) =>
+                                  _validateRequired(v, 'First name'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: AuthTextField(
+                              controller: _lastNameController,
+                              label: 'Last Name',
+                              hint: 'Khan',
+                              validator: (v) =>
+                                  _validateRequired(v, 'Last name'),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      // ── Phone ──────────────────────────────────────────────
                       AuthTextField(
                         controller: _phoneController,
                         label: 'Mobile Number',
@@ -170,17 +190,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                       ),
                       const SizedBox(height: 16),
 
-                      // ── 2. Full name ────────────────────────────────────
-                      AuthTextField(
-                        controller: _fullNameController,
-                        label: 'Full Name',
-                        hint: 'e.g. Ahmed Khan',
-                        prefixIcon: Icons.person_outline_rounded,
-                        validator: _validateFullName,
-                      ),
-                      const SizedBox(height: 16),
-
-                      // ── 3. Password ─────────────────────────────────────
+                      // ── Password ───────────────────────────────────────────
                       AuthTextField(
                         controller: _passwordController,
                         label: 'Password',
@@ -190,25 +200,24 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                         validator: _validatePassword,
                         onFieldSubmitted: (_) => _submit(),
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 16),
 
-                      // ── 4. Role selector ────────────────────────────────
-                      _RoleSectionLabel(),
-                      const SizedBox(height: 10),
-                      _RoleSelector(
+                      // ── Role picker ────────────────────────────────────────
+                      _RolePicker(
                         selected: _selectedRole,
-                        onChanged: (role) =>
-                            setState(() => _selectedRole = role),
+                        onChanged: (v) => setState(() => _selectedRole = v),
                       ),
-                      const SizedBox(height: 28),
+                      const SizedBox(height: 30),
 
-                      // ── Submit ──────────────────────────────────────────
+                      // ── Submit ─────────────────────────────────────────────
                       _PrimaryButton(
                         label: 'Create Account',
                         isLoading: isLoading,
                         onPressed: _submit,
                       ),
                       const SizedBox(height: 24),
+
+                      // ── Login link ─────────────────────────────────────────
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -241,139 +250,117 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   }
 }
 
-class _RoleSectionLabel extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return const Text(
-      'I am joining as',
-      style: TextStyle(
-        fontSize: 13,
-        fontWeight: FontWeight.w600,
-        color: Color(0xFF1A1A1A),
-        letterSpacing: 0.2,
-      ),
-    );
-  }
-}
+// ── Role picker ───────────────────────────────────────────────────────────────
 
-class _RoleSelector extends StatelessWidget {
+class _RolePicker extends StatelessWidget {
   final String selected;
   final ValueChanged<String> onChanged;
 
-  const _RoleSelector({required this.selected, required this.onChanged});
+  const _RolePicker({required this.selected, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: _RoleButton(
-            role: 'CLIENT',
-            label: 'Client',
-            icon: Icons.handyman_outlined,
-            description: 'I need repairs',
-            isSelected: selected == 'CLIENT',
-            onTap: () => onChanged('CLIENT'),
+        const Text(
+          'I am a…',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF1A1A1A),
           ),
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _RoleButton(
-            role: 'WORKER',
-            label: 'Worker',
-            icon: Icons.construction_outlined,
-            description: 'I do repairs',
-            isSelected: selected == 'WORKER',
-            onTap: () => onChanged('WORKER'),
-          ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: _RoleOption(
+                label: 'Client',
+                subtitle: 'Book services',
+                icon: Icons.home_repair_service_outlined,
+                isSelected: selected == 'CLIENT',
+                onTap: () => onChanged('CLIENT'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _RoleOption(
+                label: 'Worker',
+                subtitle: 'Offer services',
+                icon: Icons.handyman_outlined,
+                isSelected: selected == 'WORKER',
+                onTap: () => onChanged('WORKER'),
+              ),
+            ),
+          ],
         ),
       ],
     );
   }
 }
 
-class _RoleButton extends StatelessWidget {
-  static const _accent = Color(0xFFDE7356);
-  static const _border = Color(0xFFE2E8F0);
-
-  final String role;
+class _RoleOption extends StatelessWidget {
   final String label;
+  final String subtitle;
   final IconData icon;
-  final String description;
   final bool isSelected;
   final VoidCallback onTap;
 
-  const _RoleButton({
-    required this.role,
+  const _RoleOption({
     required this.label,
+    required this.subtitle,
     required this.icon,
-    required this.description,
     required this.isSelected,
     required this.onTap,
   });
+
+  static const _accent = Color(0xFF1D9E75);
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeInOut,
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         decoration: BoxDecoration(
-          color: isSelected ? _accent : Colors.white,
+          color: isSelected
+              ? _accent.withAlpha(20)
+              : Colors.white,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: isSelected ? _accent : _border,
-            width: isSelected ? 2 : 1.5,
+            color: isSelected ? _accent : const Color(0xFFE2E8F0),
+            width: isSelected ? 2 : 1,
           ),
-          boxShadow: isSelected
-              ? [
-                  const BoxShadow(
-                    color: Color(0x33DE7356),
-                    blurRadius: 12,
-                    offset: Offset(0, 4),
-                  ),
-                ]
-              : null,
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           children: [
-            Row(
+            Icon(
+              icon,
+              size: 22,
+              color: isSelected ? _accent : const Color(0xFF94A3B8),
+            ),
+            const SizedBox(width: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(
-                  icon,
-                  size: 20,
-                  color: isSelected ? Colors.white : const Color(0xFF6B7280),
-                ),
-                const Spacer(),
-                if (isSelected)
-                  const Icon(
-                    Icons.check_circle_rounded,
-                    size: 18,
-                    color: Colors.white,
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: isSelected ? _accent : const Color(0xFF1A1A1A),
                   ),
+                ),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Color(0xFF94A3B8),
+                  ),
+                ),
               ],
-            ),
-            const SizedBox(height: 10),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: isSelected ? Colors.white : const Color(0xFF1A1A1A),
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              description,
-              style: TextStyle(
-                fontSize: 11,
-                color: isSelected
-                    ? Colors.white.withAlpha(200)
-                    : const Color(0xFF94A3B8),
-              ),
             ),
           ],
         ),
@@ -381,6 +368,8 @@ class _RoleButton extends StatelessWidget {
     );
   }
 }
+
+// ── Primary button ────────────────────────────────────────────────────────────
 
 class _PrimaryButton extends StatelessWidget {
   final String label;
@@ -400,13 +389,14 @@ class _PrimaryButton extends StatelessWidget {
       child: ElevatedButton(
         onPressed: isLoading ? null : onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFFDE7356),
+          backgroundColor: const Color(0xFF1D9E75),
           foregroundColor: Colors.white,
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
-          disabledBackgroundColor: const Color(0xFFDE7356).withAlpha(150),
+          disabledBackgroundColor:
+              const Color(0xFF1D9E75).withAlpha(150),
         ),
         child: isLoading
             ? const SizedBox(

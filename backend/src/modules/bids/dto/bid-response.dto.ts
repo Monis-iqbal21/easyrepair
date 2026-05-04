@@ -6,6 +6,9 @@ export class BidWorkerDto {
   rating: number;
   completedJobs: number;
   distanceKm: number | null;
+  currentLat: number | null;
+  currentLng: number | null;
+  locationUpdatedAt: Date | null;
 }
 
 export class BidResponseDto {

@@ -472,7 +472,7 @@ class _WorkerSection extends StatelessWidget {
                   'Searching for workers...',
                   style: TextStyle(
                     fontSize: 12,
-                    color: Color(0xFFDE7356),
+                    color: Color(0xFF1D9E75),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -514,7 +514,7 @@ class _WorkerAvatar extends StatelessWidget {
       width: 34,
       height: 34,
       decoration: BoxDecoration(
-        color: const Color(0xFFDE7356),
+        color: const Color(0xFF1D9E75),
         shape: BoxShape.circle,
       ),
       child: worker.avatarUrl != null
@@ -593,7 +593,7 @@ class _SearchingDotState extends State<_SearchingDot>
           child: Icon(
             Icons.search_rounded,
             size: 16,
-            color: Color(0xFFDE7356),
+            color: Color(0xFF1D9E75),
           ),
         ),
       ),
@@ -666,7 +666,7 @@ class _QuickActions extends StatelessWidget {
             child: _ActionBtn(
               label: 'Chat',
               icon: Icons.chat_bubble_outline_rounded,
-              color: const Color(0xFFDE7356),
+              color: const Color(0xFF1D9E75),
               bgColor: const Color(0xFFFFF0EB),
               onTap: onChat!,
             ),

@@ -128,7 +128,7 @@ class _WorkerHomePageState extends ConsumerState<WorkerHomePage>
                                 width: 16,
                                 height: 16,
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFDE7356),
+                                  color: const Color(0xFF1D9E75),
                                   shape: BoxShape.circle,
                                   border: Border.all(
                                       color: Colors.white, width: 1.5),
@@ -169,7 +169,7 @@ class _WorkerHomePageState extends ConsumerState<WorkerHomePage>
                       child: const Icon(
                         Icons.logout_rounded,
                         size: 18,
-                        color: Color(0xFFDE7356),
+                        color: Color(0xFF1D9E75),
                       ),
                     ),
                   ),
@@ -380,7 +380,7 @@ class _AvailabilityCard extends ConsumerWidget {
             : const Icon(Icons.power_settings_new_rounded, size: 18),
         label: Text(isLoading ? 'Connecting...' : 'Go Online'),
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFFDE7356),
+          backgroundColor: const Color(0xFF1D9E75),
           foregroundColor: Colors.white,
           elevation: 0,
           padding: const EdgeInsets.symmetric(vertical: 14),
@@ -402,12 +402,12 @@ class _AvailabilityCard extends ConsumerWidget {
       label: Text(isLoading ? 'Going offline...' : 'Go Offline'),
       style: ElevatedButton.styleFrom(
         backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFFDE7356),
+        foregroundColor: const Color(0xFF1D9E75),
         elevation: 0,
         padding: const EdgeInsets.symmetric(vertical: 14),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(14),
-          side: const BorderSide(color: Color(0xFFDE7356), width: 1.5),
+          side: const BorderSide(color: Color(0xFF1D9E75), width: 1.5),
         ),
       ),
     );
@@ -448,7 +448,7 @@ class _AvailabilityCard extends ConsumerWidget {
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFDE7356),
+              backgroundColor: const Color(0xFF1D9E75),
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               elevation: 0,
@@ -635,7 +635,7 @@ class _SkillsSheet extends ConsumerWidget {
                         }
                       },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFDE7356),
+                  backgroundColor: const Color(0xFF1D9E75),
                   foregroundColor: Colors.white,
                   disabledBackgroundColor: Colors.grey.shade200,
                   elevation: 0,
@@ -696,12 +696,12 @@ class _CategoryChips extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: BoxDecoration(
                 color: isSelected
-                    ? const Color(0xFFDE7356)
+                    ? const Color(0xFF1D9E75)
                     : const Color(0xFFF1F5F9),
                 borderRadius: BorderRadius.circular(50),
                 border: Border.all(
                   color: isSelected
-                      ? const Color(0xFFDE7356)
+                      ? const Color(0xFF1D9E75)
                       : const Color(0xFFE2E8F0),
                 ),
               ),
@@ -777,11 +777,11 @@ class _OngoingJobCard extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          color: const Color(0xFFDE7356),
+          color: const Color(0xFF1D9E75),
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFFDE7356).withOpacity(0.30),
+              color: const Color(0xFF1D9E75).withOpacity(0.30),
               blurRadius: 20,
               offset: const Offset(0, 6),
             ),
@@ -857,7 +857,7 @@ class _OngoingJobCard extends StatelessWidget {
                 onPressed: () => context.push('/worker/job/${job!.id}'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
-                  foregroundColor: const Color(0xFFDE7356),
+                  foregroundColor: const Color(0xFF1D9E75),
                   elevation: 0,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
@@ -950,7 +950,7 @@ class _SkillsSection extends ConsumerWidget {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFDE7356).withOpacity(0.08),
+                    color: const Color(0xFF1D9E75).withOpacity(0.08),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -958,7 +958,7 @@ class _SkillsSection extends ConsumerWidget {
                     style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFFDE7356),
+                      color: Color(0xFF1D9E75),
                     ),
                   ),
                 ),
@@ -1050,7 +1050,7 @@ class _StatsSection extends StatelessWidget {
             label: 'Completed',
             value: '${profile.stats.completedJobs}',
             icon: Icons.check_circle_outline_rounded,
-            color: const Color(0xFFDE7356),
+            color: const Color(0xFF1D9E75),
             bg: const Color(0xFFE8F5E9),
           ),
         ),
@@ -1070,7 +1070,7 @@ class _StatsSection extends StatelessWidget {
             label: 'Active',
             value: '${profile.stats.activeJobs}',
             icon: Icons.bolt_rounded,
-            color: const Color(0xFFDE7356),
+            color: const Color(0xFF1D9E75),
             bg: const Color(0xFFFFF0EB),
           ),
         ),
@@ -1184,7 +1184,7 @@ class _ReviewsSection extends ConsumerWidget {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 12, vertical: 5),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFDE7356).withOpacity(0.08),
+                      color: const Color(0xFF1D9E75).withOpacity(0.08),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: const Text(
@@ -1192,7 +1192,7 @@ class _ReviewsSection extends ConsumerWidget {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFFDE7356),
+                        color: Color(0xFF1D9E75),
                       ),
                     ),
                   ),
@@ -1354,7 +1354,7 @@ class _ReviewCard extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFDE7356).withOpacity(0.08),
+                  color: const Color(0xFF1D9E75).withOpacity(0.08),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
@@ -1362,7 +1362,7 @@ class _ReviewCard extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFFDE7356),
+                    color: Color(0xFF1D9E75),
                   ),
                 ),
               ),
@@ -1502,7 +1502,7 @@ class _ErrorCard extends StatelessWidget {
               icon: const Icon(Icons.refresh_rounded, size: 18),
               label: const Text('Retry'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFDE7356),
+                backgroundColor: const Color(0xFF1D9E75),
                 foregroundColor: Colors.white,
                 elevation: 0,
                 shape: RoundedRectangleBorder(

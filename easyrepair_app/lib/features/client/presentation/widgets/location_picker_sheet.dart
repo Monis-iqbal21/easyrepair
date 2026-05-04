@@ -13,7 +13,7 @@ const _kKarachiCenter = LatLng(24.8607, 67.0011);
 const _kKarachiRadiusM = 55000.0; // 55 km
 
 // ── Palette ───────────────────────────────────────────────────────────────────
-const _kOrange  = Color(0xFFDE7356);
+const _kOrange  = Color(0xFF1D9E75);
 const _kDark    = Color(0xFF1A1A1A);
 const _kGray    = Color(0xFF6B7280);
 const _kBorder  = Color(0xFFE2E8F0);

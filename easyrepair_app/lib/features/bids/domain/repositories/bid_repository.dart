@@ -41,6 +41,9 @@ class BidWithWorkerEntity {
   final int completedJobs;
   final double distanceKm;
   final List<String> skills;
+  final double? currentLat;
+  final double? currentLng;
+  final DateTime? locationUpdatedAt;
 
   const BidWithWorkerEntity({
     required this.bid,
@@ -52,6 +55,9 @@ class BidWithWorkerEntity {
     required this.completedJobs,
     required this.distanceKm,
     required this.skills,
+    this.currentLat,
+    this.currentLng,
+    this.locationUpdatedAt,
   });
 
   String get fullName => '$firstName $lastName'.trim();

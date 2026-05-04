@@ -1,40 +1,62 @@
-Add two improvements to the Worker Place Bid page.
+I want to understand the exact worker notification flow when a client posts a job.
 
-Context:
-The worker New Jobs flow is now using /workers/jobs/new. Each job has latitude/longitude/address/status fields. On the Place Bid page, I want the worker to see a small map preview of the job location near the top.
+Please investigate the backend and Flutter app and explain clearly:
 
-Tasks:
+Main question:
+When a client posts a job, how does a worker get notified, and under what exact conditions?
 
-1. Add job location map preview on Place Bid page
-- Find the page/screen used when worker taps a New Job and opens the Place Bid page.
-- Add a map preview below the price/budget section near the top of the page.
-- The map should use the job latitude and longitude.
-- Show a marker at the job location.
-- Show the address text below or above the map.
-- Keep the map height around 180–220px.
-- Use rounded corners and match the current UI style.
-- The map preview should be non-intrusive. If direct interaction causes issues, disable scroll/zoom gestures or keep it simple.
-- If latitude or longitude is missing/null, hide the map and only show address text.
-- Do not break the existing bid form, validation, or submit flow.
+Check backend first:
+- booking/job creation endpoint/service
+- notification service
+- FCM push service
+- worker matching service
+- worker availability/location logic
+- worker skills/category matching
+- any socket/event gateway logic
+- database fields used for worker eligibility
 
-2. Show “Live” instead of “Pending” for open jobs
-- In the New Jobs / Place Bid UI, when a job has status PENDING and no worker is assigned, show user-facing label as “Live”.
-- Do not change the backend database status value.
-- This is only a display/UI label change.
-- Example:
-  backend status: PENDING
-  assigned worker: null / no assigned worker
-  UI label: Live
-- Other statuses should keep their normal labels.
-- Add a helper if needed, something like getWorkerJobDisplayStatus(job), so we don’t hardcode this in many places.
+Please answer these points:
 
-3. Check model/parsing
-- Make sure the NewJob model contains latitude, longitude, address, and assigned worker/workerProfileId if available.
-- If assigned worker info is not returned from backend, update backend /workers/jobs/new response to include workerProfileId or assignedWorkerId as nullable.
-- Use that field only to decide whether PENDING should display as Live.
+1. When client posts an urgent job:
+   - Is notification sent immediately?
+   - Which workers are selected?
+   - Does worker need to be ONLINE?
+   - Does worker need matching skill/category?
+   - Does worker need currentLat/currentLng?
+   - Is distance/radius checked?
+   - Is verificationStatus required to be VERIFIED?
+   - Is account status required to be ACTIVE?
+   - Is currentlyWorking=false required?
+   - Does FCM token/device token need to exist?
 
-4. Keep changes minimal
-- Do not redesign the whole page.
-- Do not change existing colors except matching the current theme.
-- Do not change bid API behavior.
-- Add debugPrint only if useful, but avoid noisy logs.
+2. When client posts a normal/scheduled job:
+   - Is notification sent immediately or only 1 hour before schedule?
+   - Is there any cron/queue/job scheduler for delayed notification?
+   - If no scheduler exists, explain what currently happens.
+
+3. New Jobs tab:
+   - Is New Jobs tab independent from push notifications?
+   - Can a worker see a job in New Jobs even if they did not receive FCM notification?
+   - What endpoint loads New Jobs?
+   - What filters are applied?
+
+4. Worker online/location:
+   - How does worker location get saved?
+   - What endpoint saves worker location?
+   - What conditions cause PATCH /workers/location to return 403?
+   - Recent logs show PATCH /workers/location returns 403 Forbidden and /workers/jobs/new also returns 403 Forbidden. Find why that happens.
+   - Does this mean worker is not verified/active/eligible, or logged in as wrong role/client?
+
+5. Worker bid map:
+   - If a worker bids but is offline, do we still return their last known location?
+   - Which fields are returned in booking bids response?
+   - currentLat/currentLng/locationUpdatedAt should show last known worker location even offline, if saved.
+
+6. Give me a simple flow diagram in text:
+Client posts job → backend creates booking → finds eligible workers → sends notification → worker sees notification/New Jobs tab → places bid.
+
+7. Then give me the exact files/functions involved.
+
+8. Do not change code yet.
+Only investigate and explain current behavior.
+If something is missing or broken, list it under "Issues found" and "Recommended fixes".

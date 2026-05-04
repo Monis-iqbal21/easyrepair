@@ -130,12 +130,12 @@ class _FilterButton extends StatelessWidget {
         height: 46,
         decoration: BoxDecoration(
           color: hasActiveFilters
-              ? const Color(0xFFDE7356)
+              ? const Color(0xFF1D9E75)
               : Colors.white,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: hasActiveFilters
-                ? const Color(0xFFDE7356)
+                ? const Color(0xFF1D9E75)
                 : const Color(0xFFE2E8F0),
           ),
           boxShadow: [
@@ -168,7 +168,7 @@ class _FilterButton extends StatelessWidget {
                     shape: BoxShape.circle,
                     border: Border.all(
                       color: hasActiveFilters
-                          ? const Color(0xFFDE7356)
+                          ? const Color(0xFF1D9E75)
                           : Colors.white,
                       width: 1,
                     ),

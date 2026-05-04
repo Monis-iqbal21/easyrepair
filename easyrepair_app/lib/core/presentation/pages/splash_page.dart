@@ -22,7 +22,7 @@ class SplashPage extends StatelessWidget {
               width: 22,
               height: 22,
               child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFDE7356)),
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF1D9E75)),
                 strokeWidth: 2.5,
               ),
             ),

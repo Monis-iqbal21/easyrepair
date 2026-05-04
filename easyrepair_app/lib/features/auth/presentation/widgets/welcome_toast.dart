@@ -94,7 +94,7 @@ class _WelcomeToastState extends State<_WelcomeToast>
                     width: 44,
                     height: 44,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFDE7356),
+                      color: const Color(0xFF1D9E75),
                       borderRadius: BorderRadius.circular(13),
                     ),
                     child: const Icon(

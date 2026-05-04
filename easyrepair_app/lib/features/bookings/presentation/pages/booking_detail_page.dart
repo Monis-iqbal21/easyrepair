@@ -14,7 +14,7 @@ import '../widgets/urgency_badge.dart';
 import 'worker_discovery_map_page.dart';
 
 // ── Palette ───────────────────────────────────────────────────────────────────
-const _kGreen  = Color(0xFFDE7356);
+const _kGreen  = Color(0xFF1D9E75);
 const _kDark   = Color(0xFF1A1A1A);
 const _kGray   = Color(0xFF6B7280);
 const _kLight  = Color(0xFF94A3B8);
@@ -528,7 +528,7 @@ class _LocationCard extends StatelessWidget {
                 child: const Icon(
                   Icons.location_on_rounded,
                   size: 18,
-                  color: Color(0xFFDE7356),
+                  color: Color(0xFF1D9E75),
                 ),
               ),
               const SizedBox(width: 10),
@@ -1258,7 +1258,7 @@ class _DistanceBar extends StatelessWidget {
               size: 18,
               color: isClose
                   ? const Color(0xFF16A34A)
-                  : const Color(0xFFDE7356),
+                  : const Color(0xFF1D9E75),
             ),
           ),
           const SizedBox(width: 12),
@@ -1310,49 +1310,33 @@ class _ViewBidsButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _kBorder),
+    return GestureDetector(
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => WorkerDiscoveryMapPage(booking: booking),
+        ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Worker Bids',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: _kDark,
-            ),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => WorkerDiscoveryMapPage(booking: booking),
-                  fullscreenDialog: true,
-                ),
-              ),
-              icon: const Icon(Icons.gavel_rounded, size: 18),
-              label: const Text('See Worker Bids'),
-              style: FilledButton.styleFrom(
-                backgroundColor: _kGreen,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-                textStyle: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
+      child: Container(
+        height: 50,
+        decoration: BoxDecoration(
+          color: _kGreen,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.gavel_rounded, size: 16, color: Colors.white),
+            SizedBox(width: 8),
+            Text(
+              'See Worker Bids',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1650,7 +1634,7 @@ class _ActionButtons extends ConsumerWidget {
           _FullBtn(
             label: 'Chat with Worker',
             icon: Icons.chat_bubble_outline_rounded,
-            color: const Color(0xFFDE7356),
+            color: const Color(0xFF1D9E75),
             bgColor: const Color(0xFFFFF0EB),
             onTap: () => context.push('/client/chat'),
           ),

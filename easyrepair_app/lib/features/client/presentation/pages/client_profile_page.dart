@@ -129,11 +129,11 @@ class _ClientProfilePageState extends ConsumerState<ClientProfilePage> {
                       height: 88,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: const Color(0xFFDE7356),
+                        color: const Color(0xFF1D9E75),
                         boxShadow: [
                           BoxShadow(
                             color:
-                                const Color(0xFFDE7356).withValues(alpha: 0.25),
+                                const Color(0xFF1D9E75).withValues(alpha: 0.25),
                             blurRadius: 16,
                             offset: const Offset(0, 4),
                           ),
@@ -169,7 +169,7 @@ class _ClientProfilePageState extends ConsumerState<ClientProfilePage> {
                           child: const Icon(
                             Icons.edit_rounded,
                             size: 14,
-                            color: Color(0xFFDE7356),
+                            color: Color(0xFF1D9E75),
                           ),
                         ),
                       ),
@@ -366,7 +366,7 @@ class _AvatarOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = iconColor ?? const Color(0xFFDE7356);
+    final color = iconColor ?? const Color(0xFF1D9E75);
     return GestureDetector(
       onTap: onTap,
       child: Column(
@@ -475,7 +475,7 @@ class _SettingsItem extends StatelessWidget {
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(icon,
-                      size: 18, color: const Color(0xFFDE7356)),
+                      size: 18, color: const Color(0xFF1D9E75)),
                 ),
                 const SizedBox(width: 14),
                 Expanded(

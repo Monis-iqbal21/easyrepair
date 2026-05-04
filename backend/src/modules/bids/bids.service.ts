@@ -189,6 +189,9 @@ export class BidsService {
         rating: Number(wp.rating),
         completedJobs,
         distanceKm,
+        currentLat: wp.currentLat ?? null,
+        currentLng: wp.currentLng ?? null,
+        locationUpdatedAt: wp.locationUpdatedAt ?? null,
       };
 
       return {
