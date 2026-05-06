@@ -1,0 +1,33 @@
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'BidStatus') THEN
+    CREATE TYPE "BidStatus" AS ENUM ('PENDING', 'ACCEPTED', 'REJECTED');
+  END IF;
+END $$;
+
+CREATE TABLE IF NOT EXISTS "bids" (
+  "id" TEXT NOT NULL,
+  "bookingId" TEXT NOT NULL,
+  "workerProfileId" TEXT NOT NULL,
+  "amount" DECIMAL(10,2) NOT NULL,
+  "message" TEXT,
+  "status" "BidStatus" NOT NULL DEFAULT 'PENDING',
+  "editCount" INTEGER NOT NULL DEFAULT 0,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMP(3) NOT NULL,
+  CONSTRAINT "bids_pkey" PRIMARY KEY ("id")
+);
+
+CREATE INDEX IF NOT EXISTS "bids_bookingId_idx" ON "bids"("bookingId");
+CREATE INDEX IF NOT EXISTS "bids_workerProfileId_idx" ON "bids"("workerProfileId");
+CREATE UNIQUE INDEX IF NOT EXISTS "bids_bookingId_workerProfileId_key" ON "bids"("bookingId", "workerProfileId");
+
+ALTER TABLE "bids"
+ADD CONSTRAINT "bids_bookingId_fkey"
+FOREIGN KEY ("bookingId") REFERENCES "bookings"("id")
+ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE "bids"
+ADD CONSTRAINT "bids_workerProfileId_fkey"
+FOREIGN KEY ("workerProfileId") REFERENCES "worker_profiles"("id")
+ON DELETE CASCADE ON UPDATE CASCADE;
