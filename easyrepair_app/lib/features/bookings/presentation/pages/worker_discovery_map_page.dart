@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../../../core/errors/failures.dart';
+import 'track_worker_page.dart';
 import '../../../bids/domain/entities/bid_entity.dart';
 import '../../../bids/domain/repositories/bid_repository.dart';
 import '../../../bids/presentation/providers/bid_providers.dart';
@@ -587,14 +588,9 @@ class _BidOfferCard extends ConsumerWidget {
           );
       if (context.mounted) {
         ref.invalidate(bookingDetailProvider(bookingId));
-        Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${bidWorker.firstName} has been hired!'),
-            backgroundColor: _kGreen,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            duration: const Duration(seconds: 3),
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute<void>(
+            builder: (_) => TrackWorkerPage(bookingId: bookingId),
           ),
         );
       }

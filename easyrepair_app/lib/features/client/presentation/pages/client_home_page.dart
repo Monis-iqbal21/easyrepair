@@ -11,7 +11,7 @@ import '../widgets/client_bottom_nav_bar.dart';
 import '../widgets/service_card.dart';
 import '../widgets/service_data.dart';
 
-const _kOrange = Color(0xFF1D9E75);
+const _kGreen = Color(0xFF1D9E75);
 const _kDark = Color(0xFF1A1A1A);
 const _kGray = Color(0xFF6B7280);
 
@@ -31,34 +31,24 @@ class ClientHomePage extends ConsumerWidget {
         bottom: false,
         child: Column(
           children: [
-            // ── Header ────────────────────────────────────────────────
+            // ── Branding header ──────────────────────────────────────────
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
               child: Row(
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Hello, $firstName',
-                          style: TextStyle(
-                            fontSize: rFont(screenWidth, 22, min: 18, max: 26),
-                            fontWeight: FontWeight.w700,
-                            color: _kDark,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'What do you need fixed today?',
-                          style: TextStyle(
-                            fontSize: rFont(screenWidth, 13, min: 11, max: 15),
-                            color: Colors.grey,
-                          ),
-                        ),
-                      ],
+                  // App logo
+                  Image.asset(
+                    'assets/images/logo-green.png',
+                    height: 36,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, _, _) => const Icon(
+                      Icons.home_repair_service_rounded,
+                      color: _kGreen,
+                      size: 28,
                     ),
                   ),
+                  const Spacer(),
+                  // Notification bell with unread badge
                   GestureDetector(
                     onTap: () => context.push('/notifications'),
                     child: Stack(
@@ -72,7 +62,7 @@ class ClientHomePage extends ConsumerWidget {
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.06),
+                                color: Colors.black.withValues(alpha: 0.07),
                                 blurRadius: 8,
                               ),
                             ],
@@ -90,11 +80,7 @@ class ClientHomePage extends ConsumerWidget {
                                     .watch(unreadNotificationCountProvider)
                                     .valueOrNull ??
                                 0;
-
-                            if (count == 0) {
-                              return const SizedBox.shrink();
-                            }
-
+                            if (count == 0) return const SizedBox.shrink();
                             return Positioned(
                               top: -2,
                               right: -2,
@@ -102,7 +88,7 @@ class ClientHomePage extends ConsumerWidget {
                                 width: 16,
                                 height: 16,
                                 decoration: BoxDecoration(
-                                  color: _kOrange,
+                                  color: _kGreen,
                                   shape: BoxShape.circle,
                                   border: Border.all(
                                     color: Colors.white,
@@ -130,23 +116,190 @@ class ClientHomePage extends ConsumerWidget {
               ),
             ),
 
-            const SizedBox(height: 24),
-
-            // ── Scrollable content ────────────────────────────────────
+            // ── Scrollable content ────────────────────────────────────────
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // ── Our Services ─────────────────────────────────
-                    Text(
-                      'Our Services',
-                      style: TextStyle(
-                        fontSize: rFont(screenWidth, 20, min: 17, max: 23),
-                        fontWeight: FontWeight.w700,
-                        color: _kDark,
+                    // ── Greeting ─────────────────────────────────────────
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Hi $firstName 👋',
+                          style: TextStyle(
+                            fontSize: rFont(
+                              screenWidth,
+                              22,
+                              min: 18,
+                              max: 26,
+                            ),
+                            fontWeight: FontWeight.w700,
+                            color: _kDark,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'What do you need fixed today?',
+                          style: TextStyle(
+                            fontSize: rFont(
+                              screenWidth,
+                              13,
+                              min: 11,
+                              max: 15,
+                            ),
+                            color: _kGray,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // ── Search bar ────────────────────────────────────────
+                    GestureDetector(
+                      onTap: () => context.push('/client/post-job'),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.search_rounded,
+                              color: Color(0xFF94A3B8),
+                              size: 20,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'Search services or describe issue...',
+                                style: TextStyle(
+                                  fontSize: rFont(
+                                    screenWidth,
+                                    14,
+                                    min: 12,
+                                    max: 16,
+                                  ),
+                                  color: const Color(0xFF94A3B8),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // ── EasyRepair Guarantee banner ───────────────────────
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _kGreen,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 42,
+                            height: 42,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(
+                              Icons.verified_user_outlined,
+                              color: Colors.white,
+                              size: 22,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'Handygo Guarantee',
+                                  style: TextStyle(
+                                    fontSize: rFont(
+                                      screenWidth,
+                                      15,
+                                      min: 13,
+                                      max: 17,
+                                    ),
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  'Verified workers · Fixed prices · Free re-work',
+                                  style: TextStyle(
+                                    fontSize: rFont(
+                                      screenWidth,
+                                      12,
+                                      min: 10,
+                                      max: 13,
+                                    ),
+                                    color: Colors.white.withValues(alpha: 0.85),
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // ── Our Services ──────────────────────────────────────
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Our Services',
+                          style: TextStyle(
+                            fontSize: rFont(screenWidth, 20, min: 17, max: 23),
+                            fontWeight: FontWeight.w700,
+                            color: _kDark,
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () => context.push('/client/post-job'),
+                          child: Text(
+                            'See all',
+                            style: TextStyle(
+                              fontSize: rFont(
+                                screenWidth,
+                                13,
+                                min: 11,
+                                max: 15,
+                              ),
+                              fontWeight: FontWeight.w500,
+                              color: _kGreen,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 14),
 
@@ -155,7 +308,6 @@ class ClientHomePage extends ConsumerWidget {
                         const crossAxisCount = 2;
                         const crossAxisSpacing = 12.0;
                         const mainAxisSpacing = 12.0;
-                        // Must match _ImageLayout's rFont baseWidth
                         const cardBaseW = 170.0;
 
                         final cardWidth =
@@ -163,11 +315,8 @@ class ClientHomePage extends ConsumerWidget {
                                 ((crossAxisCount - 1) * crossAxisSpacing)) /
                             crossAxisCount;
 
-                        // Target image proportion (16:10); Expanded in _ImageLayout
-                        // will fill remaining space, so this is the allocation target.
                         final imageHeight = cardWidth / 1.6;
 
-                        // Mirror _ImageLayout's rFont calculations.
                         final titleSize = rFont(
                           cardWidth,
                           15,
@@ -175,21 +324,20 @@ class ClientHomePage extends ConsumerWidget {
                           max: 17,
                           baseWidth: cardBaseW,
                         );
-                        final subtitleSize = rFont(
+                        final btnSize = rFont(
                           cardWidth,
-                          12,
-                          min: 11,
-                          max: 13,
+                          11,
+                          min: 10,
+                          max: 12,
                           baseWidth: cardBaseW,
                         );
-                        // padding(top:10 + bottom:10) + title + gap(3) + subtitle.
-                        // ×1.6 + 6px buffer covers Flutter's platform line-height
-                        // variance and text-scale-factor > 1 without overflow.
+                        // padding(top:9 + bottom:9) + title + gap(6)
+                        // + "Book Now" pill (3+btnSize+3) + 6px buffer.
                         final textAreaHeight =
-                            20.0 +
+                            18.0 +
                             titleSize * 1.6 +
-                            3.0 +
-                            subtitleSize * 1.6 +
+                            6.0 +
+                            (btnSize + 6) +
                             6.0;
 
                         final cardHeight = imageHeight + textAreaHeight;
@@ -223,13 +371,12 @@ class ClientHomePage extends ConsumerWidget {
                       },
                     ),
 
-                    // Only 10px below Our Services section
                     const SizedBox(height: 10),
 
-                    // ── Recent Notifications ──────────────────────────
+                    // ── Recent Notifications ──────────────────────────────
                     const _RecentNotifications(),
 
-                    const SizedBox(height: 100), // bottom nav clearance
+                    const SizedBox(height: 100),
                   ],
                 ),
               ),
@@ -251,7 +398,6 @@ class _RecentNotifications extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(notificationsProvider);
-
     final screenWidth = MediaQuery.sizeOf(context).width;
 
     return async.maybeWhen(
@@ -280,7 +426,7 @@ class _RecentNotifications extends ConsumerWidget {
                     style: TextStyle(
                       fontSize: rFont(screenWidth, 13, min: 11, max: 15),
                       fontWeight: FontWeight.w500,
-                      color: _kOrange,
+                      color: _kGreen,
                     ),
                   ),
                 ),
@@ -315,11 +461,11 @@ class _CompactNotifTile extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
-            color: isUnread ? const Color(0xFFFFF7F4) : Colors.white,
+            color: isUnread ? const Color(0xFFF0FDF4) : Colors.white,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
               color: isUnread
-                  ? _kOrange.withValues(alpha: 0.2)
+                  ? _kGreen.withValues(alpha: 0.2)
                   : const Color(0xFFE2E8F0),
             ),
           ),
@@ -330,14 +476,14 @@ class _CompactNotifTile extends StatelessWidget {
                 height: 34,
                 decoration: BoxDecoration(
                   color: isUnread
-                      ? _kOrange.withValues(alpha: 0.12)
+                      ? _kGreen.withValues(alpha: 0.12)
                       : const Color(0xFFF1F5F9),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
                   Icons.notifications_outlined,
                   size: 17,
-                  color: isUnread ? _kOrange : _kGray,
+                  color: isUnread ? _kGreen : _kGray,
                 ),
               ),
               const SizedBox(width: 12),
@@ -349,9 +495,8 @@ class _CompactNotifTile extends StatelessWidget {
                       n.title,
                       style: TextStyle(
                         fontSize: 13,
-                        fontWeight: isUnread
-                            ? FontWeight.w600
-                            : FontWeight.w500,
+                        fontWeight:
+                            isUnread ? FontWeight.w600 : FontWeight.w500,
                         color: _kDark,
                       ),
                       maxLines: 1,
@@ -370,7 +515,10 @@ class _CompactNotifTile extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 _fmt(n.createdAt),
-                style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: Color(0xFF94A3B8),
+                ),
               ),
             ],
           ),

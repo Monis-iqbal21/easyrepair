@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import {
   AttachmentType,
   AvailabilityStatus,
+  BidStatus,
   BookingUrgency,
   BookingStatus,
   TimeSlot,
@@ -61,7 +62,13 @@ export const BOOKING_INCLUDE = {
       rating: true,
       currentLat: true,
       currentLng: true,
+      user: { select: { phone: true } },
     },
+  },
+  bids: {
+    where: { status: BidStatus.ACCEPTED },
+    select: { amount: true },
+    take: 1,
   },
   attachments: {
     select: {

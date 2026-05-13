@@ -11,6 +11,8 @@ class BookingCard extends StatelessWidget {
   final VoidCallback? onCancel;
   final VoidCallback? onChat;
   final VoidCallback? onEdit;
+  final VoidCallback? onFindWorkers;
+  final VoidCallback? onTrackWorker;
 
   const BookingCard({
     super.key,
@@ -19,6 +21,8 @@ class BookingCard extends StatelessWidget {
     this.onCancel,
     this.onChat,
     this.onEdit,
+    this.onFindWorkers,
+    this.onTrackWorker,
   });
 
   @override
@@ -244,6 +248,18 @@ class BookingCard extends StatelessWidget {
                       onEdit: onEdit,
                     ),
                   ],
+
+                  // ── Find Workers ────────────────────────────────────
+                  if (_canFindWorkers && onFindWorkers != null) ...[
+                    const SizedBox(height: 8),
+                    _FindWorkersBtn(onTap: onFindWorkers!),
+                  ],
+
+                  // ── Track Worker ─────────────────────────────────────
+                  if (_canTrackWorker && onTrackWorker != null) ...[
+                    const SizedBox(height: 8),
+                    _TrackWorkerBtn(onTap: onTrackWorker!),
+                  ],
                 ],
               ),
             ),
@@ -262,6 +278,18 @@ class BookingCard extends StatelessWidget {
             booking.assignedWorker == null &&
             onEdit != null);
   }
+
+  bool get _canFindWorkers =>
+      booking.assignedWorker == null &&
+      booking.status != BookingStatus.completed &&
+      booking.status != BookingStatus.cancelled &&
+      booking.status != BookingStatus.rejected;
+
+  bool get _canTrackWorker =>
+      booking.assignedWorker != null &&
+      booking.status != BookingStatus.completed &&
+      booking.status != BookingStatus.cancelled &&
+      booking.status != BookingStatus.rejected;
 
   String _formatDate(DateTime dt) {
     final now = DateTime.now();
@@ -636,6 +664,74 @@ class _PriceTag extends StatelessWidget {
             style: TextStyle(fontSize: 9.5, color: Color(0xFF94A3B8)),
           ),
       ],
+    );
+  }
+}
+
+class _FindWorkersBtn extends StatelessWidget {
+  final VoidCallback onTap;
+  const _FindWorkersBtn({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 38,
+        decoration: BoxDecoration(
+          color: const Color(0xFF1D9E75),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.manage_search_rounded, size: 15, color: Colors.white),
+            SizedBox(width: 6),
+            Text(
+              'Find Workers',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TrackWorkerBtn extends StatelessWidget {
+  final VoidCallback onTap;
+  const _TrackWorkerBtn({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 38,
+        decoration: BoxDecoration(
+          color: const Color(0xFF1D9E75),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.location_on_rounded, size: 15, color: Colors.white),
+            SizedBox(width: 6),
+            Text(
+              'Track Worker',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

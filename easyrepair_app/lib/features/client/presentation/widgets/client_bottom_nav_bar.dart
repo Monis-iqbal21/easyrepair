@@ -11,7 +11,11 @@ class ClientBottomNavBar extends StatelessWidget {
   const ClientBottomNavBar({super.key, required this.currentIndex});
 
   static const _tabs = [
-    _NavTab(label: 'Home', icon: Icons.home_outlined, route: '/client/home'),
+    _NavTab(
+      label: 'Home',
+      icon: Icons.home_outlined,
+      route: '/client/home',
+    ),
     _NavTab(
       label: 'Bookings',
       icon: Icons.task_alt_outlined,
@@ -45,21 +49,18 @@ class ClientBottomNavBar extends StatelessWidget {
       ),
       child: Padding(
         padding: EdgeInsets.fromLTRB(16, 10, 16, 10 + bottomInset),
-        // LayoutBuilder gives real available width so each tab knows its budget.
         child: LayoutBuilder(
           builder: (context, constraints) {
             final tabW = constraints.maxWidth / _tabs.length;
-            // Scale icon and label relative to tabW at 390px screen (tabW≈90).
-            final iconSize = rFont(tabW, 24, min: 24, max: 30, baseWidth: 90);
-            final labelSize = rFont(tabW, 12, min: 10, max: 14, baseWidth: 90);
-            final gap = (4.0 * tabW / 90.0).clamp(2.0, 6.0);
+            final iconSize = rFont(tabW, 24, min: 22, max: 28, baseWidth: 90);
+            final labelSize = rFont(tabW, 11, min: 10, max: 13, baseWidth: 90);
+            final gap = (3.0 * tabW / 90.0).clamp(2.0, 5.0);
 
             return Row(
               children: List.generate(_tabs.length, (i) {
                 final tab = _tabs[i];
                 final isActive = i == currentIndex;
-                // Expanded gives each tab an equal share of width — overflow
-                // at the Row level is structurally impossible.
+
                 return Expanded(
                   child: GestureDetector(
                     onTap: () {
@@ -67,7 +68,7 @@ class ClientBottomNavBar extends StatelessWidget {
                     },
                     behavior: HitTestBehavior.opaque,
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      padding: const EdgeInsets.symmetric(vertical: 6),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -76,7 +77,7 @@ class ClientBottomNavBar extends StatelessWidget {
                             size: iconSize,
                             color: isActive
                                 ? _kAccent
-                                : const Color(0xFF1A1A1A),
+                                : const Color(0xFF94A3B8),
                           ),
                           SizedBox(height: gap),
                           Text(
@@ -85,13 +86,26 @@ class ClientBottomNavBar extends StatelessWidget {
                               fontSize: labelSize,
                               fontWeight: isActive
                                   ? FontWeight.w600
-                                  : FontWeight.w500,
+                                  : FontWeight.w400,
                               color: isActive
                                   ? _kAccent
-                                  : const Color(0xFF6B7280),
+                                  : const Color(0xFF94A3B8),
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 5),
+                          // Active indicator dot — always same size so all
+                          // tabs have identical height (no layout shift).
+                          Container(
+                            width: 4,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: isActive
+                                  ? _kAccent
+                                  : Colors.transparent,
+                              shape: BoxShape.circle,
+                            ),
                           ),
                         ],
                       ),
@@ -111,5 +125,10 @@ class _NavTab {
   final String label;
   final IconData icon;
   final String route;
-  const _NavTab({required this.label, required this.icon, required this.route});
+
+  const _NavTab({
+    required this.label,
+    required this.icon,
+    required this.route,
+  });
 }

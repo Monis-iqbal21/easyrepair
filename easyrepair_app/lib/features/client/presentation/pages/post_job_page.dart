@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
@@ -21,6 +20,7 @@ import '../../../../features/bookings/domain/entities/booking_entity.dart';
 import '../../../../features/bookings/domain/entities/create_booking_request.dart';
 import '../../../../features/bookings/domain/entities/update_booking_request.dart';
 import '../../../../features/bookings/presentation/providers/booking_providers.dart';
+import '../../../../features/bookings/presentation/widgets/media_attachment_widgets.dart';
 import '../../../../features/categories/presentation/providers/categories_providers.dart';
 import '../widgets/client_bottom_nav_bar.dart';
 import '../widgets/location_picker_sheet.dart';
@@ -85,11 +85,10 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
 
   // ── Voice note — new recording ───────────────────────────────────────────────
   final _recorder = AudioRecorder();
-  final _player = AudioPlayer();
   bool _isRecording = false;
-  bool _isPlaying = false;
+  int _recordingSeconds = 0;
+  Timer? _recordingTimer;
   String? _voiceNotePath;
-  StreamSubscription<PlayerState>? _playerStateSub;
 
   // ── Voice note — existing (edit mode) ────────────────────────────────────────
   BookingAttachmentEntity? _existingVoiceNote;
@@ -112,10 +111,6 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
   void initState() {
     super.initState();
     _selectedService = widget.preselectedService;
-
-    _playerStateSub = _player.onPlayerStateChanged.listen((s) {
-      if (mounted) setState(() => _isPlaying = s == PlayerState.playing);
-    });
 
     if (_isEditMode) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -170,13 +165,12 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
 
   @override
   void dispose() {
-    _playerStateSub?.cancel();
+    _recordingTimer?.cancel();
     _categoriesSubscription?.close();
     _titleCtrl.dispose();
     _addressCtrl.dispose();
     _descriptionCtrl.dispose();
     _recorder.dispose();
-    _player.dispose();
     _pulseCtrl.dispose();
     super.dispose();
   }
@@ -518,53 +512,83 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
   }
 
   // ── Voice note logic ──────────────────────────────────────────────────────
-  Future<void> _toggleRecording() async {
-    if (_isRecording) {
-      final path = await _recorder.stop();
-      _pulseCtrl.stop();
-      setState(() {
-        _isRecording = false;
-        _voiceNotePath = path;
-      });
-    } else {
-      final status = await Permission.microphone.request();
-      if (status.isPermanentlyDenied) {
-        if (mounted) {
-          _showError(
-            'Microphone access is permanently denied. Enable it in Settings.',
-          );
-          openAppSettings();
-        }
-        return;
-      }
-      if (!status.isGranted) {
-        if (mounted) _showError('Microphone permission denied.');
-        return;
-      }
-      final dir = await getTemporaryDirectory();
-      final path =
-          '${dir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
-      await _recorder.start(
-        const RecordConfig(encoder: AudioEncoder.aacLc),
-        path: path,
-      );
-      _pulseCtrl.repeat(reverse: true);
-      setState(() => _isRecording = true);
-    }
+
+  void _startRecordingTimer() {
+    _recordingTimer?.cancel();
+    _recordingTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() => _recordingSeconds++);
+    });
   }
 
-  Future<void> _togglePlayback() async {
-    if (_isPlaying) {
-      await _player.stop();
-    } else {
-      await _player.play(DeviceFileSource(_voiceNotePath!));
+  String _fmtSeconds(int s) {
+    final m = s ~/ 60;
+    final sec = s % 60;
+    return '$m:${sec.toString().padLeft(2, '0')}';
+  }
+
+  Future<void> _startRecording() async {
+    final status = await Permission.microphone.request();
+    if (status.isPermanentlyDenied) {
+      if (mounted) {
+        _showError(
+          'Microphone access is permanently denied. Enable it in Settings.',
+        );
+        openAppSettings();
+      }
+      return;
     }
+    if (!status.isGranted) {
+      if (mounted) _showError('Microphone permission denied.');
+      return;
+    }
+    final dir = await getTemporaryDirectory();
+    final path =
+        '${dir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
+    await _recorder.start(
+      const RecordConfig(encoder: AudioEncoder.aacLc),
+      path: path,
+    );
+    _pulseCtrl.repeat(reverse: true);
+    _startRecordingTimer();
+    setState(() {
+      _isRecording = true;
+      _recordingSeconds = 0;
+    });
+  }
+
+  Future<void> _stopAndFinalize() async {
+    final path = await _recorder.stop();
+    _pulseCtrl.stop();
+    _recordingTimer?.cancel();
+    setState(() {
+      _isRecording = false;
+      _voiceNotePath = path;
+      _recordingSeconds = 0;
+    });
+  }
+
+  Future<void> _cancelRecording() async {
+    try {
+      final path = await _recorder.stop();
+      if (path != null) {
+        final file = File(path);
+        if (await file.exists()) await file.delete();
+      }
+    } catch (_) {}
+    _pulseCtrl.stop();
+    _recordingTimer?.cancel();
+    setState(() {
+      _isRecording = false;
+      _voiceNotePath = null;
+      _recordingSeconds = 0;
+    });
   }
 
   Future<void> _deleteVoiceNote() async {
-    await _player.stop();
-    final file = File(_voiceNotePath!);
-    if (await file.exists()) await file.delete();
+    if (_voiceNotePath != null) {
+      final file = File(_voiceNotePath!);
+      if (await file.exists()) await file.delete();
+    }
     setState(() => _voiceNotePath = null);
   }
 
@@ -1615,135 +1639,79 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     );
   }
 
-  // WhatsApp-inspired voice note bar — handles all three states.
+  // WhatsApp-style voice note bar — 3 states: idle, recording, preview.
   Widget _buildVoiceBar() {
-    // ── State: playback ready ─────────────────────────────────────────────
+    // ── State: preview ready — player with inline delete icon ────────────
     if (_voiceNotePath != null) {
+      return WhatsAppVoiceNotePlayer(
+        localPath: _voiceNotePath,
+        onDelete: _deleteVoiceNote,
+      );
+    }
+
+    // ── State: recording — trash | dot+timer | waveform | stop/save ──────
+    if (_isRecording) {
       return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
         decoration: BoxDecoration(
-          color: _kGreen.withValues(alpha: 0.07),
-          borderRadius: BorderRadius.circular(50),
-          border: Border.all(color: _kGreen.withValues(alpha: 0.35)),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: _kBorder),
         ),
         child: Row(
           children: [
-            GestureDetector(
-              onTap: _togglePlayback,
-              child: Container(
-                width: 32,
-                height: 32,
-                decoration: const BoxDecoration(
-                  color: _kGreen,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                  color: Colors.white,
-                  size: 18,
-                ),
-              ),
-            ),
-            const SizedBox(width: 10),
-            // Decorative waveform bars
-            Expanded(
-              child: Row(
-                children: [
-                  ...List.generate(22, (i) {
-                    final heights = [6.0, 10.0, 14.0, 8.0, 16.0, 10.0, 6.0];
-                    final h = heights[i % heights.length];
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 1),
-                      child: Container(
-                        width: 3,
-                        height: h,
-                        decoration: BoxDecoration(
-                          color: _kGreen.withValues(alpha: 0.55),
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                    );
-                  }),
-                  const SizedBox(width: 6),
-                  const Text(
-                    'm4a',
-                    style: TextStyle(fontSize: 11, color: _kGray),
-                  ),
-                ],
-              ),
-            ),
-            GestureDetector(
-              onTap: _deleteVoiceNote,
+            // Trash
+            _VoiceBarBtn(
+              onTap: _cancelRecording,
               child: const Icon(
                 Icons.delete_outline_rounded,
-                size: 18,
                 color: _kGray,
+                size: 18,
               ),
+            ),
+            const SizedBox(width: 8),
+            // Pulsing red dot
+            AnimatedBuilder(
+              animation: _pulseCtrl,
+              builder: (_, _) => Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: Colors.red.withValues(
+                    alpha: 0.5 + _pulseCtrl.value * 0.5,
+                  ),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+            // Timer
+            Text(
+              _fmtSeconds(_recordingSeconds),
+              style: const TextStyle(
+                fontSize: 12,
+                color: _kGray,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(width: 8),
+            // Animated waveform
+            Expanded(child: _AnimatedWaveform(animation: _pulseCtrl)),
+            const SizedBox(width: 8),
+            // Stop & save (tap to finalize recording immediately)
+            _VoiceBarBtn(
+              onTap: _stopAndFinalize,
+              bg: _kGreen.withValues(alpha: 0.12),
+              child: const Icon(Icons.pause_rounded, color: _kGreen, size: 20),
             ),
           ],
         ),
       );
     }
 
-    // ── State: recording ──────────────────────────────────────────────────
-    if (_isRecording) {
-      return GestureDetector(
-        onTap: _toggleRecording,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          decoration: BoxDecoration(
-            color: _kRed.withValues(alpha: 0.07),
-            borderRadius: BorderRadius.circular(50),
-            border: Border.all(color: _kRed),
-          ),
-          child: Row(
-            children: [
-              AnimatedBuilder(
-                animation: _pulseCtrl,
-                builder: (_, _) => Container(
-                  width: 10,
-                  height: 10,
-                  decoration: BoxDecoration(
-                    color: _kRed.withValues(
-                      alpha: 0.5 + _pulseCtrl.value * 0.5,
-                    ),
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              const Expanded(
-                child: Text(
-                  'Recording…  tap to stop',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: _kRed,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-              Container(
-                width: 30,
-                height: 30,
-                decoration: const BoxDecoration(
-                  color: _kRed,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.stop_rounded,
-                  color: Colors.white,
-                  size: 16,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
     // ── State: idle ───────────────────────────────────────────────────────
     return GestureDetector(
-      onTap: _toggleRecording,
+      onTap: _startRecording,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
@@ -2396,6 +2364,83 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
         ),
       ),
       bottomNavigationBar: const ClientBottomNavBar(currentIndex: 0),
+    );
+  }
+}
+
+// ── Voice bar helper widgets ──────────────────────────────────────────────────
+
+class _VoiceBarBtn extends StatelessWidget {
+  final VoidCallback onTap;
+  final Widget child;
+  final Color? bg;
+
+  const _VoiceBarBtn({
+    required this.onTap,
+    required this.child,
+    this.bg,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: bg ?? Colors.transparent,
+          shape: BoxShape.circle,
+        ),
+        child: Center(child: child),
+      ),
+    );
+  }
+}
+
+/// Animated waveform bars — used during active recording.
+class _AnimatedWaveform extends StatelessWidget {
+  final Animation<double> animation;
+  const _AnimatedWaveform({required this.animation});
+
+  static const _heights = [
+    4.0, 9.0, 15.0, 7.0, 19.0, 12.0, 6.0, 14.0,
+    9.0, 5.0, 17.0, 11.0, 7.0, 13.0, 8.0, 10.0,
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    const barCount = 24;
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (_, _) {
+        return SizedBox(
+          height: 20,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: List.generate(barCount, (i) {
+              final base = _heights[i % _heights.length];
+              // Alternate bars pulse in opposite phases for wave effect.
+              final scale = i.isEven
+                  ? 0.5 + 0.5 * animation.value
+                  : 1.0 - 0.4 * animation.value;
+              final h = (base * scale).clamp(2.0, 20.0);
+              return Expanded(
+                child: Container(
+                  height: h,
+                  margin: i < barCount - 1
+                      ? const EdgeInsets.only(right: 2)
+                      : null,
+                  decoration: BoxDecoration(
+                    color: _kGreen.withValues(alpha: 0.5 + 0.5 * (i.isEven ? animation.value : 1.0 - animation.value)),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              );
+            }),
+          ),
+        );
+      },
     );
   }
 }

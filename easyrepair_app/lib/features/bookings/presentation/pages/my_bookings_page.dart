@@ -11,6 +11,8 @@ import '../widgets/booking_card.dart';
 import '../widgets/booking_filter_sheet.dart';
 import '../widgets/booking_search_bar.dart';
 import '../widgets/booking_skeleton.dart';
+import 'track_worker_page.dart';
+import 'worker_discovery_map_page.dart';
 
 class MyBookingsPage extends ConsumerWidget {
   const MyBookingsPage({super.key});
@@ -78,6 +80,26 @@ class MyBookingsPage extends ConsumerWidget {
                                       booking.assignedWorker == null
                                   ? () => context.push(
                                         '/client/post-job?editId=${booking.id}',
+                                      )
+                                  : null,
+                              onFindWorkers: () =>
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) => WorkerDiscoveryMapPage(
+                                        booking: booking,
+                                      ),
+                                    ),
+                                  ),
+                              onTrackWorker: booking.assignedWorker != null &&
+                                      booking.status != BookingStatus.completed &&
+                                      booking.status != BookingStatus.cancelled &&
+                                      booking.status != BookingStatus.rejected
+                                  ? () => Navigator.of(context).push(
+                                        MaterialPageRoute<void>(
+                                          builder: (_) => TrackWorkerPage(
+                                            bookingId: booking.id,
+                                          ),
+                                        ),
                                       )
                                   : null,
                             );

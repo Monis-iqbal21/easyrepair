@@ -11,7 +11,18 @@ import '../../domain/entities/update_booking_request.dart';
 import '../providers/booking_providers.dart';
 import '../widgets/status_badge.dart';
 import '../widgets/urgency_badge.dart';
+import 'track_worker_page.dart';
 import 'worker_discovery_map_page.dart';
+
+// ── Navigation helper ─────────────────────────────────────────────────────────
+
+void _goBack(BuildContext context) {
+  if (context.canPop()) {
+    context.pop();
+  } else {
+    context.go('/client/jobs');
+  }
+}
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 const _kGreen  = Color(0xFF1D9E75);
@@ -35,15 +46,21 @@ class _BookingDetailPageState extends ConsumerState<BookingDetailPage> {
   Widget build(BuildContext context) {
     final bookingAsync = ref.watch(bookingDetailProvider(widget.bookingId));
 
-    return Scaffold(
-      backgroundColor: _kBg,
-      body: bookingAsync.when(
-        loading: () => _LoadingSkeleton(bookingId: widget.bookingId),
-        error: (err, _) => _ErrorScreen(
-          message: err is Failure ? err.message : 'Failed to load booking.',
-          onRetry: () => ref.invalidate(bookingDetailProvider(widget.bookingId)),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _goBack(context);
+      },
+      child: Scaffold(
+        backgroundColor: _kBg,
+        body: bookingAsync.when(
+          loading: () => _LoadingSkeleton(bookingId: widget.bookingId),
+          error: (err, _) => _ErrorScreen(
+            message: err is Failure ? err.message : 'Failed to load booking.',
+            onRetry: () => ref.invalidate(bookingDetailProvider(widget.bookingId)),
+          ),
+          data: (booking) => _DetailBody(booking: booking),
         ),
-        data: (booking) => _DetailBody(booking: booking),
       ),
     );
   }
@@ -96,7 +113,7 @@ class _LoadingSkeletonState extends State<_LoadingSkeleton>
               pinned: true,
               leading: IconButton(
                 icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
-                onPressed: () => context.pop(),
+                onPressed: () => _goBack(context),
               ),
               title: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -348,6 +365,10 @@ class _DetailBody extends ConsumerWidget {
                     jobLat: booking.latitude,
                     jobLng: booking.longitude,
                   ),
+                  if (!isCompleted && !isCancelled) ...[
+                    const SizedBox(height: 16),
+                    _TrackWorkerButton(bookingId: booking.id),
+                  ],
                 ] else if (booking.status == BookingStatus.pending) ...[
                   const SizedBox(height: 16),
                   _ViewBidsButton(booking: booking),
@@ -391,7 +412,7 @@ class _AppBar extends StatelessWidget {
       pinned: true,
       leading: IconButton(
         icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
-        onPressed: () => context.pop(),
+        onPressed: () => _goBack(context),
       ),
       title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1342,6 +1363,46 @@ class _ViewBidsButton extends StatelessWidget {
   }
 }
 
+// ── Track worker button ───────────────────────────────────────────────────────
+
+class _TrackWorkerButton extends StatelessWidget {
+  final String bookingId;
+  const _TrackWorkerButton({required this.bookingId});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => TrackWorkerPage(bookingId: bookingId),
+        ),
+      ),
+      child: Container(
+        height: 50,
+        decoration: BoxDecoration(
+          color: _kGreen,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.location_on_rounded, size: 16, color: Colors.white),
+            SizedBox(width: 8),
+            Text(
+              'Track Worker',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 // ── Review section ────────────────────────────────────────────────────────────
 
 class _ReviewSection extends ConsumerStatefulWidget {
@@ -1781,7 +1842,7 @@ class _ErrorScreen extends StatelessWidget {
         surfaceTintColor: Colors.transparent,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
-          onPressed: () => context.pop(),
+          onPressed: () => _goBack(context),
         ),
         title: const Text(
           'Booking Details',

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/presentation/responsive_utils.dart';
 
+const _kGreen = Color(0xFF1D9E75);
+
 class ServiceCard extends StatelessWidget {
   final String title;
   final String emoji;
@@ -32,20 +34,24 @@ class ServiceCard extends StatelessWidget {
           color: imagePath != null ? Colors.white : backgroundColor,
           borderRadius: BorderRadius.circular(20),
           border: isSelected
-              ? Border.all(color: const Color(0xFF1D9E75), width: 2)
+              ? Border.all(color: _kGreen, width: 2)
               : null,
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: const Color(0xFF1D9E75).withValues(alpha: 0.18),
+                    color: _kGreen.withValues(alpha: 0.18),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
                 ]
-              : null,
+              : [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.07),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
         ),
-        // When an image is provided the card uses a different layout:
-        // image fills the top portion and the label sits below.
         child: imagePath != null
             ? _ImageLayout(
                 imagePath: imagePath!,
@@ -84,18 +90,12 @@ class _ImageLayout extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final w = constraints.maxWidth;
-        // Base width ~170 = typical card width in a 2-column grid on 390px screen.
         final titleSize = rFont(w, 15, min: 13, max: 17, baseWidth: 170);
-        final subtitleSize = rFont(w, 12, min: 11, max: 13, baseWidth: 170);
+        final btnSize = rFont(w, 11, min: 10, max: 12, baseWidth: 170);
 
-        // mainAxisSize.max (default) is required so Expanded can fill
-        // the bounded height provided by the GridView cell.
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Expanded absorbs whatever height remains after text — this
-            // makes overflow structurally impossible regardless of font
-            // metrics or text-scale factor.
             Expanded(
               child: ClipRRect(
                 borderRadius:
@@ -117,7 +117,7 @@ class _ImageLayout extends StatelessWidget {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+              padding: const EdgeInsets.fromLTRB(10, 9, 10, 9),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
@@ -132,13 +132,26 @@ class _ImageLayout extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 3),
-                  Text(
-                    isSelected ? 'Selected ✓' : 'Book now →',
-                    style: TextStyle(
-                      fontSize: subtitleSize,
-                      color: const Color(0xFF1D9E75),
-                      fontWeight: FontWeight.w500,
+                  const SizedBox(height: 6),
+                  // "Book Now" pill button
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _kGreen,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      isSelected ? 'Selected ✓' : 'Book Now',
+                      style: TextStyle(
+                        fontSize: btnSize,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],
@@ -193,13 +206,20 @@ class _EmojiLayout extends StatelessWidget {
               color: Color(0xFF1A1A1A),
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            isSelected ? 'Selected ✓' : 'Book now →',
-            style: const TextStyle(
-              fontSize: 12,
-              color: Color(0xFF1D9E75),
-              fontWeight: FontWeight.w500,
+          const SizedBox(height: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: _kGreen,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              isSelected ? 'Selected ✓' : 'Book Now',
+              style: const TextStyle(
+                fontSize: 11,
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],

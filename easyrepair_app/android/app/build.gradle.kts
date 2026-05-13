@@ -59,14 +59,20 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = true
-            isShrinkResources = true
+            // TEMP APK FIX:
+            // Disable R8/minify to avoid missing Google Play Core splitinstall classes
+            // during release APK build.
+            isMinifyEnabled = false
+            isShrinkResources = false
+
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
-            signingConfig = signingConfigs.getByName("release")
+
+            signingConfig = signingConfigs.getByName("debug")
         }
+
         debug {
             isMinifyEnabled = false
             isShrinkResources = false

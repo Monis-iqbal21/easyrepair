@@ -136,7 +136,12 @@ class WorkerRemoteDatasourceImpl implements WorkerRemoteDatasource {
     );
     final data = response.data!['data'] as Map<String, dynamic>;
     debugPrint('[WorkerDatasource] getWorkerJobById success, returned id=${data['id']} status=${data['status']}');
-    return BookingModel.fromJson(data);
+    final model = BookingModel.fromJson(data);
+    debugPrint('[WorkerJobDetail] attachments count = ${model.attachments.length}');
+    if (model.attachments.isNotEmpty) {
+      debugPrint('[WorkerJobDetail] attachment types = ${model.attachments.map((a) => a.type).toList()}');
+    }
+    return model;
   }
 
   @override

@@ -10,6 +10,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { BidsService } from './bids.service';
+import { BidWithRelations } from './bids.repository';
 import { CreateBidDto } from './dto/create-bid.dto';
 import { EditBidDto } from './dto/edit-bid.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -36,7 +37,7 @@ export class BidsController {
     @CurrentUser() user: { id: string },
     @Param('id') bookingId: string,
     @Body() dto: CreateBidDto,
-  ) {
+  ): Promise<BidWithRelations> {
     return this.bidsService.createBid(user.id, bookingId, dto.amount, dto.message);
   }
 
@@ -50,7 +51,7 @@ export class BidsController {
   getMyBid(
     @CurrentUser() user: { id: string },
     @Param('id') bookingId: string,
-  ) {
+  ): Promise<BidWithRelations> {
     return this.bidsService.getMyBid(user.id, bookingId);
   }
 
@@ -65,7 +66,7 @@ export class BidsController {
     @CurrentUser() user: { id: string },
     @Param('id') bidId: string,
     @Body() dto: EditBidDto,
-  ) {
+  ): Promise<BidWithRelations> {
     return this.bidsService.editBid(user.id, bidId, dto.amount, dto.message);
   }
 

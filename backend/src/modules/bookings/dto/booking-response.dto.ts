@@ -34,6 +34,7 @@ export class WorkerSummaryDto {
   avatarUrl: string | null;
   currentLat: number | null;
   currentLng: number | null;
+  phone: string | null;
 }
 
 export class BookingReviewDto {
@@ -74,4 +75,5 @@ export class BookingResponseDto {
   availableWorkersCount: number | null;
   attachments: BookingAttachmentDto[];
   review: BookingReviewDto | null;
+  acceptedBidAmount: number | null;
 }

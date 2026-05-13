@@ -7,26 +7,36 @@ import 'package:video_player/video_player.dart';
 import '../../domain/entities/booking_entity.dart';
 
 // ── Palette (matches booking-detail pages) ────────────────────────────────────
-const _kAccent  = Color(0xFF1D9E75);
-const _kDark    = Color(0xFF1A1A1A);
-const _kGray    = Color(0xFF6B7280);
-const _kLight   = Color(0xFF94A3B8);
+const _kAccent = Color(0xFF1D9E75);
+const _kDark   = Color(0xFF1A1A1A);
+const _kLight  = Color(0xFF94A3B8);
 
 // ═════════════════════════════════════════════════════════════════════════════
 // AUDIO PLAYER
 // ═════════════════════════════════════════════════════════════════════════════
 
-/// A self-contained audio player card.
-/// Manages its own [AudioPlayer] instance and disposes it on widget removal.
-class BookingAudioPlayerCard extends StatefulWidget {
-  final BookingAttachmentEntity attachment;
-  const BookingAudioPlayerCard({super.key, required this.attachment});
+// Fixed waveform heights used by both the player and recorder waveforms.
+const _kWaveHeights = [
+  4.0, 9.0, 15.0, 7.0, 19.0, 12.0, 6.0, 14.0, 9.0, 5.0,
+  17.0, 11.0, 7.0, 13.0, 8.0, 4.0, 10.0, 16.0, 6.0, 12.0,
+];
+
+/// WhatsApp-style voice note player. Accepts a network [url] for existing
+/// attachments or a [localPath] for newly recorded files before upload.
+class WhatsAppVoiceNotePlayer extends StatefulWidget {
+  final String? url;
+  final String? localPath;
+  final VoidCallback? onDelete;
+
+  const WhatsAppVoiceNotePlayer({super.key, this.url, this.localPath, this.onDelete})
+      : assert(url != null || localPath != null);
 
   @override
-  State<BookingAudioPlayerCard> createState() => _BookingAudioPlayerCardState();
+  State<WhatsAppVoiceNotePlayer> createState() =>
+      _WhatsAppVoiceNotePlayerState();
 }
 
-class _BookingAudioPlayerCardState extends State<BookingAudioPlayerCard> {
+class _WhatsAppVoiceNotePlayerState extends State<WhatsAppVoiceNotePlayer> {
   final _player = AudioPlayer();
   Duration _duration = Duration.zero;
   Duration _position = Duration.zero;
@@ -34,28 +44,23 @@ class _BookingAudioPlayerCardState extends State<BookingAudioPlayerCard> {
   bool _isLoading = false;
   bool _hasError = false;
 
-  late final StreamSubscription<Duration> _durationSub;
-  late final StreamSubscription<Duration> _positionSub;
-  late final StreamSubscription<PlayerState> _stateSub;
-  late final StreamSubscription<void> _completeSub;
-
   @override
   void initState() {
     super.initState();
-    _durationSub = _player.onDurationChanged.listen((d) {
+    _player.onDurationChanged.listen((d) {
       if (mounted) setState(() => _duration = d);
     });
-    _positionSub = _player.onPositionChanged.listen((p) {
+    _player.onPositionChanged.listen((p) {
       if (mounted) setState(() => _position = p);
     });
-    _stateSub = _player.onPlayerStateChanged.listen((s) {
+    _player.onPlayerStateChanged.listen((s) {
       if (!mounted) return;
       setState(() {
         _isPlaying = s == PlayerState.playing;
         if (s != PlayerState.playing) _isLoading = false;
       });
     });
-    _completeSub = _player.onPlayerComplete.listen((_) {
+    _player.onPlayerComplete.listen((_) {
       if (mounted) {
         setState(() {
           _position = Duration.zero;
@@ -67,10 +72,6 @@ class _BookingAudioPlayerCardState extends State<BookingAudioPlayerCard> {
 
   @override
   void dispose() {
-    _durationSub.cancel();
-    _positionSub.cancel();
-    _stateSub.cancel();
-    _completeSub.cancel();
     _player.dispose();
     super.dispose();
   }
@@ -82,7 +83,11 @@ class _BookingAudioPlayerCardState extends State<BookingAudioPlayerCard> {
     } else {
       setState(() => _isLoading = true);
       try {
-        await _player.play(UrlSource(widget.attachment.url));
+        if (widget.localPath != null) {
+          await _player.play(DeviceFileSource(widget.localPath!));
+        } else {
+          await _player.play(UrlSource(widget.url!));
+        }
       } catch (_) {
         if (mounted) {
           setState(() {
@@ -92,6 +97,12 @@ class _BookingAudioPlayerCardState extends State<BookingAudioPlayerCard> {
         }
       }
     }
+  }
+
+  Future<void> _seekTo(double frac) async {
+    if (_duration == Duration.zero) return;
+    final ms = (frac.clamp(0.0, 1.0) * _duration.inMilliseconds).round();
+    await _player.seek(Duration(milliseconds: ms));
   }
 
   String _fmt(Duration d) {
@@ -106,141 +117,128 @@ class _BookingAudioPlayerCardState extends State<BookingAudioPlayerCard> {
         ? (_position.inMilliseconds / _duration.inMilliseconds).clamp(0.0, 1.0)
         : 0.0;
 
-    return Container(
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
-      decoration: BoxDecoration(
-        color: _kAccent.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: _kAccent.withValues(alpha: 0.25)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            children: [
-              // ── Play / Pause button ──────────────────────────────────────
-              GestureDetector(
-                onTap: _toggle,
-                child: Container(
-                  width: 38,
-                  height: 38,
-                  decoration: BoxDecoration(
-                    color: _hasError
-                        ? const Color(0xFFDC2626)
-                        : _kAccent,
-                    shape: BoxShape.circle,
-                  ),
-                  child: _isLoading
-                      ? const Padding(
-                          padding: EdgeInsets.all(10),
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : Icon(
-                          _hasError
-                              ? Icons.error_outline_rounded
-                              : _isPlaying
-                                  ? Icons.pause_rounded
-                                  : Icons.play_arrow_rounded,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                ),
-              ),
-              const SizedBox(width: 12),
+    final timeLabel = _duration > Duration.zero
+        ? (_isPlaying ? _fmt(_position) : _fmt(_duration))
+        : '0:00';
 
-              // ── Decorative waveform bars ─────────────────────────────────
-              // Bars left of the playhead show as accent; right as faded.
-              Expanded(
-                child: LayoutBuilder(builder: (_, bc) {
-                  const barCount = 28;
-                  const spacing = 2.0;
-                  final barW =
-                      (bc.maxWidth - (barCount - 1) * spacing) / barCount;
-                  final filledCount = (progress * barCount).round();
-                  const heights = [
-                    5.0, 9.0, 13.0, 7.0, 16.0, 10.0, 6.0,
-                    12.0, 8.0, 14.0, 9.0, 5.0, 11.0, 7.0,
-                  ];
-                  return Row(
+    const barCount = 28;
+    final filledCount = (progress * barCount).round();
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Row(
+        children: [
+          // ── Delete icon (shown when onDelete is provided) ─────────────
+          if (widget.onDelete != null) ...[
+            GestureDetector(
+              onTap: widget.onDelete,
+              child: const Icon(
+                Icons.delete_outline_rounded,
+                size: 20,
+                color: Color(0xFF6B7280),
+              ),
+            ),
+            const SizedBox(width: 8),
+          ],
+
+          // ── Play / Pause ─────────────────────────────────────────────────
+          GestureDetector(
+            onTap: _toggle,
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: _kAccent.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: _isLoading
+                  ? const Padding(
+                      padding: EdgeInsets.all(11),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: _kAccent,
+                      ),
+                    )
+                  : Icon(
+                      _hasError
+                          ? Icons.error_outline_rounded
+                          : _isPlaying
+                              ? Icons.pause_rounded
+                              : Icons.play_arrow_rounded,
+                      color: _kAccent,
+                      size: 22,
+                    ),
+            ),
+          ),
+          const SizedBox(width: 10),
+
+          // ── Waveform bars — tap to seek ──────────────────────────────────
+          Expanded(
+            child: LayoutBuilder(builder: (_, bc) {
+              const spacing = 2.0;
+              final barW =
+                  (bc.maxWidth - (barCount - 1) * spacing) / barCount;
+              return GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTapDown: (d) =>
+                    _seekTo(d.localPosition.dx / bc.maxWidth),
+                child: SizedBox(
+                  height: 24,
+                  child: Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: List.generate(barCount, (i) {
-                      final h = heights[i % heights.length];
+                      final h = _kWaveHeights[i % _kWaveHeights.length];
+                      final filled = i < filledCount;
+                      final isHead = filledCount > 0 && i == filledCount;
                       return Container(
                         width: barW,
-                        height: h,
+                        height: isHead ? (h + 4).clamp(0.0, 22.0) : h,
                         margin: i < barCount - 1
                             ? const EdgeInsets.only(right: spacing)
                             : null,
                         decoration: BoxDecoration(
-                          color: i < filledCount
+                          color: filled
                               ? _kAccent
-                              : _kAccent.withValues(alpha: 0.22),
+                              : const Color(0xFFE2E8F0),
                           borderRadius: BorderRadius.circular(2),
                         ),
                       );
                     }),
-                  );
-                }),
-              ),
-              const SizedBox(width: 10),
-
-              // ── Time label ───────────────────────────────────────────────
-              Text(
-                _duration > Duration.zero
-                    ? '${_fmt(_position)} / ${_fmt(_duration)}'
-                    : '--:--',
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: _kGray,
-                  fontWeight: FontWeight.w500,
+                  ),
                 ),
-              ),
-            ],
+              );
+            }),
           ),
+          const SizedBox(width: 10),
 
-          // ── Seek slider ──────────────────────────────────────────────────
-          SliderTheme(
-            data: SliderTheme.of(context).copyWith(
-              trackHeight: 2.5,
-              thumbShape:
-                  const RoundSliderThumbShape(enabledThumbRadius: 6),
-              overlayShape:
-                  const RoundSliderOverlayShape(overlayRadius: 10),
-              activeTrackColor: _kAccent,
-              inactiveTrackColor: _kAccent.withValues(alpha: 0.18),
-              thumbColor: _kAccent,
-              overlayColor: _kAccent.withValues(alpha: 0.12),
-            ),
-            child: Slider(
-              value: progress,
-              onChanged: (_duration == Duration.zero || _isLoading)
-                  ? null
-                  : (v) {
-                      final ms =
-                          (v * _duration.inMilliseconds).round();
-                      _player.seek(Duration(milliseconds: ms));
-                    },
+          // ── Duration ─────────────────────────────────────────────────────
+          Text(
+            timeLabel,
+            style: const TextStyle(
+              fontSize: 11,
+              color: Color(0xFF6B7280),
+              fontWeight: FontWeight.w500,
             ),
           ),
-
-          if (_hasError)
-            const Padding(
-              padding: EdgeInsets.only(bottom: 4),
-              child: Text(
-                'Could not load audio.',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: Color(0xFFDC2626),
-                ),
-              ),
-            ),
         ],
       ),
     );
   }
+}
+
+/// Thin wrapper kept for backward compatibility with booking/job detail pages.
+class BookingAudioPlayerCard extends StatelessWidget {
+  final BookingAttachmentEntity attachment;
+  const BookingAudioPlayerCard({super.key, required this.attachment});
+
+  @override
+  Widget build(BuildContext context) =>
+      WhatsAppVoiceNotePlayer(url: attachment.url);
 }
 
 // ═════════════════════════════════════════════════════════════════════════════

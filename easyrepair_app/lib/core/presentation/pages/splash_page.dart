@@ -5,24 +5,25 @@ class SplashPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      backgroundColor: Colors.white,
+    final logoWidth = (MediaQuery.sizeOf(context).width * 0.44).clamp(112.0, 208.0);
+
+    return Scaffold(
+      backgroundColor: const Color(0xFF1D9E75),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Image(
-              image: AssetImage('assets/images/er-icon.png'),
-              width: 120,
-              height: 120,
+            Image.asset(
+              'assets/images/logo-white.png',
+              width: logoWidth,
               fit: BoxFit.contain,
             ),
-            SizedBox(height: 48),
-            SizedBox(
+            const SizedBox(height: 48),
+            const SizedBox(
               width: 22,
               height: 22,
               child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF1D9E75)),
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                 strokeWidth: 2.5,
               ),
             ),

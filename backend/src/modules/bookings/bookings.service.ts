@@ -578,7 +578,12 @@ export class BookingsService {
           avatarUrl: wp.avatarUrl,
           currentLat: wp.currentLat ?? null,
           currentLng: wp.currentLng ?? null,
+          phone: wp.user.phone,
         }
+      : null;
+
+    const acceptedBidAmount = booking.bids[0]
+      ? Number(booking.bids[0].amount)
       : null;
 
     const rv = booking.review;
@@ -624,6 +629,7 @@ export class BookingsService {
       availableWorkersCount: null,
       attachments,
       review,
+      acceptedBidAmount,
     };
   }
 }

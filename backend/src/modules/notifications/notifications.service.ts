@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { Notification } from '@prisma/client';
 import { FirebaseService } from '../../firebase/firebase.service';
 import {
   CreateNotificationData,
@@ -98,11 +99,11 @@ export class NotificationsService {
     }
   }
 
-  async getNotifications(userId: string) {
+  async getNotifications(userId: string): Promise<Notification[]> {
     return this.notificationsRepository.findByUserId(userId);
   }
 
-  async markRead(id: string) {
+  async markRead(id: string): Promise<Notification> {
     return this.notificationsRepository.markRead(id);
   }
 

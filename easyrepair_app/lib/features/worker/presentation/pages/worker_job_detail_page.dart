@@ -1,13 +1,20 @@
-import 'package:flutter/foundation.dart';
+import 'dart:async';
+
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../../../../core/config/app_config.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../bookings/domain/entities/booking_entity.dart';
 import '../../../bookings/presentation/widgets/media_attachment_widgets.dart';
 import '../providers/worker_job_providers.dart';
+import '../providers/worker_providers.dart';
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 const _kGreen  = Color(0xFF1D9E75);
@@ -205,33 +212,7 @@ class _JobBody extends ConsumerWidget {
                 const SizedBox(height: 16),
 
                 // ── Location ─────────────────────────────────────────────
-                _Section(
-                  title: 'Location',
-                  child: Column(
-                    children: [
-                      if (job.address != null && job.address!.isNotEmpty)
-                        _InfoRow(
-                          icon: Icons.location_on_outlined,
-                          label: 'Address',
-                          value: job.address!,
-                          multiline: true,
-                        ),
-                      if (job.city.isNotEmpty)
-                        _InfoRow(
-                          icon: Icons.location_city_rounded,
-                          label: 'City',
-                          value: job.city,
-                        ),
-                      if (job.latitude != 0 || job.longitude != 0)
-                        _InfoRow(
-                          icon: Icons.my_location_rounded,
-                          label: 'Coordinates',
-                          value:
-                              '${job.latitude.toStringAsFixed(5)}, ${job.longitude.toStringAsFixed(5)}',
-                        ),
-                    ],
-                  ),
-                ),
+                _LocationSection(job: job),
                 const SizedBox(height: 16),
 
                 // ── Timeline ─────────────────────────────────────────────
@@ -843,6 +824,1110 @@ class _ReviewSection extends StatelessWidget {
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+// ── Google Directions API helpers ─────────────────────────────────────────────
+
+Future<List<LatLng>?> _fetchRoadRoute(LatLng origin, LatLng dest) async {
+  final key = AppConfig.googleMapsApiKey;
+  if (key.isEmpty) return null;
+  try {
+    final dio = Dio(BaseOptions(
+      connectTimeout: const Duration(seconds: 10),
+      receiveTimeout: const Duration(seconds: 10),
+    ));
+    final response = await dio.get<Map<String, dynamic>>(
+      'https://maps.googleapis.com/maps/api/directions/json',
+      queryParameters: {
+        'origin': '${origin.latitude},${origin.longitude}',
+        'destination': '${dest.latitude},${dest.longitude}',
+        'mode': 'driving',
+        'key': key,
+      },
+    );
+    final data = response.data;
+    if (data == null) return null;
+    final routes = data['routes'] as List<dynamic>?;
+    if (data['status'] == 'OK' && routes != null && routes.isNotEmpty) {
+      final encoded =
+          routes[0]['overview_polyline']['points'] as String;
+      return _decodePolyline(encoded);
+    }
+    debugPrint('[Directions] API status: ${data['status']}');
+    return null;
+  } catch (e) {
+    debugPrint('[Directions] API request failed: $e');
+    return null;
+  }
+}
+
+List<LatLng> _decodePolyline(String encoded) {
+  final result = <LatLng>[];
+  var index = 0;
+  var lat = 0;
+  var lng = 0;
+  while (index < encoded.length) {
+    var b = 0;
+    var shift = 0;
+    var chunk = 0;
+    do {
+      b = encoded.codeUnitAt(index++) - 63;
+      chunk |= (b & 0x1f) << shift;
+      shift += 5;
+    } while (b >= 0x20);
+    lat += (chunk & 1) != 0 ? ~(chunk >> 1) : (chunk >> 1);
+    shift = 0;
+    chunk = 0;
+    do {
+      b = encoded.codeUnitAt(index++) - 63;
+      chunk |= (b & 0x1f) << shift;
+      shift += 5;
+    } while (b >= 0x20);
+    lng += (chunk & 1) != 0 ? ~(chunk >> 1) : (chunk >> 1);
+    result.add(LatLng(lat / 1e5, lng / 1e5));
+  }
+  return result;
+}
+
+// ── State returned from fullscreen map so preview can sync directions ─────────
+
+class _DirectionsResult {
+  final bool directionsActive;
+  final LatLng? workerPos;
+  final List<LatLng> routePoints;
+  const _DirectionsResult(
+    this.directionsActive,
+    this.workerPos, [
+    this.routePoints = const [],
+  ]);
+}
+
+// ── Location section with map preview + directions ────────────────────────────
+
+class _LocationSection extends ConsumerStatefulWidget {
+  final BookingEntity job;
+  const _LocationSection({required this.job});
+
+  @override
+  ConsumerState<_LocationSection> createState() => _LocationSectionState();
+}
+
+class _LocationSectionState extends ConsumerState<_LocationSection>
+    with WidgetsBindingObserver {
+  GoogleMapController? _mapCtrl;
+  bool _directionsActive = false;
+  LatLng? _workerPos;
+  Timer? _dirTimer;
+  bool _gettingLocation = false;
+  List<LatLng> _routePoints = const [];
+
+  static const _kReachedMeters = 50.0;
+  static const _kDirCheckSecs = 5;
+
+  bool get _hasJobLoc =>
+      widget.job.latitude != 0 || widget.job.longitude != 0;
+  LatLng get _jobLatLng =>
+      LatLng(widget.job.latitude, widget.job.longitude);
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _dirTimer?.cancel();
+    _mapCtrl?.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      _dirTimer?.cancel();
+      _dirTimer = null;
+      debugPrint('[DirectionsMode] App paused — timer suspended.');
+    } else if (state == AppLifecycleState.resumed) {
+      if (_directionsActive) {
+        debugPrint('[DirectionsMode] App resumed — restarting timer.');
+        _startDirTimer();
+      }
+      ref.invalidate(workerJobDetailProvider(widget.job.id));
+    }
+  }
+
+  // ── Directions ──────────────────────────────────────────────────────────────
+
+  Future<void> _startDirections() async {
+    if (_gettingLocation) return;
+
+    if (AppConfig.googleMapsApiKey.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Road route is not configured yet. Opening Google Maps for navigation.',
+            ),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        await _openExternalMaps();
+      }
+      return;
+    }
+
+    setState(() => _gettingLocation = true);
+
+    LatLng? workerPos;
+
+    final tracker = ref.read(locationTrackerProvider);
+    if (tracker.lastSyncedLat != null && tracker.lastSyncedLng != null) {
+      workerPos = LatLng(tracker.lastSyncedLat!, tracker.lastSyncedLng!);
+    } else {
+      try {
+        final p = await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.high,
+            timeLimit: Duration(seconds: 8),
+          ),
+        );
+        workerPos = LatLng(p.latitude, p.longitude);
+      } catch (_) {
+        final last = await Geolocator.getLastKnownPosition();
+        if (last != null) workerPos = LatLng(last.latitude, last.longitude);
+      }
+    }
+
+    if (!mounted) return;
+
+    if (workerPos == null) {
+      setState(() => _gettingLocation = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Unable to get your location for directions.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _workerPos = workerPos;
+      _directionsActive = true;
+      _gettingLocation = false;
+    });
+    _fitBoundsForPoints([workerPos, _jobLatLng]);
+
+    final route = await _fetchRoadRoute(workerPos, _jobLatLng);
+    if (!mounted) return;
+
+    if (route != null && route.isNotEmpty) {
+      setState(() => _routePoints = route);
+      _fitBoundsForPoints(route);
+    } else {
+      debugPrint(
+          '[Directions] Road route unavailable — straight-line emergency fallback active.');
+    }
+
+    _startDirTimer();
+  }
+
+  void _stopDirections() {
+    _dirTimer?.cancel();
+    _dirTimer = null;
+    setState(() {
+      _directionsActive = false;
+      _workerPos = null;
+      _routePoints = const [];
+    });
+    _mapCtrl?.animateCamera(CameraUpdate.newLatLng(_jobLatLng));
+  }
+
+  void _startDirTimer() {
+    _dirTimer?.cancel();
+    _dirTimer = Timer.periodic(
+      const Duration(seconds: _kDirCheckSecs),
+      (_) => _checkDistance(),
+    );
+  }
+
+  Future<void> _checkDistance() async {
+    if (!_directionsActive || !mounted) return;
+
+    LatLng? current;
+    final tracker = ref.read(locationTrackerProvider);
+    if (tracker.lastSyncedLat != null && tracker.lastSyncedLng != null) {
+      current = LatLng(tracker.lastSyncedLat!, tracker.lastSyncedLng!);
+    } else {
+      try {
+        final p = await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.high,
+            timeLimit: Duration(seconds: 5),
+          ),
+        );
+        current = LatLng(p.latitude, p.longitude);
+      } catch (_) {}
+    }
+
+    if (current == null || !mounted) return;
+
+    final dist = Geolocator.distanceBetween(
+      current.latitude,
+      current.longitude,
+      _jobLatLng.latitude,
+      _jobLatLng.longitude,
+    );
+    debugPrint('[DirectionsMode] Distance to job: ${dist.toStringAsFixed(1)}m');
+
+    if (dist <= _kReachedMeters) {
+      debugPrint('[DirectionsMode] Reached job — stopping directions.');
+      _stopDirections();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('You have arrived at the job location.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
+    }
+
+    if (mounted) setState(() => _workerPos = current);
+  }
+
+  void _fitBoundsForPoints(List<LatLng> points) {
+    if (points.isEmpty) return;
+    var minLat = points.first.latitude;
+    var maxLat = points.first.latitude;
+    var minLng = points.first.longitude;
+    var maxLng = points.first.longitude;
+    for (final p in points) {
+      if (p.latitude < minLat) minLat = p.latitude;
+      if (p.latitude > maxLat) maxLat = p.latitude;
+      if (p.longitude < minLng) minLng = p.longitude;
+      if (p.longitude > maxLng) maxLng = p.longitude;
+    }
+    _mapCtrl?.animateCamera(
+      CameraUpdate.newLatLngBounds(
+        LatLngBounds(
+          southwest: LatLng(minLat, minLng),
+          northeast: LatLng(maxLat, maxLng),
+        ),
+        60,
+      ),
+    );
+  }
+
+  Future<void> _openExternalMaps() async {
+    if (_directionsActive) _stopDirections();
+
+    final lat = _jobLatLng.latitude;
+    final lng = _jobLatLng.longitude;
+    final uri = Uri.parse(
+      'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng',
+    );
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  // ── Markers + Polyline ──────────────────────────────────────────────────────
+
+  Set<Marker> _buildMarkers() {
+    return {
+      Marker(
+        markerId: const MarkerId('job'),
+        position: _jobLatLng,
+        infoWindow: InfoWindow(
+          title: widget.job.serviceCategory,
+          snippet: widget.job.address,
+        ),
+      ),
+      if (_workerPos != null)
+        Marker(
+          markerId: const MarkerId('worker'),
+          position: _workerPos!,
+          icon: BitmapDescriptor.defaultMarkerWithHue(
+              BitmapDescriptor.hueAzure),
+          infoWindow: const InfoWindow(title: 'Your Location'),
+        ),
+    };
+  }
+
+  Set<Polyline> _buildPolylines() {
+    if (!_directionsActive) return {};
+    if (_routePoints.isNotEmpty) {
+      return {
+        Polyline(
+          polylineId: const PolylineId('route'),
+          points: _routePoints,
+          color: _kGreen,
+          width: 5,
+        ),
+      };
+    }
+    // Emergency straight-line fallback when Directions API returns no route.
+    if (_workerPos == null) return {};
+    return {
+      Polyline(
+        polylineId: const PolylineId('route'),
+        points: [_workerPos!, _jobLatLng],
+        color: _kGreen,
+        width: 3,
+        patterns: [PatternItem.dash(16), PatternItem.gap(8)],
+      ),
+    };
+  }
+
+  // ── Build ───────────────────────────────────────────────────────────────────
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_hasJobLoc) {
+      return _Section(
+        title: 'Location',
+        child: Column(
+          children: [
+            if (widget.job.address != null && widget.job.address!.isNotEmpty)
+              _InfoRow(
+                icon: Icons.location_on_outlined,
+                label: 'Address',
+                value: widget.job.address!,
+                multiline: true,
+              ),
+            if (widget.job.city.isNotEmpty)
+              _InfoRow(
+                icon: Icons.location_city_rounded,
+                label: 'City',
+                value: widget.job.city,
+              ),
+          ],
+        ),
+      );
+    }
+
+    return _Section(
+      title: 'Location',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Map preview ──────────────────────────────────────────────────
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Stack(
+              children: [
+                SizedBox(
+                  height: 180,
+                  child: GoogleMap(
+                    initialCameraPosition: CameraPosition(
+                      target: _jobLatLng,
+                      zoom: 15,
+                    ),
+                    markers: _buildMarkers(),
+                    polylines: _buildPolylines(),
+                    onMapCreated: (c) => _mapCtrl = c,
+                    zoomControlsEnabled: false,
+                    myLocationButtonEnabled: false,
+                    myLocationEnabled: false,
+                    mapToolbarEnabled: false,
+                  ),
+                ),
+                // Expand / fullscreen button
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: GestureDetector(
+                    onTap: () async {
+                      _dirTimer?.cancel();
+                      _dirTimer = null;
+                      final result =
+                          await Navigator.push<_DirectionsResult>(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => _FullScreenMapPage(
+                            job: widget.job,
+                            initialDirectionsActive: _directionsActive,
+                            initialWorkerPos: _workerPos,
+                            initialRoutePoints: _routePoints,
+                          ),
+                        ),
+                      );
+                      if (!mounted) return;
+                      if (result != null) {
+                        setState(() {
+                          _directionsActive = result.directionsActive;
+                          _workerPos = result.workerPos;
+                          _routePoints = result.routePoints;
+                        });
+                      }
+                      if (_directionsActive) {
+                        final pts = _routePoints.isNotEmpty
+                            ? _routePoints
+                            : (_workerPos != null
+                                ? [_workerPos!, _jobLatLng]
+                                : <LatLng>[]);
+                        _fitBoundsForPoints(pts);
+                        _startDirTimer();
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.12),
+                            blurRadius: 6,
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.fullscreen_rounded,
+                        size: 18,
+                        color: _kDark,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // ── Address / location info card ─────────────────────────────────
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+            decoration: BoxDecoration(
+              color: _kBg,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: _kBorder),
+            ),
+            child: Column(
+              children: [
+                if (widget.job.address != null &&
+                    widget.job.address!.isNotEmpty) ...[
+                  _InfoRow(
+                    icon: Icons.home_work_outlined,
+                    label: 'Client Address',
+                    value: widget.job.address!,
+                    multiline: true,
+                  ),
+                  const Divider(height: 1, thickness: 0.5, color: _kBorder),
+                  const SizedBox(height: 8),
+                ],
+                _InfoRow(
+                  icon: Icons.location_on_rounded,
+                  label: 'Pinned Job Location',
+                  value: 'Pinned on map',
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          // ── Directions controls ──────────────────────────────────────────
+          if (!_directionsActive) ...[
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed:
+                        _gettingLocation ? null : _startDirections,
+                    icon: _gettingLocation
+                        ? const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: _kGreen,
+                            ),
+                          )
+                        : const Icon(
+                            Icons.directions_rounded,
+                            size: 16,
+                            color: _kGreen,
+                          ),
+                    label: Text(
+                      _gettingLocation
+                          ? 'Getting location...'
+                          : 'Directions',
+                      style: const TextStyle(
+                          color: _kGreen, fontSize: 13),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: _kGreen),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                      padding:
+                          const EdgeInsets.symmetric(vertical: 9),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _openExternalMaps,
+                    icon: const Icon(
+                      Icons.open_in_new_rounded,
+                      size: 16,
+                      color: _kGray,
+                    ),
+                    label: const Text(
+                      'Open in Maps',
+                      style:
+                          TextStyle(color: _kGray, fontSize: 13),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: _kBorder),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                      padding:
+                          const EdgeInsets.symmetric(vertical: 9),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ] else ...[
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 9),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFECFDF5),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.navigation_rounded,
+                            size: 16, color: _kGreen),
+                        SizedBox(width: 6),
+                        Text(
+                          'Directions active',
+                          style: TextStyle(
+                            color: _kGreen,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                OutlinedButton(
+                  onPressed: _stopDirections,
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: _kRed),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 9, horizontal: 16),
+                  ),
+                  child: const Text(
+                    'Stop',
+                    style:
+                        TextStyle(color: _kRed, fontSize: 13),
+                  ),
+                ),
+              ],
+            ),
+          ],
+          // ── City ─────────────────────────────────────────────────────────
+          if (widget.job.city.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            _InfoRow(
+              icon: Icons.location_city_rounded,
+              label: 'City',
+              value: widget.job.city,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ── Fullscreen map page ───────────────────────────────────────────────────────
+
+class _FullScreenMapPage extends ConsumerStatefulWidget {
+  final BookingEntity job;
+  final bool initialDirectionsActive;
+  final LatLng? initialWorkerPos;
+  final List<LatLng> initialRoutePoints;
+
+  const _FullScreenMapPage({
+    required this.job,
+    this.initialDirectionsActive = false,
+    this.initialWorkerPos,
+    this.initialRoutePoints = const [],
+  });
+
+  @override
+  ConsumerState<_FullScreenMapPage> createState() =>
+      _FullScreenMapPageState();
+}
+
+class _FullScreenMapPageState extends ConsumerState<_FullScreenMapPage>
+    with WidgetsBindingObserver {
+  GoogleMapController? _ctrl;
+  bool _directionsActive = false;
+  LatLng? _workerPos;
+  List<LatLng> _routePoints = const [];
+  Timer? _dirTimer;
+  bool _gettingLocation = false;
+
+  static const _kReachedMeters = 50.0;
+  static const _kDirCheckSecs = 5;
+
+  LatLng get _jobLatLng =>
+      LatLng(widget.job.latitude, widget.job.longitude);
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _directionsActive = widget.initialDirectionsActive;
+    _workerPos = widget.initialWorkerPos;
+    _routePoints = widget.initialRoutePoints;
+    if (_directionsActive) _startDirTimer();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _dirTimer?.cancel();
+    _ctrl?.dispose();
+    super.dispose();
+  }
+
+  void _popWithResult() {
+    Navigator.pop(
+      context,
+      _DirectionsResult(_directionsActive, _workerPos, _routePoints),
+    );
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      _dirTimer?.cancel();
+      _dirTimer = null;
+      debugPrint('[DirectionsMode/FS] App paused — timer suspended.');
+    } else if (state == AppLifecycleState.resumed) {
+      if (_directionsActive) {
+        debugPrint('[DirectionsMode/FS] App resumed — restarting timer.');
+        _startDirTimer();
+      }
+    }
+  }
+
+  // ── Directions ──────────────────────────────────────────────────────────────
+
+  Future<void> _startDirections() async {
+    if (_gettingLocation) return;
+
+    if (AppConfig.googleMapsApiKey.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Road route is not configured yet. Opening Google Maps for navigation.',
+            ),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        await _openExternalMaps();
+      }
+      return;
+    }
+
+    setState(() => _gettingLocation = true);
+
+    LatLng? workerPos;
+    final tracker = ref.read(locationTrackerProvider);
+    if (tracker.lastSyncedLat != null && tracker.lastSyncedLng != null) {
+      workerPos = LatLng(tracker.lastSyncedLat!, tracker.lastSyncedLng!);
+    } else {
+      try {
+        final p = await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.high,
+            timeLimit: Duration(seconds: 8),
+          ),
+        );
+        workerPos = LatLng(p.latitude, p.longitude);
+      } catch (_) {
+        final last = await Geolocator.getLastKnownPosition();
+        if (last != null) workerPos = LatLng(last.latitude, last.longitude);
+      }
+    }
+
+    if (!mounted) return;
+
+    if (workerPos == null) {
+      setState(() => _gettingLocation = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Unable to get your location for directions.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _workerPos = workerPos;
+      _directionsActive = true;
+      _gettingLocation = false;
+    });
+    _fitBoundsForPoints([workerPos, _jobLatLng]);
+
+    final route = await _fetchRoadRoute(workerPos, _jobLatLng);
+    if (!mounted) return;
+
+    if (route != null && route.isNotEmpty) {
+      setState(() => _routePoints = route);
+      _fitBoundsForPoints(route);
+    } else {
+      debugPrint(
+          '[Directions/FS] Road route unavailable — straight-line emergency fallback active.');
+    }
+
+    _startDirTimer();
+  }
+
+  void _stopDirections() {
+    _dirTimer?.cancel();
+    _dirTimer = null;
+    setState(() {
+      _directionsActive = false;
+      _workerPos = null;
+      _routePoints = const [];
+    });
+    _ctrl?.animateCamera(CameraUpdate.newLatLng(_jobLatLng));
+  }
+
+  void _startDirTimer() {
+    _dirTimer?.cancel();
+    _dirTimer = Timer.periodic(
+      const Duration(seconds: _kDirCheckSecs),
+      (_) => _checkDistance(),
+    );
+  }
+
+  Future<void> _checkDistance() async {
+    if (!_directionsActive || !mounted) return;
+
+    LatLng? current;
+    final tracker = ref.read(locationTrackerProvider);
+    if (tracker.lastSyncedLat != null && tracker.lastSyncedLng != null) {
+      current = LatLng(tracker.lastSyncedLat!, tracker.lastSyncedLng!);
+    } else {
+      try {
+        final p = await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.high,
+            timeLimit: Duration(seconds: 5),
+          ),
+        );
+        current = LatLng(p.latitude, p.longitude);
+      } catch (_) {}
+    }
+
+    if (current == null || !mounted) return;
+
+    final dist = Geolocator.distanceBetween(
+      current.latitude,
+      current.longitude,
+      _jobLatLng.latitude,
+      _jobLatLng.longitude,
+    );
+    debugPrint(
+        '[DirectionsMode/FS] Distance to job: ${dist.toStringAsFixed(1)}m');
+
+    if (dist <= _kReachedMeters) {
+      debugPrint('[DirectionsMode/FS] Reached job — stopping directions.');
+      _stopDirections();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('You have arrived at the job location.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
+    }
+
+    if (mounted) setState(() => _workerPos = current);
+  }
+
+  void _fitBoundsForPoints(List<LatLng> points) {
+    if (points.isEmpty) return;
+    var minLat = points.first.latitude;
+    var maxLat = points.first.latitude;
+    var minLng = points.first.longitude;
+    var maxLng = points.first.longitude;
+    for (final p in points) {
+      if (p.latitude < minLat) minLat = p.latitude;
+      if (p.latitude > maxLat) maxLat = p.latitude;
+      if (p.longitude < minLng) minLng = p.longitude;
+      if (p.longitude > maxLng) maxLng = p.longitude;
+    }
+    _ctrl?.animateCamera(
+      CameraUpdate.newLatLngBounds(
+        LatLngBounds(
+          southwest: LatLng(minLat, minLng),
+          northeast: LatLng(maxLat, maxLng),
+        ),
+        60,
+      ),
+    );
+  }
+
+  Future<void> _openExternalMaps() async {
+    if (_directionsActive) _stopDirections();
+    final lat = _jobLatLng.latitude;
+    final lng = _jobLatLng.longitude;
+    final uri = Uri.parse(
+      'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng',
+    );
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  Set<Marker> _buildMarkers() {
+    return {
+      Marker(
+        markerId: const MarkerId('job'),
+        position: _jobLatLng,
+        infoWindow: InfoWindow(
+          title: widget.job.serviceCategory,
+          snippet: widget.job.address,
+        ),
+      ),
+      if (_workerPos != null)
+        Marker(
+          markerId: const MarkerId('worker'),
+          position: _workerPos!,
+          icon: BitmapDescriptor.defaultMarkerWithHue(
+              BitmapDescriptor.hueAzure),
+          infoWindow: const InfoWindow(title: 'Your Location'),
+        ),
+    };
+  }
+
+  Set<Polyline> _buildPolylines() {
+    if (!_directionsActive) return {};
+    if (_routePoints.isNotEmpty) {
+      return {
+        Polyline(
+          polylineId: const PolylineId('route'),
+          points: _routePoints,
+          color: _kGreen,
+          width: 5,
+        ),
+      };
+    }
+    // Emergency straight-line fallback when Directions API returns no route.
+    if (_workerPos == null) return {};
+    return {
+      Polyline(
+        polylineId: const PolylineId('route'),
+        points: [_workerPos!, _jobLatLng],
+        color: _kGreen,
+        width: 3,
+        patterns: [PatternItem.dash(16), PatternItem.gap(8)],
+      ),
+    };
+  }
+
+  // ── Build ───────────────────────────────────────────────────────────────────
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomPad = MediaQuery.of(context).padding.bottom;
+
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _popWithResult();
+      },
+      child: Scaffold(
+        backgroundColor: _kBg,
+        appBar: AppBar(
+          backgroundColor: _kBg,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          foregroundColor: _kDark,
+          leading: BackButton(onPressed: _popWithResult),
+          title: Text(
+            widget.job.serviceCategory,
+            style: const TextStyle(
+              color: _kDark,
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        body: Stack(
+          children: [
+            GoogleMap(
+              initialCameraPosition: CameraPosition(
+                target: _jobLatLng,
+                zoom: 15,
+              ),
+              markers: _buildMarkers(),
+              polylines: _buildPolylines(),
+              onMapCreated: (c) {
+                _ctrl = c;
+                if (_directionsActive) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    final pts = _routePoints.isNotEmpty
+                        ? _routePoints
+                        : (_workerPos != null
+                            ? [_workerPos!, _jobLatLng]
+                            : <LatLng>[]);
+                    _fitBoundsForPoints(pts);
+                  });
+                }
+              },
+              zoomControlsEnabled: true,
+              myLocationButtonEnabled: false,
+              myLocationEnabled: false,
+              mapToolbarEnabled: false,
+            ),
+
+            // ── Bottom controls ──────────────────────────────────────────────
+            Positioned(
+              left: 16,
+              right: 16,
+              bottom: 16 + bottomPad,
+              child: _directionsActive
+                  ? Row(
+                      children: [
+                        Expanded(
+                          child: _MapButton(
+                            label: 'Directions active',
+                            icon: Icons.navigation_rounded,
+                            color: _kGreen,
+                            onPressed: null,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        _MapButton(
+                          label: 'Stop',
+                          icon: Icons.stop_rounded,
+                          color: _kRed,
+                          onPressed: _stopDirections,
+                        ),
+                      ],
+                    )
+                  : Row(
+                      children: [
+                        Expanded(
+                          child: _MapButton(
+                            label: _gettingLocation
+                                ? 'Getting location...'
+                                : 'Directions',
+                            icon: Icons.directions_rounded,
+                            color: _kGreen,
+                            onPressed:
+                                _gettingLocation ? null : _startDirections,
+                            loading: _gettingLocation,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _MapButton(
+                            label: 'Open in Maps',
+                            icon: Icons.open_in_new_rounded,
+                            color: _kGray,
+                            onPressed: _openExternalMaps,
+                          ),
+                        ),
+                      ],
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Reusable map control button (fullscreen bottom bar only) ──────────────────
+
+class _MapButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final Color color;
+  final VoidCallback? onPressed;
+  final bool loading;
+
+  const _MapButton({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.onPressed,
+    this.loading = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final effective = onPressed == null && !loading
+        ? color.withValues(alpha: 0.6)
+        : color;
+    return Material(
+      color: effective,
+      borderRadius: BorderRadius.circular(12),
+      elevation: 4,
+      shadowColor: Colors.black26,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onPressed,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (loading)
+                const SizedBox(
+                  width: 15,
+                  height: 15,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              else
+                Icon(icon, size: 15, color: Colors.white),
+              const SizedBox(width: 7),
+              Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

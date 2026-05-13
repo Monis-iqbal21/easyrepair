@@ -1,3 +1,4 @@
+import '../../../../core/config/app_config.dart';
 import '../../domain/entities/booking_entity.dart';
 
 class BookingAttachmentModel {
@@ -31,11 +32,21 @@ class BookingAttachmentModel {
   BookingAttachmentEntity toEntity() => BookingAttachmentEntity(
         id: id,
         type: AttachmentTypeX.fromRaw(type),
-        url: url,
+        url: _resolveUrl(url),
         fileName: fileName,
         mimeType: mimeType,
         createdAt: createdAt,
       );
+
+  /// Returns the URL as-is when it's already absolute.
+  /// For relative paths (e.g. /uploads/...) prepends the backend origin so
+  /// the audio player, image network, and video player all receive a full URL.
+  static String _resolveUrl(String raw) {
+    if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
+    final base =
+        AppConfig.apiBaseUrl.replaceAll(RegExp(r'/api/v\d+/?$'), '');
+    return raw.startsWith('/') ? '$base$raw' : '$base/$raw';
+  }
 }
 
 class BookingReviewModel {
@@ -76,6 +87,7 @@ class AssignedWorkerModel {
   final String? avatarUrl;
   final double? currentLat;
   final double? currentLng;
+  final String? phone;
 
   const AssignedWorkerModel({
     required this.id,
@@ -85,6 +97,7 @@ class AssignedWorkerModel {
     this.avatarUrl,
     this.currentLat,
     this.currentLng,
+    this.phone,
   });
 
   factory AssignedWorkerModel.fromJson(Map<String, dynamic> json) {
@@ -96,6 +109,7 @@ class AssignedWorkerModel {
       avatarUrl: json['avatarUrl'] as String?,
       currentLat: (json['currentLat'] as num?)?.toDouble(),
       currentLng: (json['currentLng'] as num?)?.toDouble(),
+      phone: json['phone'] as String?,
     );
   }
 
@@ -107,6 +121,7 @@ class AssignedWorkerModel {
         avatarUrl: avatarUrl,
         currentLat: currentLat,
         currentLng: currentLng,
+        phone: phone,
       );
 }
 
@@ -136,6 +151,7 @@ class BookingModel {
   final String? cancellationReason;
   final AssignedWorkerModel? assignedWorker;
   final int? availableWorkersCount;
+  final double? acceptedBidAmount;
   final List<BookingAttachmentModel> attachments;
   final BookingReviewModel? review;
   final List<_StatusHistoryModel> statusHistory;
@@ -163,6 +179,7 @@ class BookingModel {
     this.cancellationReason,
     this.assignedWorker,
     this.availableWorkersCount,
+    this.acceptedBidAmount,
     this.attachments = const [],
     this.review,
     this.statusHistory = const [],
@@ -206,6 +223,7 @@ class BookingModel {
       assignedWorker:
           workerJson != null ? AssignedWorkerModel.fromJson(workerJson) : null,
       availableWorkersCount: json['availableWorkersCount'] as int?,
+      acceptedBidAmount: (json['acceptedBidAmount'] as num?)?.toDouble(),
       attachments: attachmentsJson
           .map((e) => BookingAttachmentModel.fromJson(e as Map<String, dynamic>))
           .toList(),
@@ -258,6 +276,7 @@ class BookingModel {
       cancellationReason: cancellationReason,
       assignedWorker: assignedWorker?.toEntity(),
       availableWorkersCount: availableWorkersCount,
+      acceptedBidAmount: acceptedBidAmount,
       attachments: attachments.map((a) => a.toEntity()).toList(),
       review: review?.toEntity(),
       statusHistory: statusHistory.map((h) => h.toEntity()).toList(),

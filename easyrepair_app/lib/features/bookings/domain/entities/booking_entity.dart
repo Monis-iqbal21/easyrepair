@@ -127,7 +127,8 @@ extension AttachmentTypeX on AttachmentType {
   static AttachmentType fromRaw(String raw) {
     return switch (raw.toUpperCase()) {
       'VIDEO' => AttachmentType.video,
-      'AUDIO' => AttachmentType.audio,
+      // Accept AUDIO, VOICE, and VOICE_NOTE so any backend naming works.
+      'AUDIO' || 'VOICE' || 'VOICE_NOTE' => AttachmentType.audio,
       _ => AttachmentType.image,
     };
   }
@@ -187,6 +188,7 @@ class AssignedWorkerEntity {
   final String? avatarUrl;
   final double? currentLat;
   final double? currentLng;
+  final String? phone;
 
   const AssignedWorkerEntity({
     required this.id,
@@ -196,6 +198,7 @@ class AssignedWorkerEntity {
     this.avatarUrl,
     this.currentLat,
     this.currentLng,
+    this.phone,
   });
 
   String get fullName => '$firstName $lastName';
@@ -243,6 +246,7 @@ class BookingEntity {
   final String? cancellationReason;
   final AssignedWorkerEntity? assignedWorker;
   final int? availableWorkersCount;
+  final double? acceptedBidAmount;
   final List<BookingAttachmentEntity> attachments;
   final BookingReviewEntity? review;
   final List<BookingStatusHistoryEntry> statusHistory;
@@ -274,6 +278,7 @@ class BookingEntity {
     this.cancellationReason,
     this.assignedWorker,
     this.availableWorkersCount,
+    this.acceptedBidAmount,
     this.attachments = const [],
     this.review,
     this.statusHistory = const [],
@@ -284,6 +289,7 @@ class BookingEntity {
     BookingStatus? status,
     double? estimatedPrice,
     double? finalPrice,
+    double? acceptedBidAmount,
     AssignedWorkerEntity? assignedWorker,
     DateTime? completedAt,
     String? cancellationReason,
@@ -316,6 +322,7 @@ class BookingEntity {
       cancellationReason: cancellationReason ?? this.cancellationReason,
       assignedWorker: assignedWorker ?? this.assignedWorker,
       availableWorkersCount: availableWorkersCount ?? this.availableWorkersCount,
+      acceptedBidAmount: acceptedBidAmount ?? this.acceptedBidAmount,
       attachments: attachments ?? this.attachments,
       review: review ?? this.review,
       statusHistory: statusHistory ?? this.statusHistory,
