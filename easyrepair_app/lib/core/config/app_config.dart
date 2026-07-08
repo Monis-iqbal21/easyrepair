@@ -2,15 +2,15 @@ import 'package:flutter/foundation.dart';
 
 class AppConfig {
   // Override manually when needed:
-  // flutter run --dart-define=API_BASE_URL=https://easyrepair-production.up.railway.app/api/v1 --dart-define=WS_URL=https://easyrepair-production.up.railway.app
+  // flutter run --dart-define=API_BASE_URL=https://handygo-production-jqi9i.ondigitalocean.app/api/v1 --dart-define=WS_URL=https://handygo-production-jqi9i.ondigitalocean.app
   static const String _envApiBaseUrl = String.fromEnvironment('API_BASE_URL');
   static const String _envWsUrl = String.fromEnvironment('WS_URL');
 
   // Default live backend
   static const String _prodApiBaseUrl =
-      'https://easyrepair-production.up.railway.app/api/v1';
+      'https://handygo-production-jqi9i.ondigitalocean.app/api/v1';
   static const String _prodWsUrl =
-      'https://easyrepair-production.up.railway.app';
+      'https://handygo-production-jqi9i.ondigitalocean.app';
 
   static const int _port = 3000;
 

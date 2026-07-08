@@ -33,6 +33,10 @@ const _kGray = Color(0xFF6B7280);
 const _kBorder = Color(0xFFE2E8F0);
 const _kSurface = Color(0xFFF9FAFB);
 const _kMaxVideoSecs = 30;
+const _kInspectionPrefix =
+    '[INSPECTION ONLY] Customer requested inspection first.';
+
+enum _DetailMode { knowsProblem, inspectFirst }
 
 class BookServicePage extends ConsumerStatefulWidget {
   final String? preselectedService;
@@ -73,6 +77,8 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
   bool _isSubmitting = false;
   int _currentStep = 0;
   String? _createdBookingId;
+
+  _DetailMode? _detailMode;
 
   // ── New file attachments (locally picked, not yet uploaded) ─────────────────
   final _picker = ImagePicker();
@@ -189,9 +195,24 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
       _selectedService = booking.serviceCategory;
       _isUrgent = booking.urgency == BookingUrgency.urgent;
       _selectedDate = booking.scheduledDate;
-      _titleCtrl.text = booking.title ?? '';
       _addressCtrl.text = booking.address ?? '';
-      _descriptionCtrl.text = booking.description ?? '';
+
+      final rawDescription = booking.description ?? '';
+      if (rawDescription.startsWith(_kInspectionPrefix)) {
+        _detailMode = _DetailMode.inspectFirst;
+        final remainder = rawDescription
+            .substring(_kInspectionPrefix.length)
+            .trim();
+        const seesLabel = 'What customer sees:';
+        _descriptionCtrl.text = remainder.startsWith(seesLabel)
+            ? remainder.substring(seesLabel.length).trim()
+            : '';
+        _titleCtrl.text = booking.title ?? '';
+      } else {
+        _detailMode = _DetailMode.knowsProblem;
+        _titleCtrl.text = booking.title ?? '';
+        _descriptionCtrl.text = rawDescription;
+      }
       _gpsLat = booking.latitude != 0 ? booking.latitude : null;
       _gpsLng = booking.longitude != 0 ? booking.longitude : null;
 
@@ -281,37 +302,46 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     if (_totalAttachmentCount >= 4) return;
     final choice = await _showMediaTypeSheet();
     if (choice == null || !mounted) return;
+    await _handleMediaChoice(choice);
+  }
 
+  // Opens the device camera. Offers both photo and video capture — uses the
+  // already-present image_picker package, no additional package required.
+  Future<void> _pickFromCamera() async {
+    if (_totalAttachmentCount >= 4) return;
+    final choice = await _showCameraTypeSheet();
+    if (choice == null || !mounted) return;
+    await _handleMediaChoice(choice);
+  }
+
+  Future<void> _handleMediaChoice(String choice) async {
     XFile? file;
-    if (choice == 'image') {
-      file = await _picker.pickImage(
-        source: ImageSource.gallery,
-        imageQuality: 85,
-      );
-    } else {
-      file = await _picker.pickVideo(source: ImageSource.gallery);
-      if (file != null) {
-        final valid = await _checkVideoDuration(file);
-        if (!valid) {
+    switch (choice) {
+      case 'gallery_image':
+        file = await _picker.pickImage(
+          source: ImageSource.gallery,
+          imageQuality: 85,
+        );
+      case 'gallery_video':
+        file = await _picker.pickVideo(source: ImageSource.gallery);
+        if (file != null && !await _checkVideoDuration(file)) {
           if (mounted) {
             _showError('Video must be $_kMaxVideoSecs seconds or shorter.');
           }
           return;
         }
-      }
+      case 'camera_photo':
+        file = await _picker.pickImage(
+          source: ImageSource.camera,
+          imageQuality: 85,
+        );
+      case 'camera_video':
+        file = await _picker.pickVideo(
+          source: ImageSource.camera,
+          maxDuration: const Duration(seconds: _kMaxVideoSecs),
+        );
     }
     if (file != null && mounted) setState(() => _newAttachments.add(file!));
-  }
-
-  // Opens the device camera and adds the captured photo to attachments.
-  // Uses the already-present image_picker package — no additional package required.
-  Future<void> _pickFromCamera() async {
-    if (_totalAttachmentCount >= 4) return;
-    final file = await _picker.pickImage(
-      source: ImageSource.camera,
-      imageQuality: 85,
-    );
-    if (file != null && mounted) setState(() => _newAttachments.add(file));
   }
 
   Future<bool> _checkVideoDuration(XFile file) async {
@@ -328,6 +358,45 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
   }
 
   Future<String?> _showMediaTypeSheet() {
+    return _showPickerSheet(
+      title: 'Add Photo/Video',
+      options: const [
+        (
+          icon: Icons.image_rounded,
+          label: 'Choose Photo',
+          value: 'gallery_image',
+        ),
+        (
+          icon: Icons.videocam_rounded,
+          label: 'Choose Video - 30 sec',
+          value: 'gallery_video',
+        ),
+      ],
+    );
+  }
+
+  Future<String?> _showCameraTypeSheet() {
+    return _showPickerSheet(
+      title: 'Camera',
+      options: const [
+        (
+          icon: Icons.camera_alt_rounded,
+          label: 'Take Photo',
+          value: 'camera_photo',
+        ),
+        (
+          icon: Icons.videocam_rounded,
+          label: 'Record Video - 30 sec',
+          value: 'camera_video',
+        ),
+      ],
+    );
+  }
+
+  Future<String?> _showPickerSheet({
+    required String title,
+    required List<({IconData icon, String label, String value})> options,
+  }) {
     return showModalBottomSheet<String>(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -347,16 +416,27 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
               ),
             ),
             const SizedBox(height: 12),
-            ListTile(
-              leading: const Icon(Icons.image_rounded, color: _kGreen),
-              title: const Text('Photo'),
-              onTap: () => Navigator.pop(context, 'image'),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: _kGray,
+                  ),
+                ),
+              ),
             ),
-            ListTile(
-              leading: const Icon(Icons.videocam_rounded, color: _kGreen),
-              title: const Text('Video - 30 sec'),
-              onTap: () => Navigator.pop(context, 'video'),
-            ),
+            const SizedBox(height: 4),
+            for (final opt in options)
+              ListTile(
+                leading: Icon(opt.icon, color: _kGreen),
+                title: Text(opt.label),
+                onTap: () => Navigator.pop(context, opt.value),
+              ),
             const SizedBox(height: 8),
           ],
         ),
@@ -599,12 +679,44 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     });
   }
 
+  // Builds the effective description sent to the backend based on the
+  // selected detail mode, without requiring a new backend field.
+  String? _buildEffectiveDescription() {
+    if (_detailMode == _DetailMode.inspectFirst) {
+      final sees = _descriptionCtrl.text.trim();
+      return sees.isEmpty
+          ? _kInspectionPrefix
+          : '$_kInspectionPrefix What customer sees: $sees';
+    }
+    return _titleCtrl.text.trim().isEmpty ? null : _titleCtrl.text.trim();
+  }
+
+  String? _buildEffectiveTitle() {
+    if (_detailMode == _DetailMode.inspectFirst) {
+      return _selectedService;
+    }
+    return _titleCtrl.text.trim().isEmpty
+        ? _selectedService
+        : _titleCtrl.text.trim();
+  }
+
   // ── Submit ────────────────────────────────────────────────────────────────
   Future<void> _validateAndSubmit() async {
     if (_isSubmitting) return;
 
     if (_selectedService == null) {
       _showError('Please select a service.');
+      return;
+    }
+
+    if (_detailMode == null) {
+      _showError('Select an option to continue.');
+      return;
+    }
+
+    if (_detailMode == _DetailMode.knowsProblem &&
+        _titleCtrl.text.trim().length <= 3) {
+      _showError('Please describe what needs fixing.');
       return;
     }
 
@@ -684,12 +796,8 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
           ? _slotEnum(_selectedTimeSlot!)
           : null,
       scheduledAt: (!_isUrgent && _selectedDate != null) ? _selectedDate : null,
-      title: _titleCtrl.text.trim().isEmpty
-          ? _selectedService
-          : _titleCtrl.text.trim(),
-      description: _descriptionCtrl.text.trim().isEmpty
-          ? null
-          : _descriptionCtrl.text.trim(),
+      title: _buildEffectiveTitle(),
+      description: _buildEffectiveDescription(),
       addressLine: address,
       latitude: _gpsLat,
       longitude: _gpsLng,
@@ -707,10 +815,8 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     final updateRequest = UpdateBookingRequest(
       bookingId: widget.editBookingId!,
       serviceCategory: _selectedService,
-      title: _titleCtrl.text.trim().isEmpty ? null : _titleCtrl.text.trim(),
-      description: _descriptionCtrl.text.trim().isEmpty
-          ? null
-          : _descriptionCtrl.text.trim(),
+      title: _buildEffectiveTitle(),
+      description: _buildEffectiveDescription(),
       urgency: _isUrgent ? BookingUrgency.urgent : BookingUrgency.normal,
       timeSlot: (!_isUrgent && _selectedTimeSlot != null)
           ? _slotEnum(_selectedTimeSlot!)
@@ -2079,21 +2185,26 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
   }
 
   // ── Step validation ──────────────────────────────────────────────────────────
+  // Step 1 · Address
   bool _validateStep1() {
-    if (!_isUrgent) {
-      if (_selectedDate == null) {
-        _showError('Select date.');
-        return false;
-      }
-      if (_selectedTimeSlot == null) {
-        _showError('Select arrival time.');
-        return false;
-      }
-    } else {
-      if (_urgentOption == null) {
-        _showError('Select how soon you need an Ustaad.');
-        return false;
-      }
+    final address = _addressCtrl.text.trim();
+    if (address.isEmpty) {
+      _showError('Add your service address to continue.');
+      return false;
+    }
+    return true;
+  }
+
+  // Step 2 · Details
+  bool _validateStep2() {
+    if (_detailMode == null) {
+      _showError('Select an option to continue.');
+      return false;
+    }
+    if (_detailMode == _DetailMode.knowsProblem &&
+        _titleCtrl.text.trim().length <= 3) {
+      _showError('Please describe what needs fixing.');
+      return false;
     }
     return true;
   }
@@ -2101,6 +2212,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
   void _nextStep() {
     FocusScope.of(context).unfocus();
     if (_currentStep == 0 && !_validateStep1()) return;
+    if (_currentStep == 1 && !_validateStep2()) return;
     if (_currentStep < 2) setState(() => _currentStep++);
   }
 
@@ -2115,7 +2227,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
 
   // ── Step indicator ────────────────────────────────────────────────────────────
   Widget _buildStepIndicator() {
-    const labels = ['Schedule', 'Details', 'Address'];
+    const labels = ['Address', 'Details', 'Time'];
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
@@ -2155,10 +2267,67 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     );
   }
 
-  // ── Step 1: Job type + schedule (service pre-selected from home or kept from state) ──
+  // ── Step 1: Service address ────────────────────────────────────────────────
   Widget _buildStep1() {
     return SingleChildScrollView(
       key: const ValueKey(0),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildLocationSection(),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+
+  // ── Step 2: Detail mode + mode-specific content ────────────────────────────
+  Widget _buildStep2() {
+    return SingleChildScrollView(
+      key: const ValueKey(1),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildDetailModeSelector(),
+          if (_detailMode == _DetailMode.knowsProblem) ...[
+            const SizedBox(height: 16),
+            _buildTitleSection(),
+            const SizedBox(height: 16),
+            _buildMediaSection(),
+            const SizedBox(height: 12),
+            _infoNote(
+              'Ustaads will bid the full repair price. The bid you accept is '
+              'final — no changes at the door.',
+              color: _kGreen,
+            ),
+          ] else if (_detailMode == _DetailMode.inspectFirst) ...[
+            const SizedBox(height: 16),
+            _buildInspectionInfoCard(),
+            const SizedBox(height: 16),
+            _buildInspectionOptionalField(),
+            const SizedBox(height: 16),
+            _buildMediaSection(),
+            const SizedBox(height: 12),
+            _infoNote(
+              'You only pay the small fee for the visit. The repair price is '
+              'quoted in the app before any work starts.',
+              color: _kGreen,
+            ),
+          ],
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+
+  // ── Step 3: Booking type + schedule ────────────────────────────────────────
+  Widget _buildStep3() {
+    return SingleChildScrollView(
+      key: const ValueKey(2),
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       child: Column(
@@ -2173,36 +2342,186 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     );
   }
 
-  // ── Step 2: Issue title + voice note + attachments ────────────────────────────
-  Widget _buildStep2() {
-    return SingleChildScrollView(
-      key: const ValueKey(1),
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
-      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+  // ── Details step: "Do you know the problem?" mode selector ────────────────
+  Widget _buildDetailModeSelector() {
+    return _sectionCard(
+      title: 'Do you know the problem?',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildTitleSection(),
-          const SizedBox(height: 16),
-          _buildMediaSection(),
-          const SizedBox(height: 8),
+          const Text(
+            'Masla maloom hai?',
+            style: TextStyle(fontSize: 12, color: _kGray),
+          ),
+          const SizedBox(height: 14),
+          _detailModeOption(
+            mode: _DetailMode.knowsProblem,
+            icon: Icons.build_rounded,
+            title: 'Yes, I know',
+            subtitle: 'Haan, pata hai',
+          ),
+          const SizedBox(height: 10),
+          _detailModeOption(
+            mode: _DetailMode.inspectFirst,
+            icon: Icons.search_rounded,
+            title: 'No — inspect first',
+            subtitle: 'Nahi, inspection chahiye',
+          ),
         ],
       ),
     );
   }
 
-  // ── Step 3: Service address + submit ──────────────────────────────────────────
-  Widget _buildStep3() {
-    return SingleChildScrollView(
-      key: const ValueKey(2),
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
-      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+  Widget _detailModeOption({
+    required _DetailMode mode,
+    required IconData icon,
+    required String title,
+    required String subtitle,
+  }) {
+    final selected = _detailMode == mode;
+    return GestureDetector(
+      onTap: () => setState(() => _detailMode = mode),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        decoration: BoxDecoration(
+          color: selected ? _kGreen.withValues(alpha: 0.07) : _kSurface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: selected ? _kGreen : _kBorder,
+            width: selected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: selected
+                    ? _kGreen
+                    : Colors.white,
+                shape: BoxShape.circle,
+                border: selected ? null : Border.all(color: _kBorder),
+              ),
+              child: Icon(
+                icon,
+                size: 17,
+                color: selected ? Colors.white : _kGray,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: selected ? _kGreen : _kDark,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(fontSize: 11.5, color: _kGray),
+                  ),
+                ],
+              ),
+            ),
+            if (selected)
+              const Icon(Icons.check_circle_rounded, size: 18, color: _kGreen),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Mode B: "How inspection works" info card ───────────────────────────────
+  Widget _buildInspectionInfoCard() {
+    const steps = [
+      'Ustaads bid a small inspection fee.',
+      'Ustaad visits, finds the problem, and gives you a fixed repair quote '
+          'in the app.',
+      'Accept his quote and continue, or get bids from other Ustaads — your '
+          'choice.',
+    ];
+    return _sectionCard(
+      title: 'How inspection works',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildLocationSection(),
-          const SizedBox(height: 8),
+          for (var i = 0; i < steps.length; i++) ...[
+            if (i > 0) const SizedBox(height: 10),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 22,
+                  height: 22,
+                  decoration: const BoxDecoration(
+                    color: _kGreen,
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    '${i + 1}',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    steps[i],
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: _kDark,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
+      ),
+    );
+  }
+
+  // ── Mode B: optional "What do you see?" field ──────────────────────────────
+  Widget _buildInspectionOptionalField() {
+    return _sectionCard(
+      title: 'What do you see? (optional)',
+      child: TextFormField(
+        controller: _descriptionCtrl,
+        maxLines: 3,
+        textInputAction: TextInputAction.done,
+        decoration: InputDecoration(
+          hintText: 'e.g. AC turns on but room stays hot…',
+          hintStyle: const TextStyle(color: _kGray, fontSize: 14),
+          filled: true,
+          fillColor: _kSurface,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: _kBorder),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: _kBorder),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: _kGreen, width: 1.4),
+          ),
+          contentPadding: const EdgeInsets.all(14),
+        ),
       ),
     );
   }
@@ -2293,7 +2612,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
   // ── Build ─────────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    const stepTitles = ['Schedule', 'Details', 'Address'];
+    const stepTitles = ['Address', 'Details', 'Time Selection'];
 
     return Scaffold(
       backgroundColor: _kSurface,

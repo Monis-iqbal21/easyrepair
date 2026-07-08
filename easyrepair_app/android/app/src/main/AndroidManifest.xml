@@ -20,6 +20,10 @@
          runtime permission on API 33+, so no READ_MEDIA_IMAGES/VIDEO is declared. -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
+
+    <!-- READ_MEDIA_AUDIO kept for voice-note attachments; READ_MEDIA_IMAGES/VIDEO
+         removed — image_picker uses the system photo-picker on API 33+ and needs
+         no broad gallery permission (Play policy violation if declared). -->
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" tools:node="remove" />
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" tools:node="remove" />
