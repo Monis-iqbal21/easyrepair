@@ -15,6 +15,7 @@ import { WorkersModule } from './modules/workers/workers.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { BidsModule } from './modules/bids/bids.module';
+import { AdminModule } from './modules/admin/admin.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { BidsModule } from './modules/bids/bids.module';
     NotificationsModule,
     ChatModule,
     BidsModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [AppService],
