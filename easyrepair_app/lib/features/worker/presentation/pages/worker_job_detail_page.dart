@@ -15,6 +15,7 @@ import '../../../bookings/domain/entities/booking_entity.dart';
 import '../../../bookings/presentation/widgets/media_attachment_widgets.dart';
 import '../providers/worker_job_providers.dart';
 import '../providers/worker_providers.dart';
+import '../widgets/worker_chat_action.dart';
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 const _kGreen  = Color(0xFFDB6234);
@@ -157,6 +158,30 @@ class _JobBody extends ConsumerWidget {
                   const SizedBox(height: 16),
                 ],
 
+                // ── Chat with client (available before/without a bid) ────
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () =>
+                        openWorkerChatForBooking(context, ref, job.id),
+                    icon: const Icon(Icons.chat_bubble_outline_rounded, size: 16),
+                    label: const Text('Chat with Client'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: _kGreen,
+                      side: const BorderSide(color: _kGreen),
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      textStyle: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
                 // ── Client info ──────────────────────────────────────────
                 if (job.clientName != null && job.clientName!.isNotEmpty) ...[
                   _Section(
@@ -205,6 +230,20 @@ class _JobBody extends ConsumerWidget {
                         value: job.urgency == BookingUrgency.urgent
                             ? 'Urgent'
                             : 'Normal',
+                      ),
+                      _InfoRow(
+                        icon: Icons.schedule_rounded,
+                        label: 'Timing',
+                        value: job.urgency == BookingUrgency.urgent
+                            ? 'Urgent — requested '
+                                '${DateFormat('h:mm a, d MMM').format(job.createdAt)}'
+                            : job.scheduledDate != null
+                                ? DateFormat('EEE, d MMM yyyy')
+                                        .format(job.scheduledDate!) +
+                                    (job.timeSlot != null
+                                        ? ' • ${job.timeSlot!.label}'
+                                        : '')
+                                : 'Not scheduled yet',
                       ),
                       if (job.timeSlot != null)
                         _InfoRow(

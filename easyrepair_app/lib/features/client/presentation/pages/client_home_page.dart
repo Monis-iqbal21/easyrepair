@@ -759,24 +759,51 @@ class _UrgentHelpCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          // Book Urgently button
-          GestureDetector(
-            onTap: onBookUrgently,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-              decoration: BoxDecoration(
-                color: const Color(0xFFDB6234),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Text(
-                'Book Urgently',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
+          // Book Urgently button + 24/7 Service caption
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              GestureDetector(
+                onTap: onBookUrgently,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFDB6234),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Text(
+                    'Book Urgently',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
               ),
-            ),
+              const SizedBox(height: 6),
+              const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.access_time_filled_rounded,
+                    size: 11,
+                    color: Color(0xFFDB6234),
+                  ),
+                  SizedBox(width: 4),
+                  Text(
+                    '24/7 Service',
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFFDB6234),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ],
       ),

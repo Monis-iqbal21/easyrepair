@@ -282,3 +282,37 @@ final getOrCreateConversationProvider =
     AsyncNotifierProvider<GetOrCreateConversationNotifier, ConversationEntity?>(
   GetOrCreateConversationNotifier.new,
 );
+
+// ── Get or create conversation for a booking (worker pre-bid chat) ────────────
+
+class GetOrCreateConversationForBookingNotifier
+    extends AsyncNotifier<ConversationEntity?> {
+  @override
+  Future<ConversationEntity?> build() async => null;
+
+  Future<ConversationEntity> getOrCreate(String bookingId) async {
+    state = const AsyncLoading();
+    final result = await ref
+        .read(chatRepositoryProvider)
+        .getOrCreateConversationForBooking(bookingId);
+    return result.fold(
+      (failure) {
+        state = AsyncError(failure, StackTrace.current);
+        throw failure;
+      },
+      (conversation) {
+        state = AsyncData(conversation);
+        // Ensure it appears in the worker's conversations list.
+        ref
+            .read(chatConversationsProvider.notifier)
+            .upsertConversation(conversation);
+        return conversation;
+      },
+    );
+  }
+}
+
+final getOrCreateConversationForBookingProvider = AsyncNotifierProvider<
+    GetOrCreateConversationForBookingNotifier, ConversationEntity?>(
+  GetOrCreateConversationForBookingNotifier.new,
+);

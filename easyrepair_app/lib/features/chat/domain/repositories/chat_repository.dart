@@ -7,6 +7,9 @@ abstract class ChatRepository {
   Future<Either<Failure, ConversationEntity>> getOrCreateConversation(
     String workerProfileId,
   );
+  Future<Either<Failure, ConversationEntity>> getOrCreateConversationForBooking(
+    String bookingId,
+  );
   Future<Either<Failure, List<ConversationEntity>>> getConversations();
   Future<Either<Failure, List<MessageEntity>>> getMessages(
     String conversationId, {

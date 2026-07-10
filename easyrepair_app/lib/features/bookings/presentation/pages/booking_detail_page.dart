@@ -328,6 +328,20 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
                           ? 'Urgent'
                           : 'Normal',
                     ),
+                    _InfoRow(
+                      icon: Icons.schedule_rounded,
+                      label: 'Timing',
+                      value: booking.urgency == BookingUrgency.urgent
+                          ? 'Urgent — requested '
+                              '${DateFormat('h:mm a, d MMM').format(booking.createdAt)}'
+                          : booking.scheduledDate != null
+                              ? DateFormat('EEE, d MMM yyyy')
+                                      .format(booking.scheduledDate!) +
+                                  (booking.timeSlot != null
+                                      ? ' • ${booking.timeSlot!.label}'
+                                      : '')
+                              : 'Not scheduled yet',
+                    ),
                     if (booking.timeSlot != null)
                       _InfoRow(
                         icon: Icons.access_time_rounded,

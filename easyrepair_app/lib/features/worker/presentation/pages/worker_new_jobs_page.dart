@@ -8,6 +8,7 @@ import '../../../bookings/domain/entities/booking_entity.dart';
 import '../../domain/entities/new_job_entity.dart';
 import '../providers/worker_job_providers.dart';
 import '../widgets/worker_bottom_nav_bar.dart';
+import '../widgets/worker_chat_action.dart';
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 const _kAccent = Color(0xFFDB6234);
@@ -199,12 +200,12 @@ class _FilterBar extends ConsumerWidget {
 
 // ── Job card ──────────────────────────────────────────────────────────────────
 
-class _NewJobCard extends StatelessWidget {
+class _NewJobCard extends ConsumerWidget {
   final NewJobEntity job;
   const _NewJobCard({required this.job});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isUrgent = job.urgency == BookingUrgency.urgent;
 
     return GestureDetector(
@@ -362,6 +363,28 @@ class _NewJobCard extends StatelessWidget {
                   // ── Action buttons ────────────────────────────────────
                   Row(
                     children: [
+                      // Chat with client (before bid)
+                      GestureDetector(
+                        onTap: () =>
+                            openWorkerChatForBooking(context, ref, job.id),
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: _kAccent.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: _kAccent.withValues(alpha: 0.3),
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.chat_bubble_outline_rounded,
+                            color: _kAccent,
+                            size: 18,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
                       // View Details
                       Expanded(
                         child: OutlinedButton.icon(

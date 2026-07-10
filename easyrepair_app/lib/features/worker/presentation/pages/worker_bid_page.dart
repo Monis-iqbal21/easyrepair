@@ -11,6 +11,7 @@ import '../../../bids/domain/repositories/bid_repository.dart';
 import '../../../bids/presentation/providers/bid_providers.dart';
 import '../../domain/entities/new_job_entity.dart';
 import '../providers/worker_job_providers.dart';
+import '../widgets/worker_chat_action.dart';
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 const _kGreen  = Color(0xFFDB6234);
@@ -179,6 +180,31 @@ class _WorkerBidPageState extends ConsumerState<WorkerBidPage> {
                   _StatusBadge(label: job.displayStatus),
                 ],
               ],
+            ),
+          ),
+
+          const SizedBox(height: 10),
+
+          // ── Chat with client (available before submitting a bid) ─────────
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () =>
+                  openWorkerChatForBooking(context, ref, widget.jobId),
+              icon: const Icon(Icons.chat_bubble_outline_rounded, size: 16),
+              label: const Text('Chat with Client'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: _kGreen,
+                side: const BorderSide(color: _kGreen),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                textStyle: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
           ),
 

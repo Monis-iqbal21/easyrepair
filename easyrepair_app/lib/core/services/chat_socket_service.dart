@@ -19,6 +19,14 @@ class ChatSocketService {
 
   IO.Socket? _socket;
 
+  // Conversation rooms the app currently has "open" (chat detail screen
+  // mounted). Socket.io room membership does not survive a reconnect, so we
+  // replay join_conversation for each of these every time the socket
+  // (re)connects — otherwise a receiver whose app was briefly backgrounded
+  // (or hit a transient network drop) stops getting new_message events for
+  // an already-open chat until they leave and re-enter the screen.
+  final Set<String> _activeConversationIds = {};
+
   // ── Broadcast streams (providers subscribe via ref.onDispose-guarded subs) ─
 
   final StreamController<Map<String, dynamic>> _newMessageCtrl =
@@ -67,7 +75,14 @@ class ChatSocketService {
     );
 
     _socket!
-      ..on('connect', (_) => debugPrint('[ChatSocket] connected'))
+      ..on('connect', (_) {
+        debugPrint('[ChatSocket] connected');
+        // Re-join every conversation room that was active before this
+        // (re)connect — see _activeConversationIds doc comment above.
+        for (final id in _activeConversationIds) {
+          _socket?.emit('join_conversation', {'conversationId': id});
+        }
+      })
       ..on('disconnect', (reason) =>
           debugPrint('[ChatSocket] disconnected: $reason'))
       ..on('connect_error', (e) => debugPrint('[ChatSocket] error: $e'))
@@ -111,11 +126,13 @@ class ChatSocketService {
   /// Tell the server we are viewing this conversation so it adds us to the
   /// socket room and we receive new_message / message_seen events for it.
   void joinConversation(String conversationId) {
+    _activeConversationIds.add(conversationId);
     _socket?.emit('join_conversation', {'conversationId': conversationId});
   }
 
   /// Tell the server we left the conversation screen.
   void leaveConversation(String conversationId) {
+    _activeConversationIds.remove(conversationId);
     _socket?.emit('leave_conversation', {'conversationId': conversationId});
   }
 

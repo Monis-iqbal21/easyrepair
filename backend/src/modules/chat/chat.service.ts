@@ -60,6 +60,49 @@ export class ChatService {
   }
 
   /**
+   * WORKER action: create or retrieve the conversation with the client who
+   * posted a given booking — lets a worker ask questions before placing a
+   * bid. Idempotent (same client-worker pair reuses the one conversation,
+   * consistent with the client-initiated path above).
+   *
+   * Eligibility: the booking must exist, and if it is already assigned to a
+   * worker, only that worker may open the conversation — prevents an
+   * unrelated worker from messaging a client about a job that isn't theirs.
+   */
+  async getOrCreateConversationForBooking(
+    workerUserId: string,
+    bookingId: string,
+  ): Promise<ConversationResponseDto> {
+    const booking =
+      await this.chatRepository.findBookingForChatEligibility(bookingId);
+    if (!booking) throw new NotFoundException('Booking not found');
+
+    if (booking.workerProfile && booking.workerProfile.userId !== workerUserId) {
+      throw new ForbiddenException(
+        'This job is assigned to another worker.',
+      );
+    }
+
+    const clientUserId = booking.clientProfile.userId;
+
+    const existing = await this.chatRepository.findConversation(
+      clientUserId,
+      workerUserId,
+    );
+    if (existing) {
+      const unreadCount = await this.chatRepository.countUnread(existing.id, workerUserId);
+      return this._toConversationDto(existing, workerUserId, Role.WORKER, unreadCount);
+    }
+
+    const created = await this.chatRepository.createConversation({
+      clientUserId,
+      workerUserId,
+      createdByUserId: workerUserId,
+    });
+    return this._toConversationDto(created, workerUserId, Role.WORKER, 0);
+  }
+
+  /**
    * Called internally by the booking assignment flow.
    * Ensures a conversation exists for this client-worker pair — creates one
    * automatically (with a system message) if none exists yet.

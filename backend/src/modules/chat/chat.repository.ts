@@ -376,4 +376,24 @@ export class ChatRepository {
       select: { firstName: true, lastName: true, avatarUrl: true },
     });
   }
+
+  /**
+   * Lean lookup used to authorize a worker-initiated (pre-bid) chat request:
+   * resolves the booking's client userId and, if already assigned, the
+   * assigned worker's userId so the caller can be checked for eligibility.
+   */
+  async findBookingForChatEligibility(bookingId: string): Promise<{
+    id: string;
+    clientProfile: { userId: string };
+    workerProfile: { userId: string } | null;
+  } | null> {
+    return this.prisma.booking.findUnique({
+      where: { id: bookingId },
+      select: {
+        id: true,
+        clientProfile: { select: { userId: true } },
+        workerProfile: { select: { userId: true } },
+      },
+    });
+  }
 }

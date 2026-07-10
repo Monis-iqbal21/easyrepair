@@ -21,6 +21,7 @@ import { Role } from '@prisma/client';
 import { ChatService } from './chat.service';
 import { ChatGateway } from './chat.gateway';
 import { CreateConversationDto } from './dto/create-conversation.dto';
+import { GetOrCreateConversationForBookingDto } from './dto/get-or-create-conversation-for-booking.dto';
 import { SendMessageDto } from './dto/send-message.dto';
 import { EditMessageDto } from './dto/edit-message.dto';
 import { SendLocationMessageDto } from './dto/send-location-message.dto';
@@ -52,6 +53,26 @@ export class ChatController {
     @Body() dto: CreateConversationDto,
   ) {
     return this.chatService.getOrCreateConversation(user.id, dto.workerProfileId);
+  }
+
+  /**
+   * POST /chat/conversations/for-booking
+   * WORKER only — create or retrieve the conversation with the client who
+   * posted the given booking, so the worker can ask questions before
+   * placing a bid. Idempotent; rejects jobs already assigned to someone else.
+   * Body: { bookingId }
+   */
+  @Post('conversations/for-booking')
+  @Roles(AppRole.WORKER)
+  @HttpCode(HttpStatus.OK)
+  getOrCreateConversationForBooking(
+    @CurrentUser() user: { id: string; role: string },
+    @Body() dto: GetOrCreateConversationForBookingDto,
+  ) {
+    return this.chatService.getOrCreateConversationForBooking(
+      user.id,
+      dto.bookingId,
+    );
   }
 
   /**
