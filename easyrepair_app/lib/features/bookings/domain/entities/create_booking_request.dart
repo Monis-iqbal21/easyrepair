@@ -13,6 +13,7 @@ class CreateBookingRequest {
   final String? city;
   final double? latitude;
   final double? longitude;
+  final bool inspection;
 
   const CreateBookingRequest({
     required this.serviceCategory,
@@ -25,5 +26,6 @@ class CreateBookingRequest {
     this.city,
     this.latitude,
     this.longitude,
+    this.inspection = false,
   });
 }

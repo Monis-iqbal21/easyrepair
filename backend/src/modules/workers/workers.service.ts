@@ -546,6 +546,7 @@ export class WorkersService {
       // BookingModel.fromJson can parse worker job responses too.
       scheduledDate: job.scheduledAt?.toISOString() ?? null,
       createdAt: job.createdAt.toISOString(),
+      inspection: job.inspection,
       acceptedAt: job.acceptedAt?.toISOString() ?? null,
       startedAt: job.startedAt?.toISOString() ?? null,
       completedAt: job.completedAt?.toISOString() ?? null,

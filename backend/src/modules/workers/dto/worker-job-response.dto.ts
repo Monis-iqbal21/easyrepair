@@ -40,6 +40,7 @@ export class WorkerJobResponseDto {
   timeSlot: TimeSlot | null;
   scheduledDate: string | null;
   createdAt: string;
+  inspection: boolean;
   acceptedAt: string | null;
   startedAt: string | null;
   completedAt: string | null;

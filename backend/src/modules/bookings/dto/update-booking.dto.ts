@@ -4,6 +4,7 @@ import {
   IsEnum,
   IsNumber,
   IsDateString,
+  IsBoolean,
   MaxLength,
   Min,
   Max,
@@ -66,4 +67,9 @@ export class UpdateBookingDto {
   @Min(-180)
   @Max(180)
   longitude?: number;
+
+  @IsOptional()
+  @Transform(({ value }) => (typeof value === 'string' ? value === 'true' : value))
+  @IsBoolean()
+  inspection?: boolean;
 }

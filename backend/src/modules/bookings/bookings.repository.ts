@@ -143,6 +143,7 @@ export class BookingsRepository {
     latitude: number;
     longitude: number;
     scheduledAt?: Date;
+    inspection?: boolean;
   }): Promise<BookingWithRelations> {
     // Step 1 — transactional write (no include needed here).
     const created = await this.prisma.$transaction(async (tx) => {
@@ -159,6 +160,7 @@ export class BookingsRepository {
           latitude: data.latitude,
           longitude: data.longitude,
           scheduledAt: data.scheduledAt ?? null,
+          inspection: data.inspection ?? false,
           status: BookingStatus.PENDING,
         },
       });
@@ -216,6 +218,7 @@ export class BookingsRepository {
       city?: string;
       latitude?: number;
       longitude?: number;
+      inspection?: boolean;
     },
   ): Promise<BookingWithRelations> {
     await this.prisma.booking.update({
@@ -237,6 +240,7 @@ export class BookingsRepository {
         ...(data.city !== undefined && { city: data.city }),
         ...(data.latitude !== undefined && { latitude: data.latitude }),
         ...(data.longitude !== undefined && { longitude: data.longitude }),
+        ...(data.inspection !== undefined && { inspection: data.inspection }),
       },
     });
 

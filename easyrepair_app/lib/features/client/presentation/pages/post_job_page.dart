@@ -22,6 +22,7 @@ import '../../../../features/bookings/domain/entities/update_booking_request.dar
 import '../../../../features/bookings/presentation/providers/booking_providers.dart';
 import '../../../../features/bookings/presentation/widgets/media_attachment_widgets.dart';
 import '../../../../features/categories/presentation/providers/categories_providers.dart';
+import '../../../../core/services/geocoding_service.dart';
 import '../widgets/location_picker_sheet.dart';
 import '../widgets/service_card.dart';
 
@@ -542,23 +543,35 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
       debugPrint(
         '[CaptureLocation] GPS position: lat=${pos.latitude}, lng=${pos.longitude}',
       );
-      final addr = await _reverseGeocode(pos.latitude, pos.longitude);
 
-      // DIAG-7: address controller assignment
-      debugPrint(
-        '[CaptureLocation] addr from _reverseGeocode: $addr — '
-        '${addr != null ? "setting _addressCtrl.text" : "address is null, field NOT updated"}',
-      );
+      // Primary: Google Geocoding HTTP API.
+      var addr = await _reverseGeocode(pos.latitude, pos.longitude);
+
+      // Fallback: device-native geocoder (no HTTP API key required) — covers
+      // cases where the HTTP call fails (key restrictions, quota, network).
+      if (addr == null) {
+        debugPrint(
+          '[CaptureLocation] HTTP reverse geocode failed, trying native geocoding fallback',
+        );
+        addr = await GeocodingService.addressFromCoordinates(
+          pos.latitude,
+          pos.longitude,
+        );
+      }
+
+      // Last resort: never leave the address field empty after a successful
+      // GPS fix — mirrors the "Pick on Map" flow, which always shows a label.
+      addr ??= 'Current location (${pos.latitude.toStringAsFixed(5)}, '
+          '${pos.longitude.toStringAsFixed(5)})';
+
+      debugPrint('[CaptureLocation] final resolved address: $addr');
 
       if (mounted) {
         setState(() {
           _gpsLat = pos.latitude;
           _gpsLng = pos.longitude;
           _pickedAddress = addr;
-          if (addr != null) {
-            _addressCtrl.text = addr;
-            debugPrint('[CaptureLocation] _addressCtrl.text set to: $addr');
-          }
+          _addressCtrl.text = addr!;
         });
       }
     } catch (_) {
@@ -801,6 +814,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
       addressLine: address,
       latitude: _gpsLat,
       longitude: _gpsLng,
+      inspection: _detailMode == _DetailMode.inspectFirst,
     );
 
     final booking = await ref
@@ -825,6 +839,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
       addressLine: address,
       latitude: _gpsLat,
       longitude: _gpsLng,
+      inspection: _detailMode == _DetailMode.inspectFirst,
     );
 
     await ref
@@ -2354,18 +2369,27 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
             style: TextStyle(fontSize: 12, color: _kGray),
           ),
           const SizedBox(height: 14),
-          _detailModeOption(
-            mode: _DetailMode.knowsProblem,
-            icon: Icons.build_rounded,
-            title: 'Yes, I know',
-            subtitle: 'Haan, pata hai',
-          ),
-          const SizedBox(height: 10),
-          _detailModeOption(
-            mode: _DetailMode.inspectFirst,
-            icon: Icons.search_rounded,
-            title: 'No — inspect first',
-            subtitle: 'Nahi, inspection chahiye',
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _detailModeOption(
+                  mode: _DetailMode.knowsProblem,
+                  icon: Icons.build_rounded,
+                  title: 'Yes, I know',
+                  subtitle: 'Haan, pata hai',
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _detailModeOption(
+                  mode: _DetailMode.inspectFirst,
+                  icon: Icons.search_rounded,
+                  title: 'No — inspect first',
+                  subtitle: 'Nahi, inspection chahiye',
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -2384,7 +2408,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
         decoration: BoxDecoration(
           color: selected ? _kGreen.withValues(alpha: 0.07) : _kSurface,
           borderRadius: BorderRadius.circular(14),
@@ -2393,47 +2417,63 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
             width: selected ? 1.5 : 1,
           ),
         ),
-        child: Row(
+        child: Stack(
+          clipBehavior: Clip.none,
           children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: selected
-                    ? _kGreen
-                    : Colors.white,
-                shape: BoxShape.circle,
-                border: selected ? null : Border.all(color: _kBorder),
-              ),
-              child: Icon(
-                icon,
-                size: 17,
-                color: selected ? Colors.white : _kGray,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: selected ? _kGreen : _kDark,
-                    ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: selected ? _kGreen : Colors.white,
+                    shape: BoxShape.circle,
+                    border: selected ? null : Border.all(color: _kBorder),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(fontSize: 11.5, color: _kGray),
+                  child: Icon(
+                    icon,
+                    size: 16,
+                    color: selected ? Colors.white : _kGray,
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                    color: selected ? _kGreen : _kDark,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: const TextStyle(fontSize: 11, color: _kGray),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
             if (selected)
-              const Icon(Icons.check_circle_rounded, size: 18, color: _kGreen),
+              Positioned(
+                top: -4,
+                right: -4,
+                child: Container(
+                  width: 20,
+                  height: 20,
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.check_circle_rounded,
+                    size: 20,
+                    color: _kGreen,
+                  ),
+                ),
+              ),
           ],
         ),
       ),

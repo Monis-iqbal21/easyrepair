@@ -54,6 +54,7 @@ class BookingRemoteDataSourceImpl implements BookingRemoteDataSource {
           'title': request.title,
         if (request.description != null && request.description!.isNotEmpty)
           'description': request.description,
+        'inspection': request.inspection,
       };
 
       final response = await _dio.post('/bookings', data: body);
@@ -104,6 +105,7 @@ class BookingRemoteDataSourceImpl implements BookingRemoteDataSource {
         if (request.city != null) 'city': request.city,
         if (request.latitude != null) 'latitude': request.latitude,
         if (request.longitude != null) 'longitude': request.longitude,
+        if (request.inspection != null) 'inspection': request.inspection,
       };
       final response = await _dio.patch('/bookings/${request.bookingId}', data: body);
       final data = response.data['data'] as Map<String, dynamic>;

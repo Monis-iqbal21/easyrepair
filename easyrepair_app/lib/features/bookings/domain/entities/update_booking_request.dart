@@ -12,6 +12,7 @@ class UpdateBookingRequest {
   final String? city;
   final double? latitude;
   final double? longitude;
+  final bool? inspection;
 
   const UpdateBookingRequest({
     required this.bookingId,
@@ -25,6 +26,7 @@ class UpdateBookingRequest {
     this.city,
     this.latitude,
     this.longitude,
+    this.inspection,
   });
 }
 

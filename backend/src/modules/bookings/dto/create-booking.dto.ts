@@ -5,6 +5,7 @@ import {
   IsEnum,
   IsNumber,
   IsISO8601,
+  IsBoolean,
   MaxLength,
   Min,
   Max,
@@ -66,4 +67,13 @@ export class CreateBookingDto {
   @Min(-180)
   @Max(180)
   longitude: number;
+
+  // True when the client wants an inspection visit first instead of
+  // describing the issue upfront. Defaults to false when omitted.
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value === 'true' : value,
+  )
+  @IsBoolean()
+  inspection?: boolean;
 }

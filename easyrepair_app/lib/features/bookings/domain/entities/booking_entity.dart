@@ -261,6 +261,7 @@ class BookingEntity {
   /// Full name of the client who created the booking.
   /// Populated on worker-facing responses; null on client-facing responses.
   final String? clientName;
+  final bool inspection;
 
   const BookingEntity({
     required this.id,
@@ -291,6 +292,7 @@ class BookingEntity {
     this.review,
     this.statusHistory = const [],
     this.clientName,
+    this.inspection = false,
   });
 
   BookingEntity copyWith({
@@ -335,6 +337,7 @@ class BookingEntity {
       review: review ?? this.review,
       statusHistory: statusHistory ?? this.statusHistory,
       clientName: clientName,
+      inspection: inspection,
     );
   }
 }

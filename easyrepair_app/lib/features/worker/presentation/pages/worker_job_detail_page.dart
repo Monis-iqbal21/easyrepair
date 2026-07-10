@@ -193,6 +193,12 @@ class _JobBody extends ConsumerWidget {
                           value: job.description!,
                           multiline: true,
                         ),
+                      if (job.inspection)
+                        _InfoRow(
+                          icon: Icons.search_rounded,
+                          label: 'Inspection',
+                          value: 'Inspection requested',
+                        ),
                       _InfoRow(
                         icon: Icons.bolt_rounded,
                         label: 'Urgency',

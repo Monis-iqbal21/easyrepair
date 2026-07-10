@@ -172,6 +172,7 @@ class BookingModel {
   final BookingReviewModel? review;
   final List<_StatusHistoryModel> statusHistory;
   final String? clientName;
+  final bool inspection;
 
   const BookingModel({
     required this.id,
@@ -200,6 +201,7 @@ class BookingModel {
     this.review,
     this.statusHistory = const [],
     this.clientName,
+    this.inspection = false,
   });
 
   factory BookingModel.fromJson(Map<String, dynamic> json) {
@@ -248,6 +250,7 @@ class BookingModel {
           .map((e) => _StatusHistoryModel.fromJson(e as Map<String, dynamic>))
           .toList(),
       clientName: json['clientName'] as String?,
+      inspection: json['inspection'] as bool? ?? false,
     );
   }
 
@@ -300,6 +303,7 @@ class BookingModel {
       review: review?.toEntity(),
       statusHistory: statusHistory.map((h) => h.toEntity()).toList(),
       clientName: clientName,
+      inspection: inspection,
     );
   }
 }

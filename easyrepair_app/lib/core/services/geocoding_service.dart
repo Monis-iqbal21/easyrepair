@@ -35,4 +35,39 @@ class GeocodingService {
     );
     return loc;
   }
+
+  /// Resolves geographic coordinates into a human-readable address using the
+  /// device's native geocoder (no HTTP API key required). Used as a fallback
+  /// when the Google Geocoding HTTP API is unavailable or returns no result.
+  /// Returns `null` on any failure or empty result.
+  static Future<String?> addressFromCoordinates(double lat, double lng) async {
+    debugPrint('[GeocodingService] Reverse resolving: lat=$lat, lng=$lng');
+    try {
+      final placemarks = await placemarkFromCoordinates(lat, lng);
+      if (placemarks.isEmpty) {
+        debugPrint('[GeocodingService] No placemarks for lat=$lat, lng=$lng');
+        return null;
+      }
+      final p = placemarks.first;
+      final parts = <String>{
+        if (p.street != null && p.street!.trim().isNotEmpty) p.street!.trim(),
+        if (p.subLocality != null && p.subLocality!.trim().isNotEmpty)
+          p.subLocality!.trim(),
+        if (p.locality != null && p.locality!.trim().isNotEmpty)
+          p.locality!.trim(),
+        if (p.administrativeArea != null &&
+            p.administrativeArea!.trim().isNotEmpty)
+          p.administrativeArea!.trim(),
+        if (p.country != null && p.country!.trim().isNotEmpty)
+          p.country!.trim(),
+      };
+      if (parts.isEmpty) return null;
+      final address = parts.join(', ');
+      debugPrint('[GeocodingService] Reverse resolved → $address');
+      return address;
+    } catch (e) {
+      debugPrint('[GeocodingService] placemarkFromCoordinates threw: $e');
+      return null;
+    }
+  }
 }

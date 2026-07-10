@@ -107,6 +107,7 @@ export class BookingsService {
       latitude: dto.latitude,
       longitude: dto.longitude,
       scheduledAt,
+      inspection: dto.inspection ?? false,
     });
 
     this.logger.log(`[createBooking] created bookingId=${booking.id}`);
@@ -275,6 +276,7 @@ export class BookingsService {
       city: dto.city,
       latitude: dto.latitude,
       longitude: dto.longitude,
+      inspection: dto.inspection,
     });
 
     return this._toDto(updated);
@@ -640,6 +642,7 @@ export class BookingsService {
       timeSlot: booking.timeSlot ?? null,
       scheduledDate: booking.scheduledAt?.toISOString() ?? null,
       createdAt: booking.createdAt.toISOString(),
+      inspection: booking.inspection,
       estimatedPrice: booking.estimatedPrice ?? null,
       finalPrice: booking.finalPrice ?? null,
       address: booking.addressLine,

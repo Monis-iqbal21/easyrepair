@@ -67,6 +67,7 @@ export class BookingResponseDto {
   timeSlot: TimeSlot | null;
   scheduledDate: string | null;
   createdAt: string;
+  inspection: boolean;
   estimatedPrice: number | null;
   finalPrice: number | null;
   address: string;

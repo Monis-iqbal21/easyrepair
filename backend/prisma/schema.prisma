@@ -263,6 +263,7 @@ model Booking {
   timeSlot           TimeSlot?
   title              String?
   description        String
+  inspection         Boolean        @default(false)
   addressLine        String
   city               String
   latitude           Float
