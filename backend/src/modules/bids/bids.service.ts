@@ -405,6 +405,7 @@ export class BidsService {
         longitude: b.longitude,
         scheduledAt: b.scheduledAt,
         createdAt: b.createdAt,
+        inspection: b.inspection,
         category: b.category,
         client: b.clientProfile,
         bidCount: b._count.bids,

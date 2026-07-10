@@ -12,6 +12,7 @@ import {
   BookingStatus,
   BookingUrgency,
   TimeSlot,
+  UrgentWindow,
 } from '@prisma/client';
 import {
   BookingsRepository,
@@ -95,6 +96,11 @@ export class BookingsService {
       );
     }
 
+    // Only meaningful for URGENT bookings — ignore any urgentWindow sent
+    // alongside a NORMAL booking so stored data never contradicts urgency.
+    const urgentWindow: UrgentWindow | undefined =
+      dto.urgency === BookingUrgency.URGENT ? dto.urgentWindow : undefined;
+
     const booking = await this.bookingsRepository.createBooking({
       clientProfileId: profile.id,
       categoryId: category.id,
@@ -108,6 +114,7 @@ export class BookingsService {
       longitude: dto.longitude,
       scheduledAt,
       inspection: dto.inspection ?? false,
+      urgentWindow,
     });
 
     this.logger.log(`[createBooking] created bookingId=${booking.id}`);
@@ -265,6 +272,12 @@ export class BookingsService {
       );
     }
 
+    // Only meaningful for URGENT bookings — if the effective urgency is/becomes
+    // NORMAL, clear urgentWindow so stored data never contradicts urgency.
+    // undefined here means "leave the stored value untouched".
+    const urgentWindow: UrgentWindow | null | undefined =
+      newUrgency === BookingUrgency.URGENT ? dto.urgentWindow : null;
+
     const updated = await this.bookingsRepository.updateBooking(bookingId, {
       categoryId,
       title: dto.title,
@@ -277,6 +290,7 @@ export class BookingsService {
       latitude: dto.latitude,
       longitude: dto.longitude,
       inspection: dto.inspection,
+      urgentWindow,
     });
 
     return this._toDto(updated);
@@ -640,6 +654,7 @@ export class BookingsService {
       status: booking.status,
       urgency: booking.urgency,
       timeSlot: booking.timeSlot ?? null,
+      urgentWindow: booking.urgentWindow ?? null,
       scheduledDate: booking.scheduledAt?.toISOString() ?? null,
       createdAt: booking.createdAt.toISOString(),
       inspection: booking.inspection,

@@ -50,6 +50,7 @@ class NewJobEntity {
   final bool hasMyBid;
   /// Null means no worker assigned yet (booking is open / Live).
   final String? workerProfileId;
+  final bool inspection;
 
   const NewJobEntity({
     required this.id,
@@ -70,6 +71,7 @@ class NewJobEntity {
     this.distanceKm,
     this.hasMyBid = false,
     this.workerProfileId,
+    this.inspection = false,
   });
 
   String get displayTitle => title?.isNotEmpty == true ? title! : category.name;

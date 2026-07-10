@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../bookings/domain/entities/booking_entity.dart';
 import '../../../bookings/presentation/widgets/booking_skeleton.dart';
+import '../../../bookings/presentation/widgets/inspection_badge.dart';
 import '../providers/worker_job_providers.dart';
 import '../widgets/worker_bottom_nav_bar.dart';
 
@@ -312,24 +313,32 @@ class _JobCard extends ConsumerWidget {
                 const SizedBox(height: 10),
 
                 // ── Meta row ─────────────────────────────────────────────
-                Row(
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     // Urgency badge
                     _UrgencyPill(urgency: job.urgency),
-                    const SizedBox(width: 8),
+                    if (job.inspection) const InspectionBadge(small: true),
                     // Date
-                    const Icon(
-                      Icons.access_time_rounded,
-                      size: 12,
-                      color: _kLight,
-                    ),
-                    const SizedBox(width: 3),
-                    Text(
-                      _fmtDate(job.acceptedAt ?? job.createdAt),
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: _kLight,
-                      ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.access_time_rounded,
+                          size: 12,
+                          color: _kLight,
+                        ),
+                        const SizedBox(width: 3),
+                        Text(
+                          _fmtDate(job.acceptedAt ?? job.createdAt),
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: _kLight,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),

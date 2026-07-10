@@ -34,8 +34,6 @@ const _kGray = Color(0xFF6B7280);
 const _kBorder = Color(0xFFE2E8F0);
 const _kSurface = Color(0xFFF9FAFB);
 const _kMaxVideoSecs = 30;
-const _kInspectionPrefix =
-    '[INSPECTION ONLY] Customer requested inspection first.';
 
 enum _DetailMode { knowsProblem, inspectFirst }
 
@@ -198,27 +196,22 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
       _selectedDate = booking.scheduledDate;
       _addressCtrl.text = booking.address ?? '';
 
-      final rawDescription = booking.description ?? '';
-      if (rawDescription.startsWith(_kInspectionPrefix)) {
-        _detailMode = _DetailMode.inspectFirst;
-        final remainder = rawDescription
-            .substring(_kInspectionPrefix.length)
-            .trim();
-        const seesLabel = 'What customer sees:';
-        _descriptionCtrl.text = remainder.startsWith(seesLabel)
-            ? remainder.substring(seesLabel.length).trim()
-            : '';
-        _titleCtrl.text = booking.title ?? '';
-      } else {
-        _detailMode = _DetailMode.knowsProblem;
-        _titleCtrl.text = booking.title ?? '';
-        _descriptionCtrl.text = rawDescription;
-      }
+      // Prefer the real `inspection` flag; fall back to detecting the legacy
+      // text-prefix encoding for bookings created before that field existed.
+      _detailMode = (booking.inspection || booking.hasLegacyInspectionPrefix)
+          ? _DetailMode.inspectFirst
+          : _DetailMode.knowsProblem;
+      _titleCtrl.text = booking.title ?? '';
+      _descriptionCtrl.text = booking.cleanDescription ?? '';
+
       _gpsLat = booking.latitude != 0 ? booking.latitude : null;
       _gpsLng = booking.longitude != 0 ? booking.longitude : null;
 
       if (booking.timeSlot != null) {
         _selectedTimeSlot = booking.timeSlot!.label;
+      }
+      if (booking.urgentWindow != null) {
+        _urgentOption = booking.urgentWindow!.label;
       }
 
       _existingAttachments = List.of(mediaAttachments);
@@ -692,14 +685,13 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     });
   }
 
-  // Builds the effective description sent to the backend based on the
-  // selected detail mode, without requiring a new backend field.
+  // Description sent to the backend is always exactly what the client typed
+  // — the inspection choice is carried separately via the `inspection`
+  // boolean field, not encoded into this text.
   String? _buildEffectiveDescription() {
     if (_detailMode == _DetailMode.inspectFirst) {
       final sees = _descriptionCtrl.text.trim();
-      return sees.isEmpty
-          ? _kInspectionPrefix
-          : '$_kInspectionPrefix What customer sees: $sees';
+      return sees.isEmpty ? null : sees;
     }
     return _titleCtrl.text.trim().isEmpty ? null : _titleCtrl.text.trim();
   }
@@ -711,6 +703,16 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     return _titleCtrl.text.trim().isEmpty
         ? _selectedService
         : _titleCtrl.text.trim();
+  }
+
+  // Maps the selected urgent-window option label to the API enum value.
+  UrgentWindow? _urgentWindowFromOption(String? option) {
+    return switch (option) {
+      'Within 1 hour' => UrgentWindow.within1Hour,
+      'Within 2 hours' => UrgentWindow.within2Hours,
+      'Within 4 hours' => UrgentWindow.within4Hours,
+      _ => null,
+    };
   }
 
   // ── Submit ────────────────────────────────────────────────────────────────
@@ -808,6 +810,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
       timeSlot: (!_isUrgent && _selectedTimeSlot != null)
           ? _slotEnum(_selectedTimeSlot!)
           : null,
+      urgentWindow: _isUrgent ? _urgentWindowFromOption(_urgentOption) : null,
       scheduledAt: (!_isUrgent && _selectedDate != null) ? _selectedDate : null,
       title: _buildEffectiveTitle(),
       description: _buildEffectiveDescription(),
@@ -835,6 +838,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
       timeSlot: (!_isUrgent && _selectedTimeSlot != null)
           ? _slotEnum(_selectedTimeSlot!)
           : null,
+      urgentWindow: _isUrgent ? _urgentWindowFromOption(_urgentOption) : null,
       scheduledAt: (!_isUrgent && _selectedDate != null) ? _selectedDate : null,
       addressLine: address,
       latitude: _gpsLat,

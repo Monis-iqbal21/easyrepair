@@ -6,6 +6,7 @@ class CreateBookingRequest {
   final String serviceCategory;
   final BookingUrgency urgency;
   final TimeSlot? timeSlot;
+  final UrgentWindow? urgentWindow;
   final DateTime? scheduledAt;
   final String? title;
   final String? description;
@@ -19,6 +20,7 @@ class CreateBookingRequest {
     required this.serviceCategory,
     required this.urgency,
     this.timeSlot,
+    this.urgentWindow,
     this.scheduledAt,
     this.title,
     this.description,

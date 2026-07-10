@@ -11,7 +11,7 @@ import {
   Max,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
-import { BookingUrgency, TimeSlot } from '@prisma/client';
+import { BookingUrgency, TimeSlot, UrgentWindow } from '@prisma/client';
 
 export class CreateBookingDto {
   @IsString()
@@ -76,4 +76,13 @@ export class CreateBookingDto {
   )
   @IsBoolean()
   inspection?: boolean;
+
+  // Client-selected urgent arrival window (only meaningful when urgency is
+  // URGENT). Nullable/omitted for scheduled bookings.
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.toUpperCase() : value,
+  )
+  @IsEnum(UrgentWindow)
+  urgentWindow?: UrgentWindow;
 }

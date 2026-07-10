@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../domain/entities/booking_entity.dart';
+import 'inspection_badge.dart';
 import 'status_badge.dart';
 import 'urgency_badge.dart';
 
@@ -147,6 +148,10 @@ class BookingCard extends StatelessWidget {
                           StatusBadge(status: booking.status),
                           const SizedBox(height: 4),
                           UrgencyBadge(urgency: booking.urgency, small: true),
+                          if (booking.inspection) ...[
+                            const SizedBox(height: 4),
+                            const InspectionBadge(small: true),
+                          ],
                         ],
                       ),
                     ],

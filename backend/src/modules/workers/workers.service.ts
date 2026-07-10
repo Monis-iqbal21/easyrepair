@@ -547,6 +547,7 @@ export class WorkersService {
       scheduledDate: job.scheduledAt?.toISOString() ?? null,
       createdAt: job.createdAt.toISOString(),
       inspection: job.inspection,
+      urgentWindow: job.urgentWindow ?? null,
       acceptedAt: job.acceptedAt?.toISOString() ?? null,
       startedAt: job.startedAt?.toISOString() ?? null,
       completedAt: job.completedAt?.toISOString() ?? null,

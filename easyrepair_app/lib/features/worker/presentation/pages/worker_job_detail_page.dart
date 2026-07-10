@@ -12,6 +12,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/config/app_config.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../bookings/domain/entities/booking_entity.dart';
+import '../../../bookings/presentation/widgets/inspection_badge.dart';
 import '../../../bookings/presentation/widgets/media_attachment_widgets.dart';
 import '../providers/worker_job_providers.dart';
 import '../providers/worker_providers.dart';
@@ -211,18 +212,13 @@ class _JobBody extends ConsumerWidget {
                           label: 'Title',
                           value: job.title!,
                         ),
-                      if (job.description != null && job.description!.isNotEmpty)
+                      if (job.cleanDescription != null &&
+                          job.cleanDescription!.isNotEmpty)
                         _InfoRow(
                           icon: Icons.description_outlined,
                           label: 'Description',
-                          value: job.description!,
+                          value: job.cleanDescription!,
                           multiline: true,
-                        ),
-                      if (job.inspection)
-                        _InfoRow(
-                          icon: Icons.search_rounded,
-                          label: 'Inspection',
-                          value: 'Inspection requested',
                         ),
                       _InfoRow(
                         icon: Icons.bolt_rounded,
@@ -235,8 +231,7 @@ class _JobBody extends ConsumerWidget {
                         icon: Icons.schedule_rounded,
                         label: 'Timing',
                         value: job.urgency == BookingUrgency.urgent
-                            ? 'Urgent — requested '
-                                '${DateFormat('h:mm a, d MMM').format(job.createdAt)}'
+                            ? (job.urgentWindow?.label ?? 'Urgent')
                             : job.scheduledDate != null
                                 ? DateFormat('EEE, d MMM yyyy')
                                         .format(job.scheduledDate!) +
@@ -413,20 +408,30 @@ class _StatusCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-            decoration: BoxDecoration(
-              color: bg,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              job.status.workerLabel,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: fg,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                decoration: BoxDecoration(
+                  color: bg,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  job.status.workerLabel,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: fg,
+                  ),
+                ),
               ),
-            ),
+              if (job.inspection) ...[
+                const SizedBox(height: 6),
+                const InspectionBadge(small: true),
+              ],
+            ],
           ),
         ],
       ),

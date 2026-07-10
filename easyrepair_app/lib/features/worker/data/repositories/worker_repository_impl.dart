@@ -144,6 +144,7 @@ class WorkerRepositoryImpl implements WorkerRepository {
       distanceKm: (j['distanceKm'] as num?)?.toDouble(),
       hasMyBid: j['hasMyBid'] as bool? ?? false,
       workerProfileId: j['workerProfileId'] as String?,
+      inspection: j['inspection'] as bool? ?? false,
     );
   }
 

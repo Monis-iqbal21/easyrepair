@@ -7,6 +7,7 @@ class UpdateBookingRequest {
   final String? description;
   final BookingUrgency? urgency;
   final TimeSlot? timeSlot;
+  final UrgentWindow? urgentWindow;
   final DateTime? scheduledAt;
   final String? addressLine;
   final String? city;
@@ -21,6 +22,7 @@ class UpdateBookingRequest {
     this.description,
     this.urgency,
     this.timeSlot,
+    this.urgentWindow,
     this.scheduledAt,
     this.addressLine,
     this.city,

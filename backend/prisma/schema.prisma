@@ -41,6 +41,12 @@ enum BookingUrgency {
   NORMAL
 }
 
+enum UrgentWindow {
+  WITHIN_1_HOUR
+  WITHIN_2_HOURS
+  WITHIN_4_HOURS
+}
+
 enum TimeSlot {
   MORNING
   AFTERNOON
@@ -261,6 +267,7 @@ model Booking {
   status             BookingStatus  @default(PENDING)
   urgency            BookingUrgency @default(NORMAL)
   timeSlot           TimeSlot?
+  urgentWindow       UrgentWindow?
   title              String?
   description        String
   inspection         Boolean        @default(false)

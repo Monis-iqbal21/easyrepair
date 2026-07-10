@@ -20,6 +20,14 @@ enum TimeSlot {
   night,
 }
 
+/// Client-selected arrival window for an URGENT booking. Null for
+/// scheduled (NORMAL) bookings.
+enum UrgentWindow {
+  within1Hour,
+  within2Hours,
+  within4Hours,
+}
+
 enum AttachmentType { image, video, audio }
 
 extension BookingStatusX on BookingStatus {
@@ -118,6 +126,36 @@ extension TimeSlotX on TimeSlot {
       'AFTERNOON' => TimeSlot.afternoon,
       'EVENING' => TimeSlot.evening,
       'NIGHT' => TimeSlot.night,
+      _ => null,
+    };
+  }
+}
+
+extension UrgentWindowX on UrgentWindow {
+  /// Matches the exact option labels used on the booking form
+  /// (post_job_page.dart's `_buildUrgentSchedule` options list).
+  String get label {
+    return switch (this) {
+      UrgentWindow.within1Hour => 'Within 1 hour',
+      UrgentWindow.within2Hours => 'Within 2 hours',
+      UrgentWindow.within4Hours => 'Within 4 hours',
+    };
+  }
+
+  String get raw {
+    return switch (this) {
+      UrgentWindow.within1Hour => 'WITHIN_1_HOUR',
+      UrgentWindow.within2Hours => 'WITHIN_2_HOURS',
+      UrgentWindow.within4Hours => 'WITHIN_4_HOURS',
+    };
+  }
+
+  static UrgentWindow? fromRaw(String? raw) {
+    if (raw == null) return null;
+    return switch (raw.toUpperCase()) {
+      'WITHIN_1_HOUR' => UrgentWindow.within1Hour,
+      'WITHIN_2_HOURS' => UrgentWindow.within2Hours,
+      'WITHIN_4_HOURS' => UrgentWindow.within4Hours,
       _ => null,
     };
   }
@@ -240,6 +278,7 @@ class BookingEntity {
   final BookingStatus status;
   final BookingUrgency urgency;
   final TimeSlot? timeSlot;
+  final UrgentWindow? urgentWindow;
   final DateTime? scheduledDate;
   final DateTime createdAt;
   final DateTime? acceptedAt;
@@ -273,6 +312,7 @@ class BookingEntity {
     required this.status,
     required this.urgency,
     this.timeSlot,
+    this.urgentWindow,
     this.scheduledDate,
     required this.createdAt,
     this.acceptedAt,
@@ -318,6 +358,7 @@ class BookingEntity {
       status: status ?? this.status,
       urgency: urgency,
       timeSlot: timeSlot,
+      urgentWindow: urgentWindow,
       scheduledDate: scheduledDate,
       createdAt: createdAt,
       acceptedAt: acceptedAt,
@@ -339,5 +380,32 @@ class BookingEntity {
       clientName: clientName,
       inspection: inspection,
     );
+  }
+}
+
+/// Handles bookings created before the `inspection` boolean existed, which
+/// encoded the inspection choice as a text prefix inside `description`.
+/// New bookings never write this prefix — it only needs to be recognized
+/// and stripped for older rows still stored with it in the DB.
+extension BookingDescriptionX on BookingEntity {
+  static const _kLegacyInspectionPrefix =
+      '[INSPECTION ONLY] Customer requested inspection first.';
+  static const _kLegacySeesLabel = 'What customer sees:';
+
+  bool get hasLegacyInspectionPrefix =>
+      (description ?? '').startsWith(_kLegacyInspectionPrefix);
+
+  /// The description with any legacy inspection-prefix encoding stripped, so
+  /// older bookings display only the text the client actually typed.
+  String? get cleanDescription {
+    final raw = description;
+    if (raw == null) return null;
+    if (!raw.startsWith(_kLegacyInspectionPrefix)) return raw;
+    final remainder = raw.substring(_kLegacyInspectionPrefix.length).trim();
+    if (remainder.startsWith(_kLegacySeesLabel)) {
+      final text = remainder.substring(_kLegacySeesLabel.length).trim();
+      return text.isEmpty ? null : text;
+    }
+    return remainder.isEmpty ? null : remainder;
   }
 }

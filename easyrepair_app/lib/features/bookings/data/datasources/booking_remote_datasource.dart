@@ -48,6 +48,8 @@ class BookingRemoteDataSourceImpl implements BookingRemoteDataSource {
         if (request.city != null && request.city!.isNotEmpty)
           'city': request.city,
         if (request.timeSlot != null) 'timeSlot': request.timeSlot!.apiValue,
+        if (request.urgentWindow != null)
+          'urgentWindow': request.urgentWindow!.apiValue,
         if (request.scheduledAt != null)
           'scheduledAt': request.scheduledAt!.toIso8601String(),
         if (request.title != null && request.title!.isNotEmpty)
@@ -99,6 +101,8 @@ class BookingRemoteDataSourceImpl implements BookingRemoteDataSource {
         if (request.description != null) 'description': request.description,
         if (request.urgency != null) 'urgency': request.urgency!.apiValue,
         if (request.timeSlot != null) 'timeSlot': request.timeSlot!.apiValue,
+        if (request.urgentWindow != null)
+          'urgentWindow': request.urgentWindow!.apiValue,
         if (request.scheduledAt != null)
           'scheduledAt': request.scheduledAt!.toIso8601String(),
         if (request.addressLine != null) 'addressLine': request.addressLine,
@@ -237,6 +241,19 @@ extension TimeSlotApiMapper on TimeSlot {
         return 'EVENING';
       case TimeSlot.night:
         return 'NIGHT';
+    }
+  }
+}
+
+extension UrgentWindowApiMapper on UrgentWindow {
+  String get apiValue {
+    switch (this) {
+      case UrgentWindow.within1Hour:
+        return 'WITHIN_1_HOUR';
+      case UrgentWindow.within2Hours:
+        return 'WITHIN_2_HOURS';
+      case UrgentWindow.within4Hours:
+        return 'WITHIN_4_HOURS';
     }
   }
 }

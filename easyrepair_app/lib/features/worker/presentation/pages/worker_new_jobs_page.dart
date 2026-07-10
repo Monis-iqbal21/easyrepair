@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/errors/failures.dart';
 import '../../../bookings/domain/entities/booking_entity.dart';
+import '../../../bookings/presentation/widgets/inspection_badge.dart';
 import '../../domain/entities/new_job_entity.dart';
 import '../providers/worker_job_providers.dart';
 import '../widgets/worker_bottom_nav_bar.dart';
@@ -303,6 +304,10 @@ class _NewJobCard extends ConsumerWidget {
                           if (job.hasMyBid) ...[
                             const SizedBox(height: 4),
                             const _BidPlacedBadge(),
+                          ],
+                          if (job.inspection) ...[
+                            const SizedBox(height: 4),
+                            const InspectionBadge(small: true),
                           ],
                         ],
                       ),

@@ -1,4 +1,4 @@
-import { AttachmentType, BookingStatus, BookingUrgency, TimeSlot } from '@prisma/client';
+import { AttachmentType, BookingStatus, BookingUrgency, TimeSlot, UrgentWindow } from '@prisma/client';
 
 export class WorkerJobAttachmentDto {
   id: string;
@@ -38,6 +38,7 @@ export class WorkerJobResponseDto {
   status: BookingStatus;
   urgency: BookingUrgency;
   timeSlot: TimeSlot | null;
+  urgentWindow: UrgentWindow | null;
   scheduledDate: string | null;
   createdAt: string;
   inspection: boolean;

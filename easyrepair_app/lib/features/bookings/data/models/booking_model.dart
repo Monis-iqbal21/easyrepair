@@ -153,6 +153,7 @@ class BookingModel {
   final String status;
   final String urgency;
   final String? timeSlot;
+  final String? urgentWindow;
   final DateTime? scheduledDate;
   final DateTime createdAt;
   final DateTime? acceptedAt;
@@ -182,6 +183,7 @@ class BookingModel {
     required this.status,
     required this.urgency,
     this.timeSlot,
+    this.urgentWindow,
     this.scheduledDate,
     required this.createdAt,
     this.acceptedAt,
@@ -217,6 +219,7 @@ class BookingModel {
       status: json['status'] as String? ?? 'PENDING',
       urgency: json['urgency'] as String? ?? 'NORMAL',
       timeSlot: json['timeSlot'] as String?,
+      urgentWindow: json['urgentWindow'] as String?,
       scheduledDate: json['scheduledDate'] != null
           ? DateTime.tryParse(json['scheduledDate'] as String)
           : null,
@@ -284,6 +287,7 @@ class BookingModel {
       status: BookingStatusX.fromRaw(status),
       urgency: BookingUrgencyX.fromRaw(urgency),
       timeSlot: TimeSlotX.fromRaw(timeSlot),
+      urgentWindow: UrgentWindowX.fromRaw(urgentWindow),
       scheduledDate: scheduledDate,
       createdAt: createdAt,
       acceptedAt: acceptedAt,

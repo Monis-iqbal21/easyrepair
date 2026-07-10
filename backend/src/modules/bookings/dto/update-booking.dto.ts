@@ -10,7 +10,7 @@ import {
   Max,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
-import { BookingUrgency, TimeSlot } from '@prisma/client';
+import { BookingUrgency, TimeSlot, UrgentWindow } from '@prisma/client';
 
 export class UpdateBookingDto {
   @IsOptional()
@@ -72,4 +72,11 @@ export class UpdateBookingDto {
   @Transform(({ value }) => (typeof value === 'string' ? value === 'true' : value))
   @IsBoolean()
   inspection?: boolean;
+
+  @IsOptional()
+  @Transform(({ value }) =>
+    typeof value === 'string' ? (value.toUpperCase() as UrgentWindow) : value,
+  )
+  @IsEnum(UrgentWindow)
+  urgentWindow?: UrgentWindow;
 }

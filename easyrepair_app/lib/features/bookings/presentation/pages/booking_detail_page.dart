@@ -9,6 +9,7 @@ import '../../domain/entities/booking_entity.dart';
 import '../widgets/media_attachment_widgets.dart';
 import '../../domain/entities/update_booking_request.dart';
 import '../providers/booking_providers.dart';
+import '../widgets/inspection_badge.dart';
 import '../widgets/status_badge.dart';
 import '../widgets/urgency_badge.dart';
 import 'track_worker_page.dart';
@@ -313,12 +314,12 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
                         label: 'Issue',
                         value: booking.title!,
                       ),
-                    if (booking.description != null &&
-                        booking.description!.isNotEmpty)
+                    if (booking.cleanDescription != null &&
+                        booking.cleanDescription!.isNotEmpty)
                       _InfoRow(
                         icon: Icons.description_outlined,
                         label: 'Description',
-                        value: booking.description!,
+                        value: booking.cleanDescription!,
                         multiline: true,
                       ),
                     _InfoRow(
@@ -332,8 +333,7 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
                       icon: Icons.schedule_rounded,
                       label: 'Timing',
                       value: booking.urgency == BookingUrgency.urgent
-                          ? 'Urgent — requested '
-                              '${DateFormat('h:mm a, d MMM').format(booking.createdAt)}'
+                          ? (booking.urgentWindow?.label ?? 'Urgent')
                           : booking.scheduledDate != null
                               ? DateFormat('EEE, d MMM yyyy')
                                       .format(booking.scheduledDate!) +
@@ -532,11 +532,14 @@ class _StatusCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 6),
-                Row(
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     StatusBadge(status: booking.status),
-                    const SizedBox(width: 6),
                     UrgencyBadge(urgency: booking.urgency, small: true),
+                    if (booking.inspection) const InspectionBadge(small: true),
                   ],
                 ),
               ],
