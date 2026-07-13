@@ -4,6 +4,7 @@ import {
   AttachmentType,
   AvailabilityStatus,
   BidStatus,
+  BookingLane,
   BookingUrgency,
   BookingStatus,
   TimeSlot,
@@ -122,6 +123,11 @@ export class BookingsRepository {
     });
   }
 
+  /** Find an active standard service, scoped to a category, for snapshotting at booking time. */
+  async findStandardServiceById(id: string) {
+    return this.prisma.standardService.findUnique({ where: { id } });
+  }
+
   /** Find the ClientProfile for a given userId. */
   async findClientProfileByUserId(userId: string) {
     return this.prisma.clientProfile.findUnique({ where: { userId } });
@@ -146,6 +152,12 @@ export class BookingsRepository {
     scheduledAt?: Date;
     inspection?: boolean;
     urgentWindow?: UrgentWindow;
+    lane?: BookingLane;
+    standardServiceId?: string;
+    standardServiceNameSnapshot?: string;
+    standardServicePriceSnapshot?: number;
+    inspectionFeeSnapshot?: number;
+    estimatedPrice?: number;
   }): Promise<BookingWithRelations> {
     // Step 1 — transactional write (no include needed here).
     const created = await this.prisma.$transaction(async (tx) => {
@@ -165,6 +177,13 @@ export class BookingsRepository {
           inspection: data.inspection ?? false,
           urgentWindow: data.urgentWindow ?? null,
           status: BookingStatus.PENDING,
+          lane: data.lane ?? BookingLane.BIDDING,
+          standardServiceId: data.standardServiceId ?? null,
+          standardServiceNameSnapshot: data.standardServiceNameSnapshot ?? null,
+          standardServicePriceSnapshot:
+            data.standardServicePriceSnapshot ?? null,
+          inspectionFeeSnapshot: data.inspectionFeeSnapshot ?? null,
+          estimatedPrice: data.estimatedPrice ?? null,
         },
       });
 
@@ -421,15 +440,70 @@ export class BookingsRepository {
       avatarUrl: string | null;
       rating: number;
       completedJobs: number;
+      reviewsCount: number;
+      cancellationRate: number;
       distanceMeters: number;
       skills: string[];
     }>;
     searchedRadiusKm: number;
     searchCompleted: boolean;
   }> {
-    return this.usePostgis
-      ? this._findNearbyWorkersPostgis(params)
-      : this._findNearbyWorkersHaversine(params);
+    const result = this.usePostgis
+      ? await this._findNearbyWorkersPostgis(params)
+      : await this._findNearbyWorkersHaversine(params);
+
+    const workers = await this._attachWorkerStats(result.workers);
+    return { ...result, workers };
+  }
+
+  /**
+   * Batch-attach reviewsCount + cancellationRate to a small pool of nearby
+   * workers (bounded by TARGET_POOL, so per-worker queries are cheap).
+   * Mirrors the semantics of WorkersRepository.getJobStats/getWorkerReviewSummary.
+   */
+  private async _attachWorkerStats<
+    T extends { id: string; completedJobs: number },
+  >(
+    workers: T[],
+  ): Promise<(T & { reviewsCount: number; cancellationRate: number })[]> {
+    return Promise.all(
+      workers.map(async (w) => {
+        const [reviewsCount, workerCancelled, totalAccepted] =
+          await Promise.all([
+            this.prisma.review.count({
+              where: { booking: { workerProfileId: w.id } },
+            }),
+            this.prisma.booking.count({
+              where: {
+                workerProfileId: w.id,
+                status: BookingStatus.CANCELLED,
+                cancellationReason: { contains: 'Cancelled by worker' },
+              },
+            }),
+            this.prisma.booking.count({
+              where: {
+                workerProfileId: w.id,
+                status: {
+                  in: [
+                    BookingStatus.ACCEPTED,
+                    BookingStatus.EN_ROUTE,
+                    BookingStatus.IN_PROGRESS,
+                    BookingStatus.COMPLETED,
+                    BookingStatus.CANCELLED,
+                  ],
+                },
+              },
+            }),
+          ]);
+
+        const cancellationRate =
+          totalAccepted > 0
+            ? Math.round((workerCancelled / totalAccepted) * 100)
+            : 0;
+
+        return { ...w, reviewsCount, cancellationRate };
+      }),
+    );
   }
 
   // ── PostGIS implementation ─────────────────────────────────────────────────
@@ -652,6 +726,7 @@ export class BookingsRepository {
   async assignWorkerToBooking(
     bookingId: string,
     workerProfileId: string,
+    finalPrice?: number,
   ): Promise<BookingWithRelations> {
     await this.prisma.$transaction(async (tx) => {
       await tx.booking.update({
@@ -660,6 +735,7 @@ export class BookingsRepository {
           workerProfileId,
           status: BookingStatus.ACCEPTED,
           acceptedAt: new Date(),
+          finalPrice: finalPrice ?? undefined,
         },
       });
 

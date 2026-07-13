@@ -6,12 +6,18 @@ import {
   IsNumber,
   IsISO8601,
   IsBoolean,
+  IsUUID,
   MaxLength,
   Min,
   Max,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
-import { BookingUrgency, TimeSlot, UrgentWindow } from '@prisma/client';
+import {
+  BookingLane,
+  BookingUrgency,
+  TimeSlot,
+  UrgentWindow,
+} from '@prisma/client';
 
 export class CreateBookingDto {
   @IsString()
@@ -85,4 +91,22 @@ export class CreateBookingDto {
   )
   @IsEnum(UrgentWindow)
   urgentWindow?: UrgentWindow;
+
+  // Booking lane: STANDARD (fixed-price catalog), INSPECTION (fixed fee), or
+  // BIDDING (open bidding — the existing known-problem flow). Optional for
+  // backward compatibility with older app builds that don't send it; the
+  // service layer defaults missing/omitted lane to BIDDING.
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.toUpperCase() : value,
+  )
+  @IsEnum(BookingLane)
+  lane?: BookingLane;
+
+  // Required only when lane === STANDARD; the service layer validates that
+  // relationship rather than class-validator, since the field is optional.
+  @IsOptional()
+  @IsString()
+  @IsUUID()
+  standardServiceId?: string;
 }

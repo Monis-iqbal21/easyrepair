@@ -9,6 +9,7 @@ import {
 import {
   AttachmentType,
   AvailabilityStatus,
+  BookingLane,
   BookingStatus,
   BookingUrgency,
   TimeSlot,
@@ -101,6 +102,53 @@ export class BookingsService {
     const urgentWindow: UrgentWindow | undefined =
       dto.urgency === BookingUrgency.URGENT ? dto.urgentWindow : undefined;
 
+    // Lane defaults to BIDDING when omitted — older app builds that don't
+    // send `lane` at all keep exercising the existing bidding flow unchanged.
+    const lane: BookingLane = dto.lane ?? BookingLane.BIDDING;
+
+    let standardServiceId: string | undefined;
+    let standardServiceNameSnapshot: string | undefined;
+    let standardServicePriceSnapshot: number | undefined;
+    let inspectionFeeSnapshot: number | undefined;
+    let estimatedPrice: number | undefined;
+
+    if (lane === BookingLane.STANDARD) {
+      if (!dto.standardServiceId) {
+        throw new BadRequestException(
+          'standardServiceId is required for a STANDARD lane booking.',
+        );
+      }
+      const standardService = await this.bookingsRepository.findStandardServiceById(
+        dto.standardServiceId,
+      );
+      if (
+        !standardService ||
+        !standardService.isActive ||
+        standardService.categoryId !== category.id
+      ) {
+        throw new NotFoundException(
+          'Selected standard service is not available for this category.',
+        );
+      }
+      standardServiceId = standardService.id;
+      standardServiceNameSnapshot = standardService.name;
+      standardServicePriceSnapshot = standardService.price;
+      estimatedPrice = standardService.price;
+    } else if (lane === BookingLane.INSPECTION) {
+      if (category.inspectionFee === null || category.inspectionFee === undefined) {
+        throw new BadRequestException(
+          `Inspection is not available for "${category.name}".`,
+        );
+      }
+      inspectionFeeSnapshot = category.inspectionFee;
+      estimatedPrice = category.inspectionFee;
+    }
+
+    // Keep the legacy `inspection` flag in sync for older app builds/backend
+    // consumers that only ever read the boolean, without letting it override
+    // an explicit lane sent by newer builds.
+    const inspection = dto.inspection ?? lane === BookingLane.INSPECTION;
+
     const booking = await this.bookingsRepository.createBooking({
       clientProfileId: profile.id,
       categoryId: category.id,
@@ -113,11 +161,17 @@ export class BookingsService {
       latitude: dto.latitude,
       longitude: dto.longitude,
       scheduledAt,
-      inspection: dto.inspection ?? false,
+      inspection,
       urgentWindow,
+      lane,
+      standardServiceId,
+      standardServiceNameSnapshot,
+      standardServicePriceSnapshot,
+      inspectionFeeSnapshot,
+      estimatedPrice,
     });
 
-    this.logger.log(`[createBooking] created bookingId=${booking.id}`);
+    this.logger.log(`[createBooking] created bookingId=${booking.id} lane=${lane}`);
     return this._toDto(booking);
   }
 
@@ -485,6 +539,14 @@ export class BookingsService {
         'This booking already has an assigned worker.',
       );
     }
+    if (
+      booking.lane !== BookingLane.STANDARD &&
+      booking.lane !== BookingLane.INSPECTION
+    ) {
+      throw new BadRequestException(
+        'Nearby-worker selection is only available for STANDARD or INSPECTION bookings.',
+      );
+    }
 
     const { workers, searchedRadiusKm, searchCompleted } =
       await this.bookingsRepository.findNearbyWorkers({
@@ -501,6 +563,8 @@ export class BookingsService {
       avatarUrl: w.avatarUrl,
       rating: w.rating,
       completedJobs: w.completedJobs,
+      reviewsCount: w.reviewsCount,
+      cancellationRate: w.cancellationRate,
       distanceKm: Math.round(w.distanceMeters / 100) / 10,
       skills: w.skills,
     }));
@@ -542,6 +606,14 @@ export class BookingsService {
         'This booking already has an assigned worker.',
       );
     }
+    if (
+      booking.lane !== BookingLane.STANDARD &&
+      booking.lane !== BookingLane.INSPECTION
+    ) {
+      throw new BadRequestException(
+        'Direct worker assignment is only available for STANDARD or INSPECTION bookings. Use the bidding flow instead.',
+      );
+    }
 
     const worker =
       await this.bookingsRepository.findWorkerProfileById(workerProfileId);
@@ -552,9 +624,15 @@ export class BookingsService {
       );
     }
 
+    const finalPrice =
+      booking.lane === BookingLane.STANDARD
+        ? booking.standardServicePriceSnapshot ?? undefined
+        : booking.inspectionFeeSnapshot ?? undefined;
+
     const updated = await this.bookingsRepository.assignWorkerToBooking(
       bookingId,
       workerProfileId,
+      finalPrice,
     );
 
     // Notify the assigned worker
@@ -658,6 +736,12 @@ export class BookingsService {
       scheduledDate: booking.scheduledAt?.toISOString() ?? null,
       createdAt: booking.createdAt.toISOString(),
       inspection: booking.inspection,
+      lane: booking.lane,
+      standardServiceId: booking.standardServiceId ?? null,
+      standardServiceNameSnapshot: booking.standardServiceNameSnapshot ?? null,
+      standardServicePriceSnapshot:
+        booking.standardServicePriceSnapshot ?? null,
+      inspectionFeeSnapshot: booking.inspectionFeeSnapshot ?? null,
       estimatedPrice: booking.estimatedPrice ?? null,
       finalPrice: booking.finalPrice ?? null,
       address: booking.addressLine,

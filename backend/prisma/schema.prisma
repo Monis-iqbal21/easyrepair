@@ -1,11 +1,10 @@
 generator client {
-  provider        = "prisma-client-js"
+  provider = "prisma-client-js"
 }
 
 datasource db {
-  provider   = "postgresql"
-  url        = env("DATABASE_URL")
- 
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 enum Role {
@@ -88,6 +87,12 @@ enum AvailabilityStatus {
   BUSY
 }
 
+enum BookingLane {
+  STANDARD
+  INSPECTION
+  BIDDING
+}
+
 model User {
   id           String    @id @default(uuid())
   phone        String    @unique
@@ -100,10 +105,10 @@ model User {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  clientProfile ClientProfile?
-  workerProfile WorkerProfile?
-  refreshTokens RefreshToken[]
-  notifications Notification[]
+  clientProfile     ClientProfile?
+  workerProfile     WorkerProfile?
+  refreshTokens     RefreshToken[]
+  notifications     Notification[]
   passwordResetOtps PasswordResetOtp[]
 
   conversationsAsClient Conversation[] @relation("ClientConversations")
@@ -114,16 +119,16 @@ model User {
 }
 
 model PasswordResetOtp {
-  id          String    @id @default(cuid())
-  userId      String
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  phone       String
-  otpHash     String
-  expiresAt   DateTime
-  consumedAt  DateTime?
-  attempts    Int       @default(0)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  phone      String
+  otpHash    String
+  expiresAt  DateTime
+  consumedAt DateTime?
+  attempts   Int       @default(0)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
   @@index([phone])
   @@index([userId])
@@ -145,15 +150,15 @@ model RefreshToken {
 }
 
 model ClientProfile {
-  id              String   @id @default(uuid())
-  userId          String   @unique
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  firstName       String
-  lastName        String
-  avatarUrl       String?
+  id               String   @id @default(uuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  firstName        String
+  lastName         String
+  avatarUrl        String?
   avatarStorageKey String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   bookings  Booking[]
   addresses ClientAddress[]
@@ -241,18 +246,41 @@ model WorkerDocument {
 }
 
 model ServiceCategory {
-  id          String   @id @default(uuid())
-  name        String   @unique
-  description String?
-  iconUrl     String?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String   @id @default(uuid())
+  name          String   @unique
+  description   String?
+  iconUrl       String?
+  isActive      Boolean  @default(true)
+  /// Fixed fee charged for an inspection-lane booking in this category.
+  /// Null means inspection is not offered for this category.
+  inspectionFee Float?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  bookings     Booking[]
-  workerSkills WorkerSkill[]
+  bookings         Booking[]
+  workerSkills     WorkerSkill[]
+  standardServices StandardService[]
 
   @@map("service_categories")
+}
+
+model StandardService {
+  id          String          @id @default(uuid())
+  categoryId  String
+  category    ServiceCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  price       Float
+  iconUrl     String?
+  isActive    Boolean         @default(true)
+  sortOrder   Int             @default(0)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  bookings Booking[]
+
+  @@index([categoryId])
+  @@map("standard_services")
 }
 
 model Booking {
@@ -265,6 +293,10 @@ model Booking {
   category        ServiceCategory @relation(fields: [categoryId], references: [id])
 
   status             BookingStatus  @default(PENDING)
+  /// Booking lane: STANDARD (fixed-price catalog), INSPECTION (fixed inspection
+  /// fee), or BIDDING (open worker bidding). Existing rows default to BIDDING,
+  /// preserving current behavior.
+  lane               BookingLane    @default(BIDDING)
   urgency            BookingUrgency @default(NORMAL)
   timeSlot           TimeSlot?
   urgentWindow       UrgentWindow?
@@ -281,6 +313,17 @@ model Booking {
   completedAt        DateTime?
   cancelledAt        DateTime?
   cancellationReason String?
+
+  /// STANDARD lane: the catalog item picked at booking time (nullable — the
+  /// item may later be deleted; the price/name snapshots below remain intact).
+  standardServiceId            String?
+  standardService              StandardService? @relation(fields: [standardServiceId], references: [id], onDelete: SetNull)
+  /// STANDARD lane snapshot — captured at create time so later admin price
+  /// edits never retroactively change an existing booking.
+  standardServiceNameSnapshot  String?
+  standardServicePriceSnapshot Float?
+  /// INSPECTION lane snapshot — the category's inspectionFee at create time.
+  inspectionFeeSnapshot        Float?
 
   estimatedPrice Float?
   finalPrice     Float?
@@ -302,6 +345,8 @@ model Booking {
   @@index([status])
   @@index([urgency])
   @@index([scheduledAt])
+  @@index([lane])
+  @@index([standardServiceId])
   @@map("bookings")
 }
 

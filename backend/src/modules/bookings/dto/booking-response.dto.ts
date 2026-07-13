@@ -1,6 +1,7 @@
 import {
   BookingStatus,
   BookingUrgency,
+  BookingLane,
   TimeSlot,
   UrgentWindow,
   AttachmentType,
@@ -13,6 +14,8 @@ export class NearbyWorkerDto {
   avatarUrl: string | null;
   rating: number;
   completedJobs: number;
+  reviewsCount: number;
+  cancellationRate: number;
   distanceKm: number;
   skills: string[];
 }
@@ -70,6 +73,11 @@ export class BookingResponseDto {
   scheduledDate: string | null;
   createdAt: string;
   inspection: boolean;
+  lane: BookingLane;
+  standardServiceId: string | null;
+  standardServiceNameSnapshot: string | null;
+  standardServicePriceSnapshot: number | null;
+  inspectionFeeSnapshot: number | null;
   estimatedPrice: number | null;
   finalPrice: number | null;
   address: string;
