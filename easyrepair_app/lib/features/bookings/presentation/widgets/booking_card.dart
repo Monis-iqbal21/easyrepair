@@ -117,6 +117,8 @@ class BookingCard extends StatelessWidget {
                                     color: Color(0xFF94A3B8),
                                     fontWeight: FontWeight.w500,
                                   ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                                 const SizedBox(width: 6),
                                 Container(
@@ -128,31 +130,38 @@ class BookingCard extends StatelessWidget {
                                   ),
                                 ),
                                 const SizedBox(width: 6),
-                                Text(
-                                  _formatDate(booking.createdAt),
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    color: Color(0xFF94A3B8),
+                                Flexible(
+                                  child: Text(
+                                    _formatDate(booking.createdAt),
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: Color(0xFF94A3B8),
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                               ],
                             ),
+                            const SizedBox(height: 8),
+                            // Badges row — wraps on narrow screens instead
+                            // of overflowing.
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 6,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                StatusBadge(status: booking.status),
+                                UrgencyBadge(
+                                  urgency: booking.urgency,
+                                  small: true,
+                                ),
+                                if (booking.inspection)
+                                  const InspectionBadge(small: true),
+                              ],
+                            ),
                           ],
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      // Badges column
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          StatusBadge(status: booking.status),
-                          const SizedBox(height: 4),
-                          UrgencyBadge(urgency: booking.urgency, small: true),
-                          if (booking.inspection) ...[
-                            const SizedBox(height: 4),
-                            const InspectionBadge(small: true),
-                          ],
-                        ],
                       ),
                     ],
                   ),

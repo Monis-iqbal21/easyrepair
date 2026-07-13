@@ -15,6 +15,8 @@ class CreateBookingRequest {
   final double? latitude;
   final double? longitude;
   final bool inspection;
+  final BookingLane lane;
+  final String? standardServiceId;
 
   const CreateBookingRequest({
     required this.serviceCategory,
@@ -29,5 +31,7 @@ class CreateBookingRequest {
     this.latitude,
     this.longitude,
     this.inspection = false,
+    this.lane = BookingLane.bidding,
+    this.standardServiceId,
   });
 }

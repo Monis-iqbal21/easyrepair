@@ -174,6 +174,11 @@ class BookingModel {
   final List<_StatusHistoryModel> statusHistory;
   final String? clientName;
   final bool inspection;
+  final String lane;
+  final String? standardServiceId;
+  final String? standardServiceNameSnapshot;
+  final double? standardServicePriceSnapshot;
+  final double? inspectionFeeSnapshot;
 
   const BookingModel({
     required this.id,
@@ -204,6 +209,11 @@ class BookingModel {
     this.statusHistory = const [],
     this.clientName,
     this.inspection = false,
+    this.lane = 'BIDDING',
+    this.standardServiceId,
+    this.standardServiceNameSnapshot,
+    this.standardServicePriceSnapshot,
+    this.inspectionFeeSnapshot,
   });
 
   factory BookingModel.fromJson(Map<String, dynamic> json) {
@@ -254,6 +264,14 @@ class BookingModel {
           .toList(),
       clientName: json['clientName'] as String?,
       inspection: json['inspection'] as bool? ?? false,
+      lane: json['lane'] as String? ?? 'BIDDING',
+      standardServiceId: json['standardServiceId'] as String?,
+      standardServiceNameSnapshot:
+          json['standardServiceNameSnapshot'] as String?,
+      standardServicePriceSnapshot:
+          (json['standardServicePriceSnapshot'] as num?)?.toDouble(),
+      inspectionFeeSnapshot:
+          (json['inspectionFeeSnapshot'] as num?)?.toDouble(),
     );
   }
 
@@ -308,6 +326,11 @@ class BookingModel {
       statusHistory: statusHistory.map((h) => h.toEntity()).toList(),
       clientName: clientName,
       inspection: inspection,
+      lane: BookingLaneX.fromRaw(lane),
+      standardServiceId: standardServiceId,
+      standardServiceNameSnapshot: standardServiceNameSnapshot,
+      standardServicePriceSnapshot: standardServicePriceSnapshot,
+      inspectionFeeSnapshot: inspectionFeeSnapshot,
     );
   }
 }

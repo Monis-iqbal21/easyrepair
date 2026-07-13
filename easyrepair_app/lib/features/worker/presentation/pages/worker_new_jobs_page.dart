@@ -291,6 +291,8 @@ class _NewJobCard extends ConsumerWidget {
                                 color: _kGray,
                                 fontWeight: FontWeight.w500,
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),

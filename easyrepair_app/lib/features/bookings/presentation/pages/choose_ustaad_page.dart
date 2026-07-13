@@ -1,0 +1,560 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../domain/entities/booking_entity.dart';
+import '../../domain/entities/nearby_worker_entity.dart';
+import '../providers/booking_providers.dart';
+import 'track_worker_page.dart';
+
+// ── Palette (matches post_job_page.dart / Handygo design system) ─────────────
+const _kGreen = Color(0xFFDB6234);
+const _kRed = Color(0xFFDC2626);
+const _kDark = Color(0xFF1A1A1A);
+const _kGray = Color(0xFF6B7280);
+const _kBorder = Color(0xFFE2E8F0);
+const _kSurface = Color(0xFFF9FAFB);
+
+/// Worker-selection page for STANDARD and INSPECTION lane bookings (fixed
+/// price/fee — no bidding). Shown right after a booking is confirmed for
+/// those two lanes; the known-problem/BIDDING lane keeps using
+/// WorkerDiscoveryMapPage instead.
+class ChooseUstaadPage extends ConsumerStatefulWidget {
+  final BookingEntity booking;
+
+  const ChooseUstaadPage({super.key, required this.booking});
+
+  @override
+  ConsumerState<ChooseUstaadPage> createState() => _ChooseUstaadPageState();
+}
+
+class _ChooseUstaadPageState extends ConsumerState<ChooseUstaadPage> {
+  bool _assigning = false;
+
+  Future<void> _selectWorker(NearbyWorkerEntity worker) async {
+    if (_assigning) return;
+    setState(() => _assigning = true);
+    try {
+      await ref
+          .read(assignWorkerNotifierProvider.notifier)
+          .assign(widget.booking.id, worker.id);
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => TrackWorkerPage(bookingId: widget.booking.id),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _assigning = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            'Unable to assign this Ustaad. Please try again.',
+          ),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: _kRed,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
+    }
+  }
+
+  void _openProfileModal(NearbyWorkerEntity worker) {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) {
+        final size = MediaQuery.of(ctx).size;
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: EdgeInsets.zero,
+          child: Center(
+            child: Container(
+              width: size.width * 0.9,
+              height: size.height * 0.8,
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: _WorkerProfileModalContent(
+                worker: worker,
+                onClose: () => Navigator.of(ctx).pop(),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final booking = widget.booking;
+    final nearbyState = ref.watch(nearbyWorkersNotifierProvider(booking.id));
+
+    final String? priceLabel = booking.lane == BookingLane.standard
+        ? (booking.standardServicePriceSnapshot != null
+              ? 'Fixed price Rs ${booking.standardServicePriceSnapshot!.toStringAsFixed(0)}'
+              : null)
+        : (booking.inspectionFeeSnapshot != null
+              ? 'Inspection fee Rs ${booking.inspectionFeeSnapshot!.toStringAsFixed(0)}'
+              : null);
+
+    return Scaffold(
+      backgroundColor: _kSurface,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        foregroundColor: _kDark,
+        title: const Text(
+          'Choose Ustaad',
+          style: TextStyle(fontWeight: FontWeight.w700, color: _kDark),
+        ),
+      ),
+      body: Column(
+        children: [
+          Container(
+            width: double.infinity,
+            color: Colors.white,
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  booking.serviceCategory,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: _kDark,
+                  ),
+                ),
+                if (priceLabel != null) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _kGreen.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      priceLabel,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: _kGreen,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          Expanded(child: _buildBody(nearbyState)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBody(NearbyWorkersState state) {
+    if (state.hasError && state.workers.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text(
+            'Unable to load available Ustaads. Please try again.',
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 14, color: _kGray),
+          ),
+        ),
+      );
+    }
+
+    if (state.workers.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (state.isExpanding) ...[
+                const SizedBox(
+                  width: 28,
+                  height: 28,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Searching for available Ustaads near you…',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 14, color: _kGray),
+                ),
+              ] else
+                const Text(
+                  'No Ustaads are available right now. Please try again shortly.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 14, color: _kGray),
+                ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return ListView.separated(
+      padding: const EdgeInsets.all(20),
+      itemCount: state.workers.length + (state.isExpanding ? 1 : 0),
+      separatorBuilder: (_, _) => const SizedBox(height: 12),
+      itemBuilder: (context, index) {
+        if (index >= state.workers.length) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 12),
+            child: Center(
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+          );
+        }
+        final worker = state.workers[index];
+        return _WorkerCard(
+          worker: worker,
+          busy: _assigning,
+          onAvatarTap: () => _openProfileModal(worker),
+          onSelect: () => _selectWorker(worker),
+        );
+      },
+    );
+  }
+}
+
+class _WorkerCard extends StatelessWidget {
+  final NearbyWorkerEntity worker;
+  final bool busy;
+  final VoidCallback onAvatarTap;
+  final VoidCallback onSelect;
+
+  const _WorkerCard({
+    required this.worker,
+    required this.busy,
+    required this.onAvatarTap,
+    required this.onSelect,
+  });
+
+  Widget _statChip(IconData icon, String label) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 13, color: _kGray),
+        const SizedBox(width: 3),
+        Text(label, style: const TextStyle(fontSize: 11.5, color: _kGray)),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: _kBorder),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              GestureDetector(
+                onTap: onAvatarTap,
+                child: _WorkerAvatar(worker: worker, radius: 28),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            worker.fullName,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: _kDark,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        _LevelBadge(label: worker.levelBadge),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 4,
+                      children: [
+                        _statChip(
+                          Icons.star_rounded,
+                          worker.rating > 0
+                              ? worker.rating.toStringAsFixed(1)
+                              : 'New',
+                        ),
+                        _statChip(
+                          Icons.task_alt_rounded,
+                          '${worker.completedJobs} jobs',
+                        ),
+                        _statChip(
+                          Icons.reviews_rounded,
+                          '${worker.reviewsCount} reviews',
+                        ),
+                        _statChip(
+                          Icons.cancel_outlined,
+                          '${worker.cancellationRate}% cancel',
+                        ),
+                        _statChip(
+                          Icons.location_on_rounded,
+                          worker.distanceLabel,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: busy ? null : onSelect,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _kGreen,
+                disabledBackgroundColor: _kGreen.withValues(alpha: 0.5),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 0,
+              ),
+              child: busy
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text(
+                      'Select',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LevelBadge extends StatelessWidget {
+  final String label;
+
+  const _LevelBadge({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: _kGreen.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 10.5,
+          fontWeight: FontWeight.w700,
+          color: _kGreen,
+        ),
+      ),
+    );
+  }
+}
+
+class _WorkerAvatar extends StatelessWidget {
+  final NearbyWorkerEntity worker;
+  final double radius;
+
+  const _WorkerAvatar({required this.worker, required this.radius});
+
+  @override
+  Widget build(BuildContext context) {
+    final avatarUrl = worker.avatarUrl;
+    final hasImage = avatarUrl != null && avatarUrl.isNotEmpty;
+    return Container(
+      width: radius * 2,
+      height: radius * 2,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: _kGreen.withValues(alpha: 0.12),
+        image: hasImage
+            ? DecorationImage(image: NetworkImage(avatarUrl), fit: BoxFit.cover)
+            : null,
+      ),
+      alignment: Alignment.center,
+      child: hasImage
+          ? null
+          : Text(
+              worker.initials,
+              style: TextStyle(
+                fontSize: radius * 0.55,
+                fontWeight: FontWeight.w700,
+                color: _kGreen,
+              ),
+            ),
+    );
+  }
+}
+
+class _WorkerProfileModalContent extends StatelessWidget {
+  final NearbyWorkerEntity worker;
+  final VoidCallback onClose;
+
+  const _WorkerProfileModalContent({
+    required this.worker,
+    required this.onClose,
+  });
+
+  Widget _statBlock(String value, String label) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            color: _kDark,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(label, style: const TextStyle(fontSize: 11, color: _kGray)),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            IconButton(
+              onPressed: onClose,
+              icon: const Icon(Icons.close_rounded, color: _kGray),
+            ),
+          ],
+        ),
+        Expanded(
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                _WorkerAvatar(worker: worker, radius: 48),
+                const SizedBox(height: 14),
+                Text(
+                  worker.fullName,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: _kDark,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 6),
+                _LevelBadge(label: worker.levelBadge),
+                const SizedBox(height: 18),
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 20,
+                  runSpacing: 12,
+                  children: [
+                    _statBlock(
+                      worker.rating > 0 ? worker.rating.toStringAsFixed(1) : '—',
+                      'Rating',
+                    ),
+                    _statBlock('${worker.completedJobs}', 'Jobs done'),
+                    _statBlock('${worker.reviewsCount}', 'Reviews'),
+                    _statBlock('${worker.cancellationRate}%', 'Cancel rate'),
+                  ],
+                ),
+                if (worker.skills.isNotEmpty) ...[
+                  const SizedBox(height: 20),
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Skills',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: _kDark,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: worker.skills
+                        .map(
+                          (s) => Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: _kSurface,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: _kBorder),
+                            ),
+                            child: Text(
+                              s,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: _kDark,
+                              ),
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ],
+                const SizedBox(height: 8),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}

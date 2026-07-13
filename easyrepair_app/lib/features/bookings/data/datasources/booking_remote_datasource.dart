@@ -57,6 +57,9 @@ class BookingRemoteDataSourceImpl implements BookingRemoteDataSource {
         if (request.description != null && request.description!.isNotEmpty)
           'description': request.description,
         'inspection': request.inspection,
+        'lane': request.lane.raw,
+        if (request.standardServiceId != null)
+          'standardServiceId': request.standardServiceId,
       };
 
       final response = await _dio.post('/bookings', data: body);

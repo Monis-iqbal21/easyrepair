@@ -19,8 +19,12 @@ import '../../../../core/presentation/responsive_utils.dart';
 import '../../../../features/bookings/domain/entities/booking_entity.dart';
 import '../../../../features/bookings/domain/entities/create_booking_request.dart';
 import '../../../../features/bookings/domain/entities/update_booking_request.dart';
+import '../../../../features/bookings/presentation/pages/choose_ustaad_page.dart';
+import '../../../../features/bookings/presentation/pages/worker_discovery_map_page.dart';
 import '../../../../features/bookings/presentation/providers/booking_providers.dart';
 import '../../../../features/bookings/presentation/widgets/media_attachment_widgets.dart';
+import '../../../../features/categories/domain/entities/service_category_entity.dart';
+import '../../../../features/categories/domain/entities/standard_service_entity.dart';
 import '../../../../features/categories/presentation/providers/categories_providers.dart';
 import '../../../../core/services/geocoding_service.dart';
 import '../widgets/location_picker_sheet.dart';
@@ -34,8 +38,6 @@ const _kGray = Color(0xFF6B7280);
 const _kBorder = Color(0xFFE2E8F0);
 const _kSurface = Color(0xFFF9FAFB);
 const _kMaxVideoSecs = 30;
-
-enum _DetailMode { knowsProblem, inspectFirst }
 
 class BookServicePage extends ConsumerStatefulWidget {
   final String? preselectedService;
@@ -75,9 +77,12 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
 
   bool _isSubmitting = false;
   int _currentStep = 0;
-  String? _createdBookingId;
+  BookingEntity? _createdBooking;
 
-  _DetailMode? _detailMode;
+  BookingLane? _laneChoice;
+  String? _selectedStandardServiceId;
+  String? _selectedStandardServiceName;
+  double? _selectedStandardServicePrice;
 
   // ── New file attachments (locally picked, not yet uploaded) ─────────────────
   final _picker = ImagePicker();
@@ -98,10 +103,10 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
   BookingAttachmentEntity? _existingVoiceNote;
 
   // ── Recording pulse animation ─────────────────────────────────────────────
-  late final AnimationController _pulseCtrl = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 700),
-  );
+  // Initialized eagerly in initState (not via a lazy `late` initializer) so
+  // dispose() always operates on an already-created controller rather than
+  // constructing one for the first time on a deactivated state.
+  late final AnimationController _pulseCtrl;
 
   bool _preselectionApplied = false;
   ProviderSubscription<AsyncValue<dynamic>>? _categoriesSubscription;
@@ -114,6 +119,10 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
   @override
   void initState() {
     super.initState();
+    _pulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    );
     _selectedService = widget.preselectedService;
 
     if (_isEditMode) {
@@ -198,9 +207,12 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
 
       // Prefer the real `inspection` flag; fall back to detecting the legacy
       // text-prefix encoding for bookings created before that field existed.
-      _detailMode = (booking.inspection || booking.hasLegacyInspectionPrefix)
-          ? _DetailMode.inspectFirst
-          : _DetailMode.knowsProblem;
+      // Edit mode never offers the Standard lane (old bookings/the update
+      // endpoint don't support it), so this only ever resolves to inspection
+      // or bidding.
+      _laneChoice = (booking.inspection || booking.hasLegacyInspectionPrefix)
+          ? BookingLane.inspection
+          : BookingLane.bidding;
       _titleCtrl.text = booking.title ?? '';
       _descriptionCtrl.text = booking.cleanDescription ?? '';
 
@@ -689,16 +701,22 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
   // — the inspection choice is carried separately via the `inspection`
   // boolean field, not encoded into this text.
   String? _buildEffectiveDescription() {
-    if (_detailMode == _DetailMode.inspectFirst) {
+    if (_laneChoice == BookingLane.inspection) {
       final sees = _descriptionCtrl.text.trim();
       return sees.isEmpty ? null : sees;
+    }
+    if (_laneChoice == BookingLane.standard) {
+      return null;
     }
     return _titleCtrl.text.trim().isEmpty ? null : _titleCtrl.text.trim();
   }
 
   String? _buildEffectiveTitle() {
-    if (_detailMode == _DetailMode.inspectFirst) {
+    if (_laneChoice == BookingLane.inspection) {
       return _selectedService;
+    }
+    if (_laneChoice == BookingLane.standard) {
+      return _selectedStandardServiceName ?? _selectedService;
     }
     return _titleCtrl.text.trim().isEmpty
         ? _selectedService
@@ -724,14 +742,20 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
       return;
     }
 
-    if (_detailMode == null) {
+    if (_laneChoice == null) {
       _showError('Select an option to continue.');
       return;
     }
 
-    if (_detailMode == _DetailMode.knowsProblem &&
+    if (_laneChoice == BookingLane.bidding &&
         _titleCtrl.text.trim().length <= 3) {
       _showError('Please describe what needs fixing.');
+      return;
+    }
+
+    if (_laneChoice == BookingLane.standard &&
+        _selectedStandardServiceId == null) {
+      _showError('Please select a standard service.');
       return;
     }
 
@@ -791,10 +815,11 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     try {
       if (_isEditMode) {
         await _submitEdit(address);
+        if (mounted) await _showSuccessDialog();
       } else {
         await _submitCreate(address);
+        if (mounted) _goToNextPage();
       }
-      if (mounted) await _showSuccessDialog();
     } catch (e) {
       if (mounted) _showError(_friendlyError(e));
     } finally {
@@ -817,13 +842,17 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
       addressLine: address,
       latitude: _gpsLat,
       longitude: _gpsLng,
-      inspection: _detailMode == _DetailMode.inspectFirst,
+      inspection: _laneChoice == BookingLane.inspection,
+      lane: _laneChoice ?? BookingLane.bidding,
+      standardServiceId: _laneChoice == BookingLane.standard
+          ? _selectedStandardServiceId
+          : null,
     );
 
     final booking = await ref
         .read(createBookingNotifierProvider.notifier)
         .submit(request);
-    _createdBookingId = booking.id;
+    _createdBooking = booking;
     await _uploadNewAttachments(booking.id);
     await _uploadVoiceNote(booking.id);
   }
@@ -843,7 +872,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
       addressLine: address,
       latitude: _gpsLat,
       longitude: _gpsLng,
-      inspection: _detailMode == _DetailMode.inspectFirst,
+      inspection: _laneChoice == BookingLane.inspection,
     );
 
     await ref
@@ -912,6 +941,29 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     return 'Unable to save booking. Please try again.';
   }
 
+  // After a successful new booking, skip the success dialog and go straight
+  // to the next lane-specific page: STANDARD/INSPECTION bookings open the
+  // fixed-price Choose Ustaad page, while BIDDING keeps the existing
+  // Find Workers / live offers page — same navigation pattern used by the
+  // "Find Workers" button on the booking card.
+  void _goToNextPage() {
+    final booking = _createdBooking;
+    if (booking == null) {
+      context.go('/client/jobs');
+      return;
+    }
+    if (booking.lane == BookingLane.standard ||
+        booking.lane == BookingLane.inspection) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => ChooseUstaadPage(booking: booking)),
+      );
+    } else {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => WorkerDiscoveryMapPage(booking: booking)),
+      );
+    }
+  }
+
   Future<void> _showSuccessDialog() async {
     await showDialog<void>(
       context: context,
@@ -937,23 +989,19 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                 ),
               ),
               const SizedBox(height: 20),
-              Text(
-                _isEditMode ? 'Booking Updated!' : 'Booking Submitted!',
-                style: const TextStyle(
+              const Text(
+                'Booking Updated!',
+                style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
                   color: _kDark,
                 ),
               ),
               const SizedBox(height: 8),
-              Text(
-                _isEditMode
-                    ? 'Your booking details have been updated successfully.'
-                    : _isUrgent
-                    ? 'Your job is live! Nearby Ustaads will be notified immediately.'
-                    : 'Your job has been scheduled. Ustaads will be notified 1 hour before the arrival time.',
+              const Text(
+                'Your booking details have been updated successfully.',
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
                   color: _kGray,
                   height: 1.5,
@@ -965,13 +1013,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                 child: ElevatedButton(
                   onPressed: () {
                     Navigator.pop(ctx);
-                    if (_isEditMode) {
-                      context.pop();
-                    } else if (_createdBookingId != null) {
-                      context.go('/client/booking/$_createdBookingId');
-                    } else {
-                      context.go('/client/jobs');
-                    }
+                    context.pop();
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _kGreen,
@@ -982,9 +1024,9 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                     ),
                     elevation: 0,
                   ),
-                  child: Text(
-                    _isEditMode ? 'View Booking' : 'View My Bookings',
-                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  child: const Text(
+                    'View Booking',
+                    style: TextStyle(fontWeight: FontWeight.w600),
                   ),
                 ),
               ),
@@ -2216,13 +2258,18 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
 
   // Step 2 · Details
   bool _validateStep2() {
-    if (_detailMode == null) {
+    if (_laneChoice == null) {
       _showError('Select an option to continue.');
       return false;
     }
-    if (_detailMode == _DetailMode.knowsProblem &&
+    if (_laneChoice == BookingLane.bidding &&
         _titleCtrl.text.trim().length <= 3) {
       _showError('Please describe what needs fixing.');
+      return false;
+    }
+    if (_laneChoice == BookingLane.standard &&
+        _selectedStandardServiceId == null) {
+      _showError('Please select a standard service.');
       return false;
     }
     return true;
@@ -2302,7 +2349,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     );
   }
 
-  // ── Step 2: Detail mode + mode-specific content ────────────────────────────
+  // ── Step 2: Booking lane + lane-specific content ───────────────────────────
   Widget _buildStep2() {
     return SingleChildScrollView(
       key: const ValueKey(1),
@@ -2311,21 +2358,15 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildDetailModeSelector(),
-          if (_detailMode == _DetailMode.knowsProblem) ...[
+          _buildLaneSelector(),
+          if (_laneChoice == BookingLane.standard) ...[
             const SizedBox(height: 16),
-            _buildTitleSection(),
-            const SizedBox(height: 16),
-            _buildMediaSection(),
-            const SizedBox(height: 12),
-            _infoNote(
-              'Ustaads will bid the full repair price. The bid you accept is '
-              'final — no changes at the door.',
-              color: _kGreen,
-            ),
-          ] else if (_detailMode == _DetailMode.inspectFirst) ...[
+            _buildStandardServicesSection(),
+          ] else if (_laneChoice == BookingLane.inspection) ...[
             const SizedBox(height: 16),
             _buildInspectionInfoCard(),
+            const SizedBox(height: 16),
+            _buildInspectionFeeStrip(),
             const SizedBox(height: 16),
             _buildInspectionOptionalField(),
             const SizedBox(height: 16),
@@ -2334,6 +2375,17 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
             _infoNote(
               'You only pay the small fee for the visit. The repair price is '
               'quoted in the app before any work starts.',
+              color: _kGreen,
+            ),
+          ] else if (_laneChoice == BookingLane.bidding) ...[
+            const SizedBox(height: 16),
+            _buildTitleSection(),
+            const SizedBox(height: 16),
+            _buildMediaSection(),
+            const SizedBox(height: 12),
+            _infoNote(
+              'Ustaads will bid the full repair price. The bid you accept is '
+              'final — no changes at the door.',
               color: _kGreen,
             ),
           ],
@@ -2361,126 +2413,429 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     );
   }
 
-  // ── Details step: "Do you know the problem?" mode selector ────────────────
-  Widget _buildDetailModeSelector() {
+  // ── Details step: 3-lane "What do you need?" card selector ────────────────
+  ServiceCategoryEntity? _resolveCategory(List<ServiceCategoryEntity> categories) {
+    if (_selectedService == null) return null;
+    for (final c in categories) {
+      if (c.name.toLowerCase() == _selectedService!.toLowerCase()) return c;
+    }
+    return null;
+  }
+
+  Widget _buildLaneSelector() {
+    final categoriesAsync = ref.watch(clientBookingCategoriesProvider);
+    final categoriesLoaded = categoriesAsync.maybeWhen(
+      data: (_) => true,
+      orElse: () => false,
+    );
+    final category = categoriesAsync.maybeWhen(
+      data: _resolveCategory,
+      orElse: () => null,
+    );
+    // Don't disable the card while categories are still loading — only once
+    // we know for sure the category has no inspection fee configured.
+    final inspectionAvailable = !categoriesLoaded || category?.inspectionFee != null;
+
+    final options = <Widget>[
+      if (!_isEditMode)
+        _laneOption(
+          lane: BookingLane.standard,
+          icon: Icons.build_circle_rounded,
+          title: 'Standard Services',
+          subtitle: 'Mounting / Installing / Service',
+        ),
+      _laneOption(
+        lane: BookingLane.inspection,
+        icon: Icons.search_rounded,
+        title: 'Masla maloom nhi hy',
+        subtitle: inspectionAvailable
+            ? 'Inspection karain'
+            : 'Not available for this service',
+        enabled: inspectionAvailable,
+      ),
+      _laneOption(
+        lane: BookingLane.bidding,
+        icon: Icons.forum_rounded,
+        title: 'Masla pata hy',
+        subtitle: 'Offers lain Ustaads se',
+      ),
+    ];
+
     return _sectionCard(
-      title: 'Do you know the problem?',
+      title: 'What do you need?',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Masla maloom hai?',
+            'Apni zarurat chunain',
             style: TextStyle(fontSize: 12, color: _kGray),
           ),
           const SizedBox(height: 14),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: _detailModeOption(
-                  mode: _DetailMode.knowsProblem,
-                  icon: Icons.build_rounded,
-                  title: 'Yes, I know',
-                  subtitle: 'Haan, pata hai',
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _detailModeOption(
-                  mode: _DetailMode.inspectFirst,
-                  icon: Icons.search_rounded,
-                  title: 'No — inspect first',
-                  subtitle: 'Nahi, inspection chahiye',
-                ),
-              ),
-            ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              const spacing = 10.0;
+              final rawWidth =
+                  (constraints.maxWidth - spacing * (options.length - 1)) /
+                      options.length;
+              final cardWidth = rawWidth >= 96
+                  ? rawWidth
+                  : (constraints.maxWidth < 96
+                      ? constraints.maxWidth
+                      : 96.0);
+              return Wrap(
+                spacing: spacing,
+                runSpacing: spacing,
+                children: [
+                  for (final option in options)
+                    SizedBox(width: cardWidth, child: option),
+                ],
+              );
+            },
           ),
         ],
       ),
     );
   }
 
-  Widget _detailModeOption({
-    required _DetailMode mode,
+  Widget _laneOption({
+    required BookingLane lane,
     required IconData icon,
     required String title,
     required String subtitle,
+    bool enabled = true,
   }) {
-    final selected = _detailMode == mode;
+    final selected = _laneChoice == lane;
     return GestureDetector(
-      onTap: () => setState(() => _detailMode = mode),
+      onTap: enabled
+          ? () => setState(() {
+                _laneChoice = lane;
+                if (lane != BookingLane.standard) {
+                  _selectedStandardServiceId = null;
+                  _selectedStandardServiceName = null;
+                  _selectedStandardServicePrice = null;
+                }
+              })
+          : () => _showError(subtitle),
+      child: Opacity(
+        opacity: enabled ? 1 : 0.45,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
+          decoration: BoxDecoration(
+            color: selected ? _kGreen.withValues(alpha: 0.07) : _kSurface,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: selected ? _kGreen : _kBorder,
+              width: selected ? 1.5 : 1,
+            ),
+          ),
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: selected ? _kGreen : Colors.white,
+                      shape: BoxShape.circle,
+                      border: selected ? null : Border.all(color: _kBorder),
+                    ),
+                    child: Icon(
+                      icon,
+                      size: 16,
+                      color: selected ? Colors.white : _kGray,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: selected ? _kGreen : _kDark,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(fontSize: 10.5, color: _kGray),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+              if (selected)
+                Positioned(
+                  top: -4,
+                  right: -4,
+                  child: Container(
+                    width: 20,
+                    height: 20,
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.check_circle_rounded,
+                      size: 20,
+                      color: _kGreen,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Lane A: Standard Services — dynamic fixed-price catalog ────────────────
+  Widget _buildStandardServicesSection() {
+    final categoriesAsync = ref.watch(clientBookingCategoriesProvider);
+    return categoriesAsync.when(
+      loading: () => _sectionCard(
+        title: 'Choose a standard service',
+        child: const Padding(
+          padding: EdgeInsets.symmetric(vertical: 12),
+          child: Center(
+            child: SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          ),
+        ),
+      ),
+      error: (_, _) => _sectionCard(
+        title: 'Choose a standard service',
+        child: const Text(
+          'Unable to load services. Please go back and try again.',
+          style: TextStyle(fontSize: 13, color: _kGray),
+        ),
+      ),
+      data: (categories) {
+        final category = _resolveCategory(categories);
+        if (category == null) {
+          return _sectionCard(
+            title: 'Choose a standard service',
+            child: const Text(
+              'Select a service category first.',
+              style: TextStyle(fontSize: 13, color: _kGray),
+            ),
+          );
+        }
+        final servicesAsync = ref.watch(standardServicesProvider(category.id));
+        return servicesAsync.when(
+          loading: () => _sectionCard(
+            title: 'Choose a standard service',
+            child: const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Center(
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            ),
+          ),
+          error: (_, _) => _sectionCard(
+            title: 'Choose a standard service',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Unable to load standard services.',
+                  style: TextStyle(fontSize: 13, color: _kGray),
+                ),
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: () =>
+                      ref.invalidate(standardServicesProvider(category.id)),
+                  style: TextButton.styleFrom(foregroundColor: _kGreen),
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
+          ),
+          data: (services) {
+            if (services.isEmpty) {
+              return _sectionCard(
+                title: 'Choose a standard service',
+                child: const Text(
+                  'No standard services are available for this service yet. '
+                  'Please choose another option above.',
+                  style: TextStyle(fontSize: 13, color: _kGray, height: 1.4),
+                ),
+              );
+            }
+            return _sectionCard(
+              title: 'Choose a standard service',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (var i = 0; i < services.length; i++) ...[
+                    if (i > 0) const SizedBox(height: 10),
+                    _standardServiceTile(services[i]),
+                  ],
+                  if (_selectedStandardServiceName != null &&
+                      _selectedStandardServicePrice != null) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      'Selected: $_selectedStandardServiceName — '
+                      'Rs ${_selectedStandardServicePrice!.toStringAsFixed(0)}',
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: _kDark,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 12),
+                  _infoNote(
+                    'Fixed price. Aap next step par Ustaad choose karenge.',
+                    color: _kGreen,
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _standardServiceTile(StandardServiceEntity service) {
+    final selected = _selectedStandardServiceId == service.id;
+    return GestureDetector(
+      onTap: () => setState(() {
+        _selectedStandardServiceId = service.id;
+        _selectedStandardServiceName = service.name;
+        _selectedStandardServicePrice = service.price;
+      }),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: selected ? _kGreen.withValues(alpha: 0.07) : _kSurface,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: selected ? _kGreen : _kBorder,
             width: selected ? 1.5 : 1,
           ),
         ),
-        child: Stack(
-          clipBehavior: Clip.none,
+        child: Row(
           children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 34,
-                  height: 34,
-                  decoration: BoxDecoration(
-                    color: selected ? _kGreen : Colors.white,
-                    shape: BoxShape.circle,
-                    border: selected ? null : Border.all(color: _kBorder),
-                  ),
-                  child: Icon(
-                    icon,
-                    size: 16,
-                    color: selected ? Colors.white : _kGray,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w600,
-                    color: selected ? _kGreen : _kDark,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: const TextStyle(fontSize: 11, color: _kGray),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-            if (selected)
-              Positioned(
-                top: -4,
-                right: -4,
-                child: Container(
-                  width: 20,
-                  height: 20,
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.check_circle_rounded,
-                    size: 20,
-                    color: _kGreen,
-                  ),
-                ),
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: selected ? _kGreen : Colors.white,
+                shape: BoxShape.circle,
+                border: selected ? null : Border.all(color: _kBorder),
               ),
+              child: Icon(
+                Icons.build_rounded,
+                size: 16,
+                color: selected ? Colors.white : _kGray,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                service.name,
+                style: TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w600,
+                  color: selected ? _kGreen : _kDark,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Rs ${service.price.toStringAsFixed(0)}',
+              style: TextStyle(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w700,
+                color: selected ? _kGreen : _kDark,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(
+              selected
+                  ? Icons.check_circle_rounded
+                  : Icons.radio_button_unchecked,
+              size: 20,
+              color: selected ? _kGreen : _kBorder,
+            ),
           ],
         ),
       ),
+    );
+  }
+
+  // ── Lane B: dynamic inspection fee strip ───────────────────────────────────
+  Widget _buildInspectionFeeStrip() {
+    final categoriesAsync = ref.watch(clientBookingCategoriesProvider);
+    return categoriesAsync.when(
+      loading: () => _sectionCard(
+        title: 'Inspection fee',
+        child: const Padding(
+          padding: EdgeInsets.symmetric(vertical: 4),
+          child: Center(
+            child: SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          ),
+        ),
+      ),
+      error: (_, _) => _sectionCard(
+        title: 'Inspection fee',
+        child: const Text(
+          'Unable to load the inspection fee.',
+          style: TextStyle(fontSize: 13, color: _kGray),
+        ),
+      ),
+      data: (categories) {
+        final category = _resolveCategory(categories);
+        final fee = category?.inspectionFee;
+        return _sectionCard(
+          title: 'Inspection fee',
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  _selectedService ?? 'Service',
+                  style: const TextStyle(fontSize: 13, color: _kGray),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              Text(
+                fee != null ? 'Rs ${fee.toStringAsFixed(0)}' : 'Not available',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: _kGreen,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 

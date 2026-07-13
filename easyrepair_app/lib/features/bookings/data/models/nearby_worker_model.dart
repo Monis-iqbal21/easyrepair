@@ -7,6 +7,8 @@ class NearbyWorkerModel {
   final String? avatarUrl;
   final double rating;
   final int completedJobs;
+  final int reviewsCount;
+  final int cancellationRate;
   final double distanceKm;
   final List<String> skills;
 
@@ -17,6 +19,8 @@ class NearbyWorkerModel {
     this.avatarUrl,
     required this.rating,
     required this.completedJobs,
+    this.reviewsCount = 0,
+    this.cancellationRate = 0,
     required this.distanceKm,
     required this.skills,
   });
@@ -29,6 +33,8 @@ class NearbyWorkerModel {
       avatarUrl: json['avatarUrl'] as String?,
       rating: (json['rating'] as num?)?.toDouble() ?? 0.0,
       completedJobs: (json['completedJobs'] as num?)?.toInt() ?? 0,
+      reviewsCount: (json['reviewsCount'] as num?)?.toInt() ?? 0,
+      cancellationRate: (json['cancellationRate'] as num?)?.toInt() ?? 0,
       distanceKm: (json['distanceKm'] as num?)?.toDouble() ?? 0.0,
       skills: (json['skills'] as List<dynamic>?)
               ?.map((e) => e as String)
@@ -44,6 +50,8 @@ class NearbyWorkerModel {
         avatarUrl: avatarUrl,
         rating: rating,
         completedJobs: completedJobs,
+        reviewsCount: reviewsCount,
+        cancellationRate: cancellationRate,
         distanceKm: distanceKm,
         skills: skills,
       );

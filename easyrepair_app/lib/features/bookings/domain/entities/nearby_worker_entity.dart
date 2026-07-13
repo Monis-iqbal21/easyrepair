@@ -5,6 +5,8 @@ class NearbyWorkerEntity {
   final String? avatarUrl;
   final double rating;
   final int completedJobs;
+  final int reviewsCount;
+  final int cancellationRate;
   final double distanceKm;
   final List<String> skills;
 
@@ -15,6 +17,8 @@ class NearbyWorkerEntity {
     this.avatarUrl,
     required this.rating,
     required this.completedJobs,
+    this.reviewsCount = 0,
+    this.cancellationRate = 0,
     required this.distanceKm,
     required this.skills,
   });
@@ -36,6 +40,15 @@ class NearbyWorkerEntity {
   String get distanceLabel {
     if (distanceKm < 1) return '< 1 km away';
     return '${distanceKm.toStringAsFixed(1)} km away';
+  }
+
+  /// Display badge derived from completed job count.
+  String get levelBadge {
+    if (completedJobs > 70) return 'Master';
+    if (completedJobs > 50) return 'Elite';
+    if (completedJobs > 30) return 'Pro Ustaad';
+    if (completedJobs > 10) return 'Pro';
+    return 'Standard';
   }
 }
 

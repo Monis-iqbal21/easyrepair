@@ -30,6 +30,30 @@ enum UrgentWindow {
 
 enum AttachmentType { image, video, audio }
 
+/// Booking lane: STANDARD (fixed-price catalog), INSPECTION (fixed
+/// inspection fee), or BIDDING (open worker bidding — the existing
+/// known-problem flow). Older bookings created before this concept existed
+/// always come back as BIDDING from the backend.
+enum BookingLane { standard, inspection, bidding }
+
+extension BookingLaneX on BookingLane {
+  String get raw {
+    return switch (this) {
+      BookingLane.standard => 'STANDARD',
+      BookingLane.inspection => 'INSPECTION',
+      BookingLane.bidding => 'BIDDING',
+    };
+  }
+
+  static BookingLane fromRaw(String? raw) {
+    return switch (raw?.toUpperCase()) {
+      'STANDARD' => BookingLane.standard,
+      'INSPECTION' => BookingLane.inspection,
+      _ => BookingLane.bidding,
+    };
+  }
+}
+
 extension BookingStatusX on BookingStatus {
   /// Maps internal status → client-facing display label
   String get displayLabel {
@@ -301,6 +325,11 @@ class BookingEntity {
   /// Populated on worker-facing responses; null on client-facing responses.
   final String? clientName;
   final bool inspection;
+  final BookingLane lane;
+  final String? standardServiceId;
+  final String? standardServiceNameSnapshot;
+  final double? standardServicePriceSnapshot;
+  final double? inspectionFeeSnapshot;
 
   const BookingEntity({
     required this.id,
@@ -333,6 +362,11 @@ class BookingEntity {
     this.statusHistory = const [],
     this.clientName,
     this.inspection = false,
+    this.lane = BookingLane.bidding,
+    this.standardServiceId,
+    this.standardServiceNameSnapshot,
+    this.standardServicePriceSnapshot,
+    this.inspectionFeeSnapshot,
   });
 
   BookingEntity copyWith({
@@ -379,6 +413,11 @@ class BookingEntity {
       statusHistory: statusHistory ?? this.statusHistory,
       clientName: clientName,
       inspection: inspection,
+      lane: lane,
+      standardServiceId: standardServiceId,
+      standardServiceNameSnapshot: standardServiceNameSnapshot,
+      standardServicePriceSnapshot: standardServicePriceSnapshot,
+      inspectionFeeSnapshot: inspectionFeeSnapshot,
     );
   }
 }

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/network/api_client.dart';
 import '../../data/datasources/categories_remote_datasource.dart';
 import '../../domain/entities/service_category_entity.dart';
+import '../../domain/entities/standard_service_entity.dart';
 
 // ── Remote data source provider ───────────────────────────────────────────────
 
@@ -34,6 +35,17 @@ final allCategoriesProvider =
 final clientBookingCategoriesProvider =
     FutureProvider<List<ServiceCategoryEntity>>((ref) async {
   return ref.watch(allCategoriesProvider.future);
+});
+
+// ── Standard services catalog for a category (STANDARD booking lane) ─────────
+// Always fetched fresh from backend — never hardcoded — so admin price/name
+// changes show up immediately for new bookings.
+
+final standardServicesProvider = FutureProvider.autoDispose
+    .family<List<StandardServiceEntity>, String>((ref, categoryId) async {
+  final dataSource = ref.watch(categoriesRemoteDataSourceProvider);
+  final models = await dataSource.getStandardServices(categoryId);
+  return models.map((m) => m.toEntity()).toList();
 });
 
 // ── Fallback stubs (used when API is unreachable) ─────────────────────────────
