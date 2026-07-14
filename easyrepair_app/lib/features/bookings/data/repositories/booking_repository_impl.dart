@@ -163,4 +163,83 @@ class BookingRepositoryImpl implements BookingRepository {
       return Left(ServerFailure(e.toString()));
     }
   }
+
+  @override
+  Future<Either<Failure, BookingEntity>> relistBooking(
+    String bookingId,
+  ) async {
+    try {
+      final model = await _dataSource.relistBooking(bookingId);
+      return Right(model.toEntity());
+    } on Failure catch (f) {
+      return Left(f);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, BookingEntity>> markOnMyWay(String bookingId) async {
+    try {
+      final model = await _dataSource.markOnMyWay(bookingId);
+      return Right(model.toEntity());
+    } on Failure catch (f) {
+      return Left(f);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, BookingEntity>> markArrived(String bookingId) async {
+    try {
+      final model = await _dataSource.markArrived(bookingId);
+      return Right(model.toEntity());
+    } on Failure catch (f) {
+      return Left(f);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, BookingEntity>> startJob(String bookingId) async {
+    try {
+      final model = await _dataSource.startJob(bookingId);
+      return Right(model.toEntity());
+    } on Failure catch (f) {
+      return Left(f);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, BookingEntity>> completeJobLifecycle(
+    String bookingId,
+  ) async {
+    try {
+      final model = await _dataSource.completeJobLifecycle(bookingId);
+      return Right(model.toEntity());
+    } on Failure catch (f) {
+      return Left(f);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, BookingEntity>> workerCancelBooking(
+    String bookingId,
+    String reason,
+  ) async {
+    try {
+      final model = await _dataSource.workerCancelBooking(bookingId, reason);
+      return Right(model.toEntity());
+    } on Failure catch (f) {
+      return Left(f);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
 }

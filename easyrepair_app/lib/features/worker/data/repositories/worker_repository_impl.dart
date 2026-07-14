@@ -4,6 +4,7 @@ import 'package:fpdart/fpdart.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/errors/dio_failure_mapper.dart';
 import '../../../../core/errors/failures.dart';
+import '../../../bookings/data/models/booking_model.dart';
 import '../../../bookings/domain/entities/booking_entity.dart';
 import '../../domain/entities/worker_profile_entity.dart';
 import '../../domain/entities/worker_skill_entity.dart';
@@ -145,6 +146,11 @@ class WorkerRepositoryImpl implements WorkerRepository {
       hasMyBid: j['hasMyBid'] as bool? ?? false,
       workerProfileId: j['workerProfileId'] as String?,
       inspection: j['inspection'] as bool? ?? false,
+      lane: BookingLaneX.fromRaw(j['lane'] as String?),
+      standardServiceItems: ((j['standardServiceItems'] as List<dynamic>?) ?? [])
+          .map((e) => BookingStandardServiceItemModel.fromJson(
+              e as Map<String, dynamic>).toEntity())
+          .toList(),
     );
   }
 

@@ -12,6 +12,7 @@ import '../core/router/app_router.dart';
 import '../core/services/chat_socket_service.dart';
 import '../core/storage/secure_storage_service.dart';
 import '../core/theme/app_theme.dart';
+import '../core/widgets/app_banner_overlay.dart';
 import '../features/auth/presentation/providers/auth_providers.dart';
 import '../features/chat/presentation/providers/chat_providers.dart';
 import '../features/notifications/data/datasources/notification_remote_datasource.dart';
@@ -285,6 +286,8 @@ class _EasyRepairAppState extends ConsumerState<EasyRepairApp>
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       routerConfig: router,
+      builder: (context, child) =>
+          AppBannerOverlay(child: child ?? const SizedBox.shrink()),
     );
   }
 }

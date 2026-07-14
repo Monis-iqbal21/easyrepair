@@ -264,4 +264,31 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       );
     }
   }
+
+  /**
+   * Emit an in-app top-banner event to a single user's personal room
+   * (`user:{userId}`, already joined on socket connection for chat's own
+   * conversation_updated event — reused here rather than standing up a
+   * dedicated gateway/namespace). Client renders this as a fading toast.
+   * Never throws — booking/lifecycle flows must not fail if the socket
+   * layer is unavailable.
+   */
+  emitAppBanner(
+    userId: string,
+    payload: {
+      eventKey: string;
+      title: string;
+      body: string;
+      bookingId?: string;
+      route?: string;
+    },
+  ): void {
+    try {
+      this.server.to(`user:${userId}`).emit('app_banner', payload);
+    } catch (err) {
+      this.logger.warn(
+        `[chat] emitAppBanner failed: ${(err as Error)?.message}`,
+      );
+    }
+  }
 }

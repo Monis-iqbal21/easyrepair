@@ -51,6 +51,8 @@ class NewJobEntity {
   /// Null means no worker assigned yet (booking is open / Live).
   final String? workerProfileId;
   final bool inspection;
+  final BookingLane lane;
+  final List<BookingStandardServiceItemEntity> standardServiceItems;
 
   const NewJobEntity({
     required this.id,
@@ -72,7 +74,16 @@ class NewJobEntity {
     this.hasMyBid = false,
     this.workerProfileId,
     this.inspection = false,
+    this.lane = BookingLane.bidding,
+    this.standardServiceItems = const [],
   });
+
+  bool get isStandardLane => lane == BookingLane.standard;
+
+  double get standardServicesTotal => standardServiceItems.fold<double>(
+        0,
+        (sum, item) => sum + item.lineTotal,
+      );
 
   String get displayTitle => title?.isNotEmpty == true ? title! : category.name;
 

@@ -1,6 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { Notification } from '@prisma/client';
 import { FirebaseService } from '../../firebase/firebase.service';
+import { ChatGateway } from '../chat/chat.gateway';
 import {
   CreateNotificationData,
   NotificationsRepository,
@@ -18,6 +19,12 @@ export interface NotifyOptions {
   entityType?: string;
   entityId?: string;
   payload?: Record<string, unknown>;
+  /**
+   * Set to false to suppress the in-app top-banner for this event (push +
+   * DB persistence still happen). Defaults to true — most booking lifecycle
+   * events should show the banner.
+   */
+  inAppBanner?: boolean;
 }
 
 @Injectable()
@@ -27,6 +34,8 @@ export class NotificationsService {
   constructor(
     private readonly notificationsRepository: NotificationsRepository,
     private readonly firebase: FirebaseService,
+    @Inject(forwardRef(() => ChatGateway))
+    private readonly chatGateway: ChatGateway,
   ) {}
 
   /**
@@ -94,6 +103,19 @@ export class NotificationsService {
       fcmData.bookingId = bookingId;
     }
     void this._sendPush(userId, title, body, fcmData);
+
+    // In-app top-banner — reuses the already-authenticated chat socket
+    // connection/room rather than a dedicated gateway. Additive to push,
+    // never a replacement; never throws.
+    if (options.inAppBanner !== false) {
+      this.chatGateway.emitAppBanner(userId, {
+        eventKey,
+        title,
+        body,
+        bookingId,
+        route,
+      });
+    }
   }
 
   private async _sendPush(
@@ -113,6 +135,19 @@ export class NotificationsService {
     } catch (err) {
       this.logger.warn(`FCM push failed for userId=${userId}: ${err}`);
     }
+  }
+
+  /** See NotificationsRepository.existsForBookingAndUser. */
+  async wasAlreadyNotified(
+    userId: string,
+    bookingId: string,
+    eventKey: string,
+  ): Promise<boolean> {
+    return this.notificationsRepository.existsForBookingAndUser(
+      userId,
+      bookingId,
+      eventKey,
+    );
   }
 
   async getNotifications(userId: string): Promise<Notification[]> {

@@ -9,6 +9,7 @@ class NearbyWorkerEntity {
   final int cancellationRate;
   final double distanceKm;
   final List<String> skills;
+  final bool recommended;
 
   const NearbyWorkerEntity({
     required this.id,
@@ -21,6 +22,7 @@ class NearbyWorkerEntity {
     this.cancellationRate = 0,
     required this.distanceKm,
     required this.skills,
+    this.recommended = false,
   });
 
   String get fullName => '$firstName $lastName';

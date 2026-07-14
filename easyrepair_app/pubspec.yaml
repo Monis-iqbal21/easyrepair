@@ -49,6 +49,7 @@ dependencies:
   geocoding: ^3.0.0
   permission_handler: ^11.3.1
 
+
   # Audio recording & playback
   record: ^6.2.0
   audioplayers: ^6.4.0

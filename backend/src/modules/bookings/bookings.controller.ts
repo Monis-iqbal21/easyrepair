@@ -20,6 +20,7 @@ import { CreateBookingDto } from './dto/create-booking.dto';
 import { UpdateBookingDto } from './dto/update-booking.dto';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { AssignWorkerDto } from './dto/assign-worker.dto';
+import { WorkerCancelBookingDto } from './dto/worker-cancel-booking.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -150,6 +151,85 @@ export class BookingsController {
       user.id,
       bookingId,
       dto.workerProfileId,
+    );
+  }
+
+  /**
+   * PATCH /bookings/:id/relist — client "Make Live Again" on an EXPIRED booking.
+   */
+  @Patch(':id/relist')
+  @Roles(Role.CLIENT)
+  @HttpCode(HttpStatus.OK)
+  relistBooking(
+    @CurrentUser() user: { id: string },
+    @Param('id') bookingId: string,
+  ) {
+    return this.bookingsService.relistBooking(user.id, bookingId);
+  }
+
+  // ── Worker lifecycle endpoints (assigned worker only) ─────────────────────
+
+  /** POST /bookings/:id/on-my-way — ACCEPTED → EN_ROUTE. */
+  @Post(':id/on-my-way')
+  @Roles(Role.WORKER)
+  @HttpCode(HttpStatus.OK)
+  markOnMyWay(
+    @CurrentUser() user: { id: string },
+    @Param('id') bookingId: string,
+  ) {
+    return this.bookingsService.markOnMyWay(user.id, bookingId);
+  }
+
+  /** POST /bookings/:id/arrived — EN_ROUTE → ARRIVED. */
+  @Post(':id/arrived')
+  @Roles(Role.WORKER)
+  @HttpCode(HttpStatus.OK)
+  markArrived(
+    @CurrentUser() user: { id: string },
+    @Param('id') bookingId: string,
+  ) {
+    return this.bookingsService.markArrived(user.id, bookingId);
+  }
+
+  /** POST /bookings/:id/start — ARRIVED → IN_PROGRESS. */
+  @Post(':id/start')
+  @Roles(Role.WORKER)
+  @HttpCode(HttpStatus.OK)
+  startJob(
+    @CurrentUser() user: { id: string },
+    @Param('id') bookingId: string,
+  ) {
+    return this.bookingsService.startJob(user.id, bookingId);
+  }
+
+  /** POST /bookings/:id/complete — completes an active job (assigned worker). */
+  @Post(':id/complete')
+  @Roles(Role.WORKER)
+  @HttpCode(HttpStatus.OK)
+  completeJobLifecycle(
+    @CurrentUser() user: { id: string },
+    @Param('id') bookingId: string,
+  ) {
+    return this.bookingsService.completeJob(user.id, bookingId);
+  }
+
+  /**
+   * POST /bookings/:id/worker-cancel
+   * Worker cancels before arrival. Requires a reason. Excludes the worker
+   * from being re-offered this same booking and returns it to PENDING.
+   */
+  @Post(':id/worker-cancel')
+  @Roles(Role.WORKER)
+  @HttpCode(HttpStatus.OK)
+  workerCancelBooking(
+    @CurrentUser() user: { id: string },
+    @Param('id') bookingId: string,
+    @Body() dto: WorkerCancelBookingDto,
+  ) {
+    return this.bookingsService.workerCancelBooking(
+      user.id,
+      bookingId,
+      dto.reason,
     );
   }
 

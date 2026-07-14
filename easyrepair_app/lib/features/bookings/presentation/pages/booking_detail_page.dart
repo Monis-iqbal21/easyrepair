@@ -1,19 +1,33 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/errors/failures.dart';
 import '../../../../core/utils/distance_utils.dart';
 import '../../domain/entities/booking_entity.dart';
+import '../widgets/client_chat_action.dart';
 import '../widgets/media_attachment_widgets.dart';
 import '../../domain/entities/update_booking_request.dart';
 import '../providers/booking_providers.dart';
 import '../widgets/inspection_badge.dart';
 import '../widgets/status_badge.dart';
 import '../widgets/urgency_badge.dart';
+import 'choose_ustaad_page.dart';
 import 'track_worker_page.dart';
 import 'worker_discovery_map_page.dart';
+
+/// Statuses during which the client detail page polls GET /bookings/:id
+/// every few seconds to reflect the worker's live progress/location.
+const _kPollingStatuses = {
+  BookingStatus.accepted,
+  BookingStatus.enRoute,
+  BookingStatus.arrived,
+  BookingStatus.inProgress,
+};
 
 // ── Navigation helper ─────────────────────────────────────────────────────────
 
@@ -256,23 +270,72 @@ class _DetailBody extends ConsumerStatefulWidget {
 
 class _DetailBodyState extends ConsumerState<_DetailBody> {
   final _scrollCtrl = ScrollController();
-  final _reviewKey = GlobalKey();
+  Timer? _pollTimer;
+
+  // Guards the auto-popup so it fires at most once per booking per time it
+  // becomes eligible (STANDARD + COMPLETED + no review yet) — reset whenever
+  // the booking id changes so navigating between bookings re-arms it, but
+  // never re-fires from an unrelated rebuild (polling, provider refresh...)
+  // of the *same* booking.
+  String? _reviewPromptedForBookingId;
+
+  @override
+  void initState() {
+    super.initState();
+    _syncPolling();
+    _maybePromptReview();
+  }
+
+  @override
+  void didUpdateWidget(covariant _DetailBody oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _syncPolling();
+    _maybePromptReview();
+  }
+
+  void _syncPolling() {
+    final shouldPoll = _kPollingStatuses.contains(booking.status);
+    if (shouldPoll && _pollTimer == null) {
+      _pollTimer = Timer.periodic(const Duration(seconds: 6), (_) {
+        if (mounted) ref.invalidate(bookingDetailProvider(widget.booking.id));
+      });
+    } else if (!shouldPoll && _pollTimer != null) {
+      _pollTimer?.cancel();
+      _pollTimer = null;
+    }
+  }
 
   @override
   void dispose() {
+    _pollTimer?.cancel();
     _scrollCtrl.dispose();
     super.dispose();
   }
 
-  void _scrollToReview() {
-    final ctx = _reviewKey.currentContext;
-    if (ctx != null) {
-      Scrollable.ensureVisible(
-        ctx,
-        duration: const Duration(milliseconds: 400),
-        curve: Curves.easeInOut,
-      );
-    }
+  /// Auto-shows the review modal once per booking when it's STANDARD lane,
+  /// COMPLETED, and has no review yet. Scheduled post-frame (safe to call
+  /// from initState/didUpdateWidget) and guarded by
+  /// [_reviewPromptedForBookingId] so it never re-fires from polling or
+  /// other rebuilds of the same booking.
+  void _maybePromptReview() {
+    final eligible = booking.lane == BookingLane.standard &&
+        booking.status == BookingStatus.completed &&
+        booking.review == null;
+    if (!eligible) return;
+    if (_reviewPromptedForBookingId == booking.id) return;
+    _reviewPromptedForBookingId = booking.id;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _openReviewModal();
+    });
+  }
+
+  void _openReviewModal() {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (_) => ReviewModal(booking: booking),
+    );
   }
 
   BookingEntity get booking => widget.booking;
@@ -282,6 +345,8 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
     final isLive = booking.status.tab == BookingTab.live;
     final isCompleted = booking.status == BookingStatus.completed;
     final isCancelled = booking.status.tab == BookingTab.cancelled;
+    final isExpired = booking.status == BookingStatus.expired;
+    final isStandard = booking.lane == BookingLane.standard;
     final canEdit = booking.status == BookingStatus.pending &&
         booking.assignedWorker == null;
 
@@ -298,6 +363,36 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
                 // Status card
                 _StatusCard(booking: booking),
                 const SizedBox(height: 16),
+
+                // Status timeline (when there's history to show)
+                if (booking.statusHistory.isNotEmpty) ...[
+                  _StatusTimelineCard(booking: booking),
+                  const SizedBox(height: 16),
+                ],
+
+                // EXPIRED — "Make Live Again"
+                if (isExpired) ...[
+                  _MakeLiveAgainCard(bookingId: booking.id),
+                  const SizedBox(height: 16),
+                ],
+
+                // Worker cancelled — reason strip (booking back in choose-worker state)
+                if (!isExpired &&
+                    booking.assignedWorker == null &&
+                    booking.status == BookingStatus.pending &&
+                    booking.lastWorkerCancellationReason != null &&
+                    booking.lastWorkerCancellationReason!.isNotEmpty) ...[
+                  _WorkerCancelledStrip(
+                    reason: booking.lastWorkerCancellationReason!,
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
+                // STANDARD lane: selected services + total
+                if (isStandard && booking.standardServiceItems.isNotEmpty) ...[
+                  _StandardServicesCard(booking: booking),
+                  const SizedBox(height: 16),
+                ],
 
                 // Service info
                 _InfoCard(
@@ -411,22 +506,27 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
                     const SizedBox(height: 16),
                     _TrackWorkerButton(bookingId: booking.id),
                   ],
-                  if (isCompleted) ...[
+                  if (isCompleted && booking.review == null) ...[
                     const SizedBox(height: 16),
-                    _ReviewWorkerButton(onTap: _scrollToReview),
+                    _ReviewWorkerButton(onTap: _openReviewModal),
                   ],
-                ] else if (booking.status == BookingStatus.pending) ...[
+                ] else if (booking.status == BookingStatus.pending &&
+                    booking.lane == BookingLane.bidding) ...[
                   const SizedBox(height: 16),
                   _ViewBidsButton(booking: booking),
+                ] else if (booking.status == BookingStatus.pending &&
+                    booking.lane != BookingLane.bidding &&
+                    !isExpired) ...[
+                  const SizedBox(height: 16),
+                  _ChooseUstaadButton(booking: booking),
                 ],
                 const SizedBox(height: 16),
 
-                // Review section (completed bookings only)
-                if (isCompleted) ...[
-                  KeyedSubtree(
-                    key: _reviewKey,
-                    child: _ReviewSection(booking: booking),
-                  ),
+                // Submitted review (completed bookings only — the review
+                // itself is collected via the auto-popup/manual ReviewModal,
+                // not inline; this just displays it once submitted).
+                if (isCompleted && booking.review != null) ...[
+                  _SubmittedReviewCard(review: booking.review!),
                   const SizedBox(height: 16),
                 ],
 
@@ -1367,6 +1467,334 @@ class _DistanceBar extends StatelessWidget {
   }
 }
 
+// ── Status timeline card ──────────────────────────────────────────────────────
+
+class _StatusTimelineCard extends StatelessWidget {
+  final BookingEntity booking;
+  const _StatusTimelineCard({required this.booking});
+
+  @override
+  Widget build(BuildContext context) {
+    final history = booking.statusHistory;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _kBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Job Status Timeline',
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _kDark),
+          ),
+          const SizedBox(height: 14),
+          ...history.asMap().entries.map((e) {
+            final isLast = e.key == history.length - 1;
+            final entry = e.value;
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Column(
+                  children: [
+                    Container(
+                      width: 10,
+                      height: 10,
+                      margin: const EdgeInsets.only(top: 3),
+                      decoration: BoxDecoration(
+                        color: isLast ? _kGreen : _kLight,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    if (!isLast) Container(width: 1, height: 28, color: _kBorder),
+                  ],
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          entry.status.displayLabel,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: isLast ? _kGreen : _kDark,
+                          ),
+                        ),
+                        if (entry.note != null && entry.note!.isNotEmpty)
+                          Text(
+                            entry.note!,
+                            style: const TextStyle(fontSize: 11.5, color: _kGray),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        Text(
+                          DateFormat('d MMM, h:mm a').format(entry.createdAt),
+                          style: const TextStyle(fontSize: 11, color: _kLight),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            );
+          }),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Make Live Again card (EXPIRED bookings) ───────────────────────────────────
+
+class _MakeLiveAgainCard extends ConsumerWidget {
+  final String bookingId;
+  const _MakeLiveAgainCard({required this.bookingId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isLoading = ref.watch(relistBookingNotifierProvider).isLoading;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF7ED),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFFDBA74)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.hourglass_bottom_rounded, size: 18, color: Color(0xFFEA580C)),
+              SizedBox(width: 8),
+              Text(
+                'This job expired',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFFEA580C)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'No worker was hired within 72 hours. Make it live again to keep looking.',
+            style: TextStyle(fontSize: 12.5, color: _kGray, height: 1.4),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: isLoading
+                  ? null
+                  : () async {
+                      try {
+                        await ref
+                            .read(relistBookingNotifierProvider.notifier)
+                            .relist(bookingId);
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                e is Failure ? e.message : 'Failed to make job live again.',
+                              ),
+                              backgroundColor: const Color(0xFFDC2626),
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                          );
+                        }
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFEA580C),
+                foregroundColor: Colors.white,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(vertical: 13),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: isLoading
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Text(
+                      'Make Live Again',
+                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                    ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Worker cancelled strip ────────────────────────────────────────────────────
+
+class _WorkerCancelledStrip extends StatelessWidget {
+  final String reason;
+  const _WorkerCancelledStrip({required this.reason});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF1F2),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFFECDD3)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.info_outline_rounded, size: 18, color: Color(0xFFBE123C)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Previous Ustaad cancelled',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFFBE123C),
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  reason,
+                  style: const TextStyle(fontSize: 12.5, color: _kGray, height: 1.4),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Standard services card ────────────────────────────────────────────────────
+
+class _StandardServicesCard extends StatelessWidget {
+  final BookingEntity booking;
+  const _StandardServicesCard({required this.booking});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _kBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Selected Services',
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _kDark),
+          ),
+          const SizedBox(height: 12),
+          ...booking.standardServiceItems.map(
+            (item) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      item.quantity > 1
+                          ? '${item.nameSnapshot} x${item.quantity}'
+                          : item.nameSnapshot,
+                      style: const TextStyle(fontSize: 13.5, color: _kDark),
+                    ),
+                  ),
+                  Text(
+                    'Rs ${item.lineTotal.toStringAsFixed(0)}',
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w600,
+                      color: _kDark,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const Divider(height: 20, color: _kBorder),
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Total',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: _kDark),
+                ),
+              ),
+              Text(
+                'Rs ${(booking.finalPrice ?? booking.standardServicesTotal ?? 0).toStringAsFixed(0)}',
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: _kGreen,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Choose Ustaad button (STANDARD/INSPECTION, no worker yet) ────────────────
+
+class _ChooseUstaadButton extends StatelessWidget {
+  final BookingEntity booking;
+  const _ChooseUstaadButton({required this.booking});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => ChooseUstaadPage(booking: booking),
+        ),
+      ),
+      child: Container(
+        height: 50,
+        decoration: BoxDecoration(
+          color: _kGreen,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.person_search_rounded, size: 16, color: Colors.white),
+            SizedBox(width: 8),
+            Text(
+              'Choose Ustaad',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 // ── View bids button ──────────────────────────────────────────────────────────
 
 class _ViewBidsButton extends StatelessWidget {
@@ -1483,32 +1911,15 @@ class _ReviewWorkerButton extends StatelessWidget {
   }
 }
 
-// ── Review section ────────────────────────────────────────────────────────────
+// ── Submitted review display (read-only, once a review exists) ───────────────
 
-class _ReviewSection extends ConsumerStatefulWidget {
-  final BookingEntity booking;
+class _SubmittedReviewCard extends StatelessWidget {
+  final BookingReviewEntity review;
 
-  const _ReviewSection({required this.booking});
-
-  @override
-  ConsumerState<_ReviewSection> createState() => _ReviewSectionState();
-}
-
-class _ReviewSectionState extends ConsumerState<_ReviewSection> {
-  int _selectedRating = 0;
-  final _commentCtrl = TextEditingController();
-  bool _submitting = false;
-
-  @override
-  void dispose() {
-    _commentCtrl.dispose();
-    super.dispose();
-  }
+  const _SubmittedReviewCard({required this.review});
 
   @override
   Widget build(BuildContext context) {
-    final existingReview = widget.booking.review;
-
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1524,7 +1935,7 @@ class _ReviewSectionState extends ConsumerState<_ReviewSection> {
               Icon(Icons.star_rounded, size: 16, color: Color(0xFFF59E0B)),
               SizedBox(width: 6),
               Text(
-                'Review',
+                'Your Review',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
@@ -1534,19 +1945,64 @@ class _ReviewSectionState extends ConsumerState<_ReviewSection> {
             ],
           ),
           const SizedBox(height: 14),
-          if (existingReview != null)
-            _ExistingReview(review: existingReview)
-          else
-            _ReviewForm(
-              selectedRating: _selectedRating,
-              commentCtrl: _commentCtrl,
-              submitting: _submitting,
-              onRatingChanged: (r) => setState(() => _selectedRating = r),
-              onSubmit: _submit,
+          Row(
+            children: List.generate(
+              5,
+              (i) => Icon(
+                Icons.star_rounded,
+                size: 22,
+                color: i < review.rating
+                    ? const Color(0xFFF59E0B)
+                    : const Color(0xFFE2E8F0),
+              ),
             ),
+          ),
+          if (review.comment != null && review.comment!.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(
+              review.comment!,
+              style: const TextStyle(
+                fontSize: 13,
+                color: _kGray,
+                height: 1.4,
+              ),
+            ),
+          ],
+          const SizedBox(height: 6),
+          Text(
+            DateFormat('d MMM yyyy').format(review.createdAt),
+            style: const TextStyle(fontSize: 11, color: _kLight),
+          ),
         ],
       ),
     );
+  }
+}
+
+// ── Review modal (auto-popup on STANDARD completion + manual "Review Worker") ─
+
+/// Popup shown automatically once a STANDARD booking completes with no
+/// review yet, and reachable manually via the "Review Worker" button for
+/// any completed booking. Submits through the existing [reviewNotifierProvider]
+/// / review API — no new backend surface.
+class ReviewModal extends ConsumerStatefulWidget {
+  final BookingEntity booking;
+
+  const ReviewModal({super.key, required this.booking});
+
+  @override
+  ConsumerState<ReviewModal> createState() => _ReviewModalState();
+}
+
+class _ReviewModalState extends ConsumerState<ReviewModal> {
+  int _selectedRating = 0;
+  final _commentCtrl = TextEditingController();
+  bool _submitting = false;
+
+  @override
+  void dispose() {
+    _commentCtrl.dispose();
+    super.dispose();
   }
 
   Future<void> _submit() async {
@@ -1573,7 +2029,11 @@ class _ReviewSectionState extends ConsumerState<_ReviewSection> {
                   : _commentCtrl.text.trim(),
             ),
           );
+      // reviewNotifierProvider.submit already pushes the updated booking
+      // into bookingDetailProvider / bookingsNotifierProvider, so the
+      // booking detail screen refreshes as soon as this modal closes.
       if (mounted) {
+        Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('Review submitted. Thank you!'),
@@ -1600,150 +2060,174 @@ class _ReviewSectionState extends ConsumerState<_ReviewSection> {
       if (mounted) setState(() => _submitting = false);
     }
   }
-}
-
-class _ExistingReview extends StatelessWidget {
-  final BookingReviewEntity review;
-
-  const _ExistingReview({required this.review});
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: List.generate(
-            5,
-            (i) => Icon(
-              Icons.star_rounded,
-              size: 22,
-              color: i < review.rating
-                  ? const Color(0xFFF59E0B)
-                  : const Color(0xFFE2E8F0),
+    final worker = widget.booking.assignedWorker;
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Worker avatar + name
+            if (worker != null) ...[
+              Container(
+                width: 64,
+                height: 64,
+                alignment: Alignment.center,
+                decoration: const BoxDecoration(
+                  color: _kGreen,
+                  shape: BoxShape.circle,
+                ),
+                child: worker.avatarUrl != null
+                    ? ClipOval(
+                        child: Image.network(
+                          worker.avatarUrl!,
+                          width: 64,
+                          height: 64,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) => Text(
+                            worker.initials,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 22,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      )
+                    : Text(
+                        worker.initials,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                worker.fullName,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: _kDark,
+                ),
+              ),
+              const SizedBox(height: 4),
+            ],
+            const Text(
+              'How was the service?',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: _kGray),
             ),
-          ),
-        ),
-        if (review.comment != null && review.comment!.isNotEmpty) ...[
-          const SizedBox(height: 10),
-          Text(
-            review.comment!,
-            style: const TextStyle(
-              fontSize: 13,
-              color: _kGray,
-              height: 1.4,
-            ),
-          ),
-        ],
-        const SizedBox(height: 6),
-        Text(
-          DateFormat('d MMM yyyy').format(review.createdAt),
-          style: const TextStyle(fontSize: 11, color: _kLight),
-        ),
-      ],
-    );
-  }
-}
-
-class _ReviewForm extends StatelessWidget {
-  final int selectedRating;
-  final TextEditingController commentCtrl;
-  final bool submitting;
-  final ValueChanged<int> onRatingChanged;
-  final VoidCallback onSubmit;
-
-  const _ReviewForm({
-    required this.selectedRating,
-    required this.commentCtrl,
-    required this.submitting,
-    required this.onRatingChanged,
-    required this.onSubmit,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'How was the service?',
-          style: TextStyle(fontSize: 13, color: _kGray),
-        ),
-        const SizedBox(height: 10),
-        // Star rating picker
-        Row(
-          children: List.generate(
-            5,
-            (i) => GestureDetector(
-              onTap: () => onRatingChanged(i + 1),
-              child: Padding(
-                padding: const EdgeInsets.only(right: 4),
-                child: Icon(
-                  Icons.star_rounded,
-                  size: 32,
-                  color: i < selectedRating
-                      ? const Color(0xFFF59E0B)
-                      : const Color(0xFFE2E8F0),
+            const SizedBox(height: 14),
+            // Star rating picker
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(
+                5,
+                (i) => GestureDetector(
+                  onTap: () => setState(() => _selectedRating = i + 1),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 3),
+                    child: Icon(
+                      Icons.star_rounded,
+                      size: 34,
+                      color: i < _selectedRating
+                          ? const Color(0xFFF59E0B)
+                          : const Color(0xFFE2E8F0),
+                    ),
+                  ),
                 ),
               ),
             ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        // Comment field
-        TextField(
-          controller: commentCtrl,
-          maxLines: 3,
-          style: const TextStyle(fontSize: 13, color: _kDark),
-          decoration: InputDecoration(
-            hintText: 'Add a comment (optional)...',
-            hintStyle: const TextStyle(fontSize: 13, color: _kLight),
-            filled: true,
-            fillColor: const Color(0xFFF9FAFB),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: _kBorder),
+            const SizedBox(height: 14),
+            // Comment field
+            TextField(
+              controller: _commentCtrl,
+              maxLines: 3,
+              style: const TextStyle(fontSize: 13, color: _kDark),
+              decoration: InputDecoration(
+                hintText: 'Add a comment (optional)...',
+                hintStyle: const TextStyle(fontSize: 13, color: _kLight),
+                filled: true,
+                fillColor: const Color(0xFFF9FAFB),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: _kBorder),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: _kBorder),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: _kGreen),
+                ),
+                contentPadding: const EdgeInsets.all(12),
+              ),
             ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: _kBorder),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _submitting ? null : _submit,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _kGreen,
+                  disabledBackgroundColor: _kGreen.withValues(alpha: 0.5),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
+                ),
+                child: _submitting
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Text(
+                        'Submit Review',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w700, fontSize: 14),
+                      ),
+              ),
             ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: _kGreen),
-            ),
-            contentPadding: const EdgeInsets.all(12),
-          ),
-        ),
-        const SizedBox(height: 14),
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: submitting ? null : onSubmit,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _kGreen,
-              disabledBackgroundColor: _kGreen.withValues(alpha: 0.5),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-              elevation: 0,
-            ),
-            child: submitting
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                        strokeWidth: 2, color: Colors.white),
-                  )
-                : const Text(
-                    'Submit Review',
-                    style:
-                        TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: TextButton(
+                onPressed:
+                    _submitting ? null : () => Navigator.of(context).pop(),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                child: const Text(
+                  'Later',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                    color: _kGray,
                   ),
-          ),
+                ),
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }
@@ -1767,17 +2251,30 @@ class _ActionButtons extends ConsumerWidget {
         booking.assignedWorker == null;
     final showChat = booking.assignedWorker != null;
 
+    final showCall = booking.assignedWorker?.phone != null &&
+        booking.assignedWorker!.phone!.isNotEmpty;
+
     if (!canEdit && !showCancel && !showChat) return const SizedBox.shrink();
 
     return Column(
       children: [
+        if (showCall) ...[
+          _FullBtn(
+            label: 'Call Worker',
+            icon: Icons.call_rounded,
+            color: _kGreen,
+            bgColor: const Color(0xFFFFF0EB),
+            onTap: () => _callWorker(booking.assignedWorker!.phone!),
+          ),
+          const SizedBox(height: 10),
+        ],
         if (showChat)
           _FullBtn(
             label: 'Chat with Worker',
             icon: Icons.chat_bubble_outline_rounded,
             color: _kGreen,
             bgColor: const Color(0xFFFFF0EB),
-            onTap: () => context.push('/client/chat'),
+            onTap: () => openClientChatForBooking(context, ref, booking.id),
           ),
         if (showChat && (canEdit || showCancel)) const SizedBox(height: 10),
         if (canEdit)
@@ -1801,6 +2298,13 @@ class _ActionButtons extends ConsumerWidget {
           ),
       ],
     );
+  }
+
+  Future<void> _callWorker(String phone) async {
+    final uri = Uri(scheme: 'tel', path: phone);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    }
   }
 
   Future<void> _confirmCancel(BuildContext context, WidgetRef ref) async {

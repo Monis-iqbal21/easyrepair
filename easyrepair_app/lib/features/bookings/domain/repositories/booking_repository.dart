@@ -57,4 +57,29 @@ abstract class BookingRepository {
     String bookingId,
     String workerProfileId,
   );
+
+  /// Client "Make Live Again" on an EXPIRED booking.
+  Future<Either<Failure, BookingEntity>> relistBooking(String bookingId);
+
+  // ── Worker lifecycle (assigned worker only) ─────────────────────────────
+
+  /// ACCEPTED → EN_ROUTE.
+  Future<Either<Failure, BookingEntity>> markOnMyWay(String bookingId);
+
+  /// EN_ROUTE → ARRIVED.
+  Future<Either<Failure, BookingEntity>> markArrived(String bookingId);
+
+  /// ARRIVED → IN_PROGRESS.
+  Future<Either<Failure, BookingEntity>> startJob(String bookingId);
+
+  /// Completes an active job (backward compatible with older statuses).
+  Future<Either<Failure, BookingEntity>> completeJobLifecycle(
+    String bookingId,
+  );
+
+  /// Worker cancels before arrival — requires a reason.
+  Future<Either<Failure, BookingEntity>> workerCancelBooking(
+    String bookingId,
+    String reason,
+  );
 }

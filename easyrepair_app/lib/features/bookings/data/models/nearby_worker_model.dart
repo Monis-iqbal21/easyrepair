@@ -11,6 +11,7 @@ class NearbyWorkerModel {
   final int cancellationRate;
   final double distanceKm;
   final List<String> skills;
+  final bool recommended;
 
   const NearbyWorkerModel({
     required this.id,
@@ -23,6 +24,7 @@ class NearbyWorkerModel {
     this.cancellationRate = 0,
     required this.distanceKm,
     required this.skills,
+    this.recommended = false,
   });
 
   factory NearbyWorkerModel.fromJson(Map<String, dynamic> json) {
@@ -40,6 +42,7 @@ class NearbyWorkerModel {
               ?.map((e) => e as String)
               .toList() ??
           const [],
+      recommended: json['recommended'] as bool? ?? false,
     );
   }
 
@@ -54,6 +57,7 @@ class NearbyWorkerModel {
         cancellationRate: cancellationRate,
         distanceKm: distanceKm,
         skills: skills,
+        recommended: recommended,
       );
 }
 

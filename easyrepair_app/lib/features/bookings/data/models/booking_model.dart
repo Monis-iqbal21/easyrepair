@@ -65,6 +65,67 @@ class BookingAttachmentModel {
   }
 }
 
+class BookingStandardServiceItemModel {
+  final String id;
+  final String? standardServiceId;
+  final String nameSnapshot;
+  final double priceSnapshot;
+  final int quantity;
+
+  const BookingStandardServiceItemModel({
+    required this.id,
+    this.standardServiceId,
+    required this.nameSnapshot,
+    required this.priceSnapshot,
+    this.quantity = 1,
+  });
+
+  factory BookingStandardServiceItemModel.fromJson(Map<String, dynamic> json) {
+    return BookingStandardServiceItemModel(
+      id: json['id'] as String,
+      standardServiceId: json['standardServiceId'] as String?,
+      nameSnapshot: json['nameSnapshot'] as String? ?? '',
+      priceSnapshot: (json['priceSnapshot'] as num?)?.toDouble() ?? 0,
+      quantity: (json['quantity'] as num?)?.toInt() ?? 1,
+    );
+  }
+
+  BookingStandardServiceItemEntity toEntity() => BookingStandardServiceItemEntity(
+        id: id,
+        standardServiceId: standardServiceId,
+        nameSnapshot: nameSnapshot,
+        priceSnapshot: priceSnapshot,
+        quantity: quantity,
+      );
+}
+
+class BookingWorkerExclusionModel {
+  final String workerProfileId;
+  final String? reason;
+  final DateTime createdAt;
+
+  const BookingWorkerExclusionModel({
+    required this.workerProfileId,
+    this.reason,
+    required this.createdAt,
+  });
+
+  factory BookingWorkerExclusionModel.fromJson(Map<String, dynamic> json) {
+    return BookingWorkerExclusionModel(
+      workerProfileId: json['workerProfileId'] as String? ?? '',
+      reason: json['reason'] as String?,
+      createdAt:
+          DateTime.tryParse(json['createdAt'] as String? ?? '') ?? DateTime.now(),
+    );
+  }
+
+  BookingWorkerExclusionEntity toEntity() => BookingWorkerExclusionEntity(
+        workerProfileId: workerProfileId,
+        reason: reason,
+        createdAt: createdAt,
+      );
+}
+
 class BookingReviewModel {
   final String id;
   final int rating;
@@ -157,6 +218,8 @@ class BookingModel {
   final DateTime? scheduledDate;
   final DateTime createdAt;
   final DateTime? acceptedAt;
+  final DateTime? enRouteAt;
+  final DateTime? arrivedAt;
   final DateTime? startedAt;
   final double? estimatedPrice;
   final double? finalPrice;
@@ -166,19 +229,27 @@ class BookingModel {
   final double longitude;
   final DateTime? completedAt;
   final String? cancellationReason;
+  final String? cancelledByRole;
+  final DateTime? expiresAt;
+  final DateTime? liveStartedAt;
+  final DateTime? relistedAt;
   final AssignedWorkerModel? assignedWorker;
   final int? availableWorkersCount;
   final double? acceptedBidAmount;
   final List<BookingAttachmentModel> attachments;
   final BookingReviewModel? review;
-  final List<_StatusHistoryModel> statusHistory;
+  final List<BookingStatusHistoryModel> statusHistory;
   final String? clientName;
+  final String? clientPhone;
   final bool inspection;
   final String lane;
   final String? standardServiceId;
   final String? standardServiceNameSnapshot;
   final double? standardServicePriceSnapshot;
+  final List<BookingStandardServiceItemModel> standardServiceItems;
   final double? inspectionFeeSnapshot;
+  final List<BookingWorkerExclusionModel> workerExclusions;
+  final String? lastWorkerCancellationReason;
 
   const BookingModel({
     required this.id,
@@ -192,6 +263,8 @@ class BookingModel {
     this.scheduledDate,
     required this.createdAt,
     this.acceptedAt,
+    this.enRouteAt,
+    this.arrivedAt,
     this.startedAt,
     this.estimatedPrice,
     this.finalPrice,
@@ -201,6 +274,10 @@ class BookingModel {
     this.longitude = 0,
     this.completedAt,
     this.cancellationReason,
+    this.cancelledByRole,
+    this.expiresAt,
+    this.liveStartedAt,
+    this.relistedAt,
     this.assignedWorker,
     this.availableWorkersCount,
     this.acceptedBidAmount,
@@ -208,12 +285,16 @@ class BookingModel {
     this.review,
     this.statusHistory = const [],
     this.clientName,
+    this.clientPhone,
     this.inspection = false,
     this.lane = 'BIDDING',
     this.standardServiceId,
     this.standardServiceNameSnapshot,
     this.standardServicePriceSnapshot,
+    this.standardServiceItems = const [],
     this.inspectionFeeSnapshot,
+    this.workerExclusions = const [],
+    this.lastWorkerCancellationReason,
   });
 
   factory BookingModel.fromJson(Map<String, dynamic> json) {
@@ -221,6 +302,10 @@ class BookingModel {
     final reviewJson = json['review'] as Map<String, dynamic>?;
     final attachmentsJson = json['attachments'] as List<dynamic>? ?? [];
     final historyJson = json['statusHistory'] as List<dynamic>? ?? [];
+    final standardServiceItemsJson =
+        json['standardServiceItems'] as List<dynamic>? ?? [];
+    final workerExclusionsJson =
+        json['workerExclusions'] as List<dynamic>? ?? [];
     return BookingModel(
       id: json['id'] as String,
       serviceCategory: json['serviceCategory'] as String? ?? 'Service',
@@ -238,6 +323,12 @@ class BookingModel {
       acceptedAt: json['acceptedAt'] != null
           ? DateTime.tryParse(json['acceptedAt'] as String)
           : null,
+      enRouteAt: json['enRouteAt'] != null
+          ? DateTime.tryParse(json['enRouteAt'] as String)
+          : null,
+      arrivedAt: json['arrivedAt'] != null
+          ? DateTime.tryParse(json['arrivedAt'] as String)
+          : null,
       startedAt: json['startedAt'] != null
           ? DateTime.tryParse(json['startedAt'] as String)
           : null,
@@ -251,6 +342,16 @@ class BookingModel {
           ? DateTime.tryParse(json['completedAt'] as String)
           : null,
       cancellationReason: json['cancellationReason'] as String?,
+      cancelledByRole: json['cancelledByRole'] as String?,
+      expiresAt: json['expiresAt'] != null
+          ? DateTime.tryParse(json['expiresAt'] as String)
+          : null,
+      liveStartedAt: json['liveStartedAt'] != null
+          ? DateTime.tryParse(json['liveStartedAt'] as String)
+          : null,
+      relistedAt: json['relistedAt'] != null
+          ? DateTime.tryParse(json['relistedAt'] as String)
+          : null,
       assignedWorker:
           workerJson != null ? AssignedWorkerModel.fromJson(workerJson) : null,
       availableWorkersCount: json['availableWorkersCount'] as int?,
@@ -260,9 +361,10 @@ class BookingModel {
           .toList(),
       review: reviewJson != null ? BookingReviewModel.fromJson(reviewJson) : null,
       statusHistory: historyJson
-          .map((e) => _StatusHistoryModel.fromJson(e as Map<String, dynamic>))
+          .map((e) => BookingStatusHistoryModel.fromJson(e as Map<String, dynamic>))
           .toList(),
       clientName: json['clientName'] as String?,
+      clientPhone: json['clientPhone'] as String?,
       inspection: json['inspection'] as bool? ?? false,
       lane: json['lane'] as String? ?? 'BIDDING',
       standardServiceId: json['standardServiceId'] as String?,
@@ -270,8 +372,18 @@ class BookingModel {
           json['standardServiceNameSnapshot'] as String?,
       standardServicePriceSnapshot:
           (json['standardServicePriceSnapshot'] as num?)?.toDouble(),
+      standardServiceItems: standardServiceItemsJson
+          .map((e) => BookingStandardServiceItemModel.fromJson(
+              e as Map<String, dynamic>))
+          .toList(),
       inspectionFeeSnapshot:
           (json['inspectionFeeSnapshot'] as num?)?.toDouble(),
+      workerExclusions: workerExclusionsJson
+          .map((e) =>
+              BookingWorkerExclusionModel.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      lastWorkerCancellationReason:
+          json['lastWorkerCancellationReason'] as String?,
     );
   }
 
@@ -309,6 +421,8 @@ class BookingModel {
       scheduledDate: scheduledDate,
       createdAt: createdAt,
       acceptedAt: acceptedAt,
+      enRouteAt: enRouteAt,
+      arrivedAt: arrivedAt,
       startedAt: startedAt,
       estimatedPrice: estimatedPrice,
       finalPrice: finalPrice,
@@ -318,6 +432,10 @@ class BookingModel {
       longitude: longitude,
       completedAt: completedAt,
       cancellationReason: cancellationReason,
+      cancelledByRole: CancelledByRoleX.fromRaw(cancelledByRole),
+      expiresAt: expiresAt,
+      liveStartedAt: liveStartedAt,
+      relistedAt: relistedAt,
       assignedWorker: assignedWorker?.toEntity(),
       availableWorkersCount: availableWorkersCount,
       acceptedBidAmount: acceptedBidAmount,
@@ -325,33 +443,38 @@ class BookingModel {
       review: review?.toEntity(),
       statusHistory: statusHistory.map((h) => h.toEntity()).toList(),
       clientName: clientName,
+      clientPhone: clientPhone,
       inspection: inspection,
       lane: BookingLaneX.fromRaw(lane),
       standardServiceId: standardServiceId,
       standardServiceNameSnapshot: standardServiceNameSnapshot,
       standardServicePriceSnapshot: standardServicePriceSnapshot,
+      standardServiceItems:
+          standardServiceItems.map((i) => i.toEntity()).toList(),
       inspectionFeeSnapshot: inspectionFeeSnapshot,
+      workerExclusions: workerExclusions.map((e) => e.toEntity()).toList(),
+      lastWorkerCancellationReason: lastWorkerCancellationReason,
     );
   }
 }
 
 // ── Internal model for status history entries ─────────────────────────────────
 
-class _StatusHistoryModel {
+class BookingStatusHistoryModel {
   final String id;
   final String status;
   final String? note;
   final DateTime createdAt;
 
-  const _StatusHistoryModel({
+  const BookingStatusHistoryModel({
     required this.id,
     required this.status,
     this.note,
     required this.createdAt,
   });
 
-  factory _StatusHistoryModel.fromJson(Map<String, dynamic> json) {
-    return _StatusHistoryModel(
+  factory BookingStatusHistoryModel.fromJson(Map<String, dynamic> json) {
+    return BookingStatusHistoryModel(
       id: json['id'] as String,
       status: json['status'] as String? ?? 'PENDING',
       note: json['note'] as String?,

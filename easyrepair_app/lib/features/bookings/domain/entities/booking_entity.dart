@@ -2,10 +2,12 @@ enum BookingStatus {
   pending,
   accepted,
   enRoute,
+  arrived,
   inProgress,
   completed,
   rejected,
   cancelled,
+  expired,
 }
 
 enum BookingUrgency {
@@ -29,6 +31,22 @@ enum UrgentWindow {
 }
 
 enum AttachmentType { image, video, audio }
+
+/// Who initiated a cancellation. Null for non-cancelled/non-expired bookings
+/// and for historical rows predating this field.
+enum CancelledByRole { client, worker }
+
+extension CancelledByRoleX on CancelledByRole {
+  String get raw => this == CancelledByRole.client ? 'CLIENT' : 'WORKER';
+
+  static CancelledByRole? fromRaw(String? raw) {
+    return switch (raw?.toUpperCase()) {
+      'CLIENT' => CancelledByRole.client,
+      'WORKER' => CancelledByRole.worker,
+      _ => null,
+    };
+  }
+}
 
 /// Booking lane: STANDARD (fixed-price catalog), INSPECTION (fixed
 /// inspection fee), or BIDDING (open worker bidding — the existing
@@ -61,10 +79,12 @@ extension BookingStatusX on BookingStatus {
       BookingStatus.pending => 'Live',
       BookingStatus.accepted => 'Assigned',
       BookingStatus.enRoute => 'Assigned',
+      BookingStatus.arrived => 'Assigned',
       BookingStatus.inProgress => 'Live',
       BookingStatus.completed => 'Completed',
       BookingStatus.rejected => 'Cancelled',
       BookingStatus.cancelled => 'Cancelled',
+      BookingStatus.expired => 'Expired',
     };
   }
 
@@ -74,10 +94,12 @@ extension BookingStatusX on BookingStatus {
       BookingStatus.pending => 'Pending',
       BookingStatus.accepted => 'Assigned',
       BookingStatus.enRoute => 'En Route',
+      BookingStatus.arrived => 'Arrived',
       BookingStatus.inProgress => 'In Progress',
       BookingStatus.completed => 'Completed',
       BookingStatus.rejected => 'Rejected',
       BookingStatus.cancelled => 'Cancelled',
+      BookingStatus.expired => 'Expired',
     };
   }
 
@@ -85,6 +107,7 @@ extension BookingStatusX on BookingStatus {
   bool get isWorkerActive =>
       this == BookingStatus.accepted ||
       this == BookingStatus.enRoute ||
+      this == BookingStatus.arrived ||
       this == BookingStatus.inProgress;
 
   /// Client-facing tab category
@@ -93,10 +116,12 @@ extension BookingStatusX on BookingStatus {
       BookingStatus.pending => BookingTab.live,
       BookingStatus.accepted => BookingTab.assigned,
       BookingStatus.enRoute => BookingTab.assigned,
+      BookingStatus.arrived => BookingTab.assigned,
       BookingStatus.inProgress => BookingTab.live,
       BookingStatus.completed => BookingTab.completed,
       BookingStatus.rejected => BookingTab.cancelled,
       BookingStatus.cancelled => BookingTab.cancelled,
+      BookingStatus.expired => BookingTab.cancelled,
     };
   }
 
@@ -105,10 +130,12 @@ extension BookingStatusX on BookingStatus {
       BookingStatus.pending => 'PENDING',
       BookingStatus.accepted => 'ACCEPTED',
       BookingStatus.enRoute => 'EN_ROUTE',
+      BookingStatus.arrived => 'ARRIVED',
       BookingStatus.inProgress => 'IN_PROGRESS',
       BookingStatus.completed => 'COMPLETED',
       BookingStatus.rejected => 'REJECTED',
       BookingStatus.cancelled => 'CANCELLED',
+      BookingStatus.expired => 'EXPIRED',
     };
   }
 
@@ -117,10 +144,12 @@ extension BookingStatusX on BookingStatus {
       'PENDING' => BookingStatus.pending,
       'ACCEPTED' => BookingStatus.accepted,
       'EN_ROUTE' => BookingStatus.enRoute,
+      'ARRIVED' => BookingStatus.arrived,
       'IN_PROGRESS' => BookingStatus.inProgress,
       'COMPLETED' => BookingStatus.completed,
       'REJECTED' => BookingStatus.rejected,
       'CANCELLED' => BookingStatus.cancelled,
+      'EXPIRED' => BookingStatus.expired,
       _ => BookingStatus.pending,
     };
   }
@@ -277,6 +306,41 @@ class AssignedWorkerEntity {
           .toUpperCase();
 }
 
+/// One selected STANDARD-lane sub-service (supports multi-select, e.g.
+/// "AC General Service" + "AC Dismounting" in the same booking).
+class BookingStandardServiceItemEntity {
+  final String id;
+  final String? standardServiceId;
+  final String nameSnapshot;
+  final double priceSnapshot;
+  final int quantity;
+
+  const BookingStandardServiceItemEntity({
+    required this.id,
+    this.standardServiceId,
+    required this.nameSnapshot,
+    required this.priceSnapshot,
+    this.quantity = 1,
+  });
+
+  double get lineTotal => priceSnapshot * quantity;
+}
+
+/// A worker excluded from this booking (e.g. cancelled before arrival) — kept
+/// so they are never re-offered/re-listed for this same booking, even after
+/// relist.
+class BookingWorkerExclusionEntity {
+  final String workerProfileId;
+  final String? reason;
+  final DateTime createdAt;
+
+  const BookingWorkerExclusionEntity({
+    required this.workerProfileId,
+    this.reason,
+    required this.createdAt,
+  });
+}
+
 /// One entry from the booking_status_history table.
 class BookingStatusHistoryEntry {
   final String id;
@@ -306,6 +370,8 @@ class BookingEntity {
   final DateTime? scheduledDate;
   final DateTime createdAt;
   final DateTime? acceptedAt;
+  final DateTime? enRouteAt;
+  final DateTime? arrivedAt;
   final DateTime? startedAt;
   final double? estimatedPrice;
   final double? finalPrice;
@@ -315,6 +381,10 @@ class BookingEntity {
   final double longitude;
   final DateTime? completedAt;
   final String? cancellationReason;
+  final CancelledByRole? cancelledByRole;
+  final DateTime? expiresAt;
+  final DateTime? liveStartedAt;
+  final DateTime? relistedAt;
   final AssignedWorkerEntity? assignedWorker;
   final int? availableWorkersCount;
   final double? acceptedBidAmount;
@@ -324,12 +394,18 @@ class BookingEntity {
   /// Full name of the client who created the booking.
   /// Populated on worker-facing responses; null on client-facing responses.
   final String? clientName;
+  /// Client's phone number — populated on worker-facing responses only,
+  /// powers the worker's "Call" button once hired.
+  final String? clientPhone;
   final bool inspection;
   final BookingLane lane;
   final String? standardServiceId;
   final String? standardServiceNameSnapshot;
   final double? standardServicePriceSnapshot;
+  final List<BookingStandardServiceItemEntity> standardServiceItems;
   final double? inspectionFeeSnapshot;
+  final List<BookingWorkerExclusionEntity> workerExclusions;
+  final String? lastWorkerCancellationReason;
 
   const BookingEntity({
     required this.id,
@@ -345,6 +421,8 @@ class BookingEntity {
     this.scheduledDate,
     required this.createdAt,
     this.acceptedAt,
+    this.enRouteAt,
+    this.arrivedAt,
     this.startedAt,
     this.estimatedPrice,
     this.finalPrice,
@@ -354,6 +432,10 @@ class BookingEntity {
     this.longitude = 0,
     this.completedAt,
     this.cancellationReason,
+    this.cancelledByRole,
+    this.expiresAt,
+    this.liveStartedAt,
+    this.relistedAt,
     this.assignedWorker,
     this.availableWorkersCount,
     this.acceptedBidAmount,
@@ -361,13 +443,29 @@ class BookingEntity {
     this.review,
     this.statusHistory = const [],
     this.clientName,
+    this.clientPhone,
     this.inspection = false,
     this.lane = BookingLane.bidding,
     this.standardServiceId,
     this.standardServiceNameSnapshot,
     this.standardServicePriceSnapshot,
+    this.standardServiceItems = const [],
     this.inspectionFeeSnapshot,
+    this.workerExclusions = const [],
+    this.lastWorkerCancellationReason,
   });
+
+  /// Sum of all selected STANDARD-lane sub-service prices (× quantity).
+  /// Falls back to the legacy singular snapshot when no item rows exist.
+  double? get standardServicesTotal {
+    if (standardServiceItems.isNotEmpty) {
+      return standardServiceItems.fold<double>(
+        0,
+        (sum, item) => sum + item.lineTotal,
+      );
+    }
+    return standardServicePriceSnapshot;
+  }
 
   BookingEntity copyWith({
     BookingStatus? status,
@@ -396,6 +494,8 @@ class BookingEntity {
       scheduledDate: scheduledDate,
       createdAt: createdAt,
       acceptedAt: acceptedAt,
+      enRouteAt: enRouteAt,
+      arrivedAt: arrivedAt,
       startedAt: startedAt,
       estimatedPrice: estimatedPrice ?? this.estimatedPrice,
       finalPrice: finalPrice ?? this.finalPrice,
@@ -405,6 +505,10 @@ class BookingEntity {
       longitude: longitude,
       completedAt: completedAt ?? this.completedAt,
       cancellationReason: cancellationReason ?? this.cancellationReason,
+      cancelledByRole: cancelledByRole,
+      expiresAt: expiresAt,
+      liveStartedAt: liveStartedAt,
+      relistedAt: relistedAt,
       assignedWorker: assignedWorker ?? this.assignedWorker,
       availableWorkersCount: availableWorkersCount ?? this.availableWorkersCount,
       acceptedBidAmount: acceptedBidAmount ?? this.acceptedBidAmount,
@@ -412,12 +516,16 @@ class BookingEntity {
       review: review ?? this.review,
       statusHistory: statusHistory ?? this.statusHistory,
       clientName: clientName,
+      clientPhone: clientPhone,
       inspection: inspection,
       lane: lane,
       standardServiceId: standardServiceId,
       standardServiceNameSnapshot: standardServiceNameSnapshot,
       standardServicePriceSnapshot: standardServicePriceSnapshot,
+      standardServiceItems: standardServiceItems,
       inspectionFeeSnapshot: inspectionFeeSnapshot,
+      workerExclusions: workerExclusions,
+      lastWorkerCancellationReason: lastWorkerCancellationReason,
     );
   }
 }

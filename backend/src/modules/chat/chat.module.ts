@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { ChatController } from './chat.controller';
@@ -11,7 +11,9 @@ import { NotificationsModule } from '../notifications/notifications.module';
 @Module({
   imports: [
     StorageModule,
-    NotificationsModule,
+    // forwardRef: NotificationsService emits in-app banners via ChatGateway,
+    // so NotificationsModule imports ChatModule back — this breaks that cycle.
+    forwardRef(() => NotificationsModule),
     // Register JwtModule so ChatGateway can verify socket auth tokens
     // using the same secret as the HTTP JwtStrategy.
     JwtModule.registerAsync({
@@ -23,6 +25,6 @@ import { NotificationsModule } from '../notifications/notifications.module';
   ],
   controllers: [ChatController],
   providers: [ChatService, ChatRepository, ChatGateway],
-  exports: [ChatService],
+  exports: [ChatService, ChatGateway],
 })
 export class ChatModule {}

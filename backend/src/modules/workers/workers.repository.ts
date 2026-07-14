@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { AvailabilityStatus, BookingStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { computeCancellationRate } from '../../common/utils/worker-stats.util';
 
 // ---------------------------------------------------------------------------
 // Worker profile include
@@ -26,7 +27,23 @@ export type WorkerProfileWithSkills = Prisma.WorkerProfileGetPayload<{
 
 const WORKER_JOB_INCLUDE = {
   category: { select: { name: true } },
-  clientProfile: { select: { firstName: true, lastName: true, userId: true } },
+  clientProfile: {
+    select: {
+      firstName: true,
+      lastName: true,
+      userId: true,
+      user: { select: { phone: true } },
+    },
+  },
+  standardServiceItems: {
+    select: {
+      id: true,
+      standardServiceId: true,
+      nameSnapshot: true,
+      priceSnapshot: true,
+      quantity: true,
+    },
+  },
   attachments: {
     select: {
       id: true,
@@ -217,7 +234,7 @@ export class WorkersRepository {
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
 
-    const [completedJobs, activeJobs, todayCompleted, workerCancelled, totalAccepted, responseData] =
+    const [completedJobs, activeJobs, todayCompleted, cancellationRate, responseData] =
       await Promise.all([
         this.prisma.booking.count({
           where: { workerProfileId, status: BookingStatus.COMPLETED },
@@ -225,7 +242,14 @@ export class WorkersRepository {
         this.prisma.booking.count({
           where: {
             workerProfileId,
-            status: { in: [BookingStatus.ACCEPTED, BookingStatus.EN_ROUTE, BookingStatus.IN_PROGRESS] },
+            status: {
+              in: [
+                BookingStatus.ACCEPTED,
+                BookingStatus.EN_ROUTE,
+                BookingStatus.ARRIVED,
+                BookingStatus.IN_PROGRESS,
+              ],
+            },
           },
         }),
         // Today's completed bookings with pricing for earnings
@@ -237,29 +261,8 @@ export class WorkersRepository {
           },
           select: { finalPrice: true, platformFee: true },
         }),
-        // Worker-cancelled jobs distinguished by cancellationReason text
-        this.prisma.booking.count({
-          where: {
-            workerProfileId,
-            status: BookingStatus.CANCELLED,
-            cancellationReason: { contains: 'Cancelled by worker' },
-          },
-        }),
-        // Total jobs the worker accepted (ACCEPTED or beyond) for cancel rate denominator
-        this.prisma.booking.count({
-          where: {
-            workerProfileId,
-            status: {
-              in: [
-                BookingStatus.ACCEPTED,
-                BookingStatus.EN_ROUTE,
-                BookingStatus.IN_PROGRESS,
-                BookingStatus.COMPLETED,
-                BookingStatus.CANCELLED,
-              ],
-            },
-          },
-        }),
+        // Shared helper — single source of truth, see worker-stats.util.ts
+        computeCancellationRate(this.prisma, workerProfileId),
         // Jobs with acceptedAt for response time calculation
         this.prisma.booking.findMany({
           where: { workerProfileId, acceptedAt: { not: null } },
@@ -272,10 +275,6 @@ export class WorkersRepository {
       const earned = (b.finalPrice ?? 0) - (b.platformFee ?? 0);
       return sum + Math.max(0, earned);
     }, 0);
-
-    // Cancel rate rounded to nearest whole percent
-    const cancellationRate =
-      totalAccepted > 0 ? Math.round((workerCancelled / totalAccepted) * 100) : 0;
 
     // Average response time in minutes; null when no acceptedAt data exists
     let avgResponseMinutes: number | null = null;

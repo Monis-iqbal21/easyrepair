@@ -17,10 +17,17 @@ enum BookingStatus {
   PENDING
   ACCEPTED
   EN_ROUTE
+  ARRIVED
   IN_PROGRESS
   COMPLETED
   REJECTED
   CANCELLED
+  EXPIRED
+}
+
+enum CancelledByRole {
+  CLIENT
+  WORKER
 }
 
 enum WorkerStatus {
@@ -206,10 +213,11 @@ model WorkerProfile {
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
 
-  skills    WorkerSkill[]
-  documents WorkerDocument[]
-  bookings  Booking[]
-  bids      Bid[]
+  skills            WorkerSkill[]
+  documents         WorkerDocument[]
+  bookings          Booking[]
+  bids              Bid[]
+  bookingExclusions BookingWorkerExclusion[]
 
   @@map("worker_profiles")
 }
@@ -277,7 +285,8 @@ model StandardService {
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
 
-  bookings Booking[]
+  bookings     Booking[]
+  bookingItems BookingStandardServiceItem[]
 
   @@index([categoryId])
   @@map("standard_services")
@@ -292,27 +301,42 @@ model Booking {
   categoryId      String
   category        ServiceCategory @relation(fields: [categoryId], references: [id])
 
-  status             BookingStatus  @default(PENDING)
+  status             BookingStatus    @default(PENDING)
   /// Booking lane: STANDARD (fixed-price catalog), INSPECTION (fixed inspection
   /// fee), or BIDDING (open worker bidding). Existing rows default to BIDDING,
   /// preserving current behavior.
-  lane               BookingLane    @default(BIDDING)
-  urgency            BookingUrgency @default(NORMAL)
+  lane               BookingLane      @default(BIDDING)
+  urgency            BookingUrgency   @default(NORMAL)
   timeSlot           TimeSlot?
   urgentWindow       UrgentWindow?
   title              String?
   description        String
-  inspection         Boolean        @default(false)
+  inspection         Boolean          @default(false)
   addressLine        String
   city               String
   latitude           Float
   longitude          Float
   scheduledAt        DateTime?
   acceptedAt         DateTime?
+  enRouteAt          DateTime?
+  arrivedAt          DateTime?
   startedAt          DateTime?
   completedAt        DateTime?
   cancelledAt        DateTime?
   cancellationReason String?
+  /// Who initiated the cancellation. Null for non-cancelled bookings, for
+  /// EXPIRED bookings (expiry is not a cancellation), and for historical
+  /// cancelled rows predating this field.
+  cancelledByRole    CancelledByRole?
+
+  /// 72h auto-expiry window for PENDING bookings across all lanes. Set at
+  /// creation and reset on relist; the BullMQ expiry job's delay is derived
+  /// from this timestamp.
+  expiresAt     DateTime?
+  /// When the current live/searching window started (creation, or last relist).
+  liveStartedAt DateTime?
+  /// Last time the client used "Make Live Again" on an EXPIRED booking.
+  relistedAt    DateTime?
 
   /// STANDARD lane: the catalog item picked at booking time (nullable — the
   /// item may later be deleted; the price/name snapshots below remain intact).
@@ -334,10 +358,12 @@ model Booking {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  statusHistory BookingStatusHistory[]
-  attachments   BookingAttachment[]
-  review        Review?
-  bids          Bid[]
+  statusHistory        BookingStatusHistory[]
+  attachments          BookingAttachment[]
+  review               Review?
+  bids                 Bid[]
+  standardServiceItems BookingStandardServiceItem[]
+  workerExclusions     BookingWorkerExclusion[]
 
   @@index([clientProfileId])
   @@index([workerProfileId])
@@ -347,7 +373,48 @@ model Booking {
   @@index([scheduledAt])
   @@index([lane])
   @@index([standardServiceId])
+  @@index([expiresAt])
   @@map("bookings")
+}
+
+/// Individual selected STANDARD-lane services for a booking. Supports
+/// multiple sub-services per booking (e.g. AC General Service + AC
+/// Dismounting). The legacy singular standardServiceId/snapshot fields on
+/// Booking remain for backward compatibility; new STANDARD bookings populate
+/// both the legacy fields (first/primary item) and this table.
+model BookingStandardServiceItem {
+  id                String           @id @default(uuid())
+  bookingId         String
+  booking           Booking          @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  standardServiceId String?
+  standardService   StandardService? @relation(fields: [standardServiceId], references: [id], onDelete: SetNull)
+  nameSnapshot      String
+  priceSnapshot     Float
+  quantity          Int              @default(1)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@index([bookingId])
+  @@index([standardServiceId])
+  @@map("booking_standard_service_items")
+}
+
+/// Tracks workers who cancelled or were otherwise excluded from a specific
+/// booking, so they are never re-offered/re-listed for that same booking
+/// (survives relist via "Make Live Again").
+model BookingWorkerExclusion {
+  id              String        @id @default(uuid())
+  bookingId       String
+  booking         Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  workerProfileId String
+  workerProfile   WorkerProfile @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
+  reason          String?
+  createdAt       DateTime      @default(now())
+
+  @@unique([bookingId, workerProfileId])
+  @@index([bookingId])
+  @@index([workerProfileId])
+  @@map("booking_worker_exclusions")
 }
 
 model BookingStatusHistory {

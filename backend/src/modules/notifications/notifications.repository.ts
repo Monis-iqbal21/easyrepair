@@ -75,4 +75,22 @@ export class NotificationsRepository {
     });
     return user?.fcmToken ?? null;
   }
+
+  /**
+   * Check whether a notification with this exact eventKey/bookingId/userId
+   * combination was already sent — used to dedupe repeated-poll notifications
+   * (e.g. "worker listed for STANDARD job" firing on every nearby-workers
+   * refresh instead of once per booking/worker pair).
+   */
+  async existsForBookingAndUser(
+    userId: string,
+    bookingId: string,
+    eventKey: string,
+  ): Promise<boolean> {
+    const found = await this.prisma.notification.findFirst({
+      where: { userId, bookingId, eventKey },
+      select: { id: true },
+    });
+    return found !== null;
+  }
 }

@@ -208,6 +208,7 @@ class _NewJobCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isUrgent = job.urgency == BookingUrgency.urgent;
+    final isStandard = job.isStandardLane;
 
     return GestureDetector(
       onTap: () {
@@ -302,8 +303,11 @@ class _NewJobCard extends ConsumerWidget {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          _UrgencyChip(isUrgent: isUrgent),
-                          if (job.hasMyBid) ...[
+                          if (isStandard)
+                            const _StandardJobBadge()
+                          else
+                            _UrgencyChip(isUrgent: isUrgent),
+                          if (!isStandard && job.hasMyBid) ...[
                             const SizedBox(height: 4),
                             const _BidPlacedBadge(),
                           ],
@@ -315,6 +319,26 @@ class _NewJobCard extends ConsumerWidget {
                       ),
                     ],
                   ),
+
+                  // ── STANDARD lane: services + total instead of description ──
+                  if (isStandard && job.standardServiceItems.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      job.standardServiceItems.map((i) => i.nameSnapshot).join(' + '),
+                      style: const TextStyle(fontSize: 12.5, color: _kGray, height: 1.4),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'PKR ${job.standardServicesTotal.toStringAsFixed(0)}',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: _kAccent,
+                      ),
+                    ),
+                  ],
 
                   // ── Description snippet ───────────────────────────────
                   if (job.description != null && job.description!.isNotEmpty) ...[
@@ -352,11 +376,12 @@ class _NewJobCard extends ConsumerWidget {
                           icon: Icons.near_me_outlined,
                           label: job.distanceLabel,
                         ),
-                      // Bid count
-                      _MetaChip(
-                        icon: Icons.gavel_rounded,
-                        label: '${job.bidCount} offer',
-                      ),
+                      // Bid count (bidding lane only)
+                      if (!isStandard)
+                        _MetaChip(
+                          icon: Icons.gavel_rounded,
+                          label: '${job.bidCount} offer',
+                        ),
                       // Posted time
                       _MetaChip(
                         icon: Icons.access_time_rounded,
@@ -415,34 +440,59 @@ class _NewJobCard extends ConsumerWidget {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      // Bid Now / Update Bid
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            debugPrint('[NewJobCard] bid button pressed job.id=${job.id}');
-                            final title = Uri.encodeComponent(job.displayTitle);
-                            context.push('/worker/job/${job.id}/bid?title=$title');
-                          },
-                          icon: const Icon(Icons.gavel_rounded, size: 14),
-                          label: Text(job.hasMyBid ? 'Offer Badlein' : 'Offer Bhejein'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: _kAccent,
-                            foregroundColor: Colors.white,
-                            elevation: 0,
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            textStyle: const TextStyle(
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w600,
+                      if (!isStandard) ...[
+                        const SizedBox(width: 8),
+                        // Bid Now / Update Bid
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              debugPrint('[NewJobCard] bid button pressed job.id=${job.id}');
+                              final title = Uri.encodeComponent(job.displayTitle);
+                              context.push('/worker/job/${job.id}/bid?title=$title');
+                            },
+                            icon: const Icon(Icons.gavel_rounded, size: 14),
+                            label: Text(job.hasMyBid ? 'Offer Badlein' : 'Offer Bhejein'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _kAccent,
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              textStyle: const TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ),
-                      ),
+                      ],
                     ],
                   ),
+                  if (isStandard) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: _kAccent.withValues(alpha: 0.06),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.info_outline_rounded, size: 13, color: _kAccent),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              'Client aap ko seedha hire kar sakta hai. Koi offer bhejne ki zaroorat nahi.',
+                              style: TextStyle(fontSize: 11, color: _kAccent.withValues(alpha: 0.9)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -458,6 +508,38 @@ class _NewJobCard extends ConsumerWidget {
     if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
     if (diff.inHours < 24) return '${diff.inHours}h ago';
     return DateFormat('MMM d').format(dt);
+  }
+}
+
+// ── Standard job badge ─────────────────────────────────────────────────────────
+
+class _StandardJobBadge extends StatelessWidget {
+  const _StandardJobBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      decoration: BoxDecoration(
+        color: _kAccent,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.verified_rounded, size: 11, color: Colors.white),
+          SizedBox(width: 3),
+          Text(
+            'Listed Job',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

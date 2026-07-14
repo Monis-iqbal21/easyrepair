@@ -7,6 +7,20 @@ import {
   AttachmentType,
 } from '@prisma/client';
 
+export class BookingStandardServiceItemDto {
+  id: string;
+  standardServiceId: string | null;
+  nameSnapshot: string;
+  priceSnapshot: number;
+  quantity: number;
+}
+
+export class BookingWorkerExclusionDto {
+  workerProfileId: string;
+  reason: string | null;
+  createdAt: string;
+}
+
 export class NearbyWorkerDto {
   id: string;
   firstName: string;
@@ -18,6 +32,7 @@ export class NearbyWorkerDto {
   cancellationRate: number;
   distanceKm: number;
   skills: string[];
+  recommended: boolean;
 }
 
 export class NearbyWorkersResponseDto {
@@ -77,6 +92,7 @@ export class BookingResponseDto {
   standardServiceId: string | null;
   standardServiceNameSnapshot: string | null;
   standardServicePriceSnapshot: number | null;
+  standardServiceItems: BookingStandardServiceItemDto[];
   inspectionFeeSnapshot: number | null;
   estimatedPrice: number | null;
   finalPrice: number | null;
@@ -84,11 +100,22 @@ export class BookingResponseDto {
   city: string;
   latitude: number;
   longitude: number;
+  acceptedAt: string | null;
+  enRouteAt: string | null;
+  arrivedAt: string | null;
+  startedAt: string | null;
   completedAt: string | null;
   cancellationReason: string | null;
+  cancelledByRole: 'CLIENT' | 'WORKER' | null;
+  expiresAt: string | null;
+  liveStartedAt: string | null;
+  relistedAt: string | null;
   worker: WorkerSummaryDto | null;
   availableWorkersCount: number | null;
   attachments: BookingAttachmentDto[];
   review: BookingReviewDto | null;
   acceptedBidAmount: number | null;
+  workerExclusions: BookingWorkerExclusionDto[];
+  /** Convenience: reason the most recently assigned worker cancelled, if any — for the client's "Previous Ustaad cancelled: ..." strip. */
+  lastWorkerCancellationReason: string | null;
 }

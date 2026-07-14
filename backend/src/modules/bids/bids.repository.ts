@@ -262,6 +262,9 @@ export class BidsRepository {
       where: {
         status: BookingStatus.PENDING,
         categoryId: { in: categoryIds },
+        // A worker who cancelled (or was otherwise excluded from) a STANDARD
+        // booking must never see it again in their own feed, even after relist.
+        workerExclusions: { none: { workerProfileId } },
       },
       orderBy: { createdAt: 'desc' },
       include: {
@@ -272,6 +275,15 @@ export class BidsRepository {
             firstName: true,
             lastName: true,
             avatarUrl: true,
+          },
+        },
+        standardServiceItems: {
+          select: {
+            id: true,
+            standardServiceId: true,
+            nameSnapshot: true,
+            priceSnapshot: true,
+            quantity: true,
           },
         },
         _count: { select: { bids: true } },

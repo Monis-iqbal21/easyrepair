@@ -1,4 +1,19 @@
-import { AttachmentType, BookingStatus, BookingUrgency, TimeSlot, UrgentWindow } from '@prisma/client';
+import {
+  AttachmentType,
+  BookingLane,
+  BookingStatus,
+  BookingUrgency,
+  TimeSlot,
+  UrgentWindow,
+} from '@prisma/client';
+
+export class WorkerJobStandardServiceItemDto {
+  id: string;
+  standardServiceId: string | null;
+  nameSnapshot: string;
+  priceSnapshot: number;
+  quantity: number;
+}
 
 export class WorkerJobAttachmentDto {
   id: string;
@@ -42,9 +57,15 @@ export class WorkerJobResponseDto {
   scheduledDate: string | null;
   createdAt: string;
   inspection: boolean;
+  lane: BookingLane;
+  standardServiceItems: WorkerJobStandardServiceItemDto[];
   acceptedAt: string | null;
+  enRouteAt: string | null;
+  arrivedAt: string | null;
   startedAt: string | null;
   completedAt: string | null;
+  cancellationReason: string | null;
+  cancelledByRole: 'CLIENT' | 'WORKER' | null;
   estimatedPrice: number | null;
   finalPrice: number | null;
   address: string;
@@ -53,6 +74,8 @@ export class WorkerJobResponseDto {
   longitude: number;
   /** First + last name of the client who created the booking. */
   clientName: string | null;
+  /** Client's phone number — powers the worker's "Call" button once hired. */
+  clientPhone: string | null;
   attachments: WorkerJobAttachmentDto[];
   statusHistory: WorkerJobStatusHistoryDto[];
   review: WorkerJobReviewDto | null;

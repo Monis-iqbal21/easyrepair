@@ -2,7 +2,9 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fpdart/fpdart.dart';
 
+import '../../../../core/errors/failures.dart';
 import '../../../../core/network/api_client.dart';
 import '../../data/datasources/booking_remote_datasource.dart';
 import '../../data/repositories/booking_repository_impl.dart';
@@ -621,6 +623,9 @@ class NearbyWorkersNotifier
 
   List<NearbyWorkerEntity> _sortedFrom(Map<String, NearbyWorkerEntity> map) {
     return List<NearbyWorkerEntity>.from(map.values)..sort((a, b) {
+      if (a.recommended != b.recommended) {
+        return a.recommended ? -1 : 1;
+      }
       final dc = a.distanceKm.compareTo(b.distanceKm);
       return dc != 0 ? dc : b.rating.compareTo(a.rating);
     });
@@ -663,3 +668,90 @@ class AssignWorkerNotifier extends AsyncNotifier<void> {
 
 final assignWorkerNotifierProvider =
     AsyncNotifierProvider<AssignWorkerNotifier, void>(AssignWorkerNotifier.new);
+
+// ── Relist (Make Live Again) notifier ────────────────────────────────────────
+
+class RelistBookingNotifier extends AsyncNotifier<void> {
+  @override
+  Future<void> build() async {}
+
+  Future<void> relist(String bookingId) async {
+    state = const AsyncLoading();
+    final result =
+        await ref.read(bookingRepositoryProvider).relistBooking(bookingId);
+    result.fold(
+      (failure) {
+        state = AsyncError(failure, StackTrace.current);
+        throw failure;
+      },
+      (updated) {
+        state = const AsyncData(null);
+        ref.read(bookingsNotifierProvider.notifier).patchBooking(updated);
+        ref.read(bookingDetailProvider(bookingId).notifier).push(updated);
+      },
+    );
+  }
+}
+
+final relistBookingNotifierProvider =
+    AsyncNotifierProvider<RelistBookingNotifier, void>(
+      RelistBookingNotifier.new,
+    );
+
+// ── Worker lifecycle notifier (on-my-way / arrived / start / complete / cancel) ─
+
+class WorkerLifecycleNotifier extends AsyncNotifier<void> {
+  @override
+  Future<void> build() async {}
+
+  Future<void> _run(
+    String bookingId,
+    Future<Either<Failure, BookingEntity>> Function() call,
+  ) async {
+    state = const AsyncLoading();
+    final result = await call();
+    result.fold(
+      (failure) {
+        state = AsyncError(failure, StackTrace.current);
+        throw failure;
+      },
+      (updated) {
+        state = const AsyncData(null);
+        ref.read(bookingDetailProvider(bookingId).notifier).push(updated);
+      },
+    );
+  }
+
+  Future<void> onMyWay(String bookingId) => _run(
+        bookingId,
+        () => ref.read(bookingRepositoryProvider).markOnMyWay(bookingId),
+      );
+
+  Future<void> arrived(String bookingId) => _run(
+        bookingId,
+        () => ref.read(bookingRepositoryProvider).markArrived(bookingId),
+      );
+
+  Future<void> start(String bookingId) => _run(
+        bookingId,
+        () => ref.read(bookingRepositoryProvider).startJob(bookingId),
+      );
+
+  Future<void> complete(String bookingId) => _run(
+        bookingId,
+        () =>
+            ref.read(bookingRepositoryProvider).completeJobLifecycle(bookingId),
+      );
+
+  Future<void> cancel(String bookingId, String reason) => _run(
+        bookingId,
+        () => ref
+            .read(bookingRepositoryProvider)
+            .workerCancelBooking(bookingId, reason),
+      );
+}
+
+final workerLifecycleNotifierProvider =
+    AsyncNotifierProvider<WorkerLifecycleNotifier, void>(
+      WorkerLifecycleNotifier.new,
+    );

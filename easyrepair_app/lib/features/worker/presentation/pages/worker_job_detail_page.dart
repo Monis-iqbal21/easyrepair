@@ -12,6 +12,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/config/app_config.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../bookings/domain/entities/booking_entity.dart';
+import '../../../bookings/presentation/providers/booking_providers.dart';
 import '../../../bookings/presentation/widgets/inspection_badge.dart';
 import '../../../bookings/presentation/widgets/media_attachment_widgets.dart';
 import '../providers/worker_job_providers.dart';
@@ -113,7 +114,9 @@ class _JobBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isPending   = job.status == BookingStatus.pending;
-    final canComplete = job.status.isWorkerActive;
+    final isStandard  = job.lane == BookingLane.standard;
+    final isHired     = job.assignedWorker != null || job.status != BookingStatus.pending;
+    final canComplete = job.status.isWorkerActive && !isStandard;
 
     return Column(
       children: [
@@ -126,8 +129,40 @@ class _JobBody extends ConsumerWidget {
                 _StatusCard(job: job),
                 const SizedBox(height: 12),
 
-                // ── Bid Now button (PENDING jobs only) ───────────────────
-                if (isPending) ...[
+                // ── STANDARD lane: selected services + prices ────────────
+                if (isStandard && job.standardServiceItems.isNotEmpty) ...[
+                  _StandardServicesSection(job: job),
+                  const SizedBox(height: 16),
+                ],
+
+                // ── STANDARD lane, still Live/listed: no bid — informational ──
+                if (isStandard && isPending) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: _kGreen.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: _kGreen.withValues(alpha: 0.25)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.info_outline_rounded, size: 18, color: _kGreen),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Yeh ek Standard job hai. Client aap ko seedha hire kar sakta hai — offer bhejne ki zaroorat nahi.',
+                            style: TextStyle(fontSize: 12.5, color: _kGreen.withValues(alpha: 0.9), height: 1.4),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
+                // ── Bid Now button (BIDDING lane, PENDING jobs only) ─────
+                if (isPending && !isStandard) ...[
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
@@ -159,29 +194,60 @@ class _JobBody extends ConsumerWidget {
                   const SizedBox(height: 16),
                 ],
 
-                // ── Chat with client (available before/without a bid) ────
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: () =>
-                        openWorkerChatForBooking(context, ref, job.id),
-                    icon: const Icon(Icons.chat_bubble_outline_rounded, size: 16),
-                    label: const Text('Chat with Client'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: _kGreen,
-                      side: const BorderSide(color: _kGreen),
-                      padding: const EdgeInsets.symmetric(vertical: 13),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                // ── Call + Chat (available once hired) ───────────────────
+                Row(
+                  children: [
+                    if (isHired && job.clientPhone != null) ...[
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => _callClient(job.clientPhone!),
+                          icon: const Icon(Icons.call_rounded, size: 16),
+                          label: const Text('Call'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: _kGreen,
+                            side: const BorderSide(color: _kGreen),
+                            padding: const EdgeInsets.symmetric(vertical: 13),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            textStyle: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
                       ),
-                      textStyle: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
+                      const SizedBox(width: 10),
+                    ],
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () =>
+                            openWorkerChatForBooking(context, ref, job.id),
+                        icon: const Icon(Icons.chat_bubble_outline_rounded, size: 16),
+                        label: const Text('Chat with Client'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: _kGreen,
+                          side: const BorderSide(color: _kGreen),
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          textStyle: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                 ),
                 const SizedBox(height: 16),
+
+                // ── STANDARD lane lifecycle (On My Way / Arrived / Start / Cancel) ──
+                if (isStandard && job.status.isWorkerActive) ...[
+                  _StandardLifecycleSection(job: job),
+                  const SizedBox(height: 16),
+                ],
 
                 // ── Client info ──────────────────────────────────────────
                 if (job.clientName != null && job.clientName!.isNotEmpty) ...[
@@ -351,6 +417,261 @@ class _JobBody extends ConsumerWidget {
 
   String _fmtDateTime(DateTime dt) =>
       DateFormat('d MMM yyyy, h:mm a').format(dt);
+
+  Future<void> _callClient(String phone) async {
+    final uri = Uri(scheme: 'tel', path: phone);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    }
+  }
+}
+
+// ── Standard-lane selected services ───────────────────────────────────────────
+
+class _StandardServicesSection extends StatelessWidget {
+  final BookingEntity job;
+  const _StandardServicesSection({required this.job});
+
+  @override
+  Widget build(BuildContext context) {
+    return _Section(
+      title: 'Selected Services',
+      child: Column(
+        children: [
+          ...job.standardServiceItems.map(
+            (item) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      item.quantity > 1
+                          ? '${item.nameSnapshot} x${item.quantity}'
+                          : item.nameSnapshot,
+                      style: const TextStyle(fontSize: 13.5, color: _kDark),
+                    ),
+                  ),
+                  Text(
+                    'PKR ${item.lineTotal.toStringAsFixed(0)}',
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w600,
+                      color: _kDark,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const Divider(height: 20, color: _kBorder),
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Total',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: _kDark),
+                ),
+              ),
+              Text(
+                'PKR ${(job.finalPrice ?? job.standardServicesTotal ?? 0).toStringAsFixed(0)}',
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: _kGreen,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Standard-lane lifecycle actions ───────────────────────────────────────────
+
+class _StandardLifecycleSection extends ConsumerWidget {
+  final BookingEntity job;
+  const _StandardLifecycleSection({required this.job});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isLoading = ref.watch(workerLifecycleNotifierProvider).isLoading;
+    final canCancel = job.status == BookingStatus.accepted ||
+        job.status == BookingStatus.enRoute;
+
+    Future<void> runAction(Future<void> Function() action) async {
+      try {
+        await action();
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(e is Failure ? e.message : 'Action failed. Try again.'),
+              backgroundColor: _kRed,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+          );
+        }
+      }
+    }
+
+    Widget primaryButton({
+      required String label,
+      required IconData icon,
+      required VoidCallback onPressed,
+    }) {
+      return SizedBox(
+        width: double.infinity,
+        child: ElevatedButton.icon(
+          onPressed: isLoading ? null : onPressed,
+          icon: isLoading
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                )
+              : Icon(icon, size: 16),
+          label: Text(label),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: _kGreen,
+            foregroundColor: Colors.white,
+            elevation: 0,
+            padding: const EdgeInsets.symmetric(vertical: 13),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        switch (job.status) {
+          BookingStatus.accepted => primaryButton(
+              label: 'On My Way',
+              icon: Icons.directions_car_filled_rounded,
+              onPressed: () => runAction(
+                () => ref.read(workerLifecycleNotifierProvider.notifier).onMyWay(job.id),
+              ),
+            ),
+          BookingStatus.enRoute => primaryButton(
+              label: 'Arrived',
+              icon: Icons.location_on_rounded,
+              onPressed: () => runAction(
+                () => ref.read(workerLifecycleNotifierProvider.notifier).arrived(job.id),
+              ),
+            ),
+          BookingStatus.arrived => primaryButton(
+              label: 'Start Job',
+              icon: Icons.play_circle_outline_rounded,
+              onPressed: () => runAction(
+                () => ref.read(workerLifecycleNotifierProvider.notifier).start(job.id),
+              ),
+            ),
+          BookingStatus.inProgress => primaryButton(
+              label: 'Complete Job',
+              icon: Icons.check_circle_outline_rounded,
+              onPressed: () => runAction(
+                () => ref.read(workerLifecycleNotifierProvider.notifier).complete(job.id),
+              ),
+            ),
+          _ => const SizedBox.shrink(),
+        },
+        if (canCancel) ...[
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: isLoading
+                  ? null
+                  : () => _showCancelDialog(context, ref, job.id, runAction),
+              icon: const Icon(Icons.close_rounded, size: 16),
+              label: const Text('Cancel Job'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: _kRed,
+                side: const BorderSide(color: _kRed),
+                padding: const EdgeInsets.symmetric(vertical: 13),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Future<void> _showCancelDialog(
+    BuildContext context,
+    WidgetRef ref,
+    String jobId,
+    Future<void> Function(Future<void> Function()) runAction,
+  ) async {
+    final reasonCtrl = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: const Text(
+          'Cancel this job?',
+          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Please tell the client why you are cancelling.',
+              style: TextStyle(color: _kGray, fontSize: 13.5),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: reasonCtrl,
+              maxLines: 3,
+              decoration: InputDecoration(
+                hintText: 'Reason (required)',
+                filled: true,
+                fillColor: _kBg,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: _kBorder),
+                ),
+                contentPadding: const EdgeInsets.all(12),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Keep Job', style: TextStyle(color: _kGray)),
+          ),
+          TextButton(
+            onPressed: () {
+              if (reasonCtrl.text.trim().isEmpty) return;
+              Navigator.pop(ctx, true);
+            },
+            child: const Text(
+              'Yes, cancel',
+              style: TextStyle(color: _kRed, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && reasonCtrl.text.trim().isNotEmpty) {
+      await runAction(
+        () => ref
+            .read(workerLifecycleNotifierProvider.notifier)
+            .cancel(jobId, reasonCtrl.text.trim()),
+      );
+      if (context.mounted) _goBackOrHome(context);
+    }
+  }
 }
 
 // ── Status card ───────────────────────────────────────────────────────────────

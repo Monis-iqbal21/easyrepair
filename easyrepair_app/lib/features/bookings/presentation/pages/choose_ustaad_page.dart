@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../domain/entities/booking_entity.dart';
 import '../../domain/entities/nearby_worker_entity.dart';
 import '../providers/booking_providers.dart';
-import 'track_worker_page.dart';
+import '../widgets/client_chat_action.dart';
 
 // ── Palette (matches post_job_page.dart / Handygo design system) ─────────────
 const _kGreen = Color(0xFFDB6234);
@@ -30,6 +31,42 @@ class ChooseUstaadPage extends ConsumerStatefulWidget {
 class _ChooseUstaadPageState extends ConsumerState<ChooseUstaadPage> {
   bool _assigning = false;
 
+  Future<void> _confirmAndSelectWorker(NearbyWorkerEntity worker) async {
+    if (_assigning) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: const Text(
+          'Hire this Ustaad?',
+          style: TextStyle(fontWeight: FontWeight.w700, color: _kDark),
+        ),
+        content: Text(
+          'Hire ${worker.fullName} for this job? You won\'t be able to '
+          'choose another Ustaad while they are assigned.',
+          style: const TextStyle(color: _kGray, fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel', style: TextStyle(color: _kGray)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _kGreen,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Hire'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) await _selectWorker(worker);
+  }
+
   Future<void> _selectWorker(NearbyWorkerEntity worker) async {
     if (_assigning) return;
     setState(() => _assigning = true);
@@ -38,11 +75,7 @@ class _ChooseUstaadPageState extends ConsumerState<ChooseUstaadPage> {
           .read(assignWorkerNotifierProvider.notifier)
           .assign(widget.booking.id, worker.id);
       if (!mounted) return;
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (_) => TrackWorkerPage(bookingId: widget.booking.id),
-        ),
-      );
+      context.pushReplacement('/client/booking/${widget.booking.id}');
     } catch (_) {
       if (!mounted) return;
       setState(() => _assigning = false);
@@ -57,6 +90,10 @@ class _ChooseUstaadPageState extends ConsumerState<ChooseUstaadPage> {
         ),
       );
     }
+  }
+
+  Future<void> _chatWithWorker(NearbyWorkerEntity worker) async {
+    await openClientChatForBooking(context, ref, widget.booking.id);
   }
 
   void _openProfileModal(NearbyWorkerEntity worker) {
@@ -226,7 +263,8 @@ class _ChooseUstaadPageState extends ConsumerState<ChooseUstaadPage> {
           worker: worker,
           busy: _assigning,
           onAvatarTap: () => _openProfileModal(worker),
-          onSelect: () => _selectWorker(worker),
+          onSelect: () => _confirmAndSelectWorker(worker),
+          onChat: () => _chatWithWorker(worker),
         );
       },
     );
@@ -238,12 +276,14 @@ class _WorkerCard extends StatelessWidget {
   final bool busy;
   final VoidCallback onAvatarTap;
   final VoidCallback onSelect;
+  final VoidCallback onChat;
 
   const _WorkerCard({
     required this.worker,
     required this.busy,
     required this.onAvatarTap,
     required this.onSelect,
+    required this.onChat,
   });
 
   Widget _statChip(IconData icon, String label) {
@@ -306,6 +346,10 @@ class _WorkerCard extends StatelessWidget {
                         _LevelBadge(label: worker.levelBadge),
                       ],
                     ),
+                    if (worker.recommended) ...[
+                      const SizedBox(height: 4),
+                      const _RecommendedBadge(),
+                    ],
                     const SizedBox(height: 6),
                     Wrap(
                       spacing: 10,
@@ -341,33 +385,85 @@ class _WorkerCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: busy ? null : onSelect,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _kGreen,
-                disabledBackgroundColor: _kGreen.withValues(alpha: 0.5),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+          Row(
+            children: [
+              GestureDetector(
+                onTap: busy ? null : onChat,
+                child: Container(
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    color: _kGreen.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: _kGreen.withValues(alpha: 0.3)),
+                  ),
+                  child: const Icon(
+                    Icons.chat_bubble_outline_rounded,
+                    color: _kGreen,
+                    size: 20,
+                  ),
                 ),
-                elevation: 0,
               ),
-              child: busy
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Text(
-                      'Select',
-                      style: TextStyle(fontWeight: FontWeight.w700),
+              const SizedBox(width: 10),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: busy ? null : onSelect,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _kGreen,
+                    disabledBackgroundColor: _kGreen.withValues(alpha: 0.5),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
+                    elevation: 0,
+                  ),
+                  child: busy
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text(
+                          'Select',
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RecommendedBadge extends StatelessWidget {
+  const _RecommendedBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF7ED),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFFDBA74)),
+      ),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.thumb_up_alt_rounded, size: 11, color: Color(0xFFEA580C)),
+          SizedBox(width: 4),
+          Text(
+            'Recommended',
+            style: TextStyle(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFFEA580C),
             ),
           ),
         ],

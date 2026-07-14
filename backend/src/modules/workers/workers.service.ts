@@ -534,6 +534,14 @@ export class WorkersService {
       ? `${cp.firstName} ${cp.lastName}`.trim()
       : null;
 
+    const standardServiceItems = job.standardServiceItems.map((item) => ({
+      id: item.id,
+      standardServiceId: item.standardServiceId ?? null,
+      nameSnapshot: item.nameSnapshot,
+      priceSnapshot: item.priceSnapshot,
+      quantity: item.quantity,
+    }));
+
     return {
       id: job.id,
       serviceCategory: job.category.name,
@@ -547,10 +555,16 @@ export class WorkersService {
       scheduledDate: job.scheduledAt?.toISOString() ?? null,
       createdAt: job.createdAt.toISOString(),
       inspection: job.inspection,
+      lane: job.lane,
+      standardServiceItems,
       urgentWindow: job.urgentWindow ?? null,
       acceptedAt: job.acceptedAt?.toISOString() ?? null,
+      enRouteAt: job.enRouteAt?.toISOString() ?? null,
+      arrivedAt: job.arrivedAt?.toISOString() ?? null,
       startedAt: job.startedAt?.toISOString() ?? null,
       completedAt: job.completedAt?.toISOString() ?? null,
+      cancellationReason: job.cancellationReason ?? null,
+      cancelledByRole: (job.cancelledByRole as 'CLIENT' | 'WORKER' | null) ?? null,
       estimatedPrice: job.estimatedPrice ?? null,
       finalPrice: job.finalPrice ?? null,
       address: job.addressLine,
@@ -558,6 +572,7 @@ export class WorkersService {
       latitude: job.latitude,
       longitude: job.longitude,
       clientName,
+      clientPhone: cp?.user?.phone ?? null,
       attachments,
       statusHistory,
       review: job.review

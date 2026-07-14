@@ -14,6 +14,7 @@ import {
   WorkerStatus,
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { computeCancellationRate } from '../../common/utils/worker-stats.util';
 
 // Raw row shape returned by the PostGIS nearby-workers query.
 interface RawNearbyWorkerRow {
@@ -95,6 +96,25 @@ export const BOOKING_INCLUDE = {
       createdAt: true,
     },
   },
+  standardServiceItems: {
+    select: {
+      id: true,
+      standardServiceId: true,
+      nameSnapshot: true,
+      priceSnapshot: true,
+      quantity: true,
+    },
+    orderBy: { createdAt: 'asc' as const },
+  },
+  workerExclusions: {
+    select: {
+      id: true,
+      workerProfileId: true,
+      reason: true,
+      createdAt: true,
+    },
+    orderBy: { createdAt: 'desc' as const },
+  },
 } satisfies Prisma.BookingInclude;
 
 // Derive the exact return type from the include so every caller is
@@ -128,6 +148,13 @@ export class BookingsRepository {
     return this.prisma.standardService.findUnique({ where: { id } });
   }
 
+  /** Find multiple standard services by id, for multi-select STANDARD bookings. */
+  async findStandardServicesByIds(ids: string[]) {
+    return this.prisma.standardService.findMany({
+      where: { id: { in: ids } },
+    });
+  }
+
   /** Find the ClientProfile for a given userId. */
   async findClientProfileByUserId(userId: string) {
     return this.prisma.clientProfile.findUnique({ where: { userId } });
@@ -156,8 +183,20 @@ export class BookingsRepository {
     standardServiceId?: string;
     standardServiceNameSnapshot?: string;
     standardServicePriceSnapshot?: number;
+    /** Multi-select STANDARD-lane items. First item also populates the
+     *  legacy singular standardServiceId/snapshot fields for backward
+     *  compatibility with older app builds. */
+    standardServiceItems?: Array<{
+      standardServiceId: string;
+      nameSnapshot: string;
+      priceSnapshot: number;
+      quantity?: number;
+    }>;
     inspectionFeeSnapshot?: number;
     estimatedPrice?: number;
+    /** 72h auto-expiry window — set for all lanes on creation. */
+    expiresAt?: Date;
+    liveStartedAt?: Date;
   }): Promise<BookingWithRelations> {
     // Step 1 — transactional write (no include needed here).
     const created = await this.prisma.$transaction(async (tx) => {
@@ -184,8 +223,22 @@ export class BookingsRepository {
             data.standardServicePriceSnapshot ?? null,
           inspectionFeeSnapshot: data.inspectionFeeSnapshot ?? null,
           estimatedPrice: data.estimatedPrice ?? null,
+          expiresAt: data.expiresAt ?? null,
+          liveStartedAt: data.liveStartedAt ?? null,
         },
       });
+
+      if (data.standardServiceItems && data.standardServiceItems.length > 0) {
+        await tx.bookingStandardServiceItem.createMany({
+          data: data.standardServiceItems.map((item) => ({
+            bookingId: booking.id,
+            standardServiceId: item.standardServiceId,
+            nameSnapshot: item.nameSnapshot,
+            priceSnapshot: item.priceSnapshot,
+            quantity: item.quantity ?? 1,
+          })),
+        });
+      }
 
       await tx.bookingStatusHistory.create({
         data: {
@@ -364,6 +417,7 @@ export class BookingsRepository {
     bookingId: string,
     reason?: string,
     workerProfileId?: string | null,
+    cancelledByRole: 'CLIENT' | 'WORKER' = 'CLIENT',
   ): Promise<BookingWithRelations> {
     const note = reason ?? 'Cancelled by client';
 
@@ -374,6 +428,7 @@ export class BookingsRepository {
           status: BookingStatus.CANCELLED,
           cancelledAt: new Date(),
           cancellationReason: note,
+          cancelledByRole,
         },
       });
 
@@ -412,6 +467,26 @@ export class BookingsRepository {
     });
   }
 
+  /** Find a worker profile by userId — used to authorize lifecycle endpoints. */
+  async findWorkerProfileByUserId(userId: string) {
+    return this.prisma.workerProfile.findUnique({
+      where: { userId },
+      select: { id: true, userId: true },
+    });
+  }
+
+  /** Batch-resolve workerProfileId -> userId for notification fan-out. */
+  async findUserIdsByWorkerProfileIds(
+    workerProfileIds: string[],
+  ): Promise<Map<string, string>> {
+    if (workerProfileIds.length === 0) return new Map();
+    const rows = await this.prisma.workerProfile.findMany({
+      where: { id: { in: workerProfileIds } },
+      select: { id: true, userId: true },
+    });
+    return new Map(rows.map((r) => [r.id, r.userId]));
+  }
+
   /**
    * Find nearby available workers for a booking.
    *
@@ -421,17 +496,29 @@ export class BookingsRepository {
    *
    * Both paths apply the same eligibility filters and return the same shape.
    *
-   * Radius ladder: 3 → 5 → 8 → 10 → 15 → 20 km (server-side) or a single
-   * caller-supplied radius (frontend-driven expansion).
+   * Radius ladder:
+   *   - STANDARD lane: 5 → 7 km (per product spec — tighter pool for
+   *     fixed-price catalog jobs).
+   *   - INSPECTION/other: 3 → 5 → 8 → 10 → 15 → 20 km (unchanged legacy ladder).
+   *   - A caller-supplied radiusKm searches only that single radius
+   *     (frontend-driven expansion), regardless of lane.
    * Expansion stops as soon as TARGET_POOL (4) unique workers are found.
+   *
+   * excludedWorkerIds (from BookingWorkerExclusion) are always filtered out —
+   * workers who previously cancelled this specific booking never reappear in
+   * its nearby-worker pool, even across relist.
    */
   async findNearbyWorkers(params: {
     categoryId: string;
     lat: number;
     lng: number;
     /** When provided, only this single radius is searched (frontend-driven expansion).
-     *  When omitted the full ladder 3→20 km runs server-side (backward compat). */
+     *  When omitted the full ladder runs server-side (backward compat). */
     radiusKm?: number;
+    /** STANDARD lane uses the tighter 5→7km ladder; other lanes keep the legacy ladder. */
+    lane?: BookingLane;
+    /** Worker profile ids to exclude (e.g. previously cancelled this booking). */
+    excludedWorkerIds?: string[];
   }): Promise<{
     workers: Array<{
       id: string;
@@ -444,6 +531,7 @@ export class BookingsRepository {
       cancellationRate: number;
       distanceMeters: number;
       skills: string[];
+      recommended: boolean;
     }>;
     searchedRadiusKm: number;
     searchCompleted: boolean;
@@ -452,14 +540,39 @@ export class BookingsRepository {
       ? await this._findNearbyWorkersPostgis(params)
       : await this._findNearbyWorkersHaversine(params);
 
-    const workers = await this._attachWorkerStats(result.workers);
+    const withStats = await this._attachWorkerStats(result.workers);
+
+    // Rank: rating desc, completedJobs desc, cancellationRate asc, distance asc.
+    // Top 1-3 (scaled to pool size) get recommended = true.
+    const ranked = [...withStats].sort((a, b) => {
+      if (b.rating !== a.rating) return b.rating - a.rating;
+      if (b.completedJobs !== a.completedJobs)
+        return b.completedJobs - a.completedJobs;
+      if (a.cancellationRate !== b.cancellationRate)
+        return a.cancellationRate - b.cancellationRate;
+      return a.distanceMeters - b.distanceMeters;
+    });
+    const recommendedCount =
+      ranked.length >= 6 ? 3 : ranked.length >= 3 ? 2 : ranked.length >= 1 ? 1 : 0;
+    const recommendedIds = new Set(
+      ranked.slice(0, recommendedCount).map((w) => w.id),
+    );
+
+    // Preserve the original distance-first ordering for display; only the
+    // recommended flag comes from the separate ranking above.
+    const workers = withStats.map((w) => ({
+      ...w,
+      recommended: recommendedIds.has(w.id),
+    }));
+
     return { ...result, workers };
   }
 
   /**
    * Batch-attach reviewsCount + cancellationRate to a small pool of nearby
    * workers (bounded by TARGET_POOL, so per-worker queries are cheap).
-   * Mirrors the semantics of WorkersRepository.getJobStats/getWorkerReviewSummary.
+   * cancellationRate uses the shared helper (see worker-stats.util.ts) so it
+   * stays consistent with WorkersRepository.getJobStats.
    */
   private async _attachWorkerStats<
     T extends { id: string; completedJobs: number },
@@ -468,38 +581,12 @@ export class BookingsRepository {
   ): Promise<(T & { reviewsCount: number; cancellationRate: number })[]> {
     return Promise.all(
       workers.map(async (w) => {
-        const [reviewsCount, workerCancelled, totalAccepted] =
-          await Promise.all([
-            this.prisma.review.count({
-              where: { booking: { workerProfileId: w.id } },
-            }),
-            this.prisma.booking.count({
-              where: {
-                workerProfileId: w.id,
-                status: BookingStatus.CANCELLED,
-                cancellationReason: { contains: 'Cancelled by worker' },
-              },
-            }),
-            this.prisma.booking.count({
-              where: {
-                workerProfileId: w.id,
-                status: {
-                  in: [
-                    BookingStatus.ACCEPTED,
-                    BookingStatus.EN_ROUTE,
-                    BookingStatus.IN_PROGRESS,
-                    BookingStatus.COMPLETED,
-                    BookingStatus.CANCELLED,
-                  ],
-                },
-              },
-            }),
-          ]);
-
-        const cancellationRate =
-          totalAccepted > 0
-            ? Math.round((workerCancelled / totalAccepted) * 100)
-            : 0;
+        const [reviewsCount, cancellationRate] = await Promise.all([
+          this.prisma.review.count({
+            where: { booking: { workerProfileId: w.id } },
+          }),
+          computeCancellationRate(this.prisma, w.id),
+        ]);
 
         return { ...w, reviewsCount, cancellationRate };
       }),
@@ -513,12 +600,19 @@ export class BookingsRepository {
     lat: number;
     lng: number;
     radiusKm?: number;
+    lane?: BookingLane;
+    excludedWorkerIds?: string[];
   }) {
     const TARGET_POOL = 4;
+    const legacyLadder = [3000, 5000, 8000, 10000, 15000, 20000];
+    const standardLadder = [5000, 7000];
     const radii =
       params.radiusKm !== undefined
         ? [Math.round(params.radiusKm * 1000)]
-        : [3000, 5000, 8000, 10000, 15000, 20000];
+        : params.lane === BookingLane.STANDARD
+          ? standardLadder
+          : legacyLadder;
+    const excludedIds = params.excludedWorkerIds ?? [];
 
     type WorkerEntry = {
       id: string;
@@ -567,6 +661,7 @@ export class BookingsRepository {
           AND wp."locationUpdatedAt" > NOW() - INTERVAL '30 minutes'
           AND wp.status = 'ACTIVE'::"WorkerStatus"
           AND wp."verificationStatus" = 'VERIFIED'::"VerificationStatus"
+          AND wp.id != ALL(${excludedIds}::text[])
           AND EXISTS (
             SELECT 1 FROM worker_skills ws
             WHERE ws."workerProfileId" = wp.id
@@ -618,12 +713,18 @@ export class BookingsRepository {
     lat: number;
     lng: number;
     radiusKm?: number;
+    lane?: BookingLane;
+    excludedWorkerIds?: string[];
   }) {
     const TARGET_POOL = 4;
+    const legacyLadderKm = [3, 5, 8, 10, 15, 20];
+    const standardLadderKm = [5, 7];
     const radiusLadderKm =
       params.radiusKm !== undefined
         ? [params.radiusKm]
-        : [3, 5, 8, 10, 15, 20];
+        : params.lane === BookingLane.STANDARD
+          ? standardLadderKm
+          : legacyLadderKm;
 
     // Location freshness threshold — same 30-minute rule as the PostGIS path.
     const freshThreshold = new Date(Date.now() - 30 * 60 * 1000);
@@ -640,6 +741,9 @@ export class BookingsRepository {
         currentLng: { not: null },
         locationUpdatedAt: { gte: freshThreshold },
         skills: { some: { categoryId: params.categoryId } },
+        ...(params.excludedWorkerIds && params.excludedWorkerIds.length > 0
+          ? { id: { notIn: params.excludedWorkerIds } }
+          : {}),
       },
       select: {
         id: true,
@@ -754,6 +858,197 @@ export class BookingsRepository {
       });
     });
 
+    return this.prisma.booking.findUniqueOrThrow({
+      where: { id: bookingId },
+      include: BOOKING_INCLUDE,
+    });
+  }
+
+  // ── Lifecycle transitions (assigned worker) ─────────────────────────────────
+
+  /** Transition ACCEPTED → EN_ROUTE. */
+  async markEnRoute(bookingId: string): Promise<BookingWithRelations> {
+    await this.prisma.$transaction(async (tx) => {
+      await tx.booking.update({
+        where: { id: bookingId },
+        data: { status: BookingStatus.EN_ROUTE, enRouteAt: new Date() },
+      });
+      await tx.bookingStatusHistory.create({
+        data: {
+          bookingId,
+          status: BookingStatus.EN_ROUTE,
+          note: 'Worker is on the way',
+        },
+      });
+    });
+    return this.prisma.booking.findUniqueOrThrow({
+      where: { id: bookingId },
+      include: BOOKING_INCLUDE,
+    });
+  }
+
+  /** Transition EN_ROUTE → ARRIVED. */
+  async markArrived(bookingId: string): Promise<BookingWithRelations> {
+    await this.prisma.$transaction(async (tx) => {
+      await tx.booking.update({
+        where: { id: bookingId },
+        data: { status: BookingStatus.ARRIVED, arrivedAt: new Date() },
+      });
+      await tx.bookingStatusHistory.create({
+        data: {
+          bookingId,
+          status: BookingStatus.ARRIVED,
+          note: 'Worker has arrived',
+        },
+      });
+    });
+    return this.prisma.booking.findUniqueOrThrow({
+      where: { id: bookingId },
+      include: BOOKING_INCLUDE,
+    });
+  }
+
+  /** Transition ARRIVED → IN_PROGRESS. Reuses the existing startedAt field. */
+  async markInProgress(bookingId: string): Promise<BookingWithRelations> {
+    await this.prisma.$transaction(async (tx) => {
+      await tx.booking.update({
+        where: { id: bookingId },
+        data: { status: BookingStatus.IN_PROGRESS, startedAt: new Date() },
+      });
+      await tx.bookingStatusHistory.create({
+        data: {
+          bookingId,
+          status: BookingStatus.IN_PROGRESS,
+          note: 'Job started by worker',
+        },
+      });
+    });
+    return this.prisma.booking.findUniqueOrThrow({
+      where: { id: bookingId },
+      include: BOOKING_INCLUDE,
+    });
+  }
+
+  /**
+   * Transition an active booking to COMPLETED and free the worker.
+   * Bookings-module equivalent of WorkersRepository.completeBooking — kept
+   * separate because the new /bookings/:id/complete endpoint lives in this
+   * module per the product spec, while the legacy /workers/jobs/:id/complete
+   * endpoint (still supported) uses the workers module's own copy.
+   */
+  async completeBookingLifecycle(
+    bookingId: string,
+    workerProfileId: string,
+  ): Promise<BookingWithRelations> {
+    await this.prisma.$transaction(async (tx) => {
+      await tx.booking.update({
+        where: { id: bookingId },
+        data: { status: BookingStatus.COMPLETED, completedAt: new Date() },
+      });
+      await tx.bookingStatusHistory.create({
+        data: {
+          bookingId,
+          status: BookingStatus.COMPLETED,
+          note: 'Job marked as completed by worker',
+        },
+      });
+      await tx.workerProfile.update({
+        where: { id: workerProfileId },
+        data: { currentlyWorking: false },
+      });
+    });
+    return this.prisma.booking.findUniqueOrThrow({
+      where: { id: bookingId },
+      include: BOOKING_INCLUDE,
+    });
+  }
+
+  /**
+   * Worker cancels before arrival: free the worker, record a
+   * BookingWorkerExclusion row (so this worker never reappears for this
+   * booking, surviving relist), clear the assignment, and return the booking
+   * to PENDING so the client can choose a new worker — reusing all existing
+   * exclusion/nearby-worker logic with zero extra branching.
+   */
+  async workerCancelBooking(
+    bookingId: string,
+    workerProfileId: string,
+    reason: string,
+    expiresAt: Date,
+    liveStartedAt: Date,
+  ): Promise<BookingWithRelations> {
+    await this.prisma.$transaction(async (tx) => {
+      await tx.booking.update({
+        where: { id: bookingId },
+        data: {
+          status: BookingStatus.PENDING,
+          workerProfileId: null,
+          acceptedAt: null,
+          enRouteAt: null,
+          cancellationReason: reason,
+          cancelledByRole: 'WORKER',
+          expiresAt,
+          liveStartedAt,
+        },
+      });
+
+      await tx.bookingWorkerExclusion.upsert({
+        where: {
+          bookingId_workerProfileId: { bookingId, workerProfileId },
+        },
+        create: { bookingId, workerProfileId, reason },
+        update: { reason },
+      });
+
+      await tx.bookingStatusHistory.create({
+        data: {
+          bookingId,
+          status: BookingStatus.PENDING,
+          note: `Worker cancelled: ${reason}`,
+        },
+      });
+
+      await tx.workerProfile.update({
+        where: { id: workerProfileId },
+        data: { currentlyWorking: false },
+      });
+    });
+
+    return this.prisma.booking.findUniqueOrThrow({
+      where: { id: bookingId },
+      include: BOOKING_INCLUDE,
+    });
+  }
+
+  /**
+   * Client relists an EXPIRED booking ("Make Live Again"): back to PENDING
+   * with a fresh 72h window. Existing BookingWorkerExclusion rows are left
+   * untouched (they are keyed by bookingId, not by "live session") so
+   * previously-cancelled workers stay excluded across the relist.
+   */
+  async relistBooking(
+    bookingId: string,
+    now: Date,
+    expiresAt: Date,
+  ): Promise<BookingWithRelations> {
+    await this.prisma.$transaction(async (tx) => {
+      await tx.booking.update({
+        where: { id: bookingId },
+        data: {
+          status: BookingStatus.PENDING,
+          liveStartedAt: now,
+          expiresAt,
+          relistedAt: now,
+        },
+      });
+      await tx.bookingStatusHistory.create({
+        data: {
+          bookingId,
+          status: BookingStatus.PENDING,
+          note: 'Client relisted booking ("Make Live Again")',
+        },
+      });
+    });
     return this.prisma.booking.findUniqueOrThrow({
       where: { id: bookingId },
       include: BOOKING_INCLUDE,

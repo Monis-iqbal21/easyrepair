@@ -29,6 +29,16 @@ abstract class BookingRemoteDataSource {
     double? radiusKm,
   });
   Future<BookingModel> assignWorker(String bookingId, String workerProfileId);
+
+  /// Client "Make Live Again" on an EXPIRED booking.
+  Future<BookingModel> relistBooking(String bookingId);
+
+  // ── Worker lifecycle (assigned worker only) ─────────────────────────────
+  Future<BookingModel> markOnMyWay(String bookingId);
+  Future<BookingModel> markArrived(String bookingId);
+  Future<BookingModel> startJob(String bookingId);
+  Future<BookingModel> completeJobLifecycle(String bookingId);
+  Future<BookingModel> workerCancelBooking(String bookingId, String reason);
 }
 
 class BookingRemoteDataSourceImpl implements BookingRemoteDataSource {
@@ -58,7 +68,9 @@ class BookingRemoteDataSourceImpl implements BookingRemoteDataSource {
           'description': request.description,
         'inspection': request.inspection,
         'lane': request.lane.raw,
-        if (request.standardServiceId != null)
+        if (request.standardServiceIds.isNotEmpty)
+          'standardServiceIds': request.standardServiceIds
+        else if (request.standardServiceId != null)
           'standardServiceId': request.standardServiceId,
       };
 
@@ -213,6 +225,78 @@ class BookingRemoteDataSourceImpl implements BookingRemoteDataSource {
       final response = await _dio.post(
         '/bookings/$bookingId/assign',
         data: {'workerProfileId': workerProfileId},
+      );
+      final data = response.data['data'] as Map<String, dynamic>;
+      return BookingModel.fromJson(data);
+    } on DioException catch (e) {
+      throw dioExceptionToFailure(e);
+    }
+  }
+
+  @override
+  Future<BookingModel> relistBooking(String bookingId) async {
+    try {
+      final response = await _dio.patch('/bookings/$bookingId/relist');
+      final data = response.data['data'] as Map<String, dynamic>;
+      return BookingModel.fromJson(data);
+    } on DioException catch (e) {
+      throw dioExceptionToFailure(e);
+    }
+  }
+
+  @override
+  Future<BookingModel> markOnMyWay(String bookingId) async {
+    try {
+      final response = await _dio.post('/bookings/$bookingId/on-my-way');
+      final data = response.data['data'] as Map<String, dynamic>;
+      return BookingModel.fromJson(data);
+    } on DioException catch (e) {
+      throw dioExceptionToFailure(e);
+    }
+  }
+
+  @override
+  Future<BookingModel> markArrived(String bookingId) async {
+    try {
+      final response = await _dio.post('/bookings/$bookingId/arrived');
+      final data = response.data['data'] as Map<String, dynamic>;
+      return BookingModel.fromJson(data);
+    } on DioException catch (e) {
+      throw dioExceptionToFailure(e);
+    }
+  }
+
+  @override
+  Future<BookingModel> startJob(String bookingId) async {
+    try {
+      final response = await _dio.post('/bookings/$bookingId/start');
+      final data = response.data['data'] as Map<String, dynamic>;
+      return BookingModel.fromJson(data);
+    } on DioException catch (e) {
+      throw dioExceptionToFailure(e);
+    }
+  }
+
+  @override
+  Future<BookingModel> completeJobLifecycle(String bookingId) async {
+    try {
+      final response = await _dio.post('/bookings/$bookingId/complete');
+      final data = response.data['data'] as Map<String, dynamic>;
+      return BookingModel.fromJson(data);
+    } on DioException catch (e) {
+      throw dioExceptionToFailure(e);
+    }
+  }
+
+  @override
+  Future<BookingModel> workerCancelBooking(
+    String bookingId,
+    String reason,
+  ) async {
+    try {
+      final response = await _dio.post(
+        '/bookings/$bookingId/worker-cancel',
+        data: {'reason': reason},
       );
       final data = response.data['data'] as Map<String, dynamic>;
       return BookingModel.fromJson(data);

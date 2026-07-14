@@ -7,6 +7,8 @@ import {
   IsISO8601,
   IsBoolean,
   IsUUID,
+  IsArray,
+  ArrayMinSize,
   MaxLength,
   Min,
   Max,
@@ -103,10 +105,20 @@ export class CreateBookingDto {
   @IsEnum(BookingLane)
   lane?: BookingLane;
 
-  // Required only when lane === STANDARD; the service layer validates that
-  // relationship rather than class-validator, since the field is optional.
+  // Legacy single-service field — kept for backward compatibility with older
+  // app builds. When standardServiceIds is also sent, standardServiceIds
+  // takes precedence; the service layer treats this as a 1-item list.
   @IsOptional()
   @IsString()
   @IsUUID()
   standardServiceId?: string;
+
+  // Multi-select STANDARD-lane services (e.g. AC General Service + AC
+  // Dismounting). Preferred over standardServiceId for new app builds.
+  // The service layer validates each id belongs to the selected category.
+  @IsOptional()
+  @IsArray()
+  @ArrayMinSize(1)
+  @IsUUID('4', { each: true })
+  standardServiceIds?: string[];
 }

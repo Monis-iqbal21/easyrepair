@@ -17,6 +17,7 @@ class CreateBookingRequest {
   final bool inspection;
   final BookingLane lane;
   final String? standardServiceId;
+  final List<String> standardServiceIds;
 
   const CreateBookingRequest({
     required this.serviceCategory,
@@ -33,5 +34,6 @@ class CreateBookingRequest {
     this.inspection = false,
     this.lane = BookingLane.bidding,
     this.standardServiceId,
+    this.standardServiceIds = const [],
   });
 }

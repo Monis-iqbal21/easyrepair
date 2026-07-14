@@ -80,9 +80,13 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
   BookingEntity? _createdBooking;
 
   BookingLane? _laneChoice;
-  String? _selectedStandardServiceId;
-  String? _selectedStandardServiceName;
-  double? _selectedStandardServicePrice;
+  // Multi-select STANDARD-lane services, keyed by service id, insertion order
+  // preserved (LinkedHashMap semantics of Dart's default Map) so the sent
+  // standardServiceIds list matches the order the client tapped them in.
+  final Map<String, StandardServiceEntity> _selectedStandardServices = {};
+
+  double get _selectedStandardServicesTotal => _selectedStandardServices.values
+      .fold<double>(0, (sum, s) => sum + s.price);
 
   // ── New file attachments (locally picked, not yet uploaded) ─────────────────
   final _picker = ImagePicker();
@@ -716,7 +720,8 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
       return _selectedService;
     }
     if (_laneChoice == BookingLane.standard) {
-      return _selectedStandardServiceName ?? _selectedService;
+      if (_selectedStandardServices.isEmpty) return _selectedService;
+      return _selectedStandardServices.values.map((s) => s.name).join(', ');
     }
     return _titleCtrl.text.trim().isEmpty
         ? _selectedService
@@ -754,8 +759,8 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     }
 
     if (_laneChoice == BookingLane.standard &&
-        _selectedStandardServiceId == null) {
-      _showError('Please select a standard service.');
+        _selectedStandardServices.isEmpty) {
+      _showError('Please select at least one standard service.');
       return;
     }
 
@@ -844,9 +849,9 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
       longitude: _gpsLng,
       inspection: _laneChoice == BookingLane.inspection,
       lane: _laneChoice ?? BookingLane.bidding,
-      standardServiceId: _laneChoice == BookingLane.standard
-          ? _selectedStandardServiceId
-          : null,
+      standardServiceIds: _laneChoice == BookingLane.standard
+          ? _selectedStandardServices.keys.toList()
+          : const [],
     );
 
     final booking = await ref
@@ -2268,8 +2273,8 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
       return false;
     }
     if (_laneChoice == BookingLane.standard &&
-        _selectedStandardServiceId == null) {
-      _showError('Please select a standard service.');
+        _selectedStandardServices.isEmpty) {
+      _showError('Please select at least one standard service.');
       return false;
     }
     return true;
@@ -2510,9 +2515,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
           ? () => setState(() {
                 _laneChoice = lane;
                 if (lane != BookingLane.standard) {
-                  _selectedStandardServiceId = null;
-                  _selectedStandardServiceName = null;
-                  _selectedStandardServicePrice = null;
+                  _selectedStandardServices.clear();
                 }
               })
           : () => _showError(subtitle),
@@ -2681,20 +2684,72 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  const Text(
+                    'Aap ek se zyada services chun sakte hain.',
+                    style: TextStyle(fontSize: 12, color: _kGray),
+                  ),
+                  const SizedBox(height: 10),
                   for (var i = 0; i < services.length; i++) ...[
                     if (i > 0) const SizedBox(height: 10),
                     _standardServiceTile(services[i]),
                   ],
-                  if (_selectedStandardServiceName != null &&
-                      _selectedStandardServicePrice != null) ...[
-                    const SizedBox(height: 12),
-                    Text(
-                      'Selected: $_selectedStandardServiceName — '
-                      'Rs ${_selectedStandardServicePrice!.toStringAsFixed(0)}',
-                      style: const TextStyle(
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w600,
-                        color: _kDark,
+                  if (_selectedStandardServices.isNotEmpty) ...[
+                    const SizedBox(height: 14),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: _kGreen.withValues(alpha: 0.06),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          for (final s in _selectedStandardServices.values)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 4),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      s.name,
+                                      style: const TextStyle(fontSize: 12.5, color: _kDark),
+                                    ),
+                                  ),
+                                  Text(
+                                    'Rs ${s.price.toStringAsFixed(0)}',
+                                    style: const TextStyle(
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.w600,
+                                      color: _kDark,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          const Divider(height: 14),
+                          Row(
+                            children: [
+                              const Expanded(
+                                child: Text(
+                                  'Total',
+                                  style: TextStyle(
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: _kDark,
+                                  ),
+                                ),
+                              ),
+                              Text(
+                                'Rs ${_selectedStandardServicesTotal.toStringAsFixed(0)}',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w800,
+                                  color: _kGreen,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -2713,12 +2768,14 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
   }
 
   Widget _standardServiceTile(StandardServiceEntity service) {
-    final selected = _selectedStandardServiceId == service.id;
+    final selected = _selectedStandardServices.containsKey(service.id);
     return GestureDetector(
       onTap: () => setState(() {
-        _selectedStandardServiceId = service.id;
-        _selectedStandardServiceName = service.name;
-        _selectedStandardServicePrice = service.price;
+        if (selected) {
+          _selectedStandardServices.remove(service.id);
+        } else {
+          _selectedStandardServices[service.id] = service;
+        }
       }),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
@@ -2773,8 +2830,8 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
             const SizedBox(width: 8),
             Icon(
               selected
-                  ? Icons.check_circle_rounded
-                  : Icons.radio_button_unchecked,
+                  ? Icons.check_box_rounded
+                  : Icons.check_box_outline_blank_rounded,
               size: 20,
               color: selected ? _kGreen : _kBorder,
             ),
