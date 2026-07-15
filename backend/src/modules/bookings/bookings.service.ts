@@ -44,6 +44,9 @@ import { ChatService } from '../chat/chat.service';
 /** 72 hours in milliseconds — auto-expiry window for PENDING bookings, all lanes. */
 const BOOKING_EXPIRY_MS = 72 * 60 * 60 * 1000;
 
+/** Max time to wait on the Bull/Redis queue before giving up — expiry scheduling must never hang the request. */
+const EXPIRY_QUEUE_TIMEOUT_MS = 1800;
+
 @Injectable()
 export class BookingsService {
   private readonly logger = new Logger(BookingsService.name);
@@ -231,7 +234,13 @@ export class BookingsService {
 
     this.logger.log(`[createBooking] created bookingId=${booking.id} lane=${lane}`);
 
-    await this._scheduleExpiry(booking.id, expiresAt);
+    // Fire-and-forget: expiry scheduling talks to Redis/Bull and must never
+    // block or fail the booking-creation response.
+    void this._scheduleExpiry(booking.id, expiresAt).catch((err) => {
+      this.logger.warn(
+        `[expiry] scheduleExpiry failed for bookingId=${booking.id}: ${(err as Error)?.message}`,
+      );
+    });
 
     return this._toDto(booking);
   }
@@ -290,8 +299,12 @@ export class BookingsService {
       'CLIENT',
     );
 
-    // Booking is no longer PENDING — cancel its auto-expiry job.
-    await this._cancelExpiry(bookingId);
+    // Booking is no longer PENDING — cancel its auto-expiry job. Fire-and-forget.
+    void this._cancelExpiry(bookingId).catch((err) => {
+      this.logger.warn(
+        `[expiry] cancelExpiry failed for bookingId=${bookingId}: ${(err as Error)?.message}`,
+      );
+    });
 
     // Notify assigned worker that the job was cancelled by client
     if (updated.workerProfile?.userId) {
@@ -722,8 +735,12 @@ export class BookingsService {
       finalPrice,
     );
 
-    // Booking is no longer PENDING — cancel its auto-expiry job.
-    await this._cancelExpiry(bookingId);
+    // Booking is no longer PENDING — cancel its auto-expiry job. Fire-and-forget.
+    void this._cancelExpiry(bookingId).catch((err) => {
+      this.logger.warn(
+        `[expiry] cancelExpiry failed for bookingId=${bookingId}: ${(err as Error)?.message}`,
+      );
+    });
 
     // Notify the assigned worker
     if (worker.userId) {
@@ -970,7 +987,11 @@ export class BookingsService {
       now,
     );
 
-    await this._scheduleExpiry(bookingId, expiresAt);
+    void this._scheduleExpiry(bookingId, expiresAt).catch((err) => {
+      this.logger.warn(
+        `[expiry] scheduleExpiry failed for bookingId=${bookingId}: ${(err as Error)?.message}`,
+      );
+    });
 
     if (updated.clientProfile?.userId) {
       void this.notificationsService.notify({
@@ -1022,7 +1043,11 @@ export class BookingsService {
       expiresAt,
     );
 
-    await this._scheduleExpiry(bookingId, expiresAt);
+    void this._scheduleExpiry(bookingId, expiresAt).catch((err) => {
+      this.logger.warn(
+        `[expiry] scheduleExpiry failed for bookingId=${bookingId}: ${(err as Error)?.message}`,
+      );
+    });
 
     void this.notificationsService.notify({
       userId,
@@ -1049,31 +1074,63 @@ export class BookingsService {
     bookingId: string,
     expiresAt: Date,
   ): Promise<void> {
-    const jobId = `expire-${bookingId}`;
-    const existing = await this.bookingsQueue.getJob(jobId);
-    if (existing) await existing.remove();
+    const work = async () => {
+      const jobId = `expire-${bookingId}`;
+      const existing = await this.bookingsQueue.getJob(jobId);
+      if (existing) await existing.remove();
 
-    const delay = Math.max(0, expiresAt.getTime() - Date.now());
-    const data: ExpireBookingJobData = { bookingId };
-    await this.bookingsQueue.add(EXPIRE_BOOKING_JOB, data, {
-      jobId,
-      delay,
-      removeOnComplete: true,
-      removeOnFail: false,
-    });
-    this.logger.log(
-      `[expiry] scheduled bookingId=${bookingId} in ${Math.round(delay / 1000 / 60)} min`,
-    );
+      const delay = Math.max(0, expiresAt.getTime() - Date.now());
+      const data: ExpireBookingJobData = { bookingId };
+      await this.bookingsQueue.add(EXPIRE_BOOKING_JOB, data, {
+        jobId,
+        delay,
+        removeOnComplete: true,
+        removeOnFail: false,
+      });
+      this.logger.log(
+        `[expiry] scheduled bookingId=${bookingId} in ${Math.round(delay / 1000 / 60)} min`,
+      );
+    };
+
+    await this._withQueueTimeout(work(), `scheduleExpiry(${bookingId})`);
   }
 
   /** Cancel any pending auto-expiry job — call whenever a booking leaves PENDING. */
   private async _cancelExpiry(bookingId: string): Promise<void> {
-    const jobId = `expire-${bookingId}`;
-    const existing = await this.bookingsQueue.getJob(jobId);
-    if (existing) {
-      await existing.remove();
-      this.logger.log(`[expiry] cancelled bookingId=${bookingId}`);
-    }
+    const work = async () => {
+      const jobId = `expire-${bookingId}`;
+      const existing = await this.bookingsQueue.getJob(jobId);
+      if (existing) {
+        await existing.remove();
+        this.logger.log(`[expiry] cancelled bookingId=${bookingId}`);
+      }
+    };
+
+    await this._withQueueTimeout(work(), `cancelExpiry(${bookingId})`);
+  }
+
+  /**
+   * Race a Bull/Redis queue operation against a short timeout so a slow or
+   * hung queue can never block the HTTP response. Callers treat both queue
+   * errors and timeouts as best-effort failures (log a warning, never throw
+   * back to the request).
+   */
+  private _withQueueTimeout<T>(promise: Promise<T>, label: string): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        reject(new Error(`${label} timed out after ${EXPIRY_QUEUE_TIMEOUT_MS}ms`));
+      }, EXPIRY_QUEUE_TIMEOUT_MS);
+
+      promise
+        .then((value) => {
+          clearTimeout(timer);
+          resolve(value);
+        })
+        .catch((err) => {
+          clearTimeout(timer);
+          reject(err);
+        });
+    });
   }
 
   // ── Worker-listed notification (STANDARD lane) ────────────────────────────
