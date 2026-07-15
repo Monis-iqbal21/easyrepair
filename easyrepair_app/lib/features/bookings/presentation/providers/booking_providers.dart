@@ -637,6 +637,136 @@ final nearbyWorkersNotifierProvider = NotifierProvider.autoDispose
       NearbyWorkersNotifier.new,
     );
 
+// ── STANDARD-lane nearby workers (controlled, capped radius) ─────────────────
+
+/// STANDARD-lane nearby-workers notifier used by [ChooseUstaadPage].
+///
+/// Unlike [NearbyWorkersNotifier] (shared by INSPECTION/legacy call sites,
+/// which walks a wide 3→20km ladder with an aggressive 3-second recheck),
+/// STANDARD lane's radius is capped by product spec at 5km → 7km — matching
+/// the backend's own STANDARD radius ladder (see
+/// BookingsRepository._findNearbyWorkersPostgis/Haversine) — and polling is
+/// deliberately gentle:
+///  1. On load: search 5km; if nobody is found, try 7km. Never expands past
+///     7km (per product decision — do not widen without explicit sign-off).
+///  2. Workers found → stop actively polling; a slow 2-minute background
+///     recheck just keeps the list from going stale, without adding real load.
+///  3. No workers found at all → auto-retry every 45 seconds until someone
+///     appears, [stop] is called, or the provider is disposed.
+///  4. A tick is skipped entirely if a previous request from this notifier
+///     is still in flight — never overlapping requests.
+class StandardNearbyWorkersNotifier
+    extends AutoDisposeFamilyNotifier<NearbyWorkersState, String> {
+  static const _radii = [5.0, 7.0];
+  static const _emptyRecheckInterval = Duration(seconds: 45);
+  static const _foundRecheckInterval = Duration(minutes: 2);
+
+  Timer? _recheckTimer;
+  bool _requestInProgress = false;
+  bool _disposed = false;
+  bool _stopped = false;
+
+  @override
+  NearbyWorkersState build(String arg) {
+    _disposed = false;
+    _stopped = false;
+    ref.onDispose(() {
+      _disposed = true;
+      _recheckTimer?.cancel();
+    });
+    _search(arg, radiusIndex: 0);
+    return const NearbyWorkersState();
+  }
+
+  /// Stops all polling — call when the booking is no longer eligible for
+  /// worker selection (assigned/hired, cancelled, expired, completed) while
+  /// this notifier might still be alive.
+  void stop() {
+    _stopped = true;
+    _recheckTimer?.cancel();
+  }
+
+  /// Manual "Refresh" — re-runs the capped 5km→7km search immediately,
+  /// bypassing the recheck timer's wait. No-ops if a request is in flight.
+  Future<void> refresh() async {
+    _recheckTimer?.cancel();
+    await _search(arg, radiusIndex: 0);
+  }
+
+  Future<void> _search(String bookingId, {required int radiusIndex}) async {
+    if (_disposed || _stopped || _requestInProgress) return;
+    _requestInProgress = true;
+
+    final radiusKm = _radii[radiusIndex];
+    final result = await ref
+        .read(bookingRepositoryProvider)
+        .getNearbyWorkers(bookingId, radiusKm: radiusKm);
+    _requestInProgress = false;
+
+    if (_disposed || _stopped) return;
+
+    result.fold(
+      (failure) {
+        state = state.workers.isEmpty
+            ? NearbyWorkersState(
+                isExpanding: false,
+                searchedRadiusKm: radiusKm,
+                error: failure,
+              )
+            : state.copyWith(isExpanding: false, searchedRadiusKm: radiusKm);
+        _scheduleRecheck(bookingId, found: state.workers.isNotEmpty);
+      },
+      (res) {
+        final foundNothingYet = res.workers.isEmpty;
+        final canTryNextRadius = radiusIndex < _radii.length - 1;
+
+        if (foundNothingYet && canTryNextRadius) {
+          // Nobody within 5km — try 7km right away. Still within the capped
+          // ladder, so this is a same-search follow-up, not "polling".
+          state = NearbyWorkersState(
+            isExpanding: true,
+            searchedRadiusKm: radiusKm,
+          );
+          _search(bookingId, radiusIndex: radiusIndex + 1);
+          return;
+        }
+
+        state = NearbyWorkersState(
+          workers: _sorted(res.workers),
+          isExpanding: false,
+          searchedRadiusKm: radiusKm,
+          searchCompleted: res.workers.isNotEmpty,
+        );
+        _scheduleRecheck(bookingId, found: res.workers.isNotEmpty);
+      },
+    );
+  }
+
+  void _scheduleRecheck(String bookingId, {required bool found}) {
+    if (_disposed || _stopped) return;
+    _recheckTimer?.cancel();
+    _recheckTimer = Timer(
+      found ? _foundRecheckInterval : _emptyRecheckInterval,
+      () => _search(bookingId, radiusIndex: 0),
+    );
+  }
+
+  List<NearbyWorkerEntity> _sorted(List<NearbyWorkerEntity> workers) {
+    return List<NearbyWorkerEntity>.from(workers)..sort((a, b) {
+      if (a.recommended != b.recommended) {
+        return a.recommended ? -1 : 1;
+      }
+      final dc = a.distanceKm.compareTo(b.distanceKm);
+      return dc != 0 ? dc : b.rating.compareTo(a.rating);
+    });
+  }
+}
+
+final standardNearbyWorkersNotifierProvider = NotifierProvider.autoDispose
+    .family<StandardNearbyWorkersNotifier, NearbyWorkersState, String>(
+      StandardNearbyWorkersNotifier.new,
+    );
+
 // ── Assign worker notifier ────────────────────────────────────────────────────
 
 class AssignWorkerNotifier extends AsyncNotifier<void> {
@@ -659,8 +789,10 @@ class AssignWorkerNotifier extends AsyncNotifier<void> {
         ref.read(bookingsNotifierProvider.notifier).patchBooking(updated);
         // Sync the detail page without a network round-trip.
         ref.read(bookingDetailProvider(bookingId).notifier).push(updated);
-        // The nearby-workers sheet is no longer valid after assignment.
+        // The nearby-workers sheet is no longer valid after assignment —
+        // stop whichever notifier backed it (legacy ladder or STANDARD).
         ref.invalidate(nearbyWorkersNotifierProvider(bookingId));
+        ref.invalidate(standardNearbyWorkersNotifierProvider(bookingId));
       },
     );
   }

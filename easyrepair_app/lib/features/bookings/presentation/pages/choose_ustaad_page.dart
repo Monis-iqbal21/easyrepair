@@ -74,6 +74,16 @@ class _ChooseUstaadPageState extends ConsumerState<ChooseUstaadPage> {
       await ref
           .read(assignWorkerNotifierProvider.notifier)
           .assign(widget.booking.id, worker.id);
+      // Booking is no longer eligible for worker selection — stop the
+      // controlled STANDARD-lane recheck loop right away rather than
+      // waiting for the page to dispose.
+      if (widget.booking.lane == BookingLane.standard) {
+        ref
+            .read(
+              standardNearbyWorkersNotifierProvider(widget.booking.id).notifier,
+            )
+            .stop();
+      }
       if (!mounted) return;
       context.pushReplacement('/client/booking/${widget.booking.id}');
     } catch (_) {
@@ -94,6 +104,12 @@ class _ChooseUstaadPageState extends ConsumerState<ChooseUstaadPage> {
 
   Future<void> _chatWithWorker(NearbyWorkerEntity worker) async {
     await openClientChatForBooking(context, ref, widget.booking.id);
+  }
+
+  Future<void> _refreshStandardSearch() async {
+    await ref
+        .read(standardNearbyWorkersNotifierProvider(widget.booking.id).notifier)
+        .refresh();
   }
 
   void _openProfileModal(NearbyWorkerEntity worker) {
@@ -128,9 +144,12 @@ class _ChooseUstaadPageState extends ConsumerState<ChooseUstaadPage> {
   @override
   Widget build(BuildContext context) {
     final booking = widget.booking;
-    final nearbyState = ref.watch(nearbyWorkersNotifierProvider(booking.id));
-
     final bool isStandard = booking.lane == BookingLane.standard;
+    // STANDARD lane uses the capped 5km->7km controlled-polling notifier;
+    // INSPECTION keeps the existing wide-ladder notifier unchanged.
+    final nearbyState = isStandard
+        ? ref.watch(standardNearbyWorkersNotifierProvider(booking.id))
+        : ref.watch(nearbyWorkersNotifierProvider(booking.id));
     final double? standardTotal = isStandard ? booking.standardServicesTotal : null;
 
     final String? priceLabel = isStandard
@@ -268,13 +287,13 @@ class _ChooseUstaadPageState extends ConsumerState<ChooseUstaadPage> {
               ],
             ),
           ),
-          Expanded(child: _buildBody(nearbyState)),
+          Expanded(child: _buildBody(nearbyState, isStandard)),
         ],
       ),
     );
   }
 
-  Widget _buildBody(NearbyWorkersState state) {
+  Widget _buildBody(NearbyWorkersState state, bool isStandard) {
     if (state.hasError && state.workers.isEmpty) {
       return Center(
         child: Padding(
@@ -307,6 +326,27 @@ class _ChooseUstaadPageState extends ConsumerState<ChooseUstaadPage> {
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 14, color: _kGray),
                 ),
+              ] else if (isStandard) ...[
+                const Icon(
+                  Icons.person_search_rounded,
+                  size: 32,
+                  color: Color(0xFFCBD5E1),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Abhi koi verified Ustaad nearby available nahi hai. '
+                  'Hum search kar rahe hain…',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 14, color: _kGray, height: 1.4),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'List har 45 seconds mein khud-ba-khud refresh hoti hai.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 11.5, color: Color(0xFF94A3B8)),
+                ),
+                const SizedBox(height: 16),
+                _RefreshButton(onTap: _refreshStandardSearch),
               ] else
                 const Text(
                   'No Ustaads are available right now. Please try again shortly.',
@@ -345,6 +385,31 @@ class _ChooseUstaadPageState extends ConsumerState<ChooseUstaadPage> {
           onChat: () => _chatWithWorker(worker),
         );
       },
+    );
+  }
+}
+
+class _RefreshButton extends StatelessWidget {
+  final VoidCallback onTap;
+  const _RefreshButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton.icon(
+      onPressed: onTap,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: _kGreen,
+        side: const BorderSide(color: _kGreen),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+      ),
+      icon: const Icon(Icons.refresh_rounded, size: 16),
+      label: const Text(
+        'Refresh',
+        style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
+      ),
     );
   }
 }

@@ -837,8 +837,21 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
 
     try {
       if (_isEditMode) {
-        await _submitEdit(address);
-        if (mounted) await _showSuccessDialog();
+        final updatedBooking = await _submitEdit(address);
+        if (!mounted) return;
+        if (updatedBooking.lane == BookingLane.standard) {
+          // STANDARD edits skip the generic "Booking Updated!" modal and go
+          // straight back to worker selection — same page used right after
+          // creating a STANDARD booking — since sub-services/price may have
+          // just changed and the client still needs to (re)pick an Ustaad.
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (_) => ChooseUstaadPage(booking: updatedBooking),
+            ),
+          );
+        } else {
+          await _showSuccessDialog();
+        }
       } else {
         await _submitCreate(address);
         if (mounted) _goToNextPage();
@@ -880,7 +893,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     await _uploadVoiceNote(booking.id);
   }
 
-  Future<void> _submitEdit(String address) async {
+  Future<BookingEntity> _submitEdit(String address) async {
     final updateRequest = UpdateBookingRequest(
       bookingId: widget.editBookingId!,
       serviceCategory: _selectedService,
@@ -901,7 +914,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
           : null,
     );
 
-    await ref
+    final updated = await ref
         .read(updateBookingNotifierProvider.notifier)
         .submitUpdate(updateRequest);
 
@@ -914,6 +927,8 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
 
     await _uploadNewAttachments(widget.editBookingId!);
     await _uploadVoiceNote(widget.editBookingId!);
+
+    return updated;
   }
 
   Future<void> _uploadNewAttachments(String bookingId) async {
@@ -2862,7 +2877,8 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                   ],
                   const SizedBox(height: 12),
                   _infoNote(
-                    'Fixed price. Aap next step par Ustaad choose karenge.',
+                    'Total amount is final — no bidding. Aap next step par '
+                    'Ustaad choose karenge.',
                     color: _kGreen,
                   ),
                 ],
