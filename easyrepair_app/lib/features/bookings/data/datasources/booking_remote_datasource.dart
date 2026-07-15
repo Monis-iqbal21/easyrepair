@@ -125,6 +125,8 @@ class BookingRemoteDataSourceImpl implements BookingRemoteDataSource {
         if (request.latitude != null) 'latitude': request.latitude,
         if (request.longitude != null) 'longitude': request.longitude,
         if (request.inspection != null) 'inspection': request.inspection,
+        if (request.standardServiceIds != null)
+          'standardServiceIds': request.standardServiceIds,
       };
       final response = await _dio.patch('/bookings/${request.bookingId}', data: body);
       final data = response.data['data'] as Map<String, dynamic>;

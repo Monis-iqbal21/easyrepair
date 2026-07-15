@@ -14,6 +14,10 @@ class UpdateBookingRequest {
   final double? latitude;
   final double? longitude;
   final bool? inspection;
+  /// Replaces the STANDARD-lane sub-service selection. Only meaningful when
+  /// the booking being edited is already STANDARD lane — the backend rejects
+  /// this on any other lane.
+  final List<String>? standardServiceIds;
 
   const UpdateBookingRequest({
     required this.bookingId,
@@ -29,6 +33,7 @@ class UpdateBookingRequest {
     this.latitude,
     this.longitude,
     this.inspection,
+    this.standardServiceIds,
   });
 }
 

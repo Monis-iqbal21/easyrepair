@@ -13,6 +13,7 @@ import '../widgets/booking_card.dart';
 import '../widgets/booking_filter_sheet.dart';
 import '../widgets/booking_search_bar.dart';
 import '../widgets/booking_skeleton.dart';
+import 'choose_ustaad_page.dart';
 import 'track_worker_page.dart';
 import 'worker_discovery_map_page.dart';
 
@@ -108,9 +109,14 @@ class _MyBookingsPageState extends ConsumerState<MyBookingsPage> {
                               onFindWorkers: () =>
                                   Navigator.of(context).push(
                                     MaterialPageRoute(
-                                      builder: (_) => WorkerDiscoveryMapPage(
-                                        booking: booking,
-                                      ),
+                                      builder: (_) =>
+                                          booking.lane == BookingLane.bidding
+                                              ? WorkerDiscoveryMapPage(
+                                                  booking: booking,
+                                                )
+                                              : ChooseUstaadPage(
+                                                  booking: booking,
+                                                ),
                                     ),
                                   ),
                               onTrackWorker: booking.assignedWorker != null &&

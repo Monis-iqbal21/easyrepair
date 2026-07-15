@@ -295,32 +295,72 @@ export class BookingsRepository {
       longitude?: number;
       inspection?: boolean;
       urgentWindow?: UrgentWindow | null;
+      standardServiceId?: string;
+      standardServiceNameSnapshot?: string;
+      standardServicePriceSnapshot?: number;
+      /** When provided, fully replaces this booking's STANDARD-lane sub-service rows. */
+      standardServiceItems?: Array<{
+        standardServiceId: string;
+        nameSnapshot: string;
+        priceSnapshot: number;
+        quantity?: number;
+      }>;
+      estimatedPrice?: number;
     },
   ): Promise<BookingWithRelations> {
-    await this.prisma.booking.update({
-      where: { id: bookingId },
-      data: {
-        ...(data.categoryId !== undefined && { categoryId: data.categoryId }),
-        ...(data.title !== undefined && { title: data.title }),
-        ...(data.description !== undefined && {
-          description: data.description,
-        }),
-        ...(data.urgency !== undefined && { urgency: data.urgency }),
-        ...(data.timeSlot !== undefined && { timeSlot: data.timeSlot }),
-        ...(data.scheduledAt !== undefined && {
-          scheduledAt: data.scheduledAt,
-        }),
-        ...(data.addressLine !== undefined && {
-          addressLine: data.addressLine,
-        }),
-        ...(data.city !== undefined && { city: data.city }),
-        ...(data.latitude !== undefined && { latitude: data.latitude }),
-        ...(data.longitude !== undefined && { longitude: data.longitude }),
-        ...(data.inspection !== undefined && { inspection: data.inspection }),
-        ...(data.urgentWindow !== undefined && {
-          urgentWindow: data.urgentWindow,
-        }),
-      },
+    await this.prisma.$transaction(async (tx) => {
+      await tx.booking.update({
+        where: { id: bookingId },
+        data: {
+          ...(data.categoryId !== undefined && { categoryId: data.categoryId }),
+          ...(data.title !== undefined && { title: data.title }),
+          ...(data.description !== undefined && {
+            description: data.description,
+          }),
+          ...(data.urgency !== undefined && { urgency: data.urgency }),
+          ...(data.timeSlot !== undefined && { timeSlot: data.timeSlot }),
+          ...(data.scheduledAt !== undefined && {
+            scheduledAt: data.scheduledAt,
+          }),
+          ...(data.addressLine !== undefined && {
+            addressLine: data.addressLine,
+          }),
+          ...(data.city !== undefined && { city: data.city }),
+          ...(data.latitude !== undefined && { latitude: data.latitude }),
+          ...(data.longitude !== undefined && { longitude: data.longitude }),
+          ...(data.inspection !== undefined && { inspection: data.inspection }),
+          ...(data.urgentWindow !== undefined && {
+            urgentWindow: data.urgentWindow,
+          }),
+          ...(data.standardServiceId !== undefined && {
+            standardServiceId: data.standardServiceId,
+          }),
+          ...(data.standardServiceNameSnapshot !== undefined && {
+            standardServiceNameSnapshot: data.standardServiceNameSnapshot,
+          }),
+          ...(data.standardServicePriceSnapshot !== undefined && {
+            standardServicePriceSnapshot: data.standardServicePriceSnapshot,
+          }),
+          ...(data.estimatedPrice !== undefined && {
+            estimatedPrice: data.estimatedPrice,
+          }),
+        },
+      });
+
+      if (data.standardServiceItems) {
+        await tx.bookingStandardServiceItem.deleteMany({
+          where: { bookingId },
+        });
+        await tx.bookingStandardServiceItem.createMany({
+          data: data.standardServiceItems.map((item) => ({
+            bookingId,
+            standardServiceId: item.standardServiceId,
+            nameSnapshot: item.nameSnapshot,
+            priceSnapshot: item.priceSnapshot,
+            quantity: item.quantity ?? 1,
+          })),
+        });
+      }
     });
 
     return this.prisma.booking.findUniqueOrThrow({

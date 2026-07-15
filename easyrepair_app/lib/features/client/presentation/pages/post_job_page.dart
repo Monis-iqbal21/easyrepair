@@ -85,6 +85,12 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
   // standardServiceIds list matches the order the client tapped them in.
   final Map<String, StandardServiceEntity> _selectedStandardServices = {};
 
+  // Edit mode only: standardServiceId values carried over from the booking
+  // being edited, applied to _selectedStandardServices once the real catalog
+  // entries load (see _buildStandardServicesSection).
+  List<String>? _pendingStandardServiceIdsToPreselect;
+  bool _standardServicesPreselected = false;
+
   double get _selectedStandardServicesTotal => _selectedStandardServices.values
       .fold<double>(0, (sum, s) => sum + s.price);
 
@@ -209,16 +215,28 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
       _selectedDate = booking.scheduledDate;
       _addressCtrl.text = booking.address ?? '';
 
-      // Prefer the real `inspection` flag; fall back to detecting the legacy
-      // text-prefix encoding for bookings created before that field existed.
-      // Edit mode never offers the Standard lane (old bookings/the update
-      // endpoint don't support it), so this only ever resolves to inspection
-      // or bidding.
-      _laneChoice = (booking.inspection || booking.hasLegacyInspectionPrefix)
-          ? BookingLane.inspection
-          : BookingLane.bidding;
+      // STANDARD/INSPECTION come straight from the booking's own lane field.
+      // Only bookings predating that field (no explicit lane, no inspection
+      // flag) need the legacy text-prefix fallback to resolve to inspection.
+      _laneChoice = booking.lane == BookingLane.standard
+          ? BookingLane.standard
+          : (booking.inspection || booking.hasLegacyInspectionPrefix)
+              ? BookingLane.inspection
+              : BookingLane.bidding;
       _titleCtrl.text = booking.title ?? '';
       _descriptionCtrl.text = booking.cleanDescription ?? '';
+
+      if (_laneChoice == BookingLane.standard) {
+        final ids = booking.standardServiceItems
+            .map((i) => i.standardServiceId)
+            .whereType<String>()
+            .toList();
+        _pendingStandardServiceIdsToPreselect = ids.isNotEmpty
+            ? ids
+            : (booking.standardServiceId != null
+                ? [booking.standardServiceId!]
+                : const []);
+      }
 
       _gpsLat = booking.latitude != 0 ? booking.latitude : null;
       _gpsLng = booking.longitude != 0 ? booking.longitude : null;
@@ -878,6 +896,9 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
       latitude: _gpsLat,
       longitude: _gpsLng,
       inspection: _laneChoice == BookingLane.inspection,
+      standardServiceIds: _laneChoice == BookingLane.standard
+          ? _selectedStandardServices.keys.toList()
+          : null,
     );
 
     await ref
@@ -2355,6 +2376,13 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
   }
 
   // ── Step 2: Booking lane + lane-specific content ───────────────────────────
+  // Editing an existing STANDARD booking locks the lane — the 3 "what do you
+  // need?" cards never show, since switching lane on an existing booking
+  // isn't supported. A read-only service header replaces them instead, so
+  // the client can still see which service they're editing.
+  bool get _hideLaneCardsForEdit =>
+      _isEditMode && _laneChoice == BookingLane.standard;
+
   Widget _buildStep2() {
     return SingleChildScrollView(
       key: const ValueKey(1),
@@ -2363,7 +2391,10 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildLaneSelector(),
+          if (_hideLaneCardsForEdit)
+            _buildLockedServiceHeader()
+          else
+            _buildLaneSelector(),
           if (_laneChoice == BookingLane.standard) ...[
             const SizedBox(height: 16),
             _buildStandardServicesSection(),
@@ -2425,6 +2456,63 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
       if (c.name.toLowerCase() == _selectedService!.toLowerCase()) return c;
     }
     return null;
+  }
+
+  /// Replaces the lane cards when editing a STANDARD booking — shows the
+  /// locked category (e.g. "Electrician") so the client still sees what
+  /// they're editing, without offering to switch service or lane.
+  Widget _buildLockedServiceHeader() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _kBorder),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: _kGreen.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.build_circle_rounded,
+              color: _kGreen,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Service',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: _kGray,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _selectedService ?? 'Service',
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: _kDark,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Icon(Icons.lock_outline_rounded, size: 16, color: _kGray),
+        ],
+      ),
+    );
   }
 
   Widget _buildLaneSelector() {
@@ -2599,6 +2687,24 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     );
   }
 
+  // Edit mode only: once the real catalog for this category has loaded, match
+  // the booking's carried-over standardServiceId values against it and seed
+  // _selectedStandardServices — same map/keying the tap handler uses, so the
+  // tiles render pre-checked with no extra rebuild needed. Runs once.
+  void _applyPendingStandardServicePreselection(
+    List<StandardServiceEntity> services,
+  ) {
+    if (_standardServicesPreselected) return;
+    _standardServicesPreselected = true;
+    final ids = _pendingStandardServiceIdsToPreselect;
+    if (ids == null || ids.isEmpty) return;
+    for (final s in services) {
+      if (ids.contains(s.id)) {
+        _selectedStandardServices[s.id] = s;
+      }
+    }
+  }
+
   // ── Lane A: Standard Services — dynamic fixed-price catalog ────────────────
   Widget _buildStandardServicesSection() {
     final categoriesAsync = ref.watch(clientBookingCategoriesProvider);
@@ -2669,6 +2775,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
             ),
           ),
           data: (services) {
+            _applyPendingStandardServicePreselection(services);
             if (services.isEmpty) {
               return _sectionCard(
                 title: 'Choose a standard service',

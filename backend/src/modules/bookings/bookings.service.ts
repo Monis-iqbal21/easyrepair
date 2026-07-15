@@ -144,51 +144,15 @@ export class BookingsService {
             ? [dto.standardServiceId]
             : [];
 
-      if (requestedIds.length === 0) {
-        throw new BadRequestException(
-          'At least one standard service is required for a STANDARD lane booking.',
-        );
-      }
-
-      const uniqueIds = Array.from(new Set(requestedIds));
-      const services =
-        await this.bookingsRepository.findStandardServicesByIds(uniqueIds);
-
-      if (services.length !== uniqueIds.length) {
-        throw new NotFoundException(
-          'One or more selected standard services could not be found.',
-        );
-      }
-      const invalid = services.find(
-        (s) => !s.isActive || s.categoryId !== category.id,
+      const resolved = await this._resolveStandardServiceSelection(
+        category.id,
+        requestedIds,
       );
-      if (invalid) {
-        throw new NotFoundException(
-          'Selected standard service is not available for this category.',
-        );
-      }
-
-      // Preserve the order the client selected them in.
-      const byId = new Map(services.map((s) => [s.id, s]));
-      standardServiceItems = uniqueIds.map((id) => {
-        const s = byId.get(id)!;
-        return {
-          standardServiceId: s.id,
-          nameSnapshot: s.name,
-          priceSnapshot: s.price,
-          quantity: 1,
-        };
-      });
-
-      // Legacy fields mirror the first selected item for older app builds.
-      const first = standardServiceItems[0];
-      standardServiceId = first.standardServiceId;
-      standardServiceNameSnapshot = first.nameSnapshot;
-      standardServicePriceSnapshot = first.priceSnapshot;
-      estimatedPrice = standardServiceItems.reduce(
-        (sum, item) => sum + item.priceSnapshot * (item.quantity ?? 1),
-        0,
-      );
+      standardServiceItems = resolved.standardServiceItems;
+      standardServiceId = resolved.standardServiceId;
+      standardServiceNameSnapshot = resolved.standardServiceNameSnapshot;
+      standardServicePriceSnapshot = resolved.standardServicePriceSnapshot;
+      estimatedPrice = resolved.estimatedPrice;
     } else if (lane === BookingLane.INSPECTION) {
       if (category.inspectionFee === null || category.inspectionFee === undefined) {
         throw new BadRequestException(
@@ -410,6 +374,24 @@ export class BookingsService {
     const urgentWindow: UrgentWindow | null | undefined =
       newUrgency === BookingUrgency.URGENT ? dto.urgentWindow : null;
 
+    // Replace the STANDARD-lane sub-service selection when the client sent
+    // one. Lane itself is never editable here, so this only makes sense on a
+    // booking that's already STANDARD.
+    let standardServiceUpdate:
+      | Awaited<ReturnType<BookingsService['_resolveStandardServiceSelection']>>
+      | undefined;
+    if (dto.standardServiceIds !== undefined) {
+      if (booking.lane !== BookingLane.STANDARD) {
+        throw new BadRequestException(
+          'standardServiceIds can only be updated on a STANDARD lane booking.',
+        );
+      }
+      standardServiceUpdate = await this._resolveStandardServiceSelection(
+        categoryId ?? booking.categoryId,
+        dto.standardServiceIds,
+      );
+    }
+
     const updated = await this.bookingsRepository.updateBooking(bookingId, {
       categoryId,
       title: dto.title,
@@ -423,9 +405,90 @@ export class BookingsService {
       longitude: dto.longitude,
       inspection: dto.inspection,
       urgentWindow,
+      ...(standardServiceUpdate && {
+        standardServiceId: standardServiceUpdate.standardServiceId,
+        standardServiceNameSnapshot:
+          standardServiceUpdate.standardServiceNameSnapshot,
+        standardServicePriceSnapshot:
+          standardServiceUpdate.standardServicePriceSnapshot,
+        standardServiceItems: standardServiceUpdate.standardServiceItems,
+        estimatedPrice: standardServiceUpdate.estimatedPrice,
+      }),
     });
 
     return this._toDto(updated);
+  }
+
+  /**
+   * Validate + resolve STANDARD-lane sub-service ids into snapshot rows, the
+   * legacy singular fields, and the combined price. Shared by createBooking
+   * and updateBooking so both stay in sync.
+   */
+  private async _resolveStandardServiceSelection(
+    categoryId: string,
+    requestedIds: string[],
+  ): Promise<{
+    standardServiceItems: Array<{
+      standardServiceId: string;
+      nameSnapshot: string;
+      priceSnapshot: number;
+      quantity?: number;
+    }>;
+    standardServiceId: string;
+    standardServiceNameSnapshot: string;
+    standardServicePriceSnapshot: number;
+    estimatedPrice: number;
+  }> {
+    if (requestedIds.length === 0) {
+      throw new BadRequestException(
+        'At least one standard service is required for a STANDARD lane booking.',
+      );
+    }
+
+    const uniqueIds = Array.from(new Set(requestedIds));
+    const services =
+      await this.bookingsRepository.findStandardServicesByIds(uniqueIds);
+
+    if (services.length !== uniqueIds.length) {
+      throw new NotFoundException(
+        'One or more selected standard services could not be found.',
+      );
+    }
+    const invalid = services.find(
+      (s) => !s.isActive || s.categoryId !== categoryId,
+    );
+    if (invalid) {
+      throw new NotFoundException(
+        'Selected standard service is not available for this category.',
+      );
+    }
+
+    // Preserve the order the client selected them in.
+    const byId = new Map(services.map((s) => [s.id, s]));
+    const standardServiceItems = uniqueIds.map((id) => {
+      const s = byId.get(id)!;
+      return {
+        standardServiceId: s.id,
+        nameSnapshot: s.name,
+        priceSnapshot: s.price,
+        quantity: 1,
+      };
+    });
+
+    // Legacy fields mirror the first selected item for older app builds.
+    const first = standardServiceItems[0];
+    const estimatedPrice = standardServiceItems.reduce(
+      (sum, item) => sum + item.priceSnapshot * (item.quantity ?? 1),
+      0,
+    );
+
+    return {
+      standardServiceItems,
+      standardServiceId: first.standardServiceId,
+      standardServiceNameSnapshot: first.nameSnapshot,
+      standardServicePriceSnapshot: first.priceSnapshot,
+      estimatedPrice,
+    };
   }
 
   async submitReview(

@@ -5,6 +5,8 @@ import {
   IsNumber,
   IsDateString,
   IsBoolean,
+  IsArray,
+  IsUUID,
   MaxLength,
   Min,
   Max,
@@ -79,4 +81,12 @@ export class UpdateBookingDto {
   )
   @IsEnum(UrgentWindow)
   urgentWindow?: UrgentWindow;
+
+  // Replace the STANDARD-lane sub-service selection. Only valid when the
+  // booking's lane is already STANDARD — the service layer rejects this on
+  // any other lane (lane itself is never editable via this DTO).
+  @IsOptional()
+  @IsArray()
+  @IsUUID('4', { each: true })
+  standardServiceIds?: string[];
 }
