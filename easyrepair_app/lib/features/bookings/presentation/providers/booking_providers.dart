@@ -16,6 +16,7 @@ import '../../domain/repositories/booking_repository.dart';
 import '../../domain/usecases/cancel_booking_usecase.dart';
 import '../../domain/usecases/create_booking_usecase.dart';
 import '../../domain/usecases/get_client_bookings_usecase.dart';
+import '../../../worker/presentation/providers/worker_job_providers.dart';
 
 // ── Infrastructure ────────────────────────────────────────────────────────────
 
@@ -849,7 +850,16 @@ class WorkerLifecycleNotifier extends AsyncNotifier<void> {
       },
       (updated) {
         state = const AsyncData(null);
+        // Client-side cache — harmless no-op when this runs inside the
+        // worker app process (client and worker are separate app installs),
+        // kept for any shared-process/testing scenarios.
         ref.read(bookingDetailProvider(bookingId).notifier).push(updated);
+        // Worker-side state — the ACTUAL source of truth for
+        // worker_jobs_page.dart and worker_job_detail_page.dart. Without
+        // this, both kept showing the pre-action button until the app was
+        // backgrounded/resumed or the page was reopened.
+        ref.invalidate(workerJobDetailProvider(bookingId));
+        ref.invalidate(workerJobsProvider);
       },
     );
   }
@@ -887,3 +897,19 @@ final workerLifecycleNotifierProvider =
     AsyncNotifierProvider<WorkerLifecycleNotifier, void>(
       WorkerLifecycleNotifier.new,
     );
+
+/// Dispatches a [WorkerLifecycleAction] to the matching [WorkerLifecycleNotifier]
+/// method. The single call site both worker_jobs_page.dart and
+/// worker_job_detail_page.dart use, so the two surfaces can never end up
+/// calling a different endpoint for the same button.
+extension WorkerLifecycleActionDispatchX on WorkerLifecycleAction {
+  Future<void> invoke(WidgetRef ref, String bookingId) {
+    final notifier = ref.read(workerLifecycleNotifierProvider.notifier);
+    return switch (this) {
+      WorkerLifecycleAction.onMyWay => notifier.onMyWay(bookingId),
+      WorkerLifecycleAction.arrived => notifier.arrived(bookingId),
+      WorkerLifecycleAction.start => notifier.start(bookingId),
+      WorkerLifecycleAction.complete => notifier.complete(bookingId),
+    };
+  }
+}

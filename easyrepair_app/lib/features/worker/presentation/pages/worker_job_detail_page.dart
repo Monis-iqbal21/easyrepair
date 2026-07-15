@@ -500,9 +500,22 @@ class _StandardLifecycleSection extends ConsumerWidget {
     final canCancel = job.status == BookingStatus.accepted ||
         job.status == BookingStatus.enRoute;
 
-    Future<void> runAction(Future<void> Function() action) async {
+    Future<void> runAction(
+      Future<void> Function() action, {
+      String? successMessage,
+    }) async {
       try {
         await action();
+        if (successMessage != null && context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(successMessage),
+              backgroundColor: _kGreen,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+          );
+        }
       } catch (e) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -546,40 +559,32 @@ class _StandardLifecycleSection extends ConsumerWidget {
       );
     }
 
+    // Same BookingEntity.standardWorkerNextAction mapping and
+    // WorkerLifecycleActionDispatchX.invoke dispatch as worker_jobs_page.dart's
+    // _StandardActionBtn — the two surfaces can never show a different button
+    // for the same booking.
+    final nextAction = job.standardWorkerNextAction;
+    IconData iconFor(WorkerLifecycleAction a) => switch (a) {
+          WorkerLifecycleAction.onMyWay => Icons.directions_car_filled_rounded,
+          WorkerLifecycleAction.arrived => Icons.location_on_rounded,
+          WorkerLifecycleAction.start => Icons.play_circle_outline_rounded,
+          WorkerLifecycleAction.complete => Icons.check_circle_outline_rounded,
+        };
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        switch (job.status) {
-          BookingStatus.accepted => primaryButton(
-              label: 'On My Way',
-              icon: Icons.directions_car_filled_rounded,
-              onPressed: () => runAction(
-                () => ref.read(workerLifecycleNotifierProvider.notifier).onMyWay(job.id),
-              ),
+        if (nextAction != null)
+          primaryButton(
+            label: nextAction.label,
+            icon: iconFor(nextAction),
+            onPressed: () => runAction(
+              () => nextAction.invoke(ref, job.id),
+              successMessage: nextAction.successMessage,
             ),
-          BookingStatus.enRoute => primaryButton(
-              label: 'Arrived',
-              icon: Icons.location_on_rounded,
-              onPressed: () => runAction(
-                () => ref.read(workerLifecycleNotifierProvider.notifier).arrived(job.id),
-              ),
-            ),
-          BookingStatus.arrived => primaryButton(
-              label: 'Start Job',
-              icon: Icons.play_circle_outline_rounded,
-              onPressed: () => runAction(
-                () => ref.read(workerLifecycleNotifierProvider.notifier).start(job.id),
-              ),
-            ),
-          BookingStatus.inProgress => primaryButton(
-              label: 'Complete Job',
-              icon: Icons.check_circle_outline_rounded,
-              onPressed: () => runAction(
-                () => ref.read(workerLifecycleNotifierProvider.notifier).complete(job.id),
-              ),
-            ),
-          _ => const SizedBox.shrink(),
-        },
+          )
+        else
+          const SizedBox.shrink(),
         if (canCancel) ...[
           const SizedBox(height: 10),
           SizedBox(

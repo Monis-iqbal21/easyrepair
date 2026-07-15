@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/errors/failures.dart';
 import '../../../bookings/domain/entities/booking_entity.dart';
+import '../../../bookings/presentation/providers/booking_providers.dart';
 import '../../../bookings/presentation/widgets/booking_skeleton.dart';
 import '../../../bookings/presentation/widgets/inspection_badge.dart';
 import '../providers/worker_job_providers.dart';
@@ -171,7 +172,13 @@ class _JobCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final canComplete = job.status.isWorkerActive;
+    // STANDARD lane: granular next-action button (On My Way / Arrived /
+    // Start Job / Complete Job), shared with worker_job_detail_page.dart via
+    // BookingEntity.standardWorkerNextAction so the two can never disagree.
+    // BIDDING/INSPECTION: unchanged generic "Complete" button.
+    final standardAction = job.standardWorkerNextAction;
+    final isActive = job.status.isWorkerActive;
+    final canComplete = isActive && standardAction == null;
 
     return GestureDetector(
       onTap: () => context.push('/worker/job/${job.id}').then((_) {
@@ -195,7 +202,7 @@ class _JobCard extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // ── Status accent strip for active jobs ──────────────────────
-          if (canComplete)
+          if (isActive)
             Container(
               height: 3,
               decoration: BoxDecoration(
@@ -369,7 +376,10 @@ class _JobCard extends ConsumerWidget {
                   ),
                 ],
 
-                if (canComplete) ...[
+                if (standardAction != null) ...[
+                  const SizedBox(height: 12),
+                  _StandardActionBtn(jobId: job.id, action: standardAction),
+                ] else if (canComplete) ...[
                   const SizedBox(height: 12),
                   _CompleteBtn(jobId: job.id),
                 ],
@@ -489,6 +499,96 @@ class _CompleteBtn extends ConsumerWidget {
             ),
           );
         }
+      }
+    }
+  }
+}
+
+// ── STANDARD lane next-action button (inline in card) ────────────────────────
+//
+// Same action mapping and dispatch as worker_job_detail_page.dart's
+// _StandardLifecycleSection (both go through BookingEntity
+// .standardWorkerNextAction + WorkerLifecycleActionDispatchX.invoke), so the
+// two surfaces cannot show a different button for the same booking. No
+// confirmation dialog — matches the detail page's existing behavior for
+// these actions.
+class _StandardActionBtn extends ConsumerWidget {
+  final String jobId;
+  final WorkerLifecycleAction action;
+  const _StandardActionBtn({required this.jobId, required this.action});
+
+  IconData get _icon => switch (action) {
+        WorkerLifecycleAction.onMyWay => Icons.directions_car_filled_rounded,
+        WorkerLifecycleAction.arrived => Icons.location_on_rounded,
+        WorkerLifecycleAction.start => Icons.play_circle_outline_rounded,
+        WorkerLifecycleAction.complete => Icons.check_circle_outline_rounded,
+      };
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isLoading = ref.watch(workerLifecycleNotifierProvider).isLoading;
+
+    return GestureDetector(
+      onTap: isLoading ? null : () => _run(context, ref),
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 38),
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        decoration: BoxDecoration(
+          color: _kGreen,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (isLoading)
+              const SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
+            else
+              Icon(_icon, size: 14, color: Colors.white),
+            const SizedBox(width: 5),
+            Text(
+              isLoading ? '${action.label}...' : action.label,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _run(BuildContext context, WidgetRef ref) async {
+    try {
+      await action.invoke(ref, jobId);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(action.successMessage),
+            backgroundColor: _kGreen,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e is Failure ? e.message : 'Action failed. Try again.'),
+            backgroundColor: const Color(0xFFDC2626),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
       }
     }
   }

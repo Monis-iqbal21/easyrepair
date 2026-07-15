@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -36,7 +38,12 @@ class _TrackWorkerPageState extends ConsumerState<TrackWorkerPage> {
   @override
   void initState() {
     super.initState();
-    _refreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+    // Re-fetches the whole booking (worker currentLat/currentLng included),
+    // which is the only way to get fresher worker coordinates — there's no
+    // dedicated live-location endpoint. 12s keeps the map/ETA reasonably
+    // live without being an aggressive poll (per product spec: 10-15s while
+    // this page is open).
+    _refreshTimer = Timer.periodic(const Duration(seconds: 12), (_) {
       if (mounted) ref.invalidate(bookingDetailProvider(widget.bookingId));
     });
   }
@@ -113,6 +120,8 @@ class _TrackBody extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _TopBar(booking: booking, onBack: onBack),
+          const SizedBox(height: 16),
+          _TrackingMap(booking: booking),
           const SizedBox(height: 16),
           _StatusCard(booking: booking),
           const SizedBox(height: 16),
@@ -192,12 +201,270 @@ class _TopBar extends StatelessWidget {
   }
 }
 
+// ── Tracking map preview ─────────────────────────────────────────────────────
+//
+// Shows the job/client location pin and, when available, the assigned
+// worker's current position (avatar marker when their profile photo can be
+// loaded, colored pin fallback otherwise). Rebuilds from whatever `booking`
+// the parent passes down — the page-level 12s poll (see
+// _TrackWorkerPageState) is what actually keeps the coordinates fresh; this
+// widget itself does no network polling of its own, only marker/camera work.
+class _TrackingMap extends StatefulWidget {
+  final BookingEntity booking;
+  const _TrackingMap({required this.booking});
+
+  @override
+  State<_TrackingMap> createState() => _TrackingMapState();
+}
+
+class _TrackingMapState extends State<_TrackingMap> {
+  GoogleMapController? _mapCtrl;
+  BitmapDescriptor? _workerIcon;
+  String? _iconLoadedForUrl;
+
+  bool get _hasJobLoc =>
+      widget.booking.latitude != 0 || widget.booking.longitude != 0;
+  LatLng get _jobLatLng =>
+      LatLng(widget.booking.latitude, widget.booking.longitude);
+
+  @override
+  void initState() {
+    super.initState();
+    _maybeLoadWorkerIcon();
+  }
+
+  @override
+  void didUpdateWidget(covariant _TrackingMap oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _maybeLoadWorkerIcon();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _fitBounds());
+  }
+
+  @override
+  void dispose() {
+    _mapCtrl?.dispose();
+    super.dispose();
+  }
+
+  void _maybeLoadWorkerIcon() {
+    final avatarUrl = widget.booking.assignedWorker?.avatarUrl;
+    if (avatarUrl == null || avatarUrl.isEmpty) return;
+    if (avatarUrl == _iconLoadedForUrl) return;
+    _iconLoadedForUrl = avatarUrl;
+    _buildAvatarMarkerIcon(avatarUrl).then((icon) {
+      if (!mounted || icon == null || _iconLoadedForUrl != avatarUrl) return;
+      setState(() => _workerIcon = icon);
+    });
+  }
+
+  /// Composites the worker's avatar into a circular map marker (green ring,
+  /// white border). Returns null on any failure (missing image, decode
+  /// error, network timeout) so the caller falls back to a colored pin —
+  /// this must never crash the tracking page.
+  Future<BitmapDescriptor?> _buildAvatarMarkerIcon(String avatarUrl) async {
+    try {
+      final completer = Completer<ui.Image>();
+      final stream = NetworkImage(avatarUrl).resolve(const ImageConfiguration());
+      late final ImageStreamListener listener;
+      listener = ImageStreamListener(
+        (info, _) {
+          completer.complete(info.image);
+          stream.removeListener(listener);
+        },
+        onError: (error, stack) {
+          if (!completer.isCompleted) completer.completeError(error, stack);
+          stream.removeListener(listener);
+        },
+      );
+      stream.addListener(listener);
+      final image = await completer.future.timeout(const Duration(seconds: 6));
+
+      const size = 128.0;
+      final recorder = ui.PictureRecorder();
+      final canvas = Canvas(recorder);
+      const center = Offset(size / 2, size / 2);
+      const radius = size / 2;
+
+      canvas.drawCircle(center, radius, Paint()..color = _kGreen);
+      canvas.drawCircle(center, radius - 5, Paint()..color = Colors.white);
+      canvas.save();
+      canvas.clipPath(
+        Path()..addOval(Rect.fromCircle(center: center, radius: radius - 8)),
+      );
+      canvas.drawImageRect(
+        image,
+        Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+        const Rect.fromLTWH(8, 8, size - 16, size - 16),
+        Paint(),
+      );
+      canvas.restore();
+
+      final rendered = await recorder.endRecording().toImage(
+            size.toInt(),
+            size.toInt(),
+          );
+      final bytes = await rendered.toByteData(format: ui.ImageByteFormat.png);
+      if (bytes == null) return null;
+      return BitmapDescriptor.bytes(bytes.buffer.asUint8List());
+    } catch (_) {
+      return null;
+    }
+  }
+
+  void _fitBounds() {
+    final worker = widget.booking.assignedWorker;
+    if (worker?.currentLat == null || worker?.currentLng == null || !_hasJobLoc) {
+      return;
+    }
+    final points = [_jobLatLng, LatLng(worker!.currentLat!, worker.currentLng!)];
+    var minLat = points.first.latitude, maxLat = points.first.latitude;
+    var minLng = points.first.longitude, maxLng = points.first.longitude;
+    for (final p in points) {
+      minLat = math.min(minLat, p.latitude);
+      maxLat = math.max(maxLat, p.latitude);
+      minLng = math.min(minLng, p.longitude);
+      maxLng = math.max(maxLng, p.longitude);
+    }
+    _mapCtrl?.animateCamera(
+      CameraUpdate.newLatLngBounds(
+        LatLngBounds(
+          southwest: LatLng(minLat, minLng),
+          northeast: LatLng(maxLat, maxLng),
+        ),
+        60,
+      ),
+    );
+  }
+
+  Set<Marker> _buildMarkers() {
+    final worker = widget.booking.assignedWorker;
+    final markers = <Marker>{};
+    if (_hasJobLoc) {
+      markers.add(
+        Marker(
+          markerId: const MarkerId('job'),
+          position: _jobLatLng,
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+          infoWindow: InfoWindow(
+            title: widget.booking.serviceCategory,
+            snippet: widget.booking.address,
+          ),
+        ),
+      );
+    }
+    if (worker?.currentLat != null && worker?.currentLng != null) {
+      markers.add(
+        Marker(
+          markerId: const MarkerId('worker'),
+          position: LatLng(worker!.currentLat!, worker.currentLng!),
+          icon: _workerIcon ??
+              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
+          infoWindow: InfoWindow(title: worker.fullName),
+        ),
+      );
+    }
+    return markers;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_hasJobLoc) return const SizedBox.shrink();
+    final worker = widget.booking.assignedWorker;
+    final hasWorkerLoc = worker?.currentLat != null && worker?.currentLng != null;
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: Stack(
+        children: [
+          SizedBox(
+            height: 200,
+            child: GoogleMap(
+              initialCameraPosition: CameraPosition(target: _jobLatLng, zoom: 14),
+              markers: _buildMarkers(),
+              onMapCreated: (c) {
+                _mapCtrl = c;
+                _fitBounds();
+              },
+              zoomControlsEnabled: false,
+              myLocationButtonEnabled: false,
+              myLocationEnabled: false,
+              mapToolbarEnabled: false,
+            ),
+          ),
+          if (worker != null && !hasWorkerLoc)
+            Positioned(
+              left: 10,
+              right: 10,
+              bottom: 10,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.1),
+                      blurRadius: 6,
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.location_off_outlined, size: 14, color: _kLight),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        'Ustaad location abhi available nahi hai.',
+                        style: const TextStyle(fontSize: 11.5, color: Color(0xFF6B7280)),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 // ── Status card ───────────────────────────────────────────────────────────────
 
 class _StatusCard extends StatelessWidget {
   final BookingEntity booking;
 
   const _StatusCard({required this.booking});
+
+  bool get _isStandard => booking.lane == BookingLane.standard;
+
+  // STANDARD lane has no bidding — never show "Bid Accepted" wording for it.
+  // BIDDING/INSPECTION keep the existing headline unchanged.
+  String get _headline {
+    if (booking.status == BookingStatus.completed) return 'Job Completed ✓';
+    if (!_isStandard) return 'Bid Accepted ✓';
+    return switch (booking.status) {
+      BookingStatus.enRoute => 'Ustaad On The Way',
+      BookingStatus.arrived => 'Ustaad Arrived',
+      BookingStatus.inProgress => 'Work In Progress',
+      _ => 'Hired ✓',
+    };
+  }
+
+  String _subtext(String firstName) {
+    if (booking.status == BookingStatus.completed) {
+      return '$firstName has completed the job';
+    }
+    if (!_isStandard) return '$firstName is heading to your location';
+    return switch (booking.status) {
+      BookingStatus.enRoute => '$firstName is on the way to your location',
+      BookingStatus.arrived => '$firstName has arrived at your location',
+      BookingStatus.inProgress => '$firstName is working on your job',
+      _ => '$firstName has been hired for this job',
+    };
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -243,9 +510,7 @@ class _StatusCard extends StatelessWidget {
               const SizedBox(width: 14),
               Expanded(
                 child: Text(
-                  booking.status == BookingStatus.completed
-                      ? 'Job Completed ✓'
-                      : 'Bid Accepted ✓',
+                  _headline,
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w700,
@@ -258,9 +523,7 @@ class _StatusCard extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           Text(
-            booking.status == BookingStatus.completed
-                ? '$firstName has completed the job'
-                : '$firstName is heading to your location',
+            _subtext(firstName),
             style: TextStyle(
               fontSize: 14,
               color: Colors.white.withValues(alpha: 0.85),
@@ -660,9 +923,12 @@ class _ProgressTimeline extends StatelessWidget {
     required this.etaMin,
   });
 
-  // 3 steps: Bid Accepted (rank 1), Arrived (rank 2), Job Completed (rank 3).
-  // Arrived is triggered automatically when distanceM < 150.
-  int _rank({double? distanceM}) {
+  bool get _isStandard => booking.lane == BookingLane.standard;
+
+  // Legacy 3-step ladder for BIDDING/INSPECTION — unchanged: Bid Accepted
+  // (rank 1), Arrived (rank 2, auto-triggered when distanceM < 150), Job
+  // Completed (rank 3).
+  int _legacyRank({double? distanceM}) {
     if (booking.status == BookingStatus.completed) return 3;
     if (booking.status == BookingStatus.inProgress) {
       // Treat in-progress as arrived
@@ -676,6 +942,19 @@ class _ProgressTimeline extends StatelessWidget {
     return 1;
   }
 
+  // STANDARD lane has no bidding: Hired -> Ustaad on the way -> Arrived ->
+  // Work in progress -> Completed -> Review. Rank 6 only once a review has
+  // actually been submitted.
+  int _standardRank() {
+    return switch (booking.status) {
+      BookingStatus.enRoute => 2,
+      BookingStatus.arrived => 3,
+      BookingStatus.inProgress => 4,
+      BookingStatus.completed => booking.review != null ? 6 : 5,
+      _ => 1, // accepted (or anything else — a worker shouldn't land here otherwise)
+    };
+  }
+
   DateTime? _historyDate(BookingStatus target) {
     for (final entry in booking.statusHistory.reversed) {
       if (entry.status == target) return entry.createdAt;
@@ -683,18 +962,30 @@ class _ProgressTimeline extends StatelessWidget {
     return null;
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final rank = _rank(distanceM: distanceM);
-    final fmt = DateFormat('h:mm a');
+  List<_StepData> _standardSteps(DateFormat fmt) {
+    return [
+      _StepData(label: 'Hired', requiredRank: 1, timestamp: booking.acceptedAt, fmt: fmt),
+      _StepData(label: 'Ustaad on the way', requiredRank: 2, timestamp: booking.enRouteAt, fmt: fmt),
+      _StepData(label: 'Arrived', requiredRank: 3, timestamp: booking.arrivedAt, fmt: fmt),
+      _StepData(label: 'Work in progress', requiredRank: 4, timestamp: booking.startedAt, fmt: fmt),
+      _StepData(label: 'Completed', requiredRank: 5, timestamp: booking.completedAt, fmt: fmt),
+      _StepData(
+        label: booking.review != null ? 'Reviewed' : 'Review pending',
+        requiredRank: 6,
+        timestamp: booking.review?.createdAt,
+        fmt: fmt,
+      ),
+    ];
+  }
 
+  List<_StepData> _legacySteps(DateFormat fmt, int rank) {
     final arrivedAt = booking.status == BookingStatus.inProgress
         ? (_historyDate(BookingStatus.inProgress) ?? booking.startedAt)
         : (distanceM != null && distanceM! <= 150
             ? DateTime.now()
             : null);
 
-    final steps = <_StepData>[
+    return [
       _StepData(
         label: 'Bid Accepted',
         requiredRank: 1,
@@ -719,6 +1010,13 @@ class _ProgressTimeline extends StatelessWidget {
         fmt: fmt,
       ),
     ];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final fmt = DateFormat('h:mm a');
+    final rank = _isStandard ? _standardRank() : _legacyRank(distanceM: distanceM);
+    final steps = _isStandard ? _standardSteps(fmt) : _legacySteps(fmt, rank);
 
     return Container(
       padding: const EdgeInsets.all(18),

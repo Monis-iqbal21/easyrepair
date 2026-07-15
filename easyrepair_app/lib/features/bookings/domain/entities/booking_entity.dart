@@ -72,6 +72,47 @@ extension BookingLaneX on BookingLane {
   }
 }
 
+/// Worker-facing lifecycle action for a STANDARD-lane assigned job — the
+/// single next thing a worker should do. This is the shared source of truth
+/// for "what button do we show" so the worker My Jobs list and Job Detail
+/// page can never disagree about the same booking.
+enum WorkerLifecycleAction { onMyWay, arrived, start, complete }
+
+extension WorkerLifecycleActionX on WorkerLifecycleAction {
+  String get label => switch (this) {
+        WorkerLifecycleAction.onMyWay => 'On My Way',
+        WorkerLifecycleAction.arrived => 'Arrived',
+        WorkerLifecycleAction.start => 'Start Job',
+        WorkerLifecycleAction.complete => 'Complete Job',
+      };
+
+  /// Shown in the success snackbar immediately after the action succeeds.
+  String get successMessage => switch (this) {
+        WorkerLifecycleAction.onMyWay => 'On the way — client notified.',
+        WorkerLifecycleAction.arrived => 'Marked as arrived.',
+        WorkerLifecycleAction.start => 'Job started.',
+        WorkerLifecycleAction.complete => 'Job marked as completed.',
+      };
+}
+
+extension BookingWorkerLifecycleX on BookingEntity {
+  /// The single next lifecycle action a worker should take for this
+  /// STANDARD-lane assigned job, or null when no action applies — either the
+  /// lane isn't STANDARD (BIDDING/INSPECTION keep their existing generic
+  /// "Mark as Completed" flow) or the booking isn't in an active
+  /// worker-facing status (pending/completed/cancelled/etc).
+  WorkerLifecycleAction? get standardWorkerNextAction {
+    if (lane != BookingLane.standard) return null;
+    return switch (status) {
+      BookingStatus.accepted => WorkerLifecycleAction.onMyWay,
+      BookingStatus.enRoute => WorkerLifecycleAction.arrived,
+      BookingStatus.arrived => WorkerLifecycleAction.start,
+      BookingStatus.inProgress => WorkerLifecycleAction.complete,
+      _ => null,
+    };
+  }
+}
+
 extension BookingStatusX on BookingStatus {
   /// Maps internal status → client-facing display label
   String get displayLabel {
