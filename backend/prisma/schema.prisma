@@ -202,6 +202,7 @@ model WorkerProfile {
   status             WorkerStatus       @default(ACTIVE)
   verificationStatus VerificationStatus @default(PENDING)
   isOnline           Boolean            @default(false)
+  profileCompleted   Boolean            @default(false)
   availabilityStatus AvailabilityStatus @default(OFFLINE)
   onlineAt           DateTime?          @db.Timestamptz(3)
   currentlyWorking   Boolean            @default(false)

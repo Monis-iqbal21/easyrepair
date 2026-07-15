@@ -463,7 +463,12 @@ export class BookingsRepository {
   async findWorkerProfileById(workerProfileId: string) {
     return this.prisma.workerProfile.findUnique({
       where: { id: workerProfileId },
-      select: { id: true, userId: true, availabilityStatus: true },
+      select: {
+        id: true,
+        userId: true,
+        availabilityStatus: true,
+        profileCompleted: true,
+      },
     });
   }
 
@@ -613,6 +618,10 @@ export class BookingsRepository {
           ? standardLadder
           : legacyLadder;
     const excludedIds = params.excludedWorkerIds ?? [];
+    // STANDARD lane only lists Ustaads with a completed profile — INSPECTION/
+    // BIDDING keep showing all eligible workers for now (see profileCompleted
+    // gate rollout notes in bookings.service.ts).
+    const requireProfileCompleted = params.lane === BookingLane.STANDARD;
 
     type WorkerEntry = {
       id: string;
@@ -662,6 +671,7 @@ export class BookingsRepository {
           AND wp.status = 'ACTIVE'::"WorkerStatus"
           AND wp."verificationStatus" = 'VERIFIED'::"VerificationStatus"
           AND wp.id != ALL(${excludedIds}::text[])
+          AND (${requireProfileCompleted}::boolean = FALSE OR wp."profileCompleted" = TRUE)
           AND EXISTS (
             SELECT 1 FROM worker_skills ws
             WHERE ws."workerProfileId" = wp.id
@@ -728,6 +738,9 @@ export class BookingsRepository {
 
     // Location freshness threshold — same 30-minute rule as the PostGIS path.
     const freshThreshold = new Date(Date.now() - 30 * 60 * 1000);
+    // STANDARD lane only lists Ustaads with a completed profile — see the
+    // matching comment in _findNearbyWorkersPostgis.
+    const requireProfileCompleted = params.lane === BookingLane.STANDARD;
 
     // Fetch all eligible candidate workers once (avoids repeated DB round-trips).
     // The DB filters everything except the spatial radius (applied in TS below).
@@ -741,6 +754,7 @@ export class BookingsRepository {
         currentLng: { not: null },
         locationUpdatedAt: { gte: freshThreshold },
         skills: { some: { categoryId: params.categoryId } },
+        ...(requireProfileCompleted ? { profileCompleted: true } : {}),
         ...(params.excludedWorkerIds && params.excludedWorkerIds.length > 0
           ? { id: { notIn: params.excludedWorkerIds } }
           : {}),

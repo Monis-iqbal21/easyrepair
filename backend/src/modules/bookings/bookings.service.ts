@@ -714,6 +714,11 @@ export class BookingsService {
         'This worker is no longer available. Please choose another.',
       );
     }
+    if (!worker.profileCompleted) {
+      throw new BadRequestException(
+        'This worker has not completed their profile yet and cannot be hired.',
+      );
+    }
 
     // STANDARD lane: total is the sum of all selected item snapshots
     // (supports multiple sub-services). Falls back to the legacy singular

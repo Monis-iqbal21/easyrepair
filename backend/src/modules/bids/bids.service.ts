@@ -39,6 +39,7 @@ export class BidsService {
     }
 
     this._assertWorkerEligible(workerProfile);
+    this._assertProfileCompleted(workerProfile);
 
     const booking = await this.bidsRepository.findBookingById(bookingId);
     if (!booking) {
@@ -131,6 +132,8 @@ export class BidsService {
     if (bid.workerProfile.id !== workerProfile.id) {
       throw new ForbiddenException('You do not own this bid');
     }
+
+    this._assertProfileCompleted(workerProfile);
 
     if (bid.status !== 'PENDING') {
       throw new BadRequestException(
@@ -438,6 +441,21 @@ export class BidsService {
     }
     if (workerProfile.verificationStatus !== VerificationStatus.VERIFIED) {
       throw new ForbiddenException('Worker account is not verified');
+    }
+  }
+
+  /**
+   * Gate for actions that commit a worker to a job (bid/apply/edit-bid).
+   * Deliberately NOT applied to read-only endpoints like getNewJobsForWorker —
+   * an incomplete-profile Ustaad can still browse jobs, just not act on them.
+   */
+  private _assertProfileCompleted(workerProfile: {
+    profileCompleted: boolean;
+  }): void {
+    if (!workerProfile.profileCompleted) {
+      throw new ForbiddenException(
+        'Profile complete karein taake jobs apply kar saken.',
+      );
     }
   }
 

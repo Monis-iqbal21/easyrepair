@@ -130,9 +130,12 @@ class _ChooseUstaadPageState extends ConsumerState<ChooseUstaadPage> {
     final booking = widget.booking;
     final nearbyState = ref.watch(nearbyWorkersNotifierProvider(booking.id));
 
-    final String? priceLabel = booking.lane == BookingLane.standard
-        ? (booking.standardServicePriceSnapshot != null
-              ? 'Fixed price Rs ${booking.standardServicePriceSnapshot!.toStringAsFixed(0)}'
+    final bool isStandard = booking.lane == BookingLane.standard;
+    final double? standardTotal = isStandard ? booking.standardServicesTotal : null;
+
+    final String? priceLabel = isStandard
+        ? (standardTotal != null
+              ? 'Service Total Rs ${standardTotal.toStringAsFixed(0)}'
               : null)
         : (booking.inspectionFeeSnapshot != null
               ? 'Inspection fee Rs ${booking.inspectionFeeSnapshot!.toStringAsFixed(0)}'
@@ -184,6 +187,81 @@ class _ChooseUstaadPageState extends ConsumerState<ChooseUstaadPage> {
                         fontWeight: FontWeight.w700,
                         color: _kGreen,
                       ),
+                    ),
+                  ),
+                ],
+                if (isStandard &&
+                    standardTotal != null &&
+                    booking.standardServiceItems.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _kSurface,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: _kBorder),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        for (final item in booking.standardServiceItems)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 2),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    item.quantity > 1
+                                        ? '${item.nameSnapshot} x${item.quantity}'
+                                        : item.nameSnapshot,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      color: _kGray,
+                                    ),
+                                  ),
+                                ),
+                                Text(
+                                  'Rs ${item.lineTotal.toStringAsFixed(0)}',
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    color: _kDark,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 6),
+                          child: Divider(height: 1, color: _kBorder),
+                        ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'Total',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: _kDark,
+                              ),
+                            ),
+                            Text(
+                              'Rs ${standardTotal.toStringAsFixed(0)}',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: _kGreen,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
                 ],

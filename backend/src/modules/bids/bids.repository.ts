@@ -58,6 +58,7 @@ export class BidsRepository {
         currentlyWorking: true,
         currentLat: true,
         currentLng: true,
+        profileCompleted: true,
         skills: { select: { categoryId: true } },
       },
     });
