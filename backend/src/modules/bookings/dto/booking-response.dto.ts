@@ -118,4 +118,13 @@ export class BookingResponseDto {
   workerExclusions: BookingWorkerExclusionDto[];
   /** Convenience: reason the most recently assigned worker cancelled, if any — for the client's "Previous Ustaad cancelled: ..." strip. */
   lastWorkerCancellationReason: string | null;
+  /** INSPECTION lane: true once the assigned worker has submitted their report. */
+  inspectionReportSubmitted: boolean;
+  /** INSPECTION lane: null until a report exists, then tracks the client's decision. */
+  inspectionDecisionStatus:
+    | 'PENDING_CLIENT_DECISION'
+    | 'ACCEPTED_REPAIR'
+    | 'CLOSED_AFTER_INSPECTION'
+    | null;
+  inspectionReportSubmittedAt: string | null;
 }

@@ -14,6 +14,7 @@ import '../widgets/media_attachment_widgets.dart';
 import '../../domain/entities/update_booking_request.dart';
 import '../providers/booking_providers.dart';
 import '../widgets/inspection_badge.dart';
+import '../widgets/inspection_report_card.dart';
 import '../widgets/status_badge.dart';
 import '../widgets/urgency_badge.dart';
 import 'choose_ustaad_page.dart';
@@ -364,9 +365,19 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
                 _StatusCard(booking: booking),
                 const SizedBox(height: 16),
 
+                // INSPECTION lane: lane-aware state strip (no bidding wording)
+                InspectionStatusStrip(booking: booking),
+
                 // Status timeline (when there's history to show)
                 if (booking.statusHistory.isNotEmpty) ...[
                   _StatusTimelineCard(booking: booking),
+                  const SizedBox(height: 16),
+                ],
+
+                // INSPECTION lane: worker's report + client decision buttons
+                if (booking.lane == BookingLane.inspection &&
+                    booking.assignedWorker != null) ...[
+                  InspectionReportSection(bookingId: booking.id),
                   const SizedBox(height: 16),
                 ],
 

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
@@ -6,8 +7,10 @@ import '../../../../core/errors/failures.dart';
 import '../../../../core/network/api_client.dart';
 import '../../domain/entities/booking_entity.dart';
 import '../../domain/entities/create_booking_request.dart';
+import '../../domain/entities/inspection_report_entity.dart';
 import '../../domain/entities/update_booking_request.dart';
 import '../models/booking_model.dart';
+import '../models/inspection_report_model.dart';
 import '../models/nearby_worker_model.dart';
 
 abstract class BookingRemoteDataSource {
@@ -39,6 +42,21 @@ abstract class BookingRemoteDataSource {
   Future<BookingModel> startJob(String bookingId);
   Future<BookingModel> completeJobLifecycle(String bookingId);
   Future<BookingModel> workerCancelBooking(String bookingId, String reason);
+
+  // ── Inspection report (INSPECTION lane) ─────────────────────────────────
+  Future<InspectionReportModel> submitInspectionReport(
+    String bookingId, {
+    required String issueFound,
+    required String recommendedRepair,
+    required double labourCost,
+    required bool partsNeeded,
+    required List<InspectionReportPartDraft> parts,
+    String? notes,
+    required List<File> photos,
+  });
+  Future<InspectionReportModel> getInspectionReport(String bookingId);
+  Future<BookingModel> acceptInspectionQuote(String bookingId);
+  Future<BookingModel> closeAfterInspection(String bookingId);
 }
 
 class BookingRemoteDataSourceImpl implements BookingRemoteDataSource {
@@ -302,6 +320,89 @@ class BookingRemoteDataSourceImpl implements BookingRemoteDataSource {
       );
       final data = response.data['data'] as Map<String, dynamic>;
       return BookingModel.fromJson(data);
+    } on DioException catch (e) {
+      throw dioExceptionToFailure(e);
+    }
+  }
+
+  @override
+  Future<InspectionReportModel> submitInspectionReport(
+    String bookingId, {
+    required String issueFound,
+    required String recommendedRepair,
+    required double labourCost,
+    required bool partsNeeded,
+    required List<InspectionReportPartDraft> parts,
+    String? notes,
+    required List<File> photos,
+  }) async {
+    try {
+      final payload = {
+        'issueFound': issueFound,
+        'recommendedRepair': recommendedRepair,
+        'labourCost': labourCost,
+        'partsNeeded': partsNeeded,
+        'parts': parts
+            .map((p) => {
+                  'name': p.name,
+                  'quantity': p.quantity,
+                  'unitPrice': p.unitPrice,
+                  if (p.warranty != null && p.warranty!.isNotEmpty)
+                    'warranty': p.warranty,
+                })
+            .toList(),
+        if (notes != null && notes.isNotEmpty) 'notes': notes,
+      };
+      final formData = FormData.fromMap({
+        'payload': jsonEncode(payload),
+        'photos': await Future.wait(
+          photos.map(
+            (file) => MultipartFile.fromFile(
+              file.path,
+              filename: file.path.split('/').last,
+            ),
+          ),
+        ),
+      });
+      final response = await _dio.post(
+        '/bookings/$bookingId/inspection-report',
+        data: formData,
+      );
+      final data = response.data['data'] as Map<String, dynamic>;
+      return InspectionReportModel.fromJson(data);
+    } on DioException catch (e) {
+      throw dioExceptionToFailure(e);
+    }
+  }
+
+  @override
+  Future<InspectionReportModel> getInspectionReport(String bookingId) async {
+    try {
+      final response = await _dio.get('/bookings/$bookingId/inspection-report');
+      final data = response.data['data'] as Map<String, dynamic>;
+      return InspectionReportModel.fromJson(data);
+    } on DioException catch (e) {
+      throw dioExceptionToFailure(e);
+    }
+  }
+
+  @override
+  Future<BookingModel> acceptInspectionQuote(String bookingId) async {
+    try {
+      await _dio.post('/bookings/$bookingId/inspection-report/accept');
+      // The accept endpoint returns the report DTO, not the booking — re-fetch
+      // the booking so the caller gets the updated lane/status fields.
+      return getBookingById(bookingId);
+    } on DioException catch (e) {
+      throw dioExceptionToFailure(e);
+    }
+  }
+
+  @override
+  Future<BookingModel> closeAfterInspection(String bookingId) async {
+    try {
+      await _dio.post('/bookings/$bookingId/inspection-report/close');
+      return getBookingById(bookingId);
     } on DioException catch (e) {
       throw dioExceptionToFailure(e);
     }

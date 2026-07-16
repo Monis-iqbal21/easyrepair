@@ -17,5 +17,6 @@ import { ChatModule } from '../chat/chat.module';
   ],
   controllers: [BookingsController],
   providers: [BookingsService, BookingsRepository, BookingsProcessor],
+  exports: [BookingsService],
 })
 export class BookingsModule {}

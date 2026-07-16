@@ -13,6 +13,7 @@ import '../../../../core/errors/failures.dart';
 import '../../../../core/utils/distance_utils.dart';
 import '../../domain/entities/booking_entity.dart';
 import '../providers/booking_providers.dart';
+import '../widgets/inspection_report_card.dart';
 import '../../../chat/presentation/providers/chat_providers.dart';
 
 // ── Palette ───────────────────────────────────────────────────────────────────
@@ -136,6 +137,10 @@ class _TrackBody extends StatelessWidget {
             distanceM: distanceM,
             etaMin: etaMin,
           ),
+          if (booking.lane == BookingLane.inspection) ...[
+            const SizedBox(height: 16),
+            InspectionReportSection(bookingId: booking.id),
+          ],
         ],
       ),
     );
@@ -439,11 +444,25 @@ class _StatusCard extends StatelessWidget {
   const _StatusCard({required this.booking});
 
   bool get _isStandard => booking.lane == BookingLane.standard;
+  bool get _isInspection => booking.lane == BookingLane.inspection;
 
-  // STANDARD lane has no bidding — never show "Bid Accepted" wording for it.
-  // BIDDING/INSPECTION keep the existing headline unchanged.
+  // STANDARD/INSPECTION lanes are direct-hire — never show "Bid Accepted"
+  // wording for them. BIDDING keeps the existing headline unchanged.
   String get _headline {
     if (booking.status == BookingStatus.completed) return 'Job Completed ✓';
+    if (_isInspection) {
+      if (booking.inspectionDecisionStatus == InspectionDecisionStatus.acceptedRepair) {
+        return 'Quote Accepted — Repair In Progress';
+      }
+      return switch (booking.status) {
+        BookingStatus.enRoute => 'Ustaad On The Way',
+        BookingStatus.arrived => 'Ustaad Arrived',
+        BookingStatus.inProgress => booking.inspectionReportSubmitted
+            ? 'Report Submitted'
+            : 'Inspection In Progress',
+        _ => 'Hired ✓',
+      };
+    }
     if (!_isStandard) return 'Bid Accepted ✓';
     return switch (booking.status) {
       BookingStatus.enRoute => 'Ustaad On The Way',
@@ -456,6 +475,19 @@ class _StatusCard extends StatelessWidget {
   String _subtext(String firstName) {
     if (booking.status == BookingStatus.completed) {
       return '$firstName has completed the job';
+    }
+    if (_isInspection) {
+      if (booking.inspectionDecisionStatus == InspectionDecisionStatus.acceptedRepair) {
+        return '$firstName is continuing the repair';
+      }
+      return switch (booking.status) {
+        BookingStatus.enRoute => '$firstName is on the way to your location',
+        BookingStatus.arrived => '$firstName has arrived at your location',
+        BookingStatus.inProgress => booking.inspectionReportSubmitted
+            ? 'Review the report below and decide how to proceed'
+            : '$firstName is inspecting the issue',
+        _ => '$firstName has been hired for this inspection',
+      };
     }
     if (!_isStandard) return '$firstName is heading to your location';
     return switch (booking.status) {
@@ -924,8 +956,57 @@ class _ProgressTimeline extends StatelessWidget {
   });
 
   bool get _isStandard => booking.lane == BookingLane.standard;
+  bool get _isInspection => booking.lane == BookingLane.inspection;
 
-  // Legacy 3-step ladder for BIDDING/INSPECTION — unchanged: Bid Accepted
+  // INSPECTION lane: Hired -> Ustaad on the way -> Arrived -> Inspection in
+  // progress -> Report submitted -> Quote accepted/Closed after inspection ->
+  // Completed. Never shows "Bid Accepted"/"Offer Accepted" wording.
+  int _inspectionRank() {
+    if (booking.status == BookingStatus.completed) return 7;
+    if (booking.inspectionDecisionStatus == InspectionDecisionStatus.acceptedRepair ||
+        booking.inspectionDecisionStatus == InspectionDecisionStatus.closedAfterInspection) {
+      return 6;
+    }
+    if (booking.status == BookingStatus.inProgress) {
+      return booking.inspectionReportSubmitted ? 5 : 4;
+    }
+    return switch (booking.status) {
+      BookingStatus.enRoute => 2,
+      BookingStatus.arrived => 3,
+      _ => 1,
+    };
+  }
+
+  List<_StepData> _inspectionSteps(DateFormat fmt) {
+    return [
+      _StepData(label: 'Hired', requiredRank: 1, timestamp: booking.acceptedAt, fmt: fmt),
+      _StepData(label: 'Ustaad on the way', requiredRank: 2, timestamp: booking.enRouteAt, fmt: fmt),
+      _StepData(label: 'Arrived', requiredRank: 3, timestamp: booking.arrivedAt, fmt: fmt),
+      _StepData(label: 'Inspection in progress', requiredRank: 4, timestamp: booking.startedAt, fmt: fmt),
+      _StepData(
+        label: 'Report submitted',
+        requiredRank: 5,
+        timestamp: booking.inspectionReportSubmittedAt,
+        fmt: fmt,
+      ),
+      _StepData(
+        label: booking.inspectionDecisionStatus == InspectionDecisionStatus.closedAfterInspection
+            ? 'Closed after inspection'
+            : 'Quote accepted',
+        requiredRank: 6,
+        timestamp: null,
+        fmt: fmt,
+      ),
+      _StepData(
+        label: booking.review != null ? 'Reviewed' : 'Completed',
+        requiredRank: 7,
+        timestamp: booking.completedAt,
+        fmt: fmt,
+      ),
+    ];
+  }
+
+  // Legacy 3-step ladder for BIDDING — unchanged: Bid Accepted
   // (rank 1), Arrived (rank 2, auto-triggered when distanceM < 150), Job
   // Completed (rank 3).
   int _legacyRank({double? distanceM}) {
@@ -1015,8 +1096,16 @@ class _ProgressTimeline extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fmt = DateFormat('h:mm a');
-    final rank = _isStandard ? _standardRank() : _legacyRank(distanceM: distanceM);
-    final steps = _isStandard ? _standardSteps(fmt) : _legacySteps(fmt, rank);
+    final rank = _isStandard
+        ? _standardRank()
+        : _isInspection
+            ? _inspectionRank()
+            : _legacyRank(distanceM: distanceM);
+    final steps = _isStandard
+        ? _standardSteps(fmt)
+        : _isInspection
+            ? _inspectionSteps(fmt)
+            : _legacySteps(fmt, rank);
 
     return Container(
       padding: const EdgeInsets.all(18),

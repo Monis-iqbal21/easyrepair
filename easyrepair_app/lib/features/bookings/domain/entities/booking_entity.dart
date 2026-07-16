@@ -113,6 +113,84 @@ extension BookingWorkerLifecycleX on BookingEntity {
   }
 }
 
+/// Decision recorded on an INSPECTION-lane booking's report once the worker
+/// has submitted it — drives both the worker's next action and the client's
+/// report card/decision buttons.
+enum InspectionDecisionStatus { pendingClientDecision, acceptedRepair, closedAfterInspection }
+
+extension InspectionDecisionStatusX on InspectionDecisionStatus {
+  String get raw => switch (this) {
+        InspectionDecisionStatus.pendingClientDecision => 'PENDING_CLIENT_DECISION',
+        InspectionDecisionStatus.acceptedRepair => 'ACCEPTED_REPAIR',
+        InspectionDecisionStatus.closedAfterInspection => 'CLOSED_AFTER_INSPECTION',
+      };
+
+  static InspectionDecisionStatus? fromRaw(String? raw) {
+    return switch (raw?.toUpperCase()) {
+      'PENDING_CLIENT_DECISION' => InspectionDecisionStatus.pendingClientDecision,
+      'ACCEPTED_REPAIR' => InspectionDecisionStatus.acceptedRepair,
+      'CLOSED_AFTER_INSPECTION' => InspectionDecisionStatus.closedAfterInspection,
+      _ => null,
+    };
+  }
+}
+
+/// Worker-facing lifecycle action for an INSPECTION-lane assigned job.
+/// Mirrors [WorkerLifecycleAction] but adds the report-submission and
+/// awaiting-decision steps unique to this lane.
+enum InspectionWorkerAction {
+  onMyWay,
+  arrived,
+  startInspection,
+  fillReport,
+  waitingForDecision,
+  complete,
+}
+
+extension InspectionWorkerActionX on InspectionWorkerAction {
+  String get label => switch (this) {
+        InspectionWorkerAction.onMyWay => 'On My Way',
+        InspectionWorkerAction.arrived => 'Arrived',
+        InspectionWorkerAction.startInspection => 'Start Inspection',
+        InspectionWorkerAction.fillReport => 'Fill Inspection Report',
+        InspectionWorkerAction.waitingForDecision => 'Waiting for Client Decision',
+        InspectionWorkerAction.complete => 'Complete Job',
+      };
+
+  /// Only [waitingForDecision] is a non-tappable informational state — every
+  /// other action opens a confirmation/navigates to a screen.
+  bool get isActionable => this != InspectionWorkerAction.waitingForDecision;
+
+  String get successMessage => switch (this) {
+        InspectionWorkerAction.onMyWay => 'On the way — client notified.',
+        InspectionWorkerAction.arrived => 'Marked as arrived.',
+        InspectionWorkerAction.startInspection => 'Inspection started.',
+        InspectionWorkerAction.fillReport => '',
+        InspectionWorkerAction.waitingForDecision => '',
+        InspectionWorkerAction.complete => 'Job marked as completed.',
+      };
+}
+
+extension BookingInspectionLifecycleX on BookingEntity {
+  /// The single next lifecycle action a worker should take for this
+  /// INSPECTION-lane assigned job, or null when the lane isn't INSPECTION or
+  /// the booking isn't in an active worker-facing status.
+  InspectionWorkerAction? get inspectionWorkerNextAction {
+    if (lane != BookingLane.inspection) return null;
+    return switch (status) {
+      BookingStatus.accepted => InspectionWorkerAction.onMyWay,
+      BookingStatus.enRoute => InspectionWorkerAction.arrived,
+      BookingStatus.arrived => InspectionWorkerAction.startInspection,
+      BookingStatus.inProgress => !inspectionReportSubmitted
+          ? InspectionWorkerAction.fillReport
+          : inspectionDecisionStatus == InspectionDecisionStatus.acceptedRepair
+              ? InspectionWorkerAction.complete
+              : InspectionWorkerAction.waitingForDecision,
+      _ => null,
+    };
+  }
+}
+
 extension BookingStatusX on BookingStatus {
   /// Maps internal status → client-facing display label
   String get displayLabel {
@@ -447,6 +525,11 @@ class BookingEntity {
   final double? inspectionFeeSnapshot;
   final List<BookingWorkerExclusionEntity> workerExclusions;
   final String? lastWorkerCancellationReason;
+  /// INSPECTION lane: true once the assigned worker has submitted their report.
+  final bool inspectionReportSubmitted;
+  /// INSPECTION lane: null until a report exists, then tracks the client's decision.
+  final InspectionDecisionStatus? inspectionDecisionStatus;
+  final DateTime? inspectionReportSubmittedAt;
 
   const BookingEntity({
     required this.id,
@@ -494,6 +577,9 @@ class BookingEntity {
     this.inspectionFeeSnapshot,
     this.workerExclusions = const [],
     this.lastWorkerCancellationReason,
+    this.inspectionReportSubmitted = false,
+    this.inspectionDecisionStatus,
+    this.inspectionReportSubmittedAt,
   });
 
   /// Sum of all selected STANDARD-lane sub-service prices (× quantity).
@@ -567,6 +653,9 @@ class BookingEntity {
       inspectionFeeSnapshot: inspectionFeeSnapshot,
       workerExclusions: workerExclusions,
       lastWorkerCancellationReason: lastWorkerCancellationReason,
+      inspectionReportSubmitted: inspectionReportSubmitted,
+      inspectionDecisionStatus: inspectionDecisionStatus,
+      inspectionReportSubmittedAt: inspectionReportSubmittedAt,
     );
   }
 }

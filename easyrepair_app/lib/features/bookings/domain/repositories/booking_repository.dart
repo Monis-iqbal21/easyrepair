@@ -5,6 +5,7 @@ import 'package:fpdart/fpdart.dart';
 import '../../../../core/errors/failures.dart';
 import '../entities/booking_entity.dart';
 import '../entities/create_booking_request.dart';
+import '../entities/inspection_report_entity.dart';
 import '../entities/nearby_worker_entity.dart';
 import '../entities/update_booking_request.dart';
 
@@ -81,5 +82,34 @@ abstract class BookingRepository {
   Future<Either<Failure, BookingEntity>> workerCancelBooking(
     String bookingId,
     String reason,
+  );
+
+  // ── Inspection report (INSPECTION lane) ─────────────────────────────────
+
+  /// Assigned worker submits the inspection report + repair quote.
+  Future<Either<Failure, InspectionReportEntity>> submitInspectionReport(
+    String bookingId, {
+    required String issueFound,
+    required String recommendedRepair,
+    required double labourCost,
+    required bool partsNeeded,
+    required List<InspectionReportPartDraft> parts,
+    String? notes,
+    required List<File> photos,
+  });
+
+  /// Fetch the submitted report for a booking (client/assigned worker/admin).
+  Future<Either<Failure, InspectionReportEntity>> getInspectionReport(
+    String bookingId,
+  );
+
+  /// Client: "Accept Quote & Continue Repair".
+  Future<Either<Failure, BookingEntity>> acceptInspectionQuote(
+    String bookingId,
+  );
+
+  /// Client: "Close After Inspection" — booking completes at the inspection fee.
+  Future<Either<Failure, BookingEntity>> closeAfterInspection(
+    String bookingId,
   );
 }

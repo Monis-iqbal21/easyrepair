@@ -5,6 +5,7 @@ import 'package:fpdart/fpdart.dart';
 import '../../../../core/errors/failures.dart';
 import '../../domain/entities/booking_entity.dart';
 import '../../domain/entities/create_booking_request.dart';
+import '../../domain/entities/inspection_report_entity.dart';
 import '../../domain/entities/update_booking_request.dart';
 import '../../domain/entities/nearby_worker_entity.dart';
 import '../../domain/repositories/booking_repository.dart';
@@ -235,6 +236,78 @@ class BookingRepositoryImpl implements BookingRepository {
   ) async {
     try {
       final model = await _dataSource.workerCancelBooking(bookingId, reason);
+      return Right(model.toEntity());
+    } on Failure catch (f) {
+      return Left(f);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, InspectionReportEntity>> submitInspectionReport(
+    String bookingId, {
+    required String issueFound,
+    required String recommendedRepair,
+    required double labourCost,
+    required bool partsNeeded,
+    required List<InspectionReportPartDraft> parts,
+    String? notes,
+    required List<File> photos,
+  }) async {
+    try {
+      final model = await _dataSource.submitInspectionReport(
+        bookingId,
+        issueFound: issueFound,
+        recommendedRepair: recommendedRepair,
+        labourCost: labourCost,
+        partsNeeded: partsNeeded,
+        parts: parts,
+        notes: notes,
+        photos: photos,
+      );
+      return Right(model.toEntity());
+    } on Failure catch (f) {
+      return Left(f);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, InspectionReportEntity>> getInspectionReport(
+    String bookingId,
+  ) async {
+    try {
+      final model = await _dataSource.getInspectionReport(bookingId);
+      return Right(model.toEntity());
+    } on Failure catch (f) {
+      return Left(f);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, BookingEntity>> acceptInspectionQuote(
+    String bookingId,
+  ) async {
+    try {
+      final model = await _dataSource.acceptInspectionQuote(bookingId);
+      return Right(model.toEntity());
+    } on Failure catch (f) {
+      return Left(f);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, BookingEntity>> closeAfterInspection(
+    String bookingId,
+  ) async {
+    try {
+      final model = await _dataSource.closeAfterInspection(bookingId);
       return Right(model.toEntity());
     } on Failure catch (f) {
       return Left(f);

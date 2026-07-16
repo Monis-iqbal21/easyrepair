@@ -10,6 +10,7 @@ import '../../data/datasources/booking_remote_datasource.dart';
 import '../../data/repositories/booking_repository_impl.dart';
 import '../../domain/entities/booking_entity.dart';
 import '../../domain/entities/create_booking_request.dart';
+import '../../domain/entities/inspection_report_entity.dart';
 import '../../domain/entities/nearby_worker_entity.dart';
 import '../../domain/entities/update_booking_request.dart';
 import '../../domain/repositories/booking_repository.dart';
@@ -913,3 +914,127 @@ extension WorkerLifecycleActionDispatchX on WorkerLifecycleAction {
     };
   }
 }
+
+/// Dispatches the on-my-way/arrived/complete steps of [InspectionWorkerAction]
+/// to the same [WorkerLifecycleNotifier] endpoints STANDARD uses (the
+/// underlying API calls are lane-agnostic). [fillReport] navigates to the
+/// report form instead of calling an API — callers should check
+/// [InspectionWorkerAction.isActionable] and handle that case separately.
+extension InspectionWorkerActionDispatchX on InspectionWorkerAction {
+  Future<void> invoke(WidgetRef ref, String bookingId) {
+    final notifier = ref.read(workerLifecycleNotifierProvider.notifier);
+    return switch (this) {
+      InspectionWorkerAction.onMyWay => notifier.onMyWay(bookingId),
+      InspectionWorkerAction.arrived => notifier.arrived(bookingId),
+      InspectionWorkerAction.startInspection => notifier.start(bookingId),
+      InspectionWorkerAction.complete => notifier.complete(bookingId),
+      InspectionWorkerAction.fillReport ||
+      InspectionWorkerAction.waitingForDecision =>
+        throw StateError('$this is not an API-dispatchable action.'),
+    };
+  }
+}
+
+// ── Inspection report (INSPECTION lane) ─────────────────────────────────────
+
+/// Fetches the submitted inspection report for a booking. Returns
+/// [AsyncError] with a [NotFoundFailure]-like error until a report exists —
+/// callers (client report card, worker post-submit confirmation) should
+/// treat any error as "no report yet" unless they just submitted one.
+final inspectionReportProvider =
+    FutureProvider.autoDispose.family<InspectionReportEntity, String>(
+  (ref, bookingId) async {
+    final result =
+        await ref.read(bookingRepositoryProvider).getInspectionReport(bookingId);
+    return result.fold((f) => throw f, (r) => r);
+  },
+);
+
+class InspectionReportSubmitNotifier extends AsyncNotifier<void> {
+  @override
+  Future<void> build() async {}
+
+  Future<void> submit(
+    String bookingId, {
+    required String issueFound,
+    required String recommendedRepair,
+    required double labourCost,
+    required bool partsNeeded,
+    required List<InspectionReportPartDraft> parts,
+    String? notes,
+    required List<File> photos,
+  }) async {
+    state = const AsyncLoading();
+    final result = await ref.read(bookingRepositoryProvider).submitInspectionReport(
+          bookingId,
+          issueFound: issueFound,
+          recommendedRepair: recommendedRepair,
+          labourCost: labourCost,
+          partsNeeded: partsNeeded,
+          parts: parts,
+          notes: notes,
+          photos: photos,
+        );
+    result.fold(
+      (failure) {
+        state = AsyncError(failure, StackTrace.current);
+        throw failure;
+      },
+      (_) {
+        state = const AsyncData(null);
+        ref.invalidate(inspectionReportProvider(bookingId));
+        ref.invalidate(bookingDetailProvider(bookingId));
+        ref.invalidate(workerJobDetailProvider(bookingId));
+        ref.invalidate(workerJobsProvider);
+      },
+    );
+  }
+}
+
+final inspectionReportSubmitNotifierProvider =
+    AsyncNotifierProvider<InspectionReportSubmitNotifier, void>(
+  InspectionReportSubmitNotifier.new,
+);
+
+/// Client's "Accept Quote & Continue Repair" / "Close After Inspection".
+class InspectionDecisionNotifier extends AsyncNotifier<void> {
+  @override
+  Future<void> build() async {}
+
+  Future<void> _run(
+    String bookingId,
+    Future<Either<Failure, BookingEntity>> Function() call,
+  ) async {
+    state = const AsyncLoading();
+    final result = await call();
+    result.fold(
+      (failure) {
+        state = AsyncError(failure, StackTrace.current);
+        throw failure;
+      },
+      (updated) {
+        state = const AsyncData(null);
+        ref.read(bookingsNotifierProvider.notifier).patchBooking(updated);
+        ref.read(bookingDetailProvider(bookingId).notifier).push(updated);
+        ref.invalidate(inspectionReportProvider(bookingId));
+        ref.invalidate(workerJobDetailProvider(bookingId));
+        ref.invalidate(workerJobsProvider);
+      },
+    );
+  }
+
+  Future<void> acceptQuote(String bookingId) => _run(
+        bookingId,
+        () => ref.read(bookingRepositoryProvider).acceptInspectionQuote(bookingId),
+      );
+
+  Future<void> closeAfterInspection(String bookingId) => _run(
+        bookingId,
+        () => ref.read(bookingRepositoryProvider).closeAfterInspection(bookingId),
+      );
+}
+
+final inspectionDecisionNotifierProvider =
+    AsyncNotifierProvider<InspectionDecisionNotifier, void>(
+  InspectionDecisionNotifier.new,
+);

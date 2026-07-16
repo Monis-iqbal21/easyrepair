@@ -175,10 +175,15 @@ class _JobCard extends ConsumerWidget {
     // STANDARD lane: granular next-action button (On My Way / Arrived /
     // Start Job / Complete Job), shared with worker_job_detail_page.dart via
     // BookingEntity.standardWorkerNextAction so the two can never disagree.
-    // BIDDING/INSPECTION: unchanged generic "Complete" button.
+    // INSPECTION lane: its own ladder (On My Way / Arrived / Start Inspection
+    // / Fill Report / Waiting for Decision / Complete Job) via
+    // BookingEntity.inspectionWorkerNextAction. BIDDING: unchanged generic
+    // "Complete" button.
     final standardAction = job.standardWorkerNextAction;
+    final inspectionAction = job.inspectionWorkerNextAction;
     final isActive = job.status.isWorkerActive;
-    final canComplete = isActive && standardAction == null;
+    final canComplete =
+        isActive && standardAction == null && inspectionAction == null;
 
     return GestureDetector(
       onTap: () => context.push('/worker/job/${job.id}').then((_) {
@@ -379,6 +384,9 @@ class _JobCard extends ConsumerWidget {
                 if (standardAction != null) ...[
                   const SizedBox(height: 12),
                   _StandardActionBtn(jobId: job.id, action: standardAction),
+                ] else if (inspectionAction != null) ...[
+                  const SizedBox(height: 12),
+                  _InspectionActionBtn(jobId: job.id, action: inspectionAction),
                 ] else if (canComplete) ...[
                   const SizedBox(height: 12),
                   _CompleteBtn(jobId: job.id),
@@ -567,6 +575,131 @@ class _StandardActionBtn extends ConsumerWidget {
   }
 
   Future<void> _run(BuildContext context, WidgetRef ref) async {
+    try {
+      await action.invoke(ref, jobId);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(action.successMessage),
+            backgroundColor: _kGreen,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e is Failure ? e.message : 'Action failed. Try again.'),
+            backgroundColor: const Color(0xFFDC2626),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
+      }
+    }
+  }
+}
+
+// ── INSPECTION lane next-action button (inline in card) ──────────────────────
+//
+// Same mapping and dispatch as worker_job_detail_page.dart's inspection
+// section (both go through BookingEntity.inspectionWorkerNextAction +
+// InspectionWorkerActionDispatchX.invoke). fillReport navigates to the
+// report form; waitingForDecision renders as a disabled informational chip
+// (not tappable) so a worker can never bypass the client's decision.
+class _InspectionActionBtn extends ConsumerWidget {
+  final String jobId;
+  final InspectionWorkerAction action;
+  const _InspectionActionBtn({required this.jobId, required this.action});
+
+  IconData get _icon => switch (action) {
+        InspectionWorkerAction.onMyWay => Icons.directions_car_filled_rounded,
+        InspectionWorkerAction.arrived => Icons.location_on_rounded,
+        InspectionWorkerAction.startInspection => Icons.search_rounded,
+        InspectionWorkerAction.fillReport => Icons.assignment_outlined,
+        InspectionWorkerAction.waitingForDecision => Icons.hourglass_top_rounded,
+        InspectionWorkerAction.complete => Icons.check_circle_outline_rounded,
+      };
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (action == InspectionWorkerAction.waitingForDecision) {
+      return Container(
+        constraints: const BoxConstraints(minHeight: 38),
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFF7ED),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0xFFFDBA74)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(_icon, size: 14, color: const Color(0xFFC2541D)),
+            const SizedBox(width: 5),
+            Text(
+              action.label,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFFC2541D),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final isLoading = action == InspectionWorkerAction.fillReport
+        ? false
+        : ref.watch(workerLifecycleNotifierProvider).isLoading;
+
+    return GestureDetector(
+      onTap: isLoading ? null : () => _run(context, ref),
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 38),
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        decoration: BoxDecoration(
+          color: _kGreen,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (isLoading)
+              const SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
+            else
+              Icon(_icon, size: 14, color: Colors.white),
+            const SizedBox(width: 5),
+            Text(
+              isLoading ? '${action.label}...' : action.label,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _run(BuildContext context, WidgetRef ref) async {
+    if (action == InspectionWorkerAction.fillReport) {
+      await context.push('/worker/job/$jobId/inspection-report');
+      if (context.mounted) ref.invalidate(workerJobsProvider);
+      return;
+    }
     try {
       await action.invoke(ref, jobId);
       if (context.mounted) {

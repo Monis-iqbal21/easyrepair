@@ -100,6 +100,12 @@ enum BookingLane {
   BIDDING
 }
 
+enum InspectionDecisionStatus {
+  PENDING_CLIENT_DECISION
+  ACCEPTED_REPAIR
+  CLOSED_AFTER_INSPECTION
+}
+
 model User {
   id           String    @id @default(uuid())
   phone        String    @unique
@@ -214,11 +220,12 @@ model WorkerProfile {
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
 
-  skills            WorkerSkill[]
-  documents         WorkerDocument[]
-  bookings          Booking[]
-  bids              Bid[]
-  bookingExclusions BookingWorkerExclusion[]
+  skills             WorkerSkill[]
+  documents          WorkerDocument[]
+  bookings           Booking[]
+  bids               Bid[]
+  bookingExclusions  BookingWorkerExclusion[]
+  inspectionReports  InspectionReport[]
 
   @@map("worker_profiles")
 }
@@ -365,6 +372,7 @@ model Booking {
   bids                 Bid[]
   standardServiceItems BookingStandardServiceItem[]
   workerExclusions     BookingWorkerExclusion[]
+  inspectionReport     InspectionReport?
 
   @@index([clientProfileId])
   @@index([workerProfileId])
@@ -458,6 +466,65 @@ model Review {
   updatedAt DateTime @updatedAt
 
   @@map("reviews")
+}
+
+/// INSPECTION-lane worker report: findings + repair quote submitted after
+/// on-site inspection. One report per booking. Client decides via
+/// decisionStatus whether to continue repair with the same worker or close
+/// the job at the inspection fee (see BookingsService.completeAfterInspectionClose).
+model InspectionReport {
+  id                String                   @id @default(uuid())
+  bookingId         String                   @unique
+  booking           Booking                  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  workerProfileId   String
+  workerProfile     WorkerProfile            @relation(fields: [workerProfileId], references: [id])
+  issueFound        String
+  recommendedRepair String
+  labourCost        Float
+  partsNeeded       Boolean                  @default(false)
+  partsTotal        Float                    @default(0)
+  /// labourCost + partsTotal. Deliberately NOT reduced by the inspection fee
+  /// already paid — the fee is shown separately in the UI as an informational line.
+  repairQuoteTotal  Float
+  notes             String?
+  decisionStatus    InspectionDecisionStatus @default(PENDING_CLIENT_DECISION)
+  acceptedAt        DateTime?
+  closedAt          DateTime?
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+
+  parts  InspectionReportPart[]
+  photos InspectionReportPhoto[]
+
+  @@index([workerProfileId])
+  @@map("inspection_reports")
+}
+
+model InspectionReportPart {
+  id        String           @id @default(uuid())
+  reportId  String
+  report    InspectionReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  name      String
+  quantity  Int              @default(1)
+  unitPrice Float
+  warranty  String?
+  lineTotal Float
+  createdAt DateTime         @default(now())
+
+  @@index([reportId])
+  @@map("inspection_report_parts")
+}
+
+model InspectionReportPhoto {
+  id         String           @id @default(uuid())
+  reportId   String
+  report     InspectionReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  url        String
+  storageKey String?
+  createdAt  DateTime         @default(now())
+
+  @@index([reportId])
+  @@map("inspection_report_photos")
 }
 
 model Conversation {

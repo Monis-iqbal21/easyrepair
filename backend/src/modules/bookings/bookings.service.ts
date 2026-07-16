@@ -965,6 +965,36 @@ export class BookingsService {
     bookingId: string,
   ): Promise<BookingResponseDto> {
     const booking = await this._authorizeAssignedWorker(userId, bookingId);
+
+    // INSPECTION lane: worker cannot complete without submitting a report,
+    // and cannot complete while the client hasn't decided or has already
+    // closed the job after inspection (that path completes automatically —
+    // see completeAfterInspectionClose). STANDARD/BIDDING are unaffected.
+    if (booking.lane === BookingLane.INSPECTION) {
+      if (booking.status !== BookingStatus.IN_PROGRESS) {
+        throw new BadRequestException(
+          'Start the inspection before completing this job.',
+        );
+      }
+      const report = booking.inspectionReport;
+      if (!report) {
+        throw new BadRequestException(
+          'Submit the inspection report before completing this job.',
+        );
+      }
+      if (report.decisionStatus === 'PENDING_CLIENT_DECISION') {
+        throw new BadRequestException(
+          'Waiting for the client to decide on the inspection report.',
+        );
+      }
+      if (report.decisionStatus === 'CLOSED_AFTER_INSPECTION') {
+        throw new BadRequestException(
+          'This booking was already closed after inspection.',
+        );
+      }
+      // ACCEPTED_REPAIR falls through to normal completion below.
+    }
+
     const completable: BookingStatus[] = [
       BookingStatus.ACCEPTED,
       BookingStatus.EN_ROUTE,
@@ -1009,6 +1039,68 @@ export class BookingsService {
         route: `/worker/job/${bookingId}`,
         actorUserId: userId,
         actorRole: 'WORKER',
+        entityType: 'booking',
+        entityId: bookingId,
+      });
+    }
+
+    return this._toDto(updated);
+  }
+
+  /**
+   * Completes an INSPECTION booking on the client's behalf when they choose
+   * "Close After Inspection" — the final amount is the inspection fee only,
+   * no worker action required. Called by InspectionReportsService after it
+   * has already authorized the client and validated the report/decision
+   * state; this method re-checks lane/status defensively and performs the
+   * same completion write + notifications as completeJob.
+   */
+  async completeAfterInspectionClose(
+    bookingId: string,
+  ): Promise<BookingResponseDto> {
+    const booking = await this.bookingsRepository.findBookingById(bookingId);
+    if (!booking) throw new NotFoundException('Booking not found');
+    if (booking.lane !== BookingLane.INSPECTION) {
+      throw new BadRequestException(
+        'Only INSPECTION bookings can be closed after inspection.',
+      );
+    }
+    if (booking.status !== BookingStatus.IN_PROGRESS) {
+      throw new BadRequestException(
+        `Cannot close booking with status ${booking.status}. Expected IN_PROGRESS.`,
+      );
+    }
+    if (!booking.workerProfileId) {
+      throw new BadRequestException('Booking has no assigned worker.');
+    }
+
+    const updated = await this.bookingsRepository.completeBookingLifecycle(
+      bookingId,
+      booking.workerProfileId,
+    );
+
+    if (updated.clientProfile?.userId) {
+      void this.notificationsService.notify({
+        userId: updated.clientProfile.userId,
+        eventKey: 'booking.completed',
+        title: 'Job Completed',
+        body: 'Inspection close ho gayi hai. Barah-e-karam review dein.',
+        bookingId,
+        route: `/client/booking/${bookingId}`,
+        actorRole: 'CLIENT',
+        entityType: 'booking',
+        entityId: bookingId,
+      });
+    }
+    if (updated.workerProfile?.userId) {
+      void this.notificationsService.notify({
+        userId: updated.workerProfile.userId,
+        eventKey: 'booking.inspection.closed',
+        title: 'Inspection Closed',
+        body: 'Client ne inspection ke baad job close kar di hai.',
+        bookingId,
+        route: `/worker/job/${bookingId}`,
+        actorRole: 'CLIENT',
         entityType: 'booking',
         entityId: bookingId,
       });
@@ -1376,6 +1468,10 @@ export class BookingsService {
       acceptedBidAmount,
       workerExclusions,
       lastWorkerCancellationReason,
+      inspectionReportSubmitted: booking.inspectionReport != null,
+      inspectionDecisionStatus: booking.inspectionReport?.decisionStatus ?? null,
+      inspectionReportSubmittedAt:
+        booking.inspectionReport?.createdAt.toISOString() ?? null,
     };
   }
 }

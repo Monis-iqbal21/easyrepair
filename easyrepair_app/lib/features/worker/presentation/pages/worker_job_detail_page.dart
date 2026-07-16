@@ -113,10 +113,11 @@ class _JobBody extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isPending   = job.status == BookingStatus.pending;
-    final isStandard  = job.lane == BookingLane.standard;
+    final isPending    = job.status == BookingStatus.pending;
+    final isStandard   = job.lane == BookingLane.standard;
+    final isInspection = job.lane == BookingLane.inspection;
     final isHired     = job.assignedWorker != null || job.status != BookingStatus.pending;
-    final canComplete = job.status.isWorkerActive && !isStandard;
+    final canComplete = job.status.isWorkerActive && !isStandard && !isInspection;
 
     return Column(
       children: [
@@ -162,7 +163,7 @@ class _JobBody extends ConsumerWidget {
                 ],
 
                 // ── Bid Now button (BIDDING lane, PENDING jobs only) ─────
-                if (isPending && !isStandard) ...[
+                if (isPending && !isStandard && !isInspection) ...[
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
@@ -246,6 +247,13 @@ class _JobBody extends ConsumerWidget {
                 // ── STANDARD lane lifecycle (On My Way / Arrived / Start / Cancel) ──
                 if (isStandard && job.status.isWorkerActive) ...[
                   _StandardLifecycleSection(job: job),
+                  const SizedBox(height: 16),
+                ],
+
+                // ── INSPECTION lane lifecycle (On My Way / Arrived / Start
+                // Inspection / Fill Report / Waiting for Decision / Complete) ──
+                if (isInspection && job.status.isWorkerActive) ...[
+                  _InspectionLifecycleSection(job: job),
                   const SizedBox(height: 16),
                 ],
 
@@ -610,6 +618,230 @@ class _StandardLifecycleSection extends ConsumerWidget {
   }
 
   Future<void> _showCancelDialog(
+    BuildContext context,
+    WidgetRef ref,
+    String jobId,
+    Future<void> Function(Future<void> Function()) runAction,
+  ) async {
+    final reasonCtrl = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: const Text(
+          'Cancel this job?',
+          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Please tell the client why you are cancelling.',
+              style: TextStyle(color: _kGray, fontSize: 13.5),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: reasonCtrl,
+              maxLines: 3,
+              decoration: InputDecoration(
+                hintText: 'Reason (required)',
+                filled: true,
+                fillColor: _kBg,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: _kBorder),
+                ),
+                contentPadding: const EdgeInsets.all(12),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Keep Job', style: TextStyle(color: _kGray)),
+          ),
+          TextButton(
+            onPressed: () {
+              if (reasonCtrl.text.trim().isEmpty) return;
+              Navigator.pop(ctx, true);
+            },
+            child: const Text(
+              'Yes, cancel',
+              style: TextStyle(color: _kRed, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && reasonCtrl.text.trim().isNotEmpty) {
+      await runAction(
+        () => ref
+            .read(workerLifecycleNotifierProvider.notifier)
+            .cancel(jobId, reasonCtrl.text.trim()),
+      );
+      if (context.mounted) _goBackOrHome(context);
+    }
+  }
+}
+
+// ── Inspection-lane lifecycle actions ─────────────────────────────────────────
+
+class _InspectionLifecycleSection extends ConsumerWidget {
+  final BookingEntity job;
+  const _InspectionLifecycleSection({required this.job});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isLoading = ref.watch(workerLifecycleNotifierProvider).isLoading;
+    final canCancel = job.status == BookingStatus.accepted ||
+        job.status == BookingStatus.enRoute;
+
+    Future<void> runAction(
+      Future<void> Function() action, {
+      String? successMessage,
+    }) async {
+      try {
+        await action();
+        if (successMessage != null && context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(successMessage),
+              backgroundColor: _kGreen,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(e is Failure ? e.message : 'Action failed. Try again.'),
+              backgroundColor: _kRed,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+          );
+        }
+      }
+    }
+
+    Widget primaryButton({
+      required String label,
+      required IconData icon,
+      required VoidCallback onPressed,
+    }) {
+      return SizedBox(
+        width: double.infinity,
+        child: ElevatedButton.icon(
+          onPressed: isLoading ? null : onPressed,
+          icon: isLoading
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                )
+              : Icon(icon, size: 16),
+          label: Text(label),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: _kGreen,
+            foregroundColor: Colors.white,
+            elevation: 0,
+            padding: const EdgeInsets.symmetric(vertical: 13),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          ),
+        ),
+      );
+    }
+
+    // Same BookingEntity.inspectionWorkerNextAction mapping and
+    // InspectionWorkerActionDispatchX.invoke dispatch as worker_jobs_page.dart's
+    // _InspectionActionBtn — the two surfaces can never show a different
+    // button for the same booking.
+    final nextAction = job.inspectionWorkerNextAction;
+    IconData iconFor(InspectionWorkerAction a) => switch (a) {
+          InspectionWorkerAction.onMyWay => Icons.directions_car_filled_rounded,
+          InspectionWorkerAction.arrived => Icons.location_on_rounded,
+          InspectionWorkerAction.startInspection => Icons.search_rounded,
+          InspectionWorkerAction.fillReport => Icons.assignment_outlined,
+          InspectionWorkerAction.waitingForDecision => Icons.hourglass_top_rounded,
+          InspectionWorkerAction.complete => Icons.check_circle_outline_rounded,
+        };
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (nextAction == InspectionWorkerAction.waitingForDecision)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF7ED),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFFDBA74)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.hourglass_top_rounded, size: 18, color: Color(0xFFC2541D)),
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: Text(
+                    'Report submitted. Waiting for the client to accept the quote or close after inspection.',
+                    style: TextStyle(fontSize: 12.5, color: Color(0xFFC2541D), height: 1.4),
+                  ),
+                ),
+              ],
+            ),
+          )
+        else if (nextAction == InspectionWorkerAction.fillReport)
+          primaryButton(
+            label: nextAction!.label,
+            icon: iconFor(nextAction),
+            onPressed: () async {
+              await context.push('/worker/job/${job.id}/inspection-report');
+              if (context.mounted) ref.invalidate(workerJobDetailProvider(job.id));
+            },
+          )
+        else if (nextAction != null)
+          primaryButton(
+            label: nextAction.label,
+            icon: iconFor(nextAction),
+            onPressed: () => runAction(
+              () => nextAction.invoke(ref, job.id),
+              successMessage: nextAction.successMessage,
+            ),
+          )
+        else
+          const SizedBox.shrink(),
+        if (canCancel) ...[
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: isLoading
+                  ? null
+                  : () => _showInspectionCancelDialog(context, ref, job.id, runAction),
+              icon: const Icon(Icons.close_rounded, size: 16),
+              label: const Text('Cancel Job'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: _kRed,
+                side: const BorderSide(color: _kRed),
+                padding: const EdgeInsets.symmetric(vertical: 13),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Future<void> _showInspectionCancelDialog(
     BuildContext context,
     WidgetRef ref,
     String jobId,

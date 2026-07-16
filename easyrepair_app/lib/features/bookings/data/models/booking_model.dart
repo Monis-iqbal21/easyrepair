@@ -250,6 +250,9 @@ class BookingModel {
   final double? inspectionFeeSnapshot;
   final List<BookingWorkerExclusionModel> workerExclusions;
   final String? lastWorkerCancellationReason;
+  final bool inspectionReportSubmitted;
+  final String? inspectionDecisionStatus;
+  final DateTime? inspectionReportSubmittedAt;
 
   const BookingModel({
     required this.id,
@@ -295,6 +298,9 @@ class BookingModel {
     this.inspectionFeeSnapshot,
     this.workerExclusions = const [],
     this.lastWorkerCancellationReason,
+    this.inspectionReportSubmitted = false,
+    this.inspectionDecisionStatus,
+    this.inspectionReportSubmittedAt,
   });
 
   factory BookingModel.fromJson(Map<String, dynamic> json) {
@@ -384,6 +390,12 @@ class BookingModel {
           .toList(),
       lastWorkerCancellationReason:
           json['lastWorkerCancellationReason'] as String?,
+      inspectionReportSubmitted:
+          json['inspectionReportSubmitted'] as bool? ?? false,
+      inspectionDecisionStatus: json['inspectionDecisionStatus'] as String?,
+      inspectionReportSubmittedAt: json['inspectionReportSubmittedAt'] != null
+          ? DateTime.tryParse(json['inspectionReportSubmittedAt'] as String)
+          : null,
     );
   }
 
@@ -454,6 +466,10 @@ class BookingModel {
       inspectionFeeSnapshot: inspectionFeeSnapshot,
       workerExclusions: workerExclusions.map((e) => e.toEntity()).toList(),
       lastWorkerCancellationReason: lastWorkerCancellationReason,
+      inspectionReportSubmitted: inspectionReportSubmitted,
+      inspectionDecisionStatus:
+          InspectionDecisionStatusX.fromRaw(inspectionDecisionStatus),
+      inspectionReportSubmittedAt: inspectionReportSubmittedAt,
     );
   }
 }

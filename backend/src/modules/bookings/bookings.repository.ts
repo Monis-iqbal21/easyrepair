@@ -115,6 +115,12 @@ export const BOOKING_INCLUDE = {
     },
     orderBy: { createdAt: 'desc' as const },
   },
+  inspectionReport: {
+    select: {
+      decisionStatus: true,
+      createdAt: true,
+    },
+  },
 } satisfies Prisma.BookingInclude;
 
 // Derive the exact return type from the include so every caller is
@@ -651,17 +657,23 @@ export class BookingsRepository {
     const TARGET_POOL = 4;
     const legacyLadder = [3000, 5000, 8000, 10000, 15000, 20000];
     const standardLadder = [5000, 7000];
+    // STANDARD and INSPECTION are both direct-assignment lanes (fixed
+    // price/fee, no bidding) and share the tighter 5→7km ladder. BIDDING
+    // keeps the wider legacy ladder.
     const radii =
       params.radiusKm !== undefined
         ? [Math.round(params.radiusKm * 1000)]
-        : params.lane === BookingLane.STANDARD
+        : params.lane === BookingLane.STANDARD ||
+            params.lane === BookingLane.INSPECTION
           ? standardLadder
           : legacyLadder;
     const excludedIds = params.excludedWorkerIds ?? [];
-    // STANDARD lane only lists Ustaads with a completed profile — INSPECTION/
-    // BIDDING keep showing all eligible workers for now (see profileCompleted
+    // STANDARD and INSPECTION only list Ustaads with a completed profile —
+    // BIDDING keeps showing all eligible workers for now (see profileCompleted
     // gate rollout notes in bookings.service.ts).
-    const requireProfileCompleted = params.lane === BookingLane.STANDARD;
+    const requireProfileCompleted =
+      params.lane === BookingLane.STANDARD ||
+      params.lane === BookingLane.INSPECTION;
 
     type WorkerEntry = {
       id: string;
@@ -769,18 +781,23 @@ export class BookingsRepository {
     const TARGET_POOL = 4;
     const legacyLadderKm = [3, 5, 8, 10, 15, 20];
     const standardLadderKm = [5, 7];
+    // STANDARD and INSPECTION share the tighter 5→7km ladder — see the
+    // matching comment in _findNearbyWorkersPostgis.
     const radiusLadderKm =
       params.radiusKm !== undefined
         ? [params.radiusKm]
-        : params.lane === BookingLane.STANDARD
+        : params.lane === BookingLane.STANDARD ||
+            params.lane === BookingLane.INSPECTION
           ? standardLadderKm
           : legacyLadderKm;
 
     // Location freshness threshold — same 30-minute rule as the PostGIS path.
     const freshThreshold = new Date(Date.now() - 30 * 60 * 1000);
-    // STANDARD lane only lists Ustaads with a completed profile — see the
-    // matching comment in _findNearbyWorkersPostgis.
-    const requireProfileCompleted = params.lane === BookingLane.STANDARD;
+    // STANDARD and INSPECTION only list Ustaads with a completed profile —
+    // see the matching comment in _findNearbyWorkersPostgis.
+    const requireProfileCompleted =
+      params.lane === BookingLane.STANDARD ||
+      params.lane === BookingLane.INSPECTION;
 
     // Fetch all eligible candidate workers once (avoids repeated DB round-trips).
     // The DB filters everything except the spatial radius (applied in TS below).
