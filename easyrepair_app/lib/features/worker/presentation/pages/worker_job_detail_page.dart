@@ -14,6 +14,7 @@ import '../../../../core/errors/failures.dart';
 import '../../../bookings/domain/entities/booking_entity.dart';
 import '../../../bookings/presentation/providers/booking_providers.dart';
 import '../../../bookings/presentation/widgets/inspection_badge.dart';
+import '../../../bookings/presentation/widgets/inspection_report_card.dart';
 import '../../../bookings/presentation/widgets/media_attachment_widgets.dart';
 import '../providers/worker_job_providers.dart';
 import '../providers/worker_providers.dart';
@@ -256,6 +257,14 @@ class _JobBody extends ConsumerWidget {
                   _InspectionLifecycleSection(job: job),
                   const SizedBox(height: 16),
                 ],
+
+                // ── INSPECTION lane: view the submitted report (read-only —
+                // no accept/close buttons on the worker side) ──────────────
+                if (isInspection && job.inspectionReportSubmitted)
+                  ViewInspectionReportButton(
+                    bookingId: job.id,
+                    route: '/worker/job/${job.id}/inspection-report/view',
+                  ),
 
                 // ── Client info ──────────────────────────────────────────
                 if (job.clientName != null && job.clientName!.isNotEmpty) ...[
@@ -505,8 +514,7 @@ class _StandardLifecycleSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isLoading = ref.watch(workerLifecycleNotifierProvider).isLoading;
-    final canCancel = job.status == BookingStatus.accepted ||
-        job.status == BookingStatus.enRoute;
+    final canCancel = job.canWorkerCancel;
 
     Future<void> runAction(
       Future<void> Function() action, {
@@ -696,8 +704,7 @@ class _InspectionLifecycleSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isLoading = ref.watch(workerLifecycleNotifierProvider).isLoading;
-    final canCancel = job.status == BookingStatus.accepted ||
-        job.status == BookingStatus.enRoute;
+    final canCancel = job.canWorkerCancel;
 
     Future<void> runAction(
       Future<void> Function() action, {

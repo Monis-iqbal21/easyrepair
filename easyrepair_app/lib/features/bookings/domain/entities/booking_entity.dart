@@ -113,6 +113,34 @@ extension BookingWorkerLifecycleX on BookingEntity {
   }
 }
 
+/// Shared cancellation-visibility rules — single source of truth so the
+/// client Bookings tab / Booking Detail page, and the worker My Jobs tab /
+/// Job Detail page, can never disagree about whether a cancel button should
+/// show. Mirrors the backend guards in BookingsService.cancelBooking and
+/// BookingsService.workerCancelBooking exactly.
+extension BookingCancellationX on BookingEntity {
+  /// Client can cancel only before the worker is on the way — PENDING (no
+  /// worker hired yet) or ACCEPTED (worker hired but hasn't started moving).
+  bool get canClientCancel =>
+      status == BookingStatus.pending || status == BookingStatus.accepted;
+
+  /// Worker can cancel any time before starting the job — ACCEPTED, EN_ROUTE,
+  /// or ARRIVED. Once IN_PROGRESS (work/inspection actually started) — and
+  /// therefore also once a report has been submitted, a decision has been
+  /// made, or the job is completed — cancelling is no longer allowed.
+  /// Applies to all lanes.
+  bool get canWorkerCancel =>
+      status == BookingStatus.accepted ||
+      status == BookingStatus.enRoute ||
+      status == BookingStatus.arrived;
+
+  /// INSPECTION-lane-specific alias for [canWorkerCancel] — identical rule,
+  /// kept as a distinct getter for call sites that want to assert the lane
+  /// explicitly (e.g. inspection-only UI branches).
+  bool get canWorkerCancelInspection =>
+      lane == BookingLane.inspection && canWorkerCancel;
+}
+
 /// Decision recorded on an INSPECTION-lane booking's report once the worker
 /// has submitted it — drives both the worker's next action and the client's
 /// report card/decision buttons.

@@ -1034,12 +1034,21 @@ export class BookingsRepository {
     });
   }
 
+  /** Overwrite the confirmed final price (e.g. INSPECTION quote acceptance). */
+  async updateFinalPrice(bookingId: string, finalPrice: number): Promise<void> {
+    await this.prisma.booking.update({
+      where: { id: bookingId },
+      data: { finalPrice },
+    });
+  }
+
   /**
-   * Worker cancels before arrival: free the worker, record a
-   * BookingWorkerExclusion row (so this worker never reappears for this
-   * booking, surviving relist), clear the assignment, and return the booking
-   * to PENDING so the client can choose a new worker — reusing all existing
-   * exclusion/nearby-worker logic with zero extra branching.
+   * Worker cancels before starting the job (ACCEPTED/EN_ROUTE/ARRIVED): free
+   * the worker, record a BookingWorkerExclusion row (so this worker never
+   * reappears for this booking, surviving relist), clear the assignment, and
+   * return the booking to PENDING so the client can choose a new worker —
+   * reusing all existing exclusion/nearby-worker logic with zero extra
+   * branching.
    */
   async workerCancelBooking(
     bookingId: string,
@@ -1056,6 +1065,9 @@ export class BookingsRepository {
           workerProfileId: null,
           acceptedAt: null,
           enRouteAt: null,
+          // Reset now that ARRIVED is a cancellable state too — a re-hired
+          // worker's timeline must not inherit the previous worker's arrival.
+          arrivedAt: null,
           cancellationReason: reason,
           cancelledByRole: 'WORKER',
           expiresAt,

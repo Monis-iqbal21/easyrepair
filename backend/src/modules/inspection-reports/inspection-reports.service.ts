@@ -158,6 +158,13 @@ export class InspectionReportsService {
     );
     const updated = await this.repository.markAccepted(report.id);
 
+    // Inspection fee is waived once repair continues — the confirmed final
+    // amount becomes the repair quote only (never combined with the fee).
+    await this.bookingsService.setInspectionRepairPrice(
+      bookingId,
+      updated.repairQuoteTotal,
+    );
+
     if (booking.workerProfile?.userId) {
       void this.notificationsService.notify({
         userId: booking.workerProfile.userId,

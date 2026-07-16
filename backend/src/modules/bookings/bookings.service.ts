@@ -248,12 +248,17 @@ export class BookingsService {
       throw new ForbiddenException('Not your booking');
     }
 
-    if (booking.status !== BookingStatus.PENDING) {
-      const reason =
-        booking.workerProfileId != null
-          ? 'Cannot cancel a booking that already has an assigned worker.'
-          : `Cannot cancel a booking with status ${booking.status}`;
-      throw new BadRequestException(reason);
+    // Client can cancel up through ACCEPTED (worker hired but not yet on the
+    // way). Once the worker marks EN_ROUTE or later, the client can no
+    // longer cancel — matches BookingEntity.canClientCancel on the Flutter side.
+    const clientCancellableStatuses: BookingStatus[] = [
+      BookingStatus.PENDING,
+      BookingStatus.ACCEPTED,
+    ];
+    if (!clientCancellableStatuses.includes(booking.status)) {
+      throw new BadRequestException(
+        `Cannot cancel a booking with status ${booking.status}. Cancellation is only allowed before the worker is on the way.`,
+      );
     }
 
     const updated = await this.bookingsRepository.cancelBooking(
@@ -1110,11 +1115,26 @@ export class BookingsService {
   }
 
   /**
-   * POST /bookings/:id/worker-cancel — worker cancels before arrival.
-   * Only allowed while status is ACCEPTED or EN_ROUTE (i.e. strictly before
-   * ARRIVED, per spec — once the page would show "In Progress" the cancel
-   * button must already be hidden client-side, and the backend enforces the
-   * same rule so a stale client can't bypass it).
+   * INSPECTION lane: called by InspectionReportsService when the client
+   * accepts the repair quote. The inspection fee is waived once repair
+   * continues — the confirmed final amount becomes the repair quote only,
+   * replacing the placeholder `inspectionFeeSnapshot` that was set as
+   * `finalPrice` at assignment time. Does NOT add the inspection fee to the
+   * repair quote; the two are never combined.
+   */
+  async setInspectionRepairPrice(
+    bookingId: string,
+    repairQuoteTotal: number,
+  ): Promise<void> {
+    await this.bookingsRepository.updateFinalPrice(bookingId, repairQuoteTotal);
+  }
+
+  /**
+   * POST /bookings/:id/worker-cancel — worker cancels before starting the job.
+   * Only allowed while status is ACCEPTED, EN_ROUTE, or ARRIVED — once the
+   * page would show "In Progress" the cancel button must already be hidden
+   * client-side, and the backend enforces the same rule so a stale client
+   * can't bypass it.
    */
   async workerCancelBooking(
     userId: string,
@@ -1122,13 +1142,18 @@ export class BookingsService {
     reason: string,
   ): Promise<BookingResponseDto> {
     const booking = await this._authorizeAssignedWorker(userId, bookingId);
+    // Worker may cancel any time before starting the job (ACCEPTED/EN_ROUTE/
+    // ARRIVED) — once IN_PROGRESS (inspection/repair actually started), or
+    // once a report/decision exists on an INSPECTION booking, cancellation
+    // is no longer allowed. Matches BookingEntity.canWorkerCancel on Flutter.
     const cancellable: BookingStatus[] = [
       BookingStatus.ACCEPTED,
       BookingStatus.EN_ROUTE,
+      BookingStatus.ARRIVED,
     ];
     if (!cancellable.includes(booking.status)) {
       throw new BadRequestException(
-        `Cannot cancel a job with status ${booking.status}. Workers may only cancel before arrival.`,
+        `Cannot cancel a job with status ${booking.status}. Workers may only cancel before starting the job.`,
       );
     }
 

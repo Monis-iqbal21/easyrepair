@@ -374,12 +374,14 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
                   const SizedBox(height: 16),
                 ],
 
-                // INSPECTION lane: worker's report + client decision buttons
+                // INSPECTION lane: "View Inspection Report" opens the
+                // dedicated report page (not shown inline here).
                 if (booking.lane == BookingLane.inspection &&
-                    booking.assignedWorker != null) ...[
-                  InspectionReportSection(bookingId: booking.id),
-                  const SizedBox(height: 16),
-                ],
+                    booking.assignedWorker != null)
+                  ViewInspectionReportButton(
+                    bookingId: booking.id,
+                    route: '/client/booking/${booking.id}/inspection-report',
+                  ),
 
                 // EXPIRED — "Make Live Again"
                 if (isExpired) ...[
@@ -2258,8 +2260,7 @@ class _ActionButtons extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final showCancel = booking.status == BookingStatus.pending &&
-        booking.assignedWorker == null;
+    final showCancel = booking.canClientCancel;
     final showChat = booking.assignedWorker != null;
 
     final showCall = booking.assignedWorker?.phone != null &&

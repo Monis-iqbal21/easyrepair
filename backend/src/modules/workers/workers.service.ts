@@ -583,6 +583,10 @@ export class WorkersService {
             createdAt: job.review.createdAt.toISOString(),
           } satisfies WorkerJobReviewDto
         : null,
+      inspectionReportSubmitted: job.inspectionReport != null,
+      inspectionDecisionStatus: job.inspectionReport?.decisionStatus ?? null,
+      inspectionReportSubmittedAt:
+        job.inspectionReport?.createdAt.toISOString() ?? null,
     };
   }
 

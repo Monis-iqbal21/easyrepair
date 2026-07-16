@@ -252,8 +252,7 @@ class BookingCard extends StatelessWidget {
                   if (_hasActions) ...[
                     const SizedBox(height: 12),
                     _QuickActions(
-                      canCancel: booking.status == BookingStatus.pending &&
-                          booking.assignedWorker == null,
+                      canCancel: booking.canClientCancel,
                       hasWorker: booking.assignedWorker != null,
                       canEdit: booking.status == BookingStatus.pending &&
                           booking.assignedWorker == null,
@@ -263,10 +262,13 @@ class BookingCard extends StatelessWidget {
                     ),
                   ],
 
-                  // ── Find Workers ────────────────────────────────────
+                  // ── Find Workers / Choose Ustaad ─────────────────────
                   if (_canFindWorkers && onFindWorkers != null) ...[
                     const SizedBox(height: 8),
-                    _FindWorkersBtn(onTap: onFindWorkers!),
+                    _FindWorkersBtn(
+                      onTap: onFindWorkers!,
+                      isDirectAssign: booking.lane != BookingLane.bidding,
+                    ),
                   ],
 
                   // ── Track Worker ─────────────────────────────────────
@@ -284,8 +286,7 @@ class BookingCard extends StatelessWidget {
   }
 
   bool get _hasActions {
-    final canCancel = booking.status == BookingStatus.pending &&
-        booking.assignedWorker == null;
+    final canCancel = booking.canClientCancel;
     return (canCancel && onCancel != null) ||
         (booking.assignedWorker != null && onChat != null) ||
         (booking.status == BookingStatus.pending &&
@@ -676,10 +677,15 @@ class _PriceTag extends StatelessWidget {
 
 class _FindWorkersBtn extends StatelessWidget {
   final VoidCallback onTap;
-  const _FindWorkersBtn({required this.onTap});
+  final bool isDirectAssign;
+  const _FindWorkersBtn({required this.onTap, this.isDirectAssign = false});
 
   @override
   Widget build(BuildContext context) {
+    // STANDARD/INSPECTION are direct-assignment lanes — matches the
+    // "Choose Ustaad" wording used by booking_detail_page.dart's
+    // _ChooseUstaadButton, so the list card and detail page never disagree.
+    final label = isDirectAssign ? 'Choose Ustaad' : 'Find Workers';
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -688,14 +694,14 @@ class _FindWorkersBtn extends StatelessWidget {
           color: const Color(0xFFDB6234),
           borderRadius: BorderRadius.circular(12),
         ),
-        child: const Row(
+        child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.manage_search_rounded, size: 15, color: Colors.white),
-            SizedBox(width: 6),
+            const Icon(Icons.manage_search_rounded, size: 15, color: Colors.white),
+            const SizedBox(width: 6),
             Text(
-              'Find Workers',
-              style: TextStyle(
+              label,
+              style: const TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
                 color: Colors.white,

@@ -79,6 +79,10 @@ class NewJobEntity {
   });
 
   bool get isStandardLane => lane == BookingLane.standard;
+  bool get isInspectionLane => lane == BookingLane.inspection;
+  /// True for any direct-assignment lane (STANDARD or INSPECTION) — neither
+  /// supports bidding, so "Bid Now" / bid-count UI must never show for them.
+  bool get isDirectAssignLane => isStandardLane || isInspectionLane;
 
   double get standardServicesTotal => standardServiceItems.fold<double>(
         0,

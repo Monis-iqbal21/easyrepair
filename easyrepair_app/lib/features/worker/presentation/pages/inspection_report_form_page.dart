@@ -7,7 +7,6 @@ import 'package:image_picker/image_picker.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../bookings/domain/entities/inspection_report_entity.dart';
 import '../../../bookings/presentation/providers/booking_providers.dart';
-import '../providers/worker_job_providers.dart';
 
 const _kPrimary = Color(0xFFDB6234);
 const _kDark = Color(0xFF1A1A1A);
@@ -146,10 +145,8 @@ class _InspectionReportFormPageState
 
   @override
   Widget build(BuildContext context) {
-    final jobAsync = ref.watch(workerJobDetailProvider(widget.bookingId));
     final isSubmitting =
         ref.watch(inspectionReportSubmitNotifierProvider).isLoading;
-    final inspectionFee = jobAsync.valueOrNull?.inspectionFeeSnapshot;
 
     return Scaffold(
       backgroundColor: _kBg,
@@ -259,7 +256,6 @@ class _InspectionReportFormPageState
                     _SummaryCard(
                       partsTotal: _partsTotal,
                       labourCost: _labourCost,
-                      inspectionFeeSnapshot: inspectionFee,
                       finalQuote: _finalQuote,
                     ),
                   ],
@@ -572,13 +568,11 @@ class _PartCardState extends State<_PartCard> {
 class _SummaryCard extends StatelessWidget {
   final double partsTotal;
   final double labourCost;
-  final double? inspectionFeeSnapshot;
   final double finalQuote;
 
   const _SummaryCard({
     required this.partsTotal,
     required this.labourCost,
-    required this.inspectionFeeSnapshot,
     required this.finalQuote,
   });
 
@@ -596,12 +590,6 @@ class _SummaryCard extends StatelessWidget {
         children: [
           _line('Parts total', 'Rs ${partsTotal.toStringAsFixed(0)}'),
           _line('Labour', 'Rs ${labourCost.toStringAsFixed(0)}'),
-          if (inspectionFeeSnapshot != null)
-            _line(
-              'Inspection fee already paid',
-              'Rs ${inspectionFeeSnapshot!.toStringAsFixed(0)}',
-              valueColor: const Color(0xFF37E279),
-            ),
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 8),
             child: Divider(height: 1, color: Colors.white24),
@@ -609,20 +597,18 @@ class _SummaryCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Final repair quote', style: TextStyle(color: Colors.white, fontSize: 15.5, fontWeight: FontWeight.w800)),
+              const Text('Repair quote total', style: TextStyle(color: Colors.white, fontSize: 15.5, fontWeight: FontWeight.w800)),
               Text(
                 'Rs ${finalQuote.toStringAsFixed(0)}',
                 style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w900),
               ),
             ],
           ),
-          if (inspectionFeeSnapshot != null) ...[
-            const SizedBox(height: 6),
-            Text(
-              'Total if client continues repair = Rs ${(finalQuote + inspectionFeeSnapshot!).toStringAsFixed(0)} (inspection fee + repair quote)',
-              style: const TextStyle(color: Colors.white60, fontSize: 11.5, height: 1.4),
-            ),
-          ],
+          const SizedBox(height: 6),
+          const Text(
+            'Inspection fee is not added here — it is waived if the client continues repair, or charged alone if they close after inspection.',
+            style: TextStyle(color: Colors.white60, fontSize: 11.5, height: 1.4),
+          ),
         ],
       ),
     );

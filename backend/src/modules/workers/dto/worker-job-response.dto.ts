@@ -79,4 +79,12 @@ export class WorkerJobResponseDto {
   attachments: WorkerJobAttachmentDto[];
   statusHistory: WorkerJobStatusHistoryDto[];
   review: WorkerJobReviewDto | null;
+  /** INSPECTION lane: true once this worker has submitted the report. */
+  inspectionReportSubmitted: boolean;
+  inspectionDecisionStatus:
+    | 'PENDING_CLIENT_DECISION'
+    | 'ACCEPTED_REPAIR'
+    | 'CLOSED_AFTER_INSPECTION'
+    | null;
+  inspectionReportSubmittedAt: string | null;
 }

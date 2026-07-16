@@ -11,6 +11,7 @@ import '../../features/bookings/presentation/pages/my_bookings_page.dart';
 import '../../features/client/presentation/pages/client_chat_page.dart';
 import '../../features/client/presentation/pages/client_profile_page.dart';
 import '../../features/bookings/presentation/pages/booking_detail_page.dart';
+import '../../features/bookings/presentation/pages/inspection_report_page.dart';
 import '../../features/client/presentation/pages/post_job_page.dart';
 import '../../features/worker/presentation/pages/verification_pending_page.dart';
 import '../../features/worker/presentation/pages/worker_home_page.dart';
@@ -111,6 +112,13 @@ final routerProvider = Provider<GoRouter>((ref) {
             BookingDetailPage(bookingId: state.pathParameters['id']!),
       ),
       GoRoute(
+        path: '/client/booking/:id/inspection-report',
+        builder: (_, state) => InspectionReportPage(
+          bookingId: state.pathParameters['id']!,
+          showDecisionButtons: true,
+        ),
+      ),
+      GoRoute(
         path: '/client/post-job',
         builder: (context, state) {
           final service = state.uri.queryParameters['service'];
@@ -165,6 +173,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/worker/job/:id/inspection-report',
         builder: (_, state) => InspectionReportFormPage(
           bookingId: state.pathParameters['id']!,
+        ),
+      ),
+      GoRoute(
+        path: '/worker/job/:id/inspection-report/view',
+        builder: (_, state) => InspectionReportPage(
+          bookingId: state.pathParameters['id']!,
+          showDecisionButtons: false,
         ),
       ),
       GoRoute(

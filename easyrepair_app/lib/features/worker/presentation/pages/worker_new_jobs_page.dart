@@ -209,6 +209,11 @@ class _NewJobCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isUrgent = job.urgency == BookingUrgency.urgent;
     final isStandard = job.isStandardLane;
+    // STANDARD and INSPECTION are both direct-assignment lanes — neither
+    // supports bidding, so "Bid Now"/offer-count UI must never show for
+    // either (previously only STANDARD was excluded, which incorrectly left
+    // a "Bid Now" button on pending INSPECTION jobs).
+    final isDirectAssign = job.isDirectAssignLane;
 
     return GestureDetector(
       onTap: () {
@@ -303,11 +308,11 @@ class _NewJobCard extends ConsumerWidget {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          if (isStandard)
+                          if (isDirectAssign)
                             const _StandardJobBadge()
                           else
                             _UrgencyChip(isUrgent: isUrgent),
-                          if (!isStandard && job.hasMyBid) ...[
+                          if (!isDirectAssign && job.hasMyBid) ...[
                             const SizedBox(height: 4),
                             const _BidPlacedBadge(),
                           ],
@@ -376,8 +381,8 @@ class _NewJobCard extends ConsumerWidget {
                           icon: Icons.near_me_outlined,
                           label: job.distanceLabel,
                         ),
-                      // Bid count (bidding lane only)
-                      if (!isStandard)
+                      // Bid count (BIDDING lane only)
+                      if (!isDirectAssign)
                         _MetaChip(
                           icon: Icons.gavel_rounded,
                           label: '${job.bidCount} offer',
@@ -440,7 +445,7 @@ class _NewJobCard extends ConsumerWidget {
                           ),
                         ),
                       ),
-                      if (!isStandard) ...[
+                      if (!isDirectAssign) ...[
                         const SizedBox(width: 8),
                         // Bid Now / Update Bid
                         Expanded(
@@ -470,7 +475,7 @@ class _NewJobCard extends ConsumerWidget {
                       ],
                     ],
                   ),
-                  if (isStandard) ...[
+                  if (isDirectAssign) ...[
                     const SizedBox(height: 8),
                     Container(
                       width: double.infinity,

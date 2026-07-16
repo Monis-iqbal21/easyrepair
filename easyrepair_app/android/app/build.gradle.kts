@@ -20,6 +20,21 @@ if (keyPropertiesFile.exists()) {
     keyProperties.load(keyPropertiesFile.inputStream())
 }
 
+// ---------------------------------------------------------------------------
+// Google Maps API key — `flutter run`/`flutter build` never forward
+// --dart-define values into the native Gradle build (dart-define only
+// reaches Dart's String.fromEnvironment), so the manifest placeholder below
+// was silently resolving to "" whenever it relied only on a -P flag or env
+// var — this is what produced a blank/empty Google Map box at runtime.
+// Add GOOGLE_MAPS_API_KEY=<key> to android/local.properties (gitignored,
+// machine-local — same file that already holds sdk.dir) as the simplest fix.
+// ---------------------------------------------------------------------------
+val localPropertiesFile = rootProject.file("local.properties")
+val localProperties = Properties()
+if (localPropertiesFile.exists()) {
+    localProperties.load(localPropertiesFile.inputStream())
+}
+
 android {
     namespace = "ai.handygo.app"
     compileSdk = flutter.compileSdkVersion
@@ -56,6 +71,7 @@ android {
         versionName = flutter.versionName
         manifestPlaceholders["MAPS_API_KEY"] = (project.findProperty("GOOGLE_MAPS_API_KEY") as String?)
             ?: System.getenv("GOOGLE_MAPS_API_KEY")
+            ?: localProperties.getProperty("GOOGLE_MAPS_API_KEY")
             ?: ""
     }
 

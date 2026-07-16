@@ -138,8 +138,11 @@ class _TrackBody extends StatelessWidget {
             etaMin: etaMin,
           ),
           if (booking.lane == BookingLane.inspection) ...[
-            const SizedBox(height: 16),
-            InspectionReportSection(bookingId: booking.id),
+            const SizedBox(height: 8),
+            ViewInspectionReportButton(
+              bookingId: booking.id,
+              route: '/client/booking/${booking.id}/inspection-report',
+            ),
           ],
         ],
       ),
@@ -373,7 +376,36 @@ class _TrackingMapState extends State<_TrackingMap> {
 
   @override
   Widget build(BuildContext context) {
-    if (!_hasJobLoc) return const SizedBox.shrink();
+    if (!_hasJobLoc) {
+      return Container(
+        width: double.infinity,
+        height: 140,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: _kBorder),
+        ),
+        child: const Center(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.location_off_outlined, size: 16, color: _kLight),
+                SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    'Location not available for this booking.',
+                    style: TextStyle(fontSize: 12.5, color: _kLight),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
     final worker = widget.booking.assignedWorker;
     final hasWorkerLoc = worker?.currentLat != null && worker?.currentLng != null;
 

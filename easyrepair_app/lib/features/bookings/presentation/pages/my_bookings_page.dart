@@ -89,8 +89,7 @@ class _MyBookingsPageState extends ConsumerState<MyBookingsPage> {
                               booking: booking,
                               onTap: () =>
                                   context.push('/client/booking/${booking.id}'),
-                              onCancel: booking.status == BookingStatus.pending &&
-                                      booking.assignedWorker == null
+                              onCancel: booking.canClientCancel
                                   ? () => _confirmCancel(
                                         context,
                                         ref,
