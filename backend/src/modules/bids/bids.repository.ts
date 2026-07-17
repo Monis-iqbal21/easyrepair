@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { BidStatus, BookingStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { computeCompletedJobs } from '../../common/utils/worker-stats.util';
+import { WorkerUnavailableError } from '../../common/errors/worker-unavailable.error';
 
 export const BID_INCLUDE = {
   workerProfile: {
@@ -243,11 +245,24 @@ export class BidsRepository {
         data: { bookingId, status: BookingStatus.ACCEPTED, note: 'Bid accepted by client' },
       });
 
-      // Mark worker as busy so they don't appear in new searches or new-jobs feed.
-      await tx.workerProfile.update({
-        where: { id: workerProfileId },
+      // Mark worker as busy so they don't appear in new searches or new-jobs
+      // feed — conditional on the worker still being genuinely assignable so
+      // two concurrent bid-accepts (or an assignWorker + acceptBid race)
+      // can't both win. Worker eligibility (status/verification/profile) was
+      // only checked at bid-creation time and may be stale by now, so it's
+      // re-verified here as the final authoritative gate.
+      const res = await tx.workerProfile.updateMany({
+        where: {
+          id: workerProfileId,
+          currentlyWorking: false,
+          status: 'ACTIVE',
+          verificationStatus: 'VERIFIED',
+          availabilityStatus: 'ONLINE',
+          profileCompleted: true,
+        },
         data: { currentlyWorking: true },
       });
+      if (res.count === 0) throw new WorkerUnavailableError();
 
       return booking;
     });
@@ -298,8 +313,7 @@ export class BidsRepository {
   }
 
   async countCompletedJobsByWorkerProfileId(workerProfileId: string): Promise<number> {
-    return this.prisma.booking.count({
-      where: { workerProfileId, status: BookingStatus.COMPLETED },
-    });
+    // Shared helper — single source of truth, see worker-stats.util.ts
+    return computeCompletedJobs(this.prisma, workerProfileId);
   }
 }

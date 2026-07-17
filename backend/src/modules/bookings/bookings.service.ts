@@ -21,6 +21,7 @@ import {
   BookingsRepository,
   BookingWithRelations,
 } from './bookings.repository';
+import { WorkerUnavailableError } from '../../common/errors/worker-unavailable.error';
 import {
   BOOKINGS_QUEUE,
   EXPIRE_BOOKING_JOB,
@@ -774,6 +775,12 @@ export class BookingsService {
       );
     }
 
+    if (booking.workerExclusions.some((e) => e.workerProfileId === workerProfileId)) {
+      throw new BadRequestException(
+        'This Ustaad is not eligible for this booking.',
+      );
+    }
+
     const worker =
       await this.bookingsRepository.findWorkerProfileById(workerProfileId);
     if (!worker) throw new NotFoundException('Worker not found.');
@@ -785,6 +792,14 @@ export class BookingsService {
     if (!worker.profileCompleted) {
       throw new BadRequestException(
         'This worker has not completed their profile yet and cannot be hired.',
+      );
+    }
+    // Common (non-race) case: worker visibly already busy — give the
+    // friendly message immediately rather than waiting for the transactional
+    // guard below (which remains the authoritative check for genuine races).
+    if (worker.currentlyWorking) {
+      throw new ConflictException(
+        'This Ustaad just got another job. Please choose another Ustaad.',
       );
     }
 
@@ -802,11 +817,21 @@ export class BookingsService {
           : booking.standardServicePriceSnapshot ?? undefined
         : booking.inspectionFeeSnapshot ?? undefined;
 
-    const updated = await this.bookingsRepository.assignWorkerToBooking(
-      bookingId,
-      workerProfileId,
-      finalPrice,
-    );
+    let updated: BookingWithRelations;
+    try {
+      updated = await this.bookingsRepository.assignWorkerToBooking(
+        bookingId,
+        workerProfileId,
+        finalPrice,
+      );
+    } catch (err) {
+      if (err instanceof WorkerUnavailableError) {
+        throw new ConflictException(
+          'This Ustaad just got another job. Please choose another Ustaad.',
+        );
+      }
+      throw err;
+    }
 
     // Booking is no longer PENDING — cancel its auto-expiry job. Fire-and-forget.
     void this._cancelExpiry(bookingId).catch((err) => {

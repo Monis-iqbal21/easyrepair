@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { AvailabilityStatus, BookingStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import { computeCancellationRate } from '../../common/utils/worker-stats.util';
+import {
+  computeCancellationRate,
+  computeCompletedJobs,
+} from '../../common/utils/worker-stats.util';
 
 // ---------------------------------------------------------------------------
 // Worker profile include
@@ -202,6 +205,11 @@ export class WorkersRepository {
    * Replace all worker skills atomically.
    * Deletes existing skills then creates the new set inside an interactive
    * transaction so that the final findMany is guaranteed to see the new rows.
+   *
+   * Also flips WorkerProfile.profileCompleted — having at least one skill is
+   * the only mandatory setup step gating hireability today (STANDARD/
+   * INSPECTION direct-hire and BIDDING's createBid/editBid all require
+   * profileCompleted=true). Clearing all skills correctly re-locks hireability.
    */
   async replaceSkills(workerProfileId: string, categoryIds: string[]) {
     return this.prisma.$transaction(async (tx) => {
@@ -212,6 +220,11 @@ export class WorkersRepository {
           workerProfileId,
           categoryId,
         })),
+      });
+
+      await tx.workerProfile.update({
+        where: { id: workerProfileId },
+        data: { profileCompleted: categoryIds.length > 0 },
       });
 
       return tx.workerSkill.findMany({
@@ -239,9 +252,8 @@ export class WorkersRepository {
 
     const [completedJobs, activeJobs, todayCompleted, cancellationRate, responseData] =
       await Promise.all([
-        this.prisma.booking.count({
-          where: { workerProfileId, status: BookingStatus.COMPLETED },
-        }),
+        // Shared helper — single source of truth, see worker-stats.util.ts
+        computeCompletedJobs(this.prisma, workerProfileId),
         this.prisma.booking.count({
           where: {
             workerProfileId,
@@ -481,6 +493,7 @@ export class WorkersRepository {
           status: BookingStatus.CANCELLED,
           cancelledAt: new Date(),
           cancellationReason: reason ?? 'Cancelled by worker',
+          cancelledByRole: 'WORKER',
         },
       });
       await tx.bookingStatusHistory.create({

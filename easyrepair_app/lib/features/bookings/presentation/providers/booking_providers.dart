@@ -461,6 +461,16 @@ class NearbyWorkersNotifier
     return const NearbyWorkersState();
   }
 
+  /// Manual "Refresh" — re-runs expansion from the first radius immediately,
+  /// bypassing the recheck timer's wait. Mirrors
+  /// StandardNearbyWorkersNotifier.refresh(). No-ops if expansion is already
+  /// in flight (same guard _startExpansion already uses internally).
+  Future<void> refresh() async {
+    _recheckTimer?.cancel();
+    _poolMap.clear();
+    await _startExpansion(arg, fromIndex: 0);
+  }
+
   // ── Expansion ────────────────────────────────────────────────────────────────
 
   /// Walks the radius ladder starting at [fromIndex].

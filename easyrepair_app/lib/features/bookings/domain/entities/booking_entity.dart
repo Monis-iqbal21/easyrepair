@@ -98,11 +98,27 @@ extension WorkerLifecycleActionX on WorkerLifecycleAction {
 extension BookingWorkerLifecycleX on BookingEntity {
   /// The single next lifecycle action a worker should take for this
   /// STANDARD-lane assigned job, or null when no action applies — either the
-  /// lane isn't STANDARD (BIDDING/INSPECTION keep their existing generic
-  /// "Mark as Completed" flow) or the booking isn't in an active
-  /// worker-facing status (pending/completed/cancelled/etc).
+  /// lane isn't STANDARD (BIDDING/INSPECTION have their own equivalent
+  /// getters) or the booking isn't in an active worker-facing status
+  /// (pending/completed/cancelled/etc).
   WorkerLifecycleAction? get standardWorkerNextAction {
     if (lane != BookingLane.standard) return null;
+    return switch (status) {
+      BookingStatus.accepted => WorkerLifecycleAction.onMyWay,
+      BookingStatus.enRoute => WorkerLifecycleAction.arrived,
+      BookingStatus.arrived => WorkerLifecycleAction.start,
+      BookingStatus.inProgress => WorkerLifecycleAction.complete,
+      _ => null,
+    };
+  }
+
+  /// Same ladder as [standardWorkerNextAction] (Hired -> On My Way -> Arrived
+  /// -> In Progress -> Complete), for BIDDING-lane jobs once a bid has been
+  /// accepted. Dispatches through the exact same shared
+  /// `/bookings/:id/on-my-way|arrived|start|complete` endpoints — BIDDING no
+  /// longer uses a separate legacy completion path once this is wired in.
+  WorkerLifecycleAction? get biddingWorkerNextAction {
+    if (lane != BookingLane.bidding) return null;
     return switch (status) {
       BookingStatus.accepted => WorkerLifecycleAction.onMyWay,
       BookingStatus.enRoute => WorkerLifecycleAction.arrived,

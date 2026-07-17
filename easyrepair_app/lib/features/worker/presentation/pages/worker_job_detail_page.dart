@@ -117,8 +117,9 @@ class _JobBody extends ConsumerWidget {
     final isPending    = job.status == BookingStatus.pending;
     final isStandard   = job.lane == BookingLane.standard;
     final isInspection = job.lane == BookingLane.inspection;
+    final isBidding    = job.lane == BookingLane.bidding;
     final isHired     = job.assignedWorker != null || job.status != BookingStatus.pending;
-    final canComplete = job.status.isWorkerActive && !isStandard && !isInspection;
+    final canComplete = job.status.isWorkerActive && !isStandard && !isInspection && !isBidding;
 
     return Column(
       children: [
@@ -245,8 +246,10 @@ class _JobBody extends ConsumerWidget {
                 ),
                 const SizedBox(height: 16),
 
-                // ── STANDARD lane lifecycle (On My Way / Arrived / Start / Cancel) ──
-                if (isStandard && job.status.isWorkerActive) ...[
+                // ── STANDARD/BIDDING lane lifecycle (On My Way / Arrived /
+                // Start / Cancel) — same section, same shared endpoints;
+                // BookingEntity resolves the right getter per lane. ────────
+                if ((isStandard || isBidding) && job.status.isWorkerActive) ...[
                   _StandardLifecycleSection(job: job),
                   const SizedBox(height: 16),
                 ],
@@ -575,11 +578,12 @@ class _StandardLifecycleSection extends ConsumerWidget {
       );
     }
 
-    // Same BookingEntity.standardWorkerNextAction mapping and
-    // WorkerLifecycleActionDispatchX.invoke dispatch as worker_jobs_page.dart's
-    // _StandardActionBtn — the two surfaces can never show a different button
-    // for the same booking.
-    final nextAction = job.standardWorkerNextAction;
+    // Same BookingEntity.standardWorkerNextAction/biddingWorkerNextAction
+    // mapping and WorkerLifecycleActionDispatchX.invoke dispatch as
+    // worker_jobs_page.dart's _StandardActionBtn — the two surfaces can never
+    // show a different button for the same booking. Exactly one of the two
+    // getters is non-null for any given booking (mutually exclusive by lane).
+    final nextAction = job.standardWorkerNextAction ?? job.biddingWorkerNextAction;
     IconData iconFor(WorkerLifecycleAction a) => switch (a) {
           WorkerLifecycleAction.onMyWay => Icons.directions_car_filled_rounded,
           WorkerLifecycleAction.arrived => Icons.location_on_rounded,

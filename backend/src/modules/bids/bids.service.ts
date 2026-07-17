@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ForbiddenException,
   BadRequestException,
+  ConflictException,
   HttpException,
   HttpStatus,
   Logger,
@@ -12,6 +13,7 @@ import { BidsRepository, BidWithRelations } from './bids.repository';
 import { BidResponseDto, BidWorkerDto } from './dto/bid-response.dto';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ChatService } from '../chat/chat.service';
+import { WorkerUnavailableError } from '../../common/errors/worker-unavailable.error';
 
 @Injectable()
 export class BidsService {
@@ -328,11 +330,21 @@ export class BidsService {
       throw new BadRequestException('This bid is no longer available');
     }
 
-    const booking = await this.bidsRepository.acceptBid(
-      bidId,
-      bid.booking.id,
-      bid.workerProfile.id,
-    );
+    let booking: Awaited<ReturnType<typeof this.bidsRepository.acceptBid>>;
+    try {
+      booking = await this.bidsRepository.acceptBid(
+        bidId,
+        bid.booking.id,
+        bid.workerProfile.id,
+      );
+    } catch (err) {
+      if (err instanceof WorkerUnavailableError) {
+        throw new ConflictException(
+          'This Ustaad just got another job. Please choose another Ustaad.',
+        );
+      }
+      throw err;
+    }
 
     // Fire-and-forget notification to the winning worker.
     this.notificationsService

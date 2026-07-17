@@ -172,14 +172,13 @@ class _JobCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // STANDARD lane: granular next-action button (On My Way / Arrived /
-    // Start Job / Complete Job), shared with worker_job_detail_page.dart via
-    // BookingEntity.standardWorkerNextAction so the two can never disagree.
-    // INSPECTION lane: its own ladder (On My Way / Arrived / Start Inspection
-    // / Fill Report / Waiting for Decision / Complete Job) via
-    // BookingEntity.inspectionWorkerNextAction. BIDDING: unchanged generic
-    // "Complete" button.
-    final standardAction = job.standardWorkerNextAction;
+    // STANDARD/BIDDING lane: granular next-action button (On My Way / Arrived
+    // / Start Job / Complete Job), shared with worker_job_detail_page.dart via
+    // BookingEntity.standardWorkerNextAction/biddingWorkerNextAction so the
+    // two can never disagree. INSPECTION lane: its own ladder (On My Way /
+    // Arrived / Start Inspection / Fill Report / Waiting for Decision /
+    // Complete Job) via BookingEntity.inspectionWorkerNextAction.
+    final standardAction = job.standardWorkerNextAction ?? job.biddingWorkerNextAction;
     final inspectionAction = job.inspectionWorkerNextAction;
     final isActive = job.status.isWorkerActive;
     final canComplete =

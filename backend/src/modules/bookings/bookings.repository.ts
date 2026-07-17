@@ -15,6 +15,7 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { computeCancellationRate } from '../../common/utils/worker-stats.util';
+import { WorkerUnavailableError } from '../../common/errors/worker-unavailable.error';
 
 // Raw row shape returned by the PostGIS nearby-workers query.
 interface RawNearbyWorkerRow {
@@ -514,6 +515,9 @@ export class BookingsRepository {
         userId: true,
         availabilityStatus: true,
         profileCompleted: true,
+        currentlyWorking: true,
+        status: true,
+        verificationStatus: true,
       },
     });
   }
@@ -897,6 +901,14 @@ export class BookingsRepository {
    * Also marks the worker as currentlyWorking = true so they are excluded from
    * new nearby-worker searches while on this job.
    * Wrapped in a transaction; booking is re-fetched with full relations.
+   *
+   * The currentlyWorking flip is conditional (updateMany + count check, not a
+   * blind update) so that two concurrent assignments to the same worker
+   * (e.g. two clients hiring at once, or an assignWorker/acceptBid race)
+   * can't both succeed — whichever transaction loses re-checks the worker's
+   * live eligibility (busy/active/verified/online/profile-complete) as the
+   * final authoritative gate and throws WorkerUnavailableError, which rolls
+   * back every write in this transaction (booking never gets workerProfileId).
    */
   async assignWorkerToBooking(
     bookingId: string,
@@ -923,10 +935,18 @@ export class BookingsRepository {
       });
 
       // Mark worker as busy so they don't appear in new nearby-worker pools.
-      await tx.workerProfile.update({
-        where: { id: workerProfileId },
+      const res = await tx.workerProfile.updateMany({
+        where: {
+          id: workerProfileId,
+          currentlyWorking: false,
+          status: 'ACTIVE',
+          verificationStatus: 'VERIFIED',
+          availabilityStatus: 'ONLINE',
+          profileCompleted: true,
+        },
         data: { currentlyWorking: true },
       });
+      if (res.count === 0) throw new WorkerUnavailableError();
     });
 
     return this.prisma.booking.findUniqueOrThrow({

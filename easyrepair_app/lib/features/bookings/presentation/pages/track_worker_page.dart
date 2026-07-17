@@ -132,11 +132,7 @@ class _TrackBody extends StatelessWidget {
           ],
           _DistanceEtaCard(distanceM: distanceM, etaMin: etaMin),
           const SizedBox(height: 16),
-          _ProgressTimeline(
-            booking: booking,
-            distanceM: distanceM,
-            etaMin: etaMin,
-          ),
+          _ProgressTimeline(booking: booking),
           if (booking.lane == BookingLane.inspection) ...[
             const SizedBox(height: 8),
             ViewInspectionReportButton(
@@ -475,11 +471,11 @@ class _StatusCard extends StatelessWidget {
 
   const _StatusCard({required this.booking});
 
-  bool get _isStandard => booking.lane == BookingLane.standard;
   bool get _isInspection => booking.lane == BookingLane.inspection;
 
-  // STANDARD/INSPECTION lanes are direct-hire — never show "Bid Accepted"
-  // wording for them. BIDDING keeps the existing headline unchanged.
+  // STANDARD/BIDDING share the same status-driven headline — once hired,
+  // wording is identical regardless of whether the hire came from direct
+  // assignment or an accepted bid. INSPECTION keeps its richer branching.
   String get _headline {
     if (booking.status == BookingStatus.completed) return 'Job Completed ✓';
     if (_isInspection) {
@@ -495,7 +491,6 @@ class _StatusCard extends StatelessWidget {
         _ => 'Hired ✓',
       };
     }
-    if (!_isStandard) return 'Bid Accepted ✓';
     return switch (booking.status) {
       BookingStatus.enRoute => 'Ustaad On The Way',
       BookingStatus.arrived => 'Ustaad Arrived',
@@ -521,7 +516,6 @@ class _StatusCard extends StatelessWidget {
         _ => '$firstName has been hired for this inspection',
       };
     }
-    if (!_isStandard) return '$firstName is heading to your location';
     return switch (booking.status) {
       BookingStatus.enRoute => '$firstName is on the way to your location',
       BookingStatus.arrived => '$firstName has arrived at your location',
@@ -978,16 +972,9 @@ class _LiveDotBadge extends StatelessWidget {
 
 class _ProgressTimeline extends StatelessWidget {
   final BookingEntity booking;
-  final double? distanceM;
-  final int? etaMin;
 
-  const _ProgressTimeline({
-    required this.booking,
-    required this.distanceM,
-    required this.etaMin,
-  });
+  const _ProgressTimeline({required this.booking});
 
-  bool get _isStandard => booking.lane == BookingLane.standard;
   bool get _isInspection => booking.lane == BookingLane.inspection;
 
   // INSPECTION lane: Hired -> Ustaad on the way -> Arrived -> Inspection in
@@ -1038,26 +1025,11 @@ class _ProgressTimeline extends StatelessWidget {
     ];
   }
 
-  // Legacy 3-step ladder for BIDDING — unchanged: Bid Accepted
-  // (rank 1), Arrived (rank 2, auto-triggered when distanceM < 150), Job
-  // Completed (rank 3).
-  int _legacyRank({double? distanceM}) {
-    if (booking.status == BookingStatus.completed) return 3;
-    if (booking.status == BookingStatus.inProgress) {
-      // Treat in-progress as arrived
-      return 2;
-    }
-    if (booking.status == BookingStatus.enRoute ||
-        booking.status == BookingStatus.accepted) {
-      if (distanceM != null && distanceM <= 150) return 2;
-      return 1;
-    }
-    return 1;
-  }
-
-  // STANDARD lane has no bidding: Hired -> Ustaad on the way -> Arrived ->
-  // Work in progress -> Completed -> Review. Rank 6 only once a review has
-  // actually been submitted.
+  // STANDARD and BIDDING share this ladder: Hired -> Ustaad on the way ->
+  // Arrived -> Work in progress -> Completed -> Review. Rank 6 only once a
+  // review has actually been submitted. Driven entirely by real booking
+  // status/timestamps — BIDDING no longer infers "arrived" from GPS
+  // proximity now that its worker actions call the same lifecycle endpoints.
   int _standardRank() {
     return switch (booking.status) {
       BookingStatus.enRoute => 2,
@@ -1066,13 +1038,6 @@ class _ProgressTimeline extends StatelessWidget {
       BookingStatus.completed => booking.review != null ? 6 : 5,
       _ => 1, // accepted (or anything else — a worker shouldn't land here otherwise)
     };
-  }
-
-  DateTime? _historyDate(BookingStatus target) {
-    for (final entry in booking.statusHistory.reversed) {
-      if (entry.status == target) return entry.createdAt;
-    }
-    return null;
   }
 
   List<_StepData> _standardSteps(DateFormat fmt) {
@@ -1091,53 +1056,12 @@ class _ProgressTimeline extends StatelessWidget {
     ];
   }
 
-  List<_StepData> _legacySteps(DateFormat fmt, int rank) {
-    final arrivedAt = booking.status == BookingStatus.inProgress
-        ? (_historyDate(BookingStatus.inProgress) ?? booking.startedAt)
-        : (distanceM != null && distanceM! <= 150
-            ? DateTime.now()
-            : null);
-
-    return [
-      _StepData(
-        label: 'Bid Accepted',
-        requiredRank: 1,
-        timestamp:
-            _historyDate(BookingStatus.accepted) ?? booking.acceptedAt,
-        fmt: fmt,
-      ),
-      _StepData(
-        label: 'Arrived',
-        requiredRank: 2,
-        timestamp: arrivedAt,
-        fmt: fmt,
-        subtext: (rank == 1 && distanceM != null)
-            ? 'ETA $etaMin min • Updated now'
-            : null,
-      ),
-      _StepData(
-        label: 'Job Completed',
-        requiredRank: 3,
-        timestamp:
-            _historyDate(BookingStatus.completed) ?? booking.completedAt,
-        fmt: fmt,
-      ),
-    ];
-  }
-
   @override
   Widget build(BuildContext context) {
     final fmt = DateFormat('h:mm a');
-    final rank = _isStandard
-        ? _standardRank()
-        : _isInspection
-            ? _inspectionRank()
-            : _legacyRank(distanceM: distanceM);
-    final steps = _isStandard
-        ? _standardSteps(fmt)
-        : _isInspection
-            ? _inspectionSteps(fmt)
-            : _legacySteps(fmt, rank);
+    // STANDARD and BIDDING share _standardRank/_standardSteps.
+    final rank = _isInspection ? _inspectionRank() : _standardRank();
+    final steps = _isInspection ? _inspectionSteps(fmt) : _standardSteps(fmt);
 
     return Container(
       padding: const EdgeInsets.all(18),

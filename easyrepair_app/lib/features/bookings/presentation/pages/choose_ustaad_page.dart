@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/errors/failures.dart';
 import '../../domain/entities/booking_entity.dart';
 import '../../domain/entities/nearby_worker_entity.dart';
 import '../providers/booking_providers.dart';
@@ -86,19 +87,38 @@ class _ChooseUstaadPageState extends ConsumerState<ChooseUstaadPage> {
       }
       if (!mounted) return;
       context.pushReplacement('/client/booking/${widget.booking.id}');
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
       setState(() => _assigning = false);
+      final isConflict = e is ConflictFailure;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text(
-            'Unable to assign this Ustaad. Please try again.',
+          content: Text(
+            isConflict
+                ? e.message
+                : 'Unable to assign this Ustaad. Please try again.',
           ),
           behavior: SnackBarBehavior.floating,
           backgroundColor: _kRed,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
       );
+      if (isConflict) {
+        // Worker became unavailable between list fetch and hire tap — refresh
+        // so the now-busy worker drops out of the list (backend already
+        // filters currentlyWorking=false, so a fresh fetch excludes them).
+        await _refreshSearch();
+      }
+    }
+  }
+
+  Future<void> _refreshSearch() async {
+    if (widget.booking.lane == BookingLane.standard) {
+      await _refreshStandardSearch();
+    } else {
+      await ref
+          .read(nearbyWorkersNotifierProvider(widget.booking.id).notifier)
+          .refresh();
     }
   }
 
@@ -294,14 +314,51 @@ class _ChooseUstaadPageState extends ConsumerState<ChooseUstaadPage> {
   }
 
   Widget _buildBody(NearbyWorkersState state, bool isStandard) {
+    // First load in flight, nothing to show yet at all — skeleton cards
+    // instead of a spinner or (worse) a scary error-looking empty state.
+    if (state.isExpanding && state.workers.isEmpty && !state.hasError) {
+      return Column(
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(20, 16, 20, 4),
+            child: Text(
+              'Finding verified Ustaads near you…',
+              style: TextStyle(fontSize: 13.5, color: _kGray, fontWeight: FontWeight.w500),
+            ),
+          ),
+          Expanded(
+            child: ListView.separated(
+              padding: const EdgeInsets.all(20),
+              itemCount: 3,
+              separatorBuilder: (_, _) => const SizedBox(height: 12),
+              itemBuilder: (_, _) => const _WorkerCardSkeleton(),
+            ),
+          ),
+        ],
+      );
+    }
+
     if (state.hasError && state.workers.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: Text(
-            'Unable to load available Ustaads. Please try again.',
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 14, color: _kGray),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.wifi_off_rounded,
+                size: 32,
+                color: Color(0xFFCBD5E1),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Unable to load available Ustaads right now.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 14, color: _kGray),
+              ),
+              const SizedBox(height: 16),
+              _RefreshButton(onTap: _refreshSearch),
+            ],
           ),
         ),
       );
@@ -314,45 +371,28 @@ class _ChooseUstaadPageState extends ConsumerState<ChooseUstaadPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (state.isExpanding) ...[
-                const SizedBox(
-                  width: 28,
-                  height: 28,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Searching for available Ustaads near you…',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 14, color: _kGray),
-                ),
-              ] else if (isStandard) ...[
-                const Icon(
-                  Icons.person_search_rounded,
-                  size: 32,
-                  color: Color(0xFFCBD5E1),
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  'Abhi koi verified Ustaad nearby available nahi hai. '
-                  'Hum search kar rahe hain…',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 14, color: _kGray, height: 1.4),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  'List har 45 seconds mein khud-ba-khud refresh hoti hai.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 11.5, color: Color(0xFF94A3B8)),
-                ),
-                const SizedBox(height: 16),
-                _RefreshButton(onTap: _refreshStandardSearch),
-              ] else
-                const Text(
-                  'No Ustaads are available right now. Please try again shortly.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 14, color: _kGray),
-                ),
+              const Icon(
+                Icons.person_search_rounded,
+                size: 32,
+                color: Color(0xFFCBD5E1),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'No verified Ustaad available right now.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 14, color: _kDark, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                isStandard
+                    ? 'List har 45 seconds mein khud-ba-khud refresh hoti hai. '
+                        'Aap bhi refresh kar sakte hain ya thora wait karein.'
+                    : 'You can refresh or wait a little — checking available Ustaads…',
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8), height: 1.4),
+              ),
+              const SizedBox(height: 16),
+              _RefreshButton(onTap: _refreshSearch),
             ],
           ),
         ),
@@ -409,6 +449,76 @@ class _RefreshButton extends StatelessWidget {
       label: const Text(
         'Refresh',
         style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
+      ),
+    );
+  }
+}
+
+/// Shimmer-like pulsing placeholder card shown in place of a [_WorkerCard]
+/// while the first nearby-workers fetch is in flight. Matches _WorkerCard's
+/// size/shape (28px avatar, 18px rounded card) so the list doesn't jump when
+/// real cards swap in.
+class _WorkerCardSkeleton extends StatefulWidget {
+  const _WorkerCardSkeleton();
+
+  @override
+  State<_WorkerCardSkeleton> createState() => _WorkerCardSkeletonState();
+}
+
+class _WorkerCardSkeletonState extends State<_WorkerCardSkeleton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 900),
+  )..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Widget _bone({required double width, required double height}) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: const Color(0xFFE5E7EB),
+        borderRadius: BorderRadius.circular(6),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: Tween(begin: 0.5, end: 1.0).animate(_controller),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: _kBorder),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const CircleAvatar(radius: 28, backgroundColor: Color(0xFFE5E7EB)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _bone(width: 120, height: 14),
+                  const SizedBox(height: 8),
+                  _bone(width: 80, height: 11),
+                  const SizedBox(height: 10),
+                  _bone(width: double.infinity, height: 34),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
