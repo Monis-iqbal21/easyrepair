@@ -115,9 +115,13 @@ class _WorkerNewJobsPageState extends ConsumerState<WorkerNewJobsPage>
 
             const SizedBox(height: 8),
 
+            if (jobsAsync.hasError && jobsAsync.hasValue)
+              const _RefreshFailedBanner(),
+
             // ── List ─────────────────────────────────────────────────────
             Expanded(
               child: jobsAsync.when(
+                skipError: true,
                 loading: () => const Center(
                   child: CircularProgressIndicator(color: _kAccent, strokeWidth: 2),
                 ),
@@ -136,7 +140,10 @@ class _WorkerNewJobsPageState extends ConsumerState<WorkerNewJobsPage>
                         child: ListView.builder(
                           padding: const EdgeInsets.fromLTRB(16, 4, 16, 110),
                           itemCount: jobs.length,
-                          itemBuilder: (ctx, i) => _NewJobCard(job: jobs[i]),
+                          itemBuilder: (ctx, i) => _NewJobCard(
+                            key: ValueKey(jobs[i].id),
+                            job: jobs[i],
+                          ),
                         ),
                       ),
               ),
@@ -203,7 +210,7 @@ class _FilterBar extends ConsumerWidget {
 
 class _NewJobCard extends ConsumerWidget {
   final NewJobEntity job;
-  const _NewJobCard({required this.job});
+  const _NewJobCard({super.key, required this.job});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -693,6 +700,25 @@ class _EmptyState extends StatelessWidget {
 }
 
 // ── Error state ───────────────────────────────────────────────────────────────
+
+/// Shown above the list only when a background poll failed but previous
+/// jobs are still cached/visible — never replaces the list itself.
+class _RefreshFailedBanner extends StatelessWidget {
+  const _RefreshFailedBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      color: const Color(0xFFFEF3C7),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: const Text(
+        'Could not refresh. Pull to retry.',
+        style: TextStyle(fontSize: 12, color: Color(0xFF92400E)),
+      ),
+    );
+  }
+}
 
 class _ErrorState extends StatelessWidget {
   final String message;

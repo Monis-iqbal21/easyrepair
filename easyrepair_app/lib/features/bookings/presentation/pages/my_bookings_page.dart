@@ -55,8 +55,11 @@ class _MyBookingsPageState extends ConsumerState<MyBookingsPage> {
           children: [
             _Header(filter: filter),
             _StatusTabs(activeTab: filter.activeTab),
+            if (bookingsAsync.hasError && bookingsAsync.hasValue)
+              const _RefreshFailedBanner(),
             Expanded(
               child: bookingsAsync.when(
+                skipError: true,
                 loading: () => const Padding(
                   padding: EdgeInsets.fromLTRB(16, 4, 16, 0),
                   child: BookingSkeleton(),
@@ -86,6 +89,7 @@ class _MyBookingsPageState extends ConsumerState<MyBookingsPage> {
                           itemBuilder: (context, index) {
                             final booking = filtered[index];
                             return BookingCard(
+                              key: ValueKey(booking.id),
                               booking: booking,
                               onTap: () =>
                                   context.push('/client/booking/${booking.id}'),
@@ -487,6 +491,27 @@ class _EmptyState extends StatelessWidget {
             ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ── Non-blocking background-refresh-failed banner ─────────────────────────────
+
+/// Shown above the list only when a background poll failed but previous
+/// bookings are still cached/visible — never replaces the list itself.
+class _RefreshFailedBanner extends StatelessWidget {
+  const _RefreshFailedBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      color: const Color(0xFFFEF3C7),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: const Text(
+        'Could not refresh. Pull to retry.',
+        style: TextStyle(fontSize: 12, color: Color(0xFF92400E)),
       ),
     );
   }

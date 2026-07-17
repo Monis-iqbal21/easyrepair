@@ -38,7 +38,7 @@ class WorkerJobsNotifier extends AsyncNotifier<List<BookingEntity>> {
   @override
   Future<List<BookingEntity>> build() {
     final timer = Timer.periodic(const Duration(seconds: 30), (_) {
-      if (state is! AsyncLoading) _reload();
+      if (!state.isLoading) ref.invalidateSelf();
     });
     ref.onDispose(timer.cancel);
     return _fetch();
@@ -54,17 +54,21 @@ class WorkerJobsNotifier extends AsyncNotifier<List<BookingEntity>> {
   void setFilter(WorkerJobFilter newFilter) {
     if (_filter == newFilter) return;
     _filter = newFilter;
-    state = const AsyncLoading();
-    _reload();
+    // ref.invalidateSelf() re-runs build() (reading the new _filter) via
+    // Riverpod's safe isRefreshing/copyWithPrevious path, so the list stays
+    // visible instead of flashing to a skeleton while refetching.
+    ref.invalidateSelf();
   }
 
+  /// Background/pull-to-refresh reload — see BookingsNotifier.refresh() for
+  /// why invalidateSelf() is used instead of a manual AsyncLoading reset.
   Future<void> refresh() async {
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(_fetch);
-  }
-
-  Future<void> _reload() async {
-    state = await AsyncValue.guard(_fetch);
+    ref.invalidateSelf();
+    try {
+      await future;
+    } catch (_) {
+      // Swallowed — a background failure keeps the previous list visible.
+    }
   }
 }
 
@@ -141,7 +145,7 @@ class NewJobsNotifier extends AsyncNotifier<List<NewJobEntity>> {
   @override
   Future<List<NewJobEntity>> build() {
     final timer = Timer.periodic(const Duration(seconds: 30), (_) {
-      if (state is! AsyncLoading) _reload();
+      if (!state.isLoading) ref.invalidateSelf();
     });
     ref.onDispose(timer.cancel);
     return _fetch();
@@ -162,22 +166,21 @@ class NewJobsNotifier extends AsyncNotifier<List<NewJobEntity>> {
 
   void setFilter(NewJobFilter f) {
     _filter = f;
-    // Re-apply filter to current data without re-fetching.
-    final current = state.valueOrNull;
-    if (current != null) {
-      // Re-fetch so we have the full unfiltered list to filter from.
-      state = const AsyncLoading();
-      _reload();
-    }
+    // ref.invalidateSelf() re-runs build() (reading the new _filter) via
+    // Riverpod's safe isRefreshing/copyWithPrevious path, so the list stays
+    // visible instead of flashing to a skeleton while refetching.
+    ref.invalidateSelf();
   }
 
+  /// Background/pull-to-refresh reload — see BookingsNotifier.refresh() for
+  /// why invalidateSelf() is used instead of a manual AsyncLoading reset.
   Future<void> refresh() async {
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(_fetch);
-  }
-
-  Future<void> _reload() async {
-    state = await AsyncValue.guard(_fetch);
+    ref.invalidateSelf();
+    try {
+      await future;
+    } catch (_) {
+      // Swallowed — a background failure keeps the previous list visible.
+    }
   }
 }
 

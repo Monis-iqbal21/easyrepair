@@ -418,6 +418,7 @@ class _ChooseUstaadPageState extends ConsumerState<ChooseUstaadPage> {
         }
         final worker = state.workers[index];
         return _WorkerCard(
+          key: ValueKey(worker.id),
           worker: worker,
           busy: _assigning,
           onAvatarTap: () => _openProfileModal(worker),
@@ -532,6 +533,7 @@ class _WorkerCard extends StatelessWidget {
   final VoidCallback onChat;
 
   const _WorkerCard({
+    super.key,
     required this.worker,
     required this.busy,
     required this.onAvatarTap,

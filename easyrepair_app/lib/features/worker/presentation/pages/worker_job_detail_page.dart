@@ -52,6 +52,7 @@ class WorkerJobDetailPage extends ConsumerWidget {
       backgroundColor: _kBg,
       appBar: _AppBar(),
       body: jobAsync.when(
+        skipError: true,
         loading: () => const Center(child: CircularProgressIndicator(
           color: _kGreen,
         )),

@@ -21,12 +21,11 @@ class WorkerProfileNotifier extends AsyncNotifier<WorkerProfileEntity> {
     );
   }
 
+  /// Delegates to silentRefresh() — keeps the dashboard visible instead of
+  /// flashing to a loading spinner (RefreshIndicator's own pull animation
+  /// already gives the user feedback that a refresh is happening).
   Future<void> refresh() async {
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(() async {
-      final result = await ref.read(workerRepositoryProvider).getProfile();
-      return result.fold((f) => throw f, (p) => p);
-    });
+    await silentRefresh();
   }
 
   /// Fetches fresh profile data and updates state without showing a loading

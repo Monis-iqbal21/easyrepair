@@ -83,9 +83,13 @@ class _WorkerJobsPageState extends ConsumerState<WorkerJobsPage>
 
             const SizedBox(height: 4),
 
+            if (jobsAsync.hasError && jobsAsync.hasValue)
+              const _RefreshFailedBanner(),
+
             // ── List ─────────────────────────────────────────────────────
             Expanded(
               child: jobsAsync.when(
+                skipError: true,
                 loading: () => const Padding(
                   padding: EdgeInsets.fromLTRB(16, 4, 16, 0),
                   child: BookingSkeleton(),
@@ -105,7 +109,8 @@ class _WorkerJobsPageState extends ConsumerState<WorkerJobsPage>
                         child: ListView.builder(
                           padding: const EdgeInsets.fromLTRB(16, 8, 16, 110),
                           itemCount: jobs.length,
-                          itemBuilder: (ctx, i) => _JobCard(job: jobs[i]),
+                          itemBuilder: (ctx, i) =>
+                              _JobCard(key: ValueKey(jobs[i].id), job: jobs[i]),
                         ),
                       ),
               ),
@@ -168,7 +173,7 @@ class _FilterTabs extends StatelessWidget {
 
 class _JobCard extends ConsumerWidget {
   final BookingEntity job;
-  const _JobCard({required this.job});
+  const _JobCard({super.key, required this.job});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -862,6 +867,25 @@ class _EmptyState extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Shown above the list only when a background poll failed but previous jobs
+/// are still cached/visible — never replaces the list itself.
+class _RefreshFailedBanner extends StatelessWidget {
+  const _RefreshFailedBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      color: const Color(0xFFFEF3C7),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: const Text(
+        'Could not refresh. Pull to retry.',
+        style: TextStyle(fontSize: 12, color: Color(0xFF92400E)),
       ),
     );
   }

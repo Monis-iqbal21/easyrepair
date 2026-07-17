@@ -58,11 +58,20 @@ class BookingsNotifier extends AsyncNotifier<List<BookingEntity>> {
     return result.fold((failure) => throw failure, (bookings) => bookings);
   }
 
-  /// Full network reload — only call when truly needed (e.g. first load / pull-
-  /// to-refresh). Sets AsyncLoading which resets scroll position.
+  /// Background/pull-to-refresh reload. Uses ref.invalidateSelf() rather than
+  /// a manual `state = AsyncLoading()` reset — Riverpod's own
+  /// isRefreshing/copyWithPrevious mechanism then keeps the previous list
+  /// visible (AsyncValue.when's default skipLoadingOnRefresh:true skips the
+  /// loading branch) instead of flashing the whole tab to a skeleton.
   Future<void> refresh() async {
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(_fetch);
+    ref.invalidateSelf();
+    try {
+      await future;
+    } catch (_) {
+      // Swallowed — state already reflects the outcome safely; a background
+      // failure with existing cached data keeps showing that data (see the
+      // skipError:true call sites that watch this provider).
+    }
   }
 
   /// Replace a single booking in the list without touching AsyncLoading.

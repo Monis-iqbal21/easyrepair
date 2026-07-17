@@ -338,6 +338,7 @@ class _BidsSheet extends ConsumerWidget {
 
         // ── Bid list / states ─────────────────────────────────────────────
         bidsAsync.when(
+          skipError: true,
           loading: () =>
               SliverToBoxAdapter(child: _LoadingState()),
           error: (err, _) => SliverToBoxAdapter(
@@ -368,6 +369,7 @@ class _BidsSheet extends ConsumerWidget {
                       return const SizedBox(height: 10);
                     }
                     return _BidOfferCard(
+                      key: ValueKey(pending[index].bid.id),
                       bidWorker: pending[index],
                       bookingId: booking.id,
                     );
@@ -392,6 +394,7 @@ class _SheetSubtitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = bidsAsync.when(
+      skipError: true,
       loading: () => 'Loading bids...',
       error: (e, st) => 'Could not load bids',
       data: (bids) {
@@ -410,7 +413,11 @@ class _BidOfferCard extends ConsumerWidget {
   final BidWithWorkerEntity bidWorker;
   final String bookingId;
 
-  const _BidOfferCard({required this.bidWorker, required this.bookingId});
+  const _BidOfferCard({
+    super.key,
+    required this.bidWorker,
+    required this.bookingId,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

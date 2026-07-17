@@ -67,6 +67,7 @@ class _WorkerHomePageState extends ConsumerState<WorkerHomePage>
       body: SafeArea(
         bottom: false,
         child: profileAsync.when(
+          skipError: true,
           loading: () => const Center(
             child: CircularProgressIndicator(color: _kOrange),
           ),

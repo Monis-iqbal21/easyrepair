@@ -70,6 +70,7 @@ class _BookingDetailPageState extends ConsumerState<BookingDetailPage> {
       child: Scaffold(
         backgroundColor: _kBg,
         body: bookingAsync.when(
+          skipError: true,
           loading: () => _LoadingSkeleton(bookingId: widget.bookingId),
           error: (err, _) => _ErrorScreen(
             message: err is Failure ? err.message : 'Failed to load booking.',

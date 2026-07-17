@@ -70,6 +70,7 @@ class _TrackWorkerPageState extends ConsumerState<TrackWorkerPage> {
       backgroundColor: _kBg,
       body: SafeArea(
         child: bookingAsync.when(
+          skipError: true,
           loading: () => const Center(
             child: CircularProgressIndicator(color: _kGreen, strokeWidth: 2),
           ),
