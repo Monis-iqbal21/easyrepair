@@ -5,6 +5,7 @@ import '../../../../core/errors/failures.dart';
 import '../../domain/entities/booking_entity.dart';
 import '../../domain/entities/inspection_report_entity.dart';
 import '../providers/booking_providers.dart';
+import '../widgets/media_attachment_widgets.dart';
 
 const _kPrimary = Color(0xFFDB6234);
 const _kPrimaryLight = Color(0xFFF5E8E0);
@@ -114,17 +115,38 @@ class _ReportBody extends ConsumerWidget {
         children: [
           _DecisionBadge(decisionStatus: report.decisionStatus),
           const SizedBox(height: 14),
-          _Card(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _row('Issue found', report.issueFound),
-                _row('Recommended repair', report.recommendedRepair),
-                if (report.notes != null && report.notes!.isNotEmpty)
-                  _row('Notes', report.notes!, isLast: true),
-              ],
+          if ((report.issueFound != null && report.issueFound!.isNotEmpty) ||
+              (report.recommendedRepair != null && report.recommendedRepair!.isNotEmpty) ||
+              (report.notes != null && report.notes!.isNotEmpty))
+            _Card(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (report.issueFound != null && report.issueFound!.isNotEmpty)
+                    _row('Issue found', report.issueFound!),
+                  if (report.recommendedRepair != null && report.recommendedRepair!.isNotEmpty)
+                    _row('Recommended repair', report.recommendedRepair!),
+                  if (report.notes != null && report.notes!.isNotEmpty)
+                    _row('Notes', report.notes!, isLast: true),
+                ],
+              ),
             ),
-          ),
+          if (report.voiceNoteUrl != null) ...[
+            const SizedBox(height: 12),
+            _Card(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Ustaad Voice Note',
+                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: _kGray),
+                  ),
+                  const SizedBox(height: 10),
+                  WhatsAppVoiceNotePlayer(url: report.voiceNoteUrl),
+                ],
+              ),
+            ),
+          ],
           if (report.photos.isNotEmpty) ...[
             const SizedBox(height: 12),
             _Card(

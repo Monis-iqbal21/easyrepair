@@ -17,8 +17,8 @@ export class InspectionReportResponseDto {
   id: string;
   bookingId: string;
   workerProfileId: string;
-  issueFound: string;
-  recommendedRepair: string;
+  issueFound: string | null;
+  recommendedRepair: string | null;
   labourCost: number;
   partsNeeded: boolean;
   partsTotal: number;
@@ -27,6 +27,9 @@ export class InspectionReportResponseDto {
   /** The category's inspection fee snapshot at booking time — shown separately, informational only. */
   inspectionFeeSnapshot: number | null;
   notes: string | null;
+  voiceNoteUrl: string | null;
+  voiceNoteMimeType: string | null;
+  voiceNoteDurationSeconds: number | null;
   decisionStatus:
     | 'PENDING_CLIENT_DECISION'
     | 'ACCEPTED_REPAIR'

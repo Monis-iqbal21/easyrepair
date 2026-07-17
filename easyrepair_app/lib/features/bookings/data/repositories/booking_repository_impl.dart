@@ -247,13 +247,15 @@ class BookingRepositoryImpl implements BookingRepository {
   @override
   Future<Either<Failure, InspectionReportEntity>> submitInspectionReport(
     String bookingId, {
-    required String issueFound,
-    required String recommendedRepair,
+    String? issueFound,
+    String? recommendedRepair,
     required double labourCost,
     required bool partsNeeded,
     required List<InspectionReportPartDraft> parts,
     String? notes,
     required List<File> photos,
+    File? voiceNoteFile,
+    double? voiceNoteDurationSeconds,
   }) async {
     try {
       final model = await _dataSource.submitInspectionReport(
@@ -265,6 +267,8 @@ class BookingRepositoryImpl implements BookingRepository {
         parts: parts,
         notes: notes,
         photos: photos,
+        voiceNoteFile: voiceNoteFile,
+        voiceNoteDurationSeconds: voiceNoteDurationSeconds,
       );
       return Right(model.toEntity());
     } on Failure catch (f) {

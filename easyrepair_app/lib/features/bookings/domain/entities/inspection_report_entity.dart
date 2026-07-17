@@ -34,14 +34,17 @@ class InspectionReportEntity {
   final String id;
   final String bookingId;
   final String workerProfileId;
-  final String issueFound;
-  final String recommendedRepair;
+  final String? issueFound;
+  final String? recommendedRepair;
   final double labourCost;
   final bool partsNeeded;
   final double partsTotal;
   final double repairQuoteTotal;
   final double? inspectionFeeSnapshot;
   final String? notes;
+  final String? voiceNoteUrl;
+  final String? voiceNoteMimeType;
+  final double? voiceNoteDurationSeconds;
   final InspectionDecisionStatus decisionStatus;
   final List<InspectionReportPartEntity> parts;
   final List<InspectionReportPhotoEntity> photos;
@@ -53,14 +56,17 @@ class InspectionReportEntity {
     required this.id,
     required this.bookingId,
     required this.workerProfileId,
-    required this.issueFound,
-    required this.recommendedRepair,
+    this.issueFound,
+    this.recommendedRepair,
     required this.labourCost,
     required this.partsNeeded,
     required this.partsTotal,
     required this.repairQuoteTotal,
     this.inspectionFeeSnapshot,
     this.notes,
+    this.voiceNoteUrl,
+    this.voiceNoteMimeType,
+    this.voiceNoteDurationSeconds,
     required this.decisionStatus,
     this.parts = const [],
     this.photos = const [],

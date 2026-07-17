@@ -33,6 +33,7 @@ export class InspectionReportsService {
     bookingId: string,
     dto: CreateInspectionReportDto,
     photos: Express.Multer.File[],
+    voiceNote?: Express.Multer.File,
   ): Promise<InspectionReportResponseDto> {
     const workerProfile =
       await this.repository.findWorkerProfileByUserId(userId);
@@ -80,22 +81,32 @@ export class InspectionReportsService {
     // shown as a separate informational line in the UI.
     const repairQuoteTotal = dto.labourCost + partsTotal;
 
-    const uploaded = await Promise.all(
-      photos.map((file) =>
-        this.storageService.uploadFile(
-          file.buffer,
-          file.originalname,
-          file.mimetype,
-          `uploads/bookings/${bookingId}/inspection-report`,
+    const [uploaded, uploadedVoiceNote] = await Promise.all([
+      Promise.all(
+        photos.map((file) =>
+          this.storageService.uploadFile(
+            file.buffer,
+            file.originalname,
+            file.mimetype,
+            `uploads/bookings/${bookingId}/inspection-report`,
+          ),
         ),
       ),
-    );
+      voiceNote
+        ? this.storageService.uploadFile(
+            voiceNote.buffer,
+            voiceNote.originalname,
+            voiceNote.mimetype,
+            `uploads/bookings/${bookingId}/inspection-report/voice`,
+          )
+        : Promise.resolve(null),
+    ]);
 
     const report = await this.repository.createReport({
       bookingId,
       workerProfileId: workerProfile.id,
-      issueFound: dto.issueFound,
-      recommendedRepair: dto.recommendedRepair,
+      issueFound: dto.issueFound ?? null,
+      recommendedRepair: dto.recommendedRepair ?? null,
       labourCost: dto.labourCost,
       partsNeeded: dto.partsNeeded,
       partsTotal,
@@ -103,6 +114,12 @@ export class InspectionReportsService {
       notes: dto.notes,
       parts: partsWithTotals,
       photos: uploaded.map((u) => ({ url: u.url, storageKey: u.key })),
+      voiceNoteUrl: uploadedVoiceNote?.url ?? null,
+      voiceNoteStorageKey: uploadedVoiceNote?.key ?? null,
+      voiceNoteMimeType: uploadedVoiceNote?.mimeType ?? null,
+      voiceNoteDurationSeconds: uploadedVoiceNote
+        ? dto.voiceNoteDurationSeconds ?? null
+        : null,
     });
 
     if (booking.clientProfile?.userId) {
@@ -234,6 +251,9 @@ export class InspectionReportsService {
       repairQuoteTotal: report.repairQuoteTotal,
       inspectionFeeSnapshot: booking.inspectionFeeSnapshot ?? null,
       notes: report.notes ?? null,
+      voiceNoteUrl: report.voiceNoteUrl ?? null,
+      voiceNoteMimeType: report.voiceNoteMimeType ?? null,
+      voiceNoteDurationSeconds: report.voiceNoteDurationSeconds ?? null,
       decisionStatus: report.decisionStatus as
         | 'PENDING_CLIENT_DECISION'
         | 'ACCEPTED_REPAIR'

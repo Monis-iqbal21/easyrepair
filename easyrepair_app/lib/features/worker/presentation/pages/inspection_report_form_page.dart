@@ -1,12 +1,17 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:record/record.dart';
 
 import '../../../../core/errors/failures.dart';
 import '../../../bookings/domain/entities/inspection_report_entity.dart';
 import '../../../bookings/presentation/providers/booking_providers.dart';
+import '../../../bookings/presentation/widgets/media_attachment_widgets.dart';
 
 const _kPrimary = Color(0xFFDB6234);
 const _kDark = Color(0xFF1A1A1A);
@@ -39,12 +44,21 @@ class _InspectionReportFormPageState
   final List<InspectionReportPartDraft> _parts = [];
   final List<XFile> _photos = [];
 
+  AudioRecorder? _recorder;
+  bool _isRecordingVoice = false;
+  Duration _recordingDuration = Duration.zero;
+  Timer? _recordingTimer;
+  String? _voiceNotePath;
+  int? _voiceNoteDurationSeconds;
+
   @override
   void dispose() {
     _issueCtrl.dispose();
     _repairCtrl.dispose();
     _labourCtrl.dispose();
     _notesCtrl.dispose();
+    _recordingTimer?.cancel();
+    _recorder?.dispose();
     super.dispose();
   }
 
@@ -55,15 +69,109 @@ class _InspectionReportFormPageState
 
   double get _finalQuote => _labourCost + _partsTotal;
 
+  bool get _hasWrittenText =>
+      _issueCtrl.text.trim().isNotEmpty && _repairCtrl.text.trim().isNotEmpty;
+
+  bool get _hasVoiceNote => _voiceNotePath != null;
+
+  bool get _hasReportContent => _hasWrittenText || _hasVoiceNote;
+
   bool get _isValid {
-    if (_issueCtrl.text.trim().isEmpty) return false;
-    if (_repairCtrl.text.trim().isEmpty) return false;
+    if (!_hasReportContent) return false;
     if (_labourCtrl.text.trim().isEmpty || _labourCost < 0) return false;
     if (_partsNeeded && _parts.isEmpty) return false;
     for (final p in _parts) {
       if (p.name.trim().isEmpty || p.quantity < 1) return false;
     }
     return true;
+  }
+
+  // ── Voice recording ───────────────────────────────────────────────────────
+
+  Future<void> _startVoiceRecording() async {
+    final status = await Permission.microphone.request();
+    if (status.isPermanentlyDenied) {
+      _showError('Microphone access is permanently denied. Enable it in Settings.');
+      openAppSettings();
+      return;
+    }
+    if (!status.isGranted) {
+      _showError('Microphone permission denied.');
+      return;
+    }
+    _recorder ??= AudioRecorder();
+
+    final dir = await getTemporaryDirectory();
+    final path =
+        '${dir.path}/inspection_voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
+
+    await _recorder!.start(
+      const RecordConfig(encoder: AudioEncoder.aacLc),
+      path: path,
+    );
+
+    setState(() {
+      _isRecordingVoice = true;
+      _recordingDuration = Duration.zero;
+    });
+
+    _recordingTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) {
+        setState(() => _recordingDuration += const Duration(seconds: 1));
+      }
+    });
+  }
+
+  Future<void> _stopVoiceRecording() async {
+    _recordingTimer?.cancel();
+    _recordingTimer = null;
+
+    final path = await _recorder?.stop();
+    final finalDuration = _recordingDuration;
+
+    setState(() {
+      _isRecordingVoice = false;
+      _recordingDuration = Duration.zero;
+      if (path != null) {
+        _voiceNotePath = path;
+        _voiceNoteDurationSeconds = finalDuration.inSeconds;
+      }
+    });
+  }
+
+  Future<void> _cancelRecording() async {
+    _recordingTimer?.cancel();
+    _recordingTimer = null;
+    await _recorder?.stop();
+    setState(() {
+      _isRecordingVoice = false;
+      _recordingDuration = Duration.zero;
+    });
+  }
+
+  Future<void> _deleteVoiceNote() async {
+    final path = _voiceNotePath;
+    setState(() {
+      _voiceNotePath = null;
+      _voiceNoteDurationSeconds = null;
+    });
+    if (path != null) {
+      try {
+        final file = File(path);
+        if (await file.exists()) await file.delete();
+      } catch (_) {}
+    }
+  }
+
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: _kError,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   Future<void> _pickPhoto() async {
@@ -112,13 +220,16 @@ class _InspectionReportFormPageState
     try {
       await ref.read(inspectionReportSubmitNotifierProvider.notifier).submit(
             widget.bookingId,
-            issueFound: _issueCtrl.text.trim(),
-            recommendedRepair: _repairCtrl.text.trim(),
+            issueFound: _issueCtrl.text.trim().isEmpty ? null : _issueCtrl.text.trim(),
+            recommendedRepair:
+                _repairCtrl.text.trim().isEmpty ? null : _repairCtrl.text.trim(),
             labourCost: _labourCost,
             partsNeeded: _partsNeeded,
             parts: _parts,
             notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
             photos: _photos.map((x) => File(x.path)).toList(),
+            voiceNoteFile: _voiceNotePath != null ? File(_voiceNotePath!) : null,
+            voiceNoteDurationSeconds: _voiceNoteDurationSeconds?.toDouble(),
           );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -172,18 +283,43 @@ class _InspectionReportFormPageState
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _FieldLabel('Masla kya nikla? *'),
-                          _TextInput(controller: _issueCtrl, hint: 'e.g. Gas leak — refill zaroori'),
+                          _FieldLabel(_hasVoiceNote ? 'Masla kya nikla?' : 'Masla kya nikla? *'),
+                          _TextInput(
+                            controller: _issueCtrl,
+                            hint: 'e.g. Gas leak — refill zaroori',
+                            onChanged: (_) => setState(() {}),
+                          ),
                           const SizedBox(height: 16),
-                          _FieldLabel('Recommended repair *'),
+                          _FieldLabel(_hasVoiceNote ? 'Recommended repair' : 'Recommended repair *'),
                           _TextInput(
                             controller: _repairCtrl,
                             hint: 'Kya kaam karna hoga',
                             maxLines: 3,
+                            onChanged: (_) => setState(() {}),
                           ),
                         ],
                       ),
                     ),
+                    const SizedBox(height: 12),
+                    _Card(
+                      child: _VoiceNoteSection(
+                        isRecording: _isRecordingVoice,
+                        recordingDuration: _recordingDuration,
+                        voiceNotePath: _voiceNotePath,
+                        voiceNoteDurationSeconds: _voiceNoteDurationSeconds,
+                        onStartRecording: _startVoiceRecording,
+                        onStopRecording: _stopVoiceRecording,
+                        onCancelRecording: _cancelRecording,
+                        onDelete: _deleteVoiceNote,
+                      ),
+                    ),
+                    if (!_hasReportContent) ...[
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Please write the report or record a voice note.',
+                        style: TextStyle(color: _kError, fontSize: 12.5, fontWeight: FontWeight.w600),
+                      ),
+                    ],
                     const SizedBox(height: 12),
                     _Card(child: _PhotosSection(photos: _photos, onAdd: _pickPhoto, onRemove: (i) => setState(() => _photos.removeAt(i)))),
                     const SizedBox(height: 12),
@@ -450,6 +586,104 @@ class _PhotosSection extends StatelessWidget {
             );
           },
         ),
+      ],
+    );
+  }
+}
+
+class _VoiceNoteSection extends StatelessWidget {
+  final bool isRecording;
+  final Duration recordingDuration;
+  final String? voiceNotePath;
+  final int? voiceNoteDurationSeconds;
+  final VoidCallback onStartRecording;
+  final VoidCallback onStopRecording;
+  final VoidCallback onCancelRecording;
+  final VoidCallback onDelete;
+
+  const _VoiceNoteSection({
+    required this.isRecording,
+    required this.recordingDuration,
+    required this.voiceNotePath,
+    required this.voiceNoteDurationSeconds,
+    required this.onStartRecording,
+    required this.onStopRecording,
+    required this.onCancelRecording,
+    required this.onDelete,
+  });
+
+  String _fmt(Duration d) {
+    final m = d.inMinutes.toString().padLeft(2, '0');
+    final s = (d.inSeconds % 60).toString().padLeft(2, '0');
+    return '$m:$s';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Voice note',
+          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _kDark),
+        ),
+        const SizedBox(height: 4),
+        const Text(
+          'Agar likhna mushkil ho, voice note record kar dein.',
+          style: TextStyle(fontSize: 12, color: _kGray),
+        ),
+        const SizedBox(height: 12),
+        if (isRecording)
+          Row(
+            children: [
+              Container(
+                width: 10,
+                height: 10,
+                decoration: const BoxDecoration(color: _kError, shape: BoxShape.circle),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'Recording  ${_fmt(recordingDuration)}',
+                style: const TextStyle(fontSize: 14, color: _kDark, fontWeight: FontWeight.w500),
+              ),
+              const Spacer(),
+              IconButton(
+                onPressed: onCancelRecording,
+                icon: const Icon(Icons.close_rounded, color: _kGray),
+                tooltip: 'Cancel',
+              ),
+              IconButton(
+                onPressed: onStopRecording,
+                icon: const Icon(Icons.stop_circle_rounded, color: _kPrimary, size: 32),
+                tooltip: 'Stop',
+              ),
+            ],
+          )
+        else if (voiceNotePath != null)
+          Row(
+            children: [
+              Expanded(
+                child: WhatsAppVoiceNotePlayer(localPath: voiceNotePath),
+              ),
+              IconButton(
+                onPressed: onDelete,
+                icon: const Icon(Icons.delete_outline_rounded, color: _kError),
+                tooltip: 'Delete',
+              ),
+            ],
+          )
+        else
+          OutlinedButton.icon(
+            onPressed: onStartRecording,
+            icon: const Icon(Icons.mic_rounded, size: 18),
+            label: const Text('Start recording'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: _kPrimary,
+              side: const BorderSide(color: _kPrimary),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            ),
+          ),
       ],
     );
   }

@@ -59,8 +59,8 @@ export class InspectionReportsRepository {
   async createReport(data: {
     bookingId: string;
     workerProfileId: string;
-    issueFound: string;
-    recommendedRepair: string;
+    issueFound: string | null;
+    recommendedRepair: string | null;
     labourCost: number;
     partsNeeded: boolean;
     partsTotal: number;
@@ -74,6 +74,10 @@ export class InspectionReportsRepository {
       lineTotal: number;
     }>;
     photos: Array<{ url: string; storageKey?: string }>;
+    voiceNoteUrl?: string | null;
+    voiceNoteStorageKey?: string | null;
+    voiceNoteMimeType?: string | null;
+    voiceNoteDurationSeconds?: number | null;
   }): Promise<InspectionReportWithRelations> {
     return this.prisma.inspectionReport.create({
       data: {
@@ -86,6 +90,10 @@ export class InspectionReportsRepository {
         partsTotal: data.partsTotal,
         repairQuoteTotal: data.repairQuoteTotal,
         notes: data.notes ?? null,
+        voiceNoteUrl: data.voiceNoteUrl ?? null,
+        voiceNoteStorageKey: data.voiceNoteStorageKey ?? null,
+        voiceNoteMimeType: data.voiceNoteMimeType ?? null,
+        voiceNoteDurationSeconds: data.voiceNoteDurationSeconds ?? null,
         parts: {
           create: data.parts.map((p) => ({
             name: p.name,

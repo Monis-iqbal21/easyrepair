@@ -46,13 +46,15 @@ abstract class BookingRemoteDataSource {
   // ── Inspection report (INSPECTION lane) ─────────────────────────────────
   Future<InspectionReportModel> submitInspectionReport(
     String bookingId, {
-    required String issueFound,
-    required String recommendedRepair,
+    String? issueFound,
+    String? recommendedRepair,
     required double labourCost,
     required bool partsNeeded,
     required List<InspectionReportPartDraft> parts,
     String? notes,
     required List<File> photos,
+    File? voiceNoteFile,
+    double? voiceNoteDurationSeconds,
   });
   Future<InspectionReportModel> getInspectionReport(String bookingId);
   Future<BookingModel> acceptInspectionQuote(String bookingId);
@@ -328,18 +330,21 @@ class BookingRemoteDataSourceImpl implements BookingRemoteDataSource {
   @override
   Future<InspectionReportModel> submitInspectionReport(
     String bookingId, {
-    required String issueFound,
-    required String recommendedRepair,
+    String? issueFound,
+    String? recommendedRepair,
     required double labourCost,
     required bool partsNeeded,
     required List<InspectionReportPartDraft> parts,
     String? notes,
     required List<File> photos,
+    File? voiceNoteFile,
+    double? voiceNoteDurationSeconds,
   }) async {
     try {
       final payload = {
-        'issueFound': issueFound,
-        'recommendedRepair': recommendedRepair,
+        if (issueFound != null && issueFound.isNotEmpty) 'issueFound': issueFound,
+        if (recommendedRepair != null && recommendedRepair.isNotEmpty)
+          'recommendedRepair': recommendedRepair,
         'labourCost': labourCost,
         'partsNeeded': partsNeeded,
         'parts': parts
@@ -352,6 +357,8 @@ class BookingRemoteDataSourceImpl implements BookingRemoteDataSource {
                 })
             .toList(),
         if (notes != null && notes.isNotEmpty) 'notes': notes,
+        if (voiceNoteFile != null && voiceNoteDurationSeconds != null)
+          'voiceNoteDurationSeconds': voiceNoteDurationSeconds,
       };
       final formData = FormData.fromMap({
         'payload': jsonEncode(payload),
@@ -363,6 +370,12 @@ class BookingRemoteDataSourceImpl implements BookingRemoteDataSource {
             ),
           ),
         ),
+        if (voiceNoteFile != null)
+          'voiceNote': await MultipartFile.fromFile(
+            voiceNoteFile.path,
+            filename: voiceNoteFile.path.split('/').last,
+            contentType: DioMediaType.parse('audio/x-m4a'),
+          ),
       });
       final response = await _dio.post(
         '/bookings/$bookingId/inspection-report',

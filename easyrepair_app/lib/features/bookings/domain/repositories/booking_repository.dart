@@ -89,13 +89,15 @@ abstract class BookingRepository {
   /// Assigned worker submits the inspection report + repair quote.
   Future<Either<Failure, InspectionReportEntity>> submitInspectionReport(
     String bookingId, {
-    required String issueFound,
-    required String recommendedRepair,
+    String? issueFound,
+    String? recommendedRepair,
     required double labourCost,
     required bool partsNeeded,
     required List<InspectionReportPartDraft> parts,
     String? notes,
     required List<File> photos,
+    File? voiceNoteFile,
+    double? voiceNoteDurationSeconds,
   });
 
   /// Fetch the submitted report for a booking (client/assigned worker/admin).

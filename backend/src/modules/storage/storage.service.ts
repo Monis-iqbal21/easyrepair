@@ -115,6 +115,7 @@ export class StorageService {
       'audio/m4a': '.m4a',
       'audio/ogg': '.ogg',
       'audio/wav': '.wav',
+      'audio/webm': '.webm',
     };
     return mimeMap[mimeType] ?? '';
   }

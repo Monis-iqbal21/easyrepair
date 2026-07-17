@@ -29,13 +29,16 @@ export class InspectionReportPartDto {
 }
 
 export class CreateInspectionReportDto {
+  // Either (issueFound & recommendedRepair) or a voice note is required — enforced
+  // in the controller after DTO validation, since it needs to know if a voice file
+  // was uploaded alongside this payload.
+  @IsOptional()
   @IsString()
-  @MinLength(1)
-  issueFound: string;
+  issueFound?: string;
 
+  @IsOptional()
   @IsString()
-  @MinLength(1)
-  recommendedRepair: string;
+  recommendedRepair?: string;
 
   @IsNumber()
   @Min(0)
@@ -52,4 +55,9 @@ export class CreateInspectionReportDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  voiceNoteDurationSeconds?: number;
 }

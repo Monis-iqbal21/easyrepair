@@ -478,8 +478,10 @@ model InspectionReport {
   booking           Booking                  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   workerProfileId   String
   workerProfile     WorkerProfile            @relation(fields: [workerProfileId], references: [id])
-  issueFound        String
-  recommendedRepair String
+  /// Either (issueFound & recommendedRepair) or a voice note must be present —
+  /// enforced in InspectionReportsService, not at the DB level.
+  issueFound        String?
+  recommendedRepair String?
   labourCost        Float
   partsNeeded       Boolean                  @default(false)
   partsTotal        Float                    @default(0)
@@ -487,6 +489,10 @@ model InspectionReport {
   /// already paid — the fee is shown separately in the UI as an informational line.
   repairQuoteTotal  Float
   notes             String?
+  voiceNoteUrl              String?
+  voiceNoteStorageKey       String?
+  voiceNoteMimeType         String?
+  voiceNoteDurationSeconds  Float?
   decisionStatus    InspectionDecisionStatus @default(PENDING_CLIENT_DECISION)
   acceptedAt        DateTime?
   closedAt          DateTime?

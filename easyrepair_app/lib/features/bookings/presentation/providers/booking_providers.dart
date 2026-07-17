@@ -956,13 +956,15 @@ class InspectionReportSubmitNotifier extends AsyncNotifier<void> {
 
   Future<void> submit(
     String bookingId, {
-    required String issueFound,
-    required String recommendedRepair,
+    String? issueFound,
+    String? recommendedRepair,
     required double labourCost,
     required bool partsNeeded,
     required List<InspectionReportPartDraft> parts,
     String? notes,
     required List<File> photos,
+    File? voiceNoteFile,
+    double? voiceNoteDurationSeconds,
   }) async {
     state = const AsyncLoading();
     final result = await ref.read(bookingRepositoryProvider).submitInspectionReport(
@@ -974,6 +976,8 @@ class InspectionReportSubmitNotifier extends AsyncNotifier<void> {
           parts: parts,
           notes: notes,
           photos: photos,
+          voiceNoteFile: voiceNoteFile,
+          voiceNoteDurationSeconds: voiceNoteDurationSeconds,
         );
     result.fold(
       (failure) {
