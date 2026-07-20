@@ -153,6 +153,7 @@ class _MyBookingsPageState extends ConsumerState<MyBookingsPage> {
     WidgetRef ref,
     BookingEntity booking,
   ) async {
+    final reasonCtrl = TextEditingController();
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -165,9 +166,30 @@ class _MyBookingsPageState extends ConsumerState<MyBookingsPage> {
             fontSize: 16,
           ),
         ),
-        content: Text(
-          'Cancel ${booking.serviceCategory} request ${booking.referenceId}?',
-          style: const TextStyle(color: Color(0xFF6B7280), fontSize: 14),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Cancel ${booking.serviceCategory} request ${booking.referenceId}?',
+              style: const TextStyle(color: Color(0xFF6B7280), fontSize: 14),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: reasonCtrl,
+              maxLines: 3,
+              decoration: InputDecoration(
+                hintText: 'Reason (required)',
+                filled: true,
+                fillColor: const Color(0xFFF9FAFB),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                ),
+                contentPadding: const EdgeInsets.all(12),
+              ),
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -178,7 +200,10 @@ class _MyBookingsPageState extends ConsumerState<MyBookingsPage> {
             ),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
+            onPressed: () {
+              if (reasonCtrl.text.trim().isEmpty) return;
+              Navigator.pop(ctx, true);
+            },
             child: const Text(
               'Yes, cancel',
               style: TextStyle(
@@ -191,11 +216,12 @@ class _MyBookingsPageState extends ConsumerState<MyBookingsPage> {
       ),
     );
 
-    if (confirmed == true && context.mounted) {
+    final reason = reasonCtrl.text.trim();
+    if (confirmed == true && reason.isNotEmpty && context.mounted) {
       try {
         await ref
             .read(bookingsNotifierProvider.notifier)
-            .cancelBooking(booking.id);
+            .cancelBooking(booking.id, reason);
       } catch (e) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

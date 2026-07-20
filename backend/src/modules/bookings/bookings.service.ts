@@ -233,7 +233,7 @@ export class BookingsService {
   async cancelBooking(
     userId: string,
     bookingId: string,
-    reason?: string,
+    reason: string,
   ): Promise<BookingResponseDto> {
     const profile =
       await this.bookingsRepository.findClientProfileByUserId(userId);
@@ -282,7 +282,7 @@ export class BookingsService {
         userId: updated.workerProfile.userId,
         eventKey: 'booking.cancelled.by_client',
         title: 'Job Cancelled',
-        body: 'The client has cancelled the job.',
+        body: `Client cancelled: ${reason}`,
         bookingId,
         route: `/worker/job/${bookingId}`,
         actorUserId: userId,
@@ -1208,7 +1208,7 @@ export class BookingsService {
         userId: updated.clientProfile.userId,
         eventKey: 'booking.cancelled.by_worker',
         title: 'Worker Cancelled',
-        body: 'Ustaad ne job cancel kar di hai. Aap naya Ustaad choose kar sakte hain.',
+        body: `Ustaad cancelled: ${reason}`,
         bookingId,
         route: `/client/booking/${bookingId}`,
         actorUserId: userId,
@@ -1468,13 +1468,19 @@ export class BookingsService {
 
     const workerExclusions = booking.workerExclusions.map((e) => ({
       workerProfileId: e.workerProfileId,
+      workerName: e.workerProfile
+        ? `${e.workerProfile.firstName} ${e.workerProfile.lastName}`.trim()
+        : null,
       reason: e.reason ?? null,
       createdAt: e.createdAt.toISOString(),
     }));
 
-    // Most recent exclusion reason — drives the client's "Previous Ustaad
-    // cancelled: [reason]" strip while the booking is back in choose-worker state.
+    // Most recent exclusion reason/name — drives the client's "Previous
+    // Ustaad [name] cancelled: [reason]" strip while the booking is back in
+    // choose-worker state.
     const lastWorkerCancellationReason = workerExclusions[0]?.reason ?? null;
+    const lastWorkerCancellationWorkerName =
+      workerExclusions[0]?.workerName ?? null;
 
     return {
       id: booking.id,
@@ -1518,6 +1524,7 @@ export class BookingsService {
       acceptedBidAmount,
       workerExclusions,
       lastWorkerCancellationReason,
+      lastWorkerCancellationWorkerName,
       inspectionReportSubmitted: booking.inspectionReport != null,
       inspectionDecisionStatus: booking.inspectionReport?.decisionStatus ?? null,
       inspectionReportSubmittedAt:

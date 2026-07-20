@@ -21,6 +21,7 @@ import { UpdateBookingDto } from './dto/update-booking.dto';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { AssignWorkerDto } from './dto/assign-worker.dto';
 import { WorkerCancelBookingDto } from './dto/worker-cancel-booking.dto';
+import { CancelBookingDto } from './dto/cancel-booking.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -101,15 +102,15 @@ export class BookingsController {
     return this.bookingsService.submitReview(user.id, bookingId, dto);
   }
 
-  /** PATCH /bookings/:id/cancel — client cancels their booking */
+  /** PATCH /bookings/:id/cancel — client cancels their booking. Reason required. */
   @Patch(':id/cancel')
   @Roles(Role.CLIENT)
   cancelBooking(
     @CurrentUser() user: { id: string },
     @Param('id') bookingId: string,
-    @Body('reason') reason?: string,
+    @Body() dto: CancelBookingDto,
   ) {
-    return this.bookingsService.cancelBooking(user.id, bookingId, reason);
+    return this.bookingsService.cancelBooking(user.id, bookingId, dto.reason);
   }
 
   /**

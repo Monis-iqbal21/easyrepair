@@ -9,6 +9,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
 
 import '../../../../core/errors/failures.dart';
+import '../../../../core/utils/currency_utils.dart';
 import '../../../bookings/domain/entities/inspection_report_entity.dart';
 import '../../../bookings/presentation/providers/booking_providers.dart';
 import '../../../bookings/presentation/widgets/media_attachment_widgets.dart';
@@ -822,8 +823,8 @@ class _SummaryCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _line('Parts total', 'Rs ${partsTotal.toStringAsFixed(0)}'),
-          _line('Labour', 'Rs ${labourCost.toStringAsFixed(0)}'),
+          _line('Parts total', formatPkr(partsTotal)),
+          _line('Labour', formatPkr(labourCost)),
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 8),
             child: Divider(height: 1, color: Colors.white24),
@@ -833,7 +834,7 @@ class _SummaryCard extends StatelessWidget {
             children: [
               const Text('Repair quote total', style: TextStyle(color: Colors.white, fontSize: 15.5, fontWeight: FontWeight.w800)),
               Text(
-                'Rs ${finalQuote.toStringAsFixed(0)}',
+                formatPkr(finalQuote),
                 style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w900),
               ),
             ],

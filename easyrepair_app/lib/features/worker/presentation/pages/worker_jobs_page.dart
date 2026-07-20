@@ -18,6 +18,7 @@ const _kGray   = Color(0xFF6B7280);
 const _kLight  = Color(0xFF94A3B8);
 const _kBorder = Color(0xFFE2E8F0);
 const _kBg     = Color(0xFFF9FAFB);
+const _kRed    = Color(0xFFDC2626);
 
 class WorkerJobsPage extends ConsumerStatefulWidget {
   const WorkerJobsPage({super.key});
@@ -32,6 +33,11 @@ class _WorkerJobsPageState extends ConsumerState<WorkerJobsPage>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // Silent refresh whenever this tab is opened (each bottom-nav tap
+    // rebuilds this page via context.go) — cheap, keeps cached data visible
+    // while refetching, and catches any assignment missed by the realtime
+    // push handlers in app.dart.
+    ref.read(workerJobsProvider.notifier).refresh();
   }
 
   @override
@@ -188,6 +194,8 @@ class _JobCard extends ConsumerWidget {
     final isActive = job.status.isWorkerActive;
     final canComplete =
         isActive && standardAction == null && inspectionAction == null;
+    final cancelledByClient = job.status == BookingStatus.cancelled &&
+        job.cancelledByRole == CancelledByRole.client;
 
     return GestureDetector(
       onTap: () => context.push('/worker/job/${job.id}').then((_) {
@@ -218,6 +226,56 @@ class _JobCard extends ConsumerWidget {
                 color: _kGreen,
                 borderRadius:
                     const BorderRadius.vertical(top: Radius.circular(18)),
+              ),
+            )
+          else if (cancelledByClient)
+            Container(
+              height: 3,
+              decoration: const BoxDecoration(
+                color: _kRed,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+              ),
+            ),
+
+          if (cancelledByClient)
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.fromLTRB(14, 12, 14, 0),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF1F2),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFFECDD3)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.info_outline_rounded, size: 14, color: _kRed),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Client cancelled this booking',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: _kRed,
+                          ),
+                        ),
+                        if (job.cancellationReason != null &&
+                            job.cancellationReason!.isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            job.cancellationReason!,
+                            style: const TextStyle(fontSize: 11.5, color: _kGray),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
 

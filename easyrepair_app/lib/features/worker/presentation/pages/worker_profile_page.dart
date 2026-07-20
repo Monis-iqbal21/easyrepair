@@ -15,6 +15,7 @@ import '../../../../core/presentation/pages/general_info_page.dart';
 import '../../../../core/presentation/pages/privacy_policy_page.dart';
 import '../../../../core/presentation/pages/terms_conditions_page.dart';
 import '../pages/worker_reviews_page.dart';
+import '../providers/worker_providers.dart';
 import '../providers/worker_review_providers.dart';
 import '../widgets/worker_bottom_nav_bar.dart';
 
@@ -179,6 +180,8 @@ class _WorkerProfilePageState extends ConsumerState<WorkerProfilePage> {
     final user = ref.watch(authStateProvider).valueOrNull;
     final avatarPath = ref.watch(_workerLocalAvatarPathProvider);
     final cloudUrl = ref.watch(_workerCloudAvatarUrlProvider);
+    final skills = ref.watch(workerProfileProvider).valueOrNull?.skills ?? const [];
+    final mainSkillName = skills.isNotEmpty ? skills.first.categoryName : null;
     final firstName = user?.firstName ?? '';
     final lastName = user?.lastName ?? '';
     final fullName = '$firstName $lastName'.trim();
@@ -312,6 +315,21 @@ class _WorkerProfilePageState extends ConsumerState<WorkerProfilePage> {
                         fontWeight: FontWeight.w600,
                         color: _kOrange,
                       ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Center(
+                  child: Text(
+                    mainSkillName != null
+                        ? 'Main Skill: $mainSkillName'
+                        : 'No main skill selected yet',
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w500,
+                      color: mainSkillName != null
+                          ? const Color(0xFF1A1A1A)
+                          : const Color(0xFF6B7280),
                     ),
                   ),
                 ),

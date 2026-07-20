@@ -101,11 +101,13 @@ class BookingStandardServiceItemModel {
 
 class BookingWorkerExclusionModel {
   final String workerProfileId;
+  final String? workerName;
   final String? reason;
   final DateTime createdAt;
 
   const BookingWorkerExclusionModel({
     required this.workerProfileId,
+    this.workerName,
     this.reason,
     required this.createdAt,
   });
@@ -113,6 +115,7 @@ class BookingWorkerExclusionModel {
   factory BookingWorkerExclusionModel.fromJson(Map<String, dynamic> json) {
     return BookingWorkerExclusionModel(
       workerProfileId: json['workerProfileId'] as String? ?? '',
+      workerName: json['workerName'] as String?,
       reason: json['reason'] as String?,
       createdAt:
           DateTime.tryParse(json['createdAt'] as String? ?? '') ?? DateTime.now(),
@@ -121,6 +124,7 @@ class BookingWorkerExclusionModel {
 
   BookingWorkerExclusionEntity toEntity() => BookingWorkerExclusionEntity(
         workerProfileId: workerProfileId,
+        workerName: workerName,
         reason: reason,
         createdAt: createdAt,
       );
@@ -227,6 +231,7 @@ class BookingModel {
   final String city;
   final double latitude;
   final double longitude;
+  final double? distanceKm;
   final DateTime? completedAt;
   final String? cancellationReason;
   final String? cancelledByRole;
@@ -250,6 +255,7 @@ class BookingModel {
   final double? inspectionFeeSnapshot;
   final List<BookingWorkerExclusionModel> workerExclusions;
   final String? lastWorkerCancellationReason;
+  final String? lastWorkerCancellationWorkerName;
   final bool inspectionReportSubmitted;
   final String? inspectionDecisionStatus;
   final DateTime? inspectionReportSubmittedAt;
@@ -275,6 +281,7 @@ class BookingModel {
     this.city = '',
     this.latitude = 0,
     this.longitude = 0,
+    this.distanceKm,
     this.completedAt,
     this.cancellationReason,
     this.cancelledByRole,
@@ -298,6 +305,7 @@ class BookingModel {
     this.inspectionFeeSnapshot,
     this.workerExclusions = const [],
     this.lastWorkerCancellationReason,
+    this.lastWorkerCancellationWorkerName,
     this.inspectionReportSubmitted = false,
     this.inspectionDecisionStatus,
     this.inspectionReportSubmittedAt,
@@ -344,6 +352,7 @@ class BookingModel {
       city: json['city'] as String? ?? '',
       latitude: (json['latitude'] as num?)?.toDouble() ?? 0,
       longitude: (json['longitude'] as num?)?.toDouble() ?? 0,
+      distanceKm: (json['distanceKm'] as num?)?.toDouble(),
       completedAt: json['completedAt'] != null
           ? DateTime.tryParse(json['completedAt'] as String)
           : null,
@@ -390,6 +399,8 @@ class BookingModel {
           .toList(),
       lastWorkerCancellationReason:
           json['lastWorkerCancellationReason'] as String?,
+      lastWorkerCancellationWorkerName:
+          json['lastWorkerCancellationWorkerName'] as String?,
       inspectionReportSubmitted:
           json['inspectionReportSubmitted'] as bool? ?? false,
       inspectionDecisionStatus: json['inspectionDecisionStatus'] as String?,
@@ -442,6 +453,7 @@ class BookingModel {
       city: city,
       latitude: latitude,
       longitude: longitude,
+      distanceKm: distanceKm,
       completedAt: completedAt,
       cancellationReason: cancellationReason,
       cancelledByRole: CancelledByRoleX.fromRaw(cancelledByRole),
@@ -466,6 +478,7 @@ class BookingModel {
       inspectionFeeSnapshot: inspectionFeeSnapshot,
       workerExclusions: workerExclusions.map((e) => e.toEntity()).toList(),
       lastWorkerCancellationReason: lastWorkerCancellationReason,
+      lastWorkerCancellationWorkerName: lastWorkerCancellationWorkerName,
       inspectionReportSubmitted: inspectionReportSubmitted,
       inspectionDecisionStatus:
           InspectionDecisionStatusX.fromRaw(inspectionDecisionStatus),

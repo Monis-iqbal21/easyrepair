@@ -68,13 +68,24 @@ export class WorkerJobResponseDto {
   cancelledByRole: 'CLIENT' | 'WORKER' | null;
   estimatedPrice: number | null;
   finalPrice: number | null;
-  address: string;
+  /**
+   * Privacy: exact address/coordinates are only populated once this worker
+   * is actually assigned to the booking. Not-yet-assigned callers (the New
+   * Job detail fallback) receive `null` here — use `city` + `distanceKm`
+   * instead.
+   */
+  address: string | null;
   city: string;
-  latitude: number;
-  longitude: number;
+  latitude: number | null;
+  longitude: number | null;
+  /** Server-computed distance in km — only present when not yet assigned. */
+  distanceKm: number | null;
   /** First + last name of the client who created the booking. */
   clientName: string | null;
-  /** Client's phone number — powers the worker's "Call" button once hired. */
+  /**
+   * Client's phone number — powers the worker's "Call" button once hired.
+   * Privacy: `null` until this worker is actually assigned.
+   */
   clientPhone: string | null;
   attachments: WorkerJobAttachmentDto[];
   statusHistory: WorkerJobStatusHistoryDto[];

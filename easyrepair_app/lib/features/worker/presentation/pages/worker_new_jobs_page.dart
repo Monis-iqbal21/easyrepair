@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/errors/failures.dart';
+import '../../../../core/utils/currency_utils.dart';
 import '../../../bookings/domain/entities/booking_entity.dart';
 import '../../../bookings/presentation/widgets/inspection_badge.dart';
 import '../../domain/entities/new_job_entity.dart';
@@ -32,6 +33,11 @@ class _WorkerNewJobsPageState extends ConsumerState<WorkerNewJobsPage>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // Silent refresh whenever this tab is opened (each bottom-nav tap
+    // rebuilds this page via context.go) — cheap, keeps cached data visible
+    // while refetching, and catches any assignment missed by the realtime
+    // push handlers in app.dart.
+    ref.read(newJobsProvider.notifier).refresh();
   }
 
   @override
@@ -343,7 +349,7 @@ class _NewJobCard extends ConsumerWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'PKR ${job.standardServicesTotal.toStringAsFixed(0)}',
+                      formatPkr(job.standardServicesTotal),
                       style: const TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,

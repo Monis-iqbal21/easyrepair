@@ -9,6 +9,6 @@ class CancelBookingUseCase {
 
   const CancelBookingUseCase(this._repository);
 
-  Future<Either<Failure, BookingEntity>> call(String bookingId) =>
-      _repository.cancelBooking(bookingId);
+  Future<Either<Failure, BookingEntity>> call(String bookingId, String reason) =>
+      _repository.cancelBooking(bookingId, reason);
 }

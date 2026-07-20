@@ -19,6 +19,7 @@ import {
 } from './workers.processor';
 import { UpdateSkillsDto } from './dto/update-skills.dto';
 import { UpdateLocationDto } from './dto/update-location.dto';
+import { haversineKm } from '../../common/utils/geo.util';
 import {
   WorkerJobAttachmentDto,
   WorkerJobResponseDto,
@@ -127,7 +128,7 @@ export class WorkersService {
       profile.skills.length === 0
     ) {
       throw new UnprocessableEntityException(
-        'You must add at least one skill before going online',
+        'Please select your main skill first.',
       );
     }
 
@@ -232,11 +233,20 @@ export class WorkersService {
     );
   }
 
-  /** Replace all skills for a worker. */
+  /**
+   * Replace all skills for a worker.
+   * Product rule: exactly one main skill for now — reject more than one with
+   * a clear message rather than relying solely on the DTO's ArrayMaxSize(1),
+   * so the error text is guaranteed regardless of pipe configuration.
+   */
   async updateSkills(userId: string, dto: UpdateSkillsDto) {
     this.logger.log(
       `[updateSkills] userId=${userId} categoryIds=${JSON.stringify(dto.categoryIds)}`,
     );
+
+    if (dto.categoryIds.length > 1) {
+      throw new BadRequestException('Only one main skill is allowed.');
+    }
 
     const profile = await this.workersRepository.findByUserId(userId);
     if (!profile) {
@@ -289,7 +299,7 @@ export class WorkersService {
       profile.id,
       statusFilter,
     );
-    return jobs.map((j) => this._toJobDto(j));
+    return jobs.map((j) => this._toJobDto(j, profile.id));
   }
 
   /** Get a single job by id, scoped to the authenticated worker. */
@@ -329,7 +339,10 @@ export class WorkersService {
     }
 
     this.logger.debug(`[getWorkerJobById] found job bookingId=${bookingId} status=${job.status}`);
-    return this._toJobDto(job);
+    return this._toJobDto(job, profile.id, {
+      lat: profile.currentLat,
+      lng: profile.currentLng,
+    });
   }
 
   /**
@@ -382,7 +395,7 @@ export class WorkersService {
       });
     }
 
-    return this._toJobDto(updated);
+    return this._toJobDto(updated, profile.id);
   }
 
   /**
@@ -453,7 +466,7 @@ export class WorkersService {
       }
     }
 
-    return this._toJobDto(updated);
+    return this._toJobDto(updated, profile.id);
   }
 
   /**
@@ -505,12 +518,24 @@ export class WorkersService {
       });
     }
 
-    return this._toJobDto(updated);
+    return this._toJobDto(updated, profile.id);
   }
 
   // ── Private helpers ──────────────────────────────────────────────────────
 
-  private _toJobDto(job: WorkerJobWithRelations): WorkerJobResponseDto {
+  /**
+   * Maps a booking to the worker-facing DTO.
+   * Privacy gate: `isAssignedToCaller` (job.workerProfileId === workerProfileId)
+   * decides whether exact address/coordinates/client phone are included.
+   * Not-yet-assigned workers (the New Job detail fallback path in
+   * getWorkerJobById) only ever get city + a server-computed distanceKm —
+   * never the exact location or the client's phone number.
+   */
+  private _toJobDto(
+    job: WorkerJobWithRelations,
+    workerProfileId: string,
+    workerCoords?: { lat: number | null; lng: number | null },
+  ): WorkerJobResponseDto {
     const attachments: WorkerJobAttachmentDto[] = job.attachments.map((a) => ({
       id: a.id,
       type: a.type,
@@ -542,6 +567,11 @@ export class WorkersService {
       quantity: item.quantity,
     }));
 
+    const isAssignedToCaller = job.workerProfileId === workerProfileId;
+    const distanceKm = isAssignedToCaller
+      ? null
+      : haversineKm(job.latitude, job.longitude, workerCoords?.lat, workerCoords?.lng);
+
     return {
       id: job.id,
       serviceCategory: job.category.name,
@@ -567,12 +597,16 @@ export class WorkersService {
       cancelledByRole: (job.cancelledByRole as 'CLIENT' | 'WORKER' | null) ?? null,
       estimatedPrice: job.estimatedPrice ?? null,
       finalPrice: job.finalPrice ?? null,
-      address: job.addressLine,
+      // Privacy: exact address/coordinates/phone are only ever included once
+      // this worker is actually assigned. Not-yet-assigned callers (New Job
+      // detail) only get city + distanceKm.
+      address: isAssignedToCaller ? job.addressLine : null,
       city: job.city,
-      latitude: job.latitude,
-      longitude: job.longitude,
+      latitude: isAssignedToCaller ? job.latitude : null,
+      longitude: isAssignedToCaller ? job.longitude : null,
+      distanceKm,
       clientName,
-      clientPhone: cp?.user?.phone ?? null,
+      clientPhone: isAssignedToCaller ? (cp?.user?.phone ?? null) : null,
       attachments,
       statusHistory,
       review: job.review

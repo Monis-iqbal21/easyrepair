@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/utils/currency_utils.dart';
 import '../../domain/entities/booking_entity.dart';
 import '../providers/booking_providers.dart';
 
@@ -54,7 +55,7 @@ class InspectionStatusStrip extends StatelessWidget {
         final fee = b.inspectionFeeSnapshot;
         return (
           'Closed after inspection — client pays inspection fee only'
-              '${fee != null ? ': Rs ${fee.toStringAsFixed(0)}' : '.'}',
+              '${fee != null ? ': ${formatPkr(fee)}' : '.'}',
           Icons.info_outline_rounded,
           const Color(0xFF2563EB),
         );

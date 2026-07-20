@@ -10,6 +10,7 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/errors/failures.dart';
+import '../../../../core/utils/currency_utils.dart';
 import '../../../../core/utils/distance_utils.dart';
 import '../../domain/entities/booking_entity.dart';
 import '../providers/booking_providers.dart';
@@ -602,7 +603,7 @@ class _StatusCard extends StatelessWidget {
                     color: Colors.white.withValues(alpha: 0.2)),
               ),
               child: Text(
-                'Hired at PKR ${price.toStringAsFixed(0)}',
+                'Hired at ${formatPkr(price)}',
                 style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,

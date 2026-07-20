@@ -205,11 +205,13 @@ export class WorkersRepository {
    * Replace all worker skills atomically.
    * Deletes existing skills then creates the new set inside an interactive
    * transaction so that the final findMany is guaranteed to see the new rows.
+   * Callers (WorkersService.updateSkills) already enforce at most one
+   * categoryId, but this method itself only trusts what it's given.
    *
-   * Also flips WorkerProfile.profileCompleted — having at least one skill is
+   * Also flips WorkerProfile.profileCompleted — having exactly one skill is
    * the only mandatory setup step gating hireability today (STANDARD/
    * INSPECTION direct-hire and BIDDING's createBid/editBid all require
-   * profileCompleted=true). Clearing all skills correctly re-locks hireability.
+   * profileCompleted=true). Clearing the skill correctly re-locks hireability.
    */
   async replaceSkills(workerProfileId: string, categoryIds: string[]) {
     return this.prisma.$transaction(async (tx) => {
@@ -224,7 +226,7 @@ export class WorkersRepository {
 
       await tx.workerProfile.update({
         where: { id: workerProfileId },
-        data: { profileCompleted: categoryIds.length > 0 },
+        data: { profileCompleted: categoryIds.length === 1 },
       });
 
       return tx.workerSkill.findMany({

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:intl/intl.dart';
 
+import '../../../../core/utils/currency_utils.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../../notifications/presentation/providers/notification_providers.dart';
 import '../../domain/entities/worker_profile_entity.dart';
@@ -394,7 +395,7 @@ class _HeroCard extends ConsumerWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Rs. ${profile.stats.todayEarnings.toStringAsFixed(0)}',
+                    formatPkr(profile.stats.todayEarnings),
                     style: const TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.w800,
@@ -1000,6 +1001,10 @@ class _SkillsSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Only one main skill is allowed — show the first row if present. Legacy
+    // profiles saved before this rule may still carry more than one; only
+    // the first is shown here, and re-saving via the sheet trims to one.
+    final mainSkill = skills.isNotEmpty ? skills.first : null;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
       child: Column(
@@ -1008,7 +1013,7 @@ class _SkillsSection extends ConsumerWidget {
           Row(
             children: [
               const Text(
-                'Your Skills',
+                'Main Skill',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
@@ -1019,7 +1024,7 @@ class _SkillsSection extends ConsumerWidget {
               GestureDetector(
                 onTap: () => _showSkillsSheet(context, ref),
                 child: Text(
-                  skills.isEmpty ? '+ Add Skills' : 'Edit',
+                  mainSkill == null ? '+ Select Main Skill' : 'Edit',
                   style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -1044,42 +1049,29 @@ class _SkillsSection extends ConsumerWidget {
                 ),
               ],
             ),
-            child: skills.isEmpty
+            child: mainSkill == null
                 ? const Text(
-                    'No skills added yet — add skills to receive jobs.',
+                    'No main skill selected yet.',
                     style: TextStyle(fontSize: 13, color: _kGray),
                   )
-                : Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: skills.asMap().entries.map((entry) {
-                      final i = entry.key;
-                      final skill = entry.value;
-                      final isFeatured = i < 2;
-                      return Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: isFeatured
-                              ? _kOrange.withValues(alpha: 0.09)
-                              : const Color(0xFFF1F5F9),
-                          borderRadius: BorderRadius.circular(50),
-                          border: Border.all(
-                            color: isFeatured
-                                ? _kOrange.withValues(alpha: 0.3)
-                                : _kBorder,
-                          ),
-                        ),
-                        child: Text(
-                          skill.categoryName,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: isFeatured ? _kOrange : _kDark,
-                          ),
-                        ),
-                      );
-                    }).toList(),
+                : Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: _kOrange.withValues(alpha: 0.09),
+                      borderRadius: BorderRadius.circular(50),
+                      border: Border.all(
+                        color: _kOrange.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Text(
+                      mainSkill.categoryName,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: _kOrange,
+                      ),
+                    ),
                   ),
           ),
         ],
@@ -1315,9 +1307,14 @@ class _ReviewItem extends StatelessWidget {
 
 Future<void> _showSkillsSheet(BuildContext context, WidgetRef ref) async {
   final profile = ref.read(workerProfileProvider).valueOrNull;
-  final existingIds =
-      profile?.skills.map((s) => s.categoryId).toSet() ?? {};
-  ref.read(selectedCategoryIdsProvider.notifier).state = existingIds;
+  // Only one main skill is allowed — pre-select just the first existing one
+  // (legacy profiles saved before this rule may carry more than one; opening
+  // the sheet already narrows the working selection down to a single skill).
+  final existingId = profile?.skills.isNotEmpty == true
+      ? profile!.skills.first.categoryId
+      : null;
+  ref.read(selectedCategoryIdsProvider.notifier).state =
+      existingId != null ? {existingId} : {};
 
   await showModalBottomSheet<void>(
     context: context,
@@ -1366,7 +1363,7 @@ class _SkillsSheet extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Add your skills first',
+                  'Select your main skill',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w700,
@@ -1375,7 +1372,7 @@ class _SkillsSheet extends ConsumerWidget {
                 ),
                 SizedBox(height: 6),
                 Text(
-                  'Select at least one service to start receiving work',
+                  'Select your main skill to start receiving work',
                   style: TextStyle(fontSize: 13, color: _kGray),
                 ),
               ],
@@ -1395,16 +1392,11 @@ class _SkillsSheet extends ConsumerWidget {
             data: (categories) => _CategoryChips(
               categories: categories,
               selected: selected,
+              // Single-select: choosing a category always replaces the
+              // current selection (radio-button semantics) rather than
+              // toggling membership — a worker may have only one main skill.
               onToggle: (id) {
-                final current =
-                    Set<String>.from(ref.read(selectedCategoryIdsProvider));
-                if (current.contains(id)) {
-                  current.remove(id);
-                } else {
-                  current.add(id);
-                }
-                ref.read(selectedCategoryIdsProvider.notifier).state =
-                    current;
+                ref.read(selectedCategoryIdsProvider.notifier).state = {id};
               },
             ),
           ),
@@ -1460,7 +1452,7 @@ class _SkillsSheet extends ConsumerWidget {
                       )
                     : Text(
                         selected.isEmpty
-                            ? 'Select at least one skill'
+                            ? 'Select your main skill'
                             : 'Save & Go Online',
                         style: const TextStyle(
                           fontSize: 15,

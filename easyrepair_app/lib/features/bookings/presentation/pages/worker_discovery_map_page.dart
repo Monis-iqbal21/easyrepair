@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../../../core/errors/failures.dart';
+import '../../../../core/utils/currency_utils.dart';
 import 'track_worker_page.dart';
 import '../../../bids/domain/entities/bid_entity.dart';
 import '../../../bids/domain/repositories/bid_repository.dart';
@@ -115,7 +116,7 @@ class _WorkerDiscoveryMapPageState extends ConsumerState<WorkerDiscoveryMapPage>
           icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
           infoWindow: InfoWindow(
             title: bw.firstName,
-            snippet: 'PKR ${bw.bid.amount.toStringAsFixed(0)}',
+            snippet: formatPkr(bw.bid.amount),
           ),
         ),
       );
@@ -490,7 +491,7 @@ class _BidOfferCard extends ConsumerWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      'PKR ${bidWorker.bid.amount.toStringAsFixed(0)}',
+                      formatPkr(bidWorker.bid.amount),
                       style: const TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
@@ -612,7 +613,7 @@ class _BidOfferCard extends ConsumerWidget {
           ),
         ),
         content: Text(
-          'Accept ${bidWorker.fullName}\'s bid of PKR ${bidWorker.bid.amount.toStringAsFixed(0)}?',
+          'Accept ${bidWorker.fullName}\'s bid of ${formatPkr(bidWorker.bid.amount)}?',
           style: const TextStyle(fontSize: 13, color: _kGray),
         ),
         actions: [

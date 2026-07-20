@@ -17,6 +17,7 @@ export class BookingStandardServiceItemDto {
 
 export class BookingWorkerExclusionDto {
   workerProfileId: string;
+  workerName: string | null;
   reason: string | null;
   createdAt: string;
 }
@@ -118,6 +119,8 @@ export class BookingResponseDto {
   workerExclusions: BookingWorkerExclusionDto[];
   /** Convenience: reason the most recently assigned worker cancelled, if any — for the client's "Previous Ustaad cancelled: ..." strip. */
   lastWorkerCancellationReason: string | null;
+  /** Convenience: name of the most recently assigned worker who cancelled, if any. */
+  lastWorkerCancellationWorkerName: string | null;
   /** INSPECTION lane: true once the assigned worker has submitted their report. */
   inspectionReportSubmitted: boolean;
   /** INSPECTION lane: null until a report exists, then tracks the client's decision. */

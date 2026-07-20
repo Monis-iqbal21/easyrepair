@@ -16,6 +16,7 @@ import 'package:video_player/video_player.dart';
 import '../../../../core/config/app_config.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/presentation/responsive_utils.dart';
+import '../../../../core/utils/currency_utils.dart';
 import '../../../../features/bookings/domain/entities/booking_entity.dart';
 import '../../../../features/bookings/domain/entities/create_booking_request.dart';
 import '../../../../features/bookings/domain/entities/update_booking_request.dart';
@@ -2838,7 +2839,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                                     ),
                                   ),
                                   Text(
-                                    'Rs ${s.price.toStringAsFixed(0)}',
+                                    formatPkr(s.price),
                                     style: const TextStyle(
                                       fontSize: 12.5,
                                       fontWeight: FontWeight.w600,
@@ -2862,7 +2863,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                                 ),
                               ),
                               Text(
-                                'Rs ${_selectedStandardServicesTotal.toStringAsFixed(0)}',
+                                formatPkr(_selectedStandardServicesTotal),
                                 style: const TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w800,
@@ -2943,7 +2944,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
             ),
             const SizedBox(width: 8),
             Text(
-              'Rs ${service.price.toStringAsFixed(0)}',
+              formatPkr(service.price),
               style: TextStyle(
                 fontSize: 13.5,
                 fontWeight: FontWeight.w700,
@@ -3005,7 +3006,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                 ),
               ),
               Text(
-                fee != null ? 'Rs ${fee.toStringAsFixed(0)}' : 'Not available',
+                fee != null ? formatPkr(fee) : 'Not available',
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,

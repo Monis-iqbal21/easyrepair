@@ -6,6 +6,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/errors/failures.dart';
+import '../../../../core/utils/currency_utils.dart';
 import '../../../bids/domain/entities/bid_entity.dart';
 import '../../../bids/domain/repositories/bid_repository.dart';
 import '../../../bids/presentation/providers/bid_providers.dart';
@@ -335,6 +336,11 @@ class _JobLocationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Privacy: the backend never sends exact address/lat/lng for a job the
+    // worker hasn't been hired for yet (see WorkersService._toJobDto /
+    // BidsService.getNewJobsForWorker) — latitude/longitude default to 0 and
+    // addressLine to '' when absent, so this naturally degrades to the
+    // approximate area + distance view below without a map or exact pin.
     final hasCoords = job.latitude != 0 || job.longitude != 0;
     final position  = LatLng(job.latitude, job.longitude);
 
@@ -348,7 +354,7 @@ class _JobLocationCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Map (only when coordinates are valid)
+          // Map (only when coordinates are valid — i.e. never before hire)
           if (hasCoords)
             SizedBox(
               height: 190,
@@ -375,7 +381,7 @@ class _JobLocationCard extends StatelessWidget {
               ),
             ),
 
-          // Address row
+          // Approximate area + distance row (pre-hire) / address row (hired)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             child: Row(
@@ -384,15 +390,36 @@ class _JobLocationCard extends StatelessWidget {
                 const Icon(Icons.location_on_rounded, size: 16, color: _kGreen),
                 const SizedBox(width: 6),
                 Expanded(
-                  child: Text(
-                    job.addressLine.isNotEmpty
-                        ? '${job.addressLine}, ${job.city}'
-                        : job.city,
-                    style: const TextStyle(
-                      fontSize: 12.5,
-                      color: _kGray,
-                      height: 1.4,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        job.addressLine?.isNotEmpty == true
+                            ? '${job.addressLine}, ${job.city}'
+                            : (job.city.isNotEmpty ? job.city : 'Area not available'),
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          color: _kGray,
+                          height: 1.4,
+                        ),
+                      ),
+                      if (!hasCoords && job.distanceKm != null) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          job.distanceLabel.isNotEmpty
+                              ? '${job.distanceLabel} away'
+                              : '',
+                          style: const TextStyle(fontSize: 11.5, color: _kLight),
+                        ),
+                      ],
+                      if (!hasCoords) ...[
+                        const SizedBox(height: 4),
+                        const Text(
+                          'Exact address is shared once the client accepts your bid.',
+                          style: TextStyle(fontSize: 11, color: _kLight, height: 1.3),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
               ],
@@ -443,7 +470,7 @@ class _CurrentBidCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'PKR ${bid.amount.toStringAsFixed(0)}',
+                  formatPkr(bid.amount),
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w700,
@@ -670,7 +697,7 @@ class _BidFeedTile extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      'PKR ${bid.amount.toStringAsFixed(0)}',
+                      formatPkr(bid.amount),
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,

@@ -18,7 +18,7 @@ abstract class BookingRemoteDataSource {
   Future<List<BookingModel>> getClientBookings();
   Future<BookingModel> getBookingById(String bookingId);
   Future<BookingModel> updateBooking(UpdateBookingRequest request);
-  Future<BookingModel> cancelBooking(String bookingId);
+  Future<BookingModel> cancelBooking(String bookingId, String reason);
   Future<BookingModel> submitReview(ReviewRequest request);
   Future<BookingAttachmentModel> uploadAttachment(
     String bookingId,
@@ -157,9 +157,12 @@ class BookingRemoteDataSourceImpl implements BookingRemoteDataSource {
   }
 
   @override
-  Future<BookingModel> cancelBooking(String bookingId) async {
+  Future<BookingModel> cancelBooking(String bookingId, String reason) async {
     try {
-      final response = await _dio.patch('/bookings/$bookingId/cancel');
+      final response = await _dio.patch(
+        '/bookings/$bookingId/cancel',
+        data: {'reason': reason},
+      );
       final data = response.data['data'] as Map<String, dynamic>;
       return BookingModel.fromJson(data);
     } on DioException catch (e) {

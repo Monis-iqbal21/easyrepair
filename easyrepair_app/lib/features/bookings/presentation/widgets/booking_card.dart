@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/utils/currency_utils.dart';
 import '../../domain/entities/booking_entity.dart';
 import 'inspection_badge.dart';
 import 'status_badge.dart';
@@ -653,7 +654,7 @@ class _PriceTag extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         Text(
-          'EGP ${price.toStringAsFixed(0)}',
+          formatPkr(price),
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w700,

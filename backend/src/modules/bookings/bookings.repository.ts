@@ -113,6 +113,10 @@ export const BOOKING_INCLUDE = {
       workerProfileId: true,
       reason: true,
       createdAt: true,
+      // Powers the client's "Previous Ustaad: [name]" cancellation strip —
+      // BookingWorkerExclusion already has a workerProfile relation, so no
+      // migration is needed to surface the name.
+      workerProfile: { select: { firstName: true, lastName: true } },
     },
     orderBy: { createdAt: 'desc' as const },
   },

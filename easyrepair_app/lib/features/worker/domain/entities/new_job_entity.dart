@@ -37,7 +37,9 @@ class NewJobEntity {
   final BookingStatus status;
   final BookingUrgency urgency;
   final TimeSlot? timeSlot;
-  final String addressLine;
+  /// Null before hire — the backend only exposes exact address/coordinates
+  /// once a worker is assigned. Use [city] + [distanceKm] instead.
+  final String? addressLine;
   final String city;
   final double latitude;
   final double longitude;
@@ -61,7 +63,7 @@ class NewJobEntity {
     required this.status,
     required this.urgency,
     this.timeSlot,
-    required this.addressLine,
+    this.addressLine,
     required this.city,
     required this.latitude,
     required this.longitude,

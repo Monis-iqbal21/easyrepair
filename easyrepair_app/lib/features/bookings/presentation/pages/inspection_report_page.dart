@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/errors/failures.dart';
+import '../../../../core/utils/currency_utils.dart';
 import '../../domain/entities/booking_entity.dart';
 import '../../domain/entities/inspection_report_entity.dart';
 import '../providers/booking_providers.dart';
@@ -190,7 +191,7 @@ class _ReportBody extends ConsumerWidget {
                               style: const TextStyle(fontSize: 13.5, color: _kDark),
                             ),
                           ),
-                          Text('Rs ${p.lineTotal.toStringAsFixed(0)}',
+                          Text(formatPkr(p.lineTotal),
                               style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: _kDark)),
                         ],
                       ),
@@ -219,7 +220,7 @@ class _ReportBody extends ConsumerWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text('Repair quote total', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: _kDark)),
-                    Text('Rs ${report.repairQuoteTotal.toStringAsFixed(0)}',
+                    Text(formatPkr(report.repairQuoteTotal),
                         style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17, color: _kPrimary)),
                   ],
                 ),
@@ -286,7 +287,7 @@ class _ReportBody extends ConsumerWidget {
         children: [
           Text(label, style: const TextStyle(fontSize: 13, color: _kGray)),
           Text(
-            'Rs ${value.toStringAsFixed(0)}',
+            formatPkr(value),
             style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _kDark),
           ),
         ],

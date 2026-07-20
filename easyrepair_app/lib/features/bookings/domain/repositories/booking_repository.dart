@@ -27,7 +27,11 @@ abstract class BookingRepository {
   );
 
   /// Cancel a booking by id (only valid for PENDING/ACCEPTED status).
-  Future<Either<Failure, BookingEntity>> cancelBooking(String bookingId);
+  /// A reason is required — the backend rejects an empty reason.
+  Future<Either<Failure, BookingEntity>> cancelBooking(
+    String bookingId,
+    String reason,
+  );
 
   /// Submit a review for a completed booking.
   Future<Either<Failure, BookingEntity>> submitReview(ReviewRequest request);

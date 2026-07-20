@@ -14,6 +14,7 @@ import { BidResponseDto, BidWorkerDto } from './dto/bid-response.dto';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ChatService } from '../chat/chat.service';
 import { WorkerUnavailableError } from '../../common/errors/worker-unavailable.error';
+import { haversineKm } from '../../common/utils/geo.util';
 
 @Injectable()
 export class BidsService {
@@ -201,7 +202,7 @@ export class BidsService {
     return bids.map((bid) => {
       const wp = bid.workerProfile;
       const completedJobs = wp.bookings.length;
-      const distanceKm = this._haversineKm(
+      const distanceKm = haversineKm(
         booking.latitude,
         booking.longitude,
         wp.currentLat,
@@ -267,7 +268,7 @@ export class BidsService {
     return bids.map((bid) => {
       const wp = bid.workerProfile;
       const completedJobs = wp.bookings.length;
-      const distanceKm = this._haversineKm(
+      const distanceKm = haversineKm(
         booking.latitude,
         booking.longitude,
         wp.currentLat,
@@ -336,6 +337,7 @@ export class BidsService {
         bidId,
         bid.booking.id,
         bid.workerProfile.id,
+        Number(bid.amount),
       );
     } catch (err) {
       if (err instanceof WorkerUnavailableError) {
@@ -397,7 +399,7 @@ export class BidsService {
     );
 
     const result = bookings.map((b) => {
-      const distanceKm = this._haversineKm(
+      const distanceKm = haversineKm(
         b.latitude,
         b.longitude,
         workerProfile.currentLat,
@@ -414,10 +416,11 @@ export class BidsService {
         status: b.status,
         urgency: b.urgency,
         timeSlot: b.timeSlot,
-        addressLine: b.addressLine,
+        // Privacy: unassigned/pending workers must never receive the exact
+        // address — only city + server-computed distanceKm below. Exact
+        // address/lat/lng are only exposed once a worker is actually hired
+        // (see WorkersService._toJobDto's isAssignedToCaller gate).
         city: b.city,
-        latitude: b.latitude,
-        longitude: b.longitude,
         scheduledAt: b.scheduledAt,
         createdAt: b.createdAt,
         inspection: b.inspection,
@@ -471,26 +474,4 @@ export class BidsService {
     }
   }
 
-  /** Returns null when either coordinate pair is missing. */
-  private _haversineKm(
-    lat1: number,
-    lng1: number,
-    lat2: number | null | undefined,
-    lng2: number | null | undefined,
-  ): number | null {
-    if (lat2 == null || lng2 == null) return null;
-    const R = 6371;
-    const dLat = this._deg2rad(lat2 - lat1);
-    const dLng = this._deg2rad(lng2 - lng1);
-    const a =
-      Math.sin(dLat / 2) ** 2 +
-      Math.cos(this._deg2rad(lat1)) *
-        Math.cos(this._deg2rad(lat2)) *
-        Math.sin(dLng / 2) ** 2;
-    return +(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))).toFixed(2);
-  }
-
-  private _deg2rad(deg: number) {
-    return (deg * Math.PI) / 180;
-  }
 }

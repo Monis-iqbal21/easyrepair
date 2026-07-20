@@ -122,7 +122,7 @@ class WorkerRepositoryImpl implements WorkerRepository {
           ? BookingUrgency.urgent
           : BookingUrgency.normal,
       timeSlot: _parseTimeSlot(j['timeSlot'] as String?),
-      addressLine: j['addressLine'] as String? ?? '',
+      addressLine: j['addressLine'] as String?,
       city: j['city'] as String? ?? '',
       latitude: (j['latitude'] as num?)?.toDouble() ?? 0,
       longitude: (j['longitude'] as num?)?.toDouble() ?? 0,

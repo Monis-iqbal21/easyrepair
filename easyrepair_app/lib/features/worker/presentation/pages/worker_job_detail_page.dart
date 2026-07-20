@@ -11,6 +11,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/config/app_config.dart';
 import '../../../../core/errors/failures.dart';
+import '../../../../core/utils/currency_utils.dart';
 import '../../../bookings/domain/entities/booking_entity.dart';
 import '../../../bookings/presentation/providers/booking_providers.dart';
 import '../../../bookings/presentation/widgets/inspection_badge.dart';
@@ -121,6 +122,8 @@ class _JobBody extends ConsumerWidget {
     final isBidding    = job.lane == BookingLane.bidding;
     final isHired     = job.assignedWorker != null || job.status != BookingStatus.pending;
     final canComplete = job.status.isWorkerActive && !isStandard && !isInspection && !isBidding;
+    final cancelledByClient = job.status == BookingStatus.cancelled &&
+        job.cancelledByRole == CancelledByRole.client;
 
     return Column(
       children: [
@@ -132,6 +135,12 @@ class _JobBody extends ConsumerWidget {
               children: [
                 _StatusCard(job: job),
                 const SizedBox(height: 12),
+
+                // ── Client cancelled this (previously assigned) job ──────
+                if (cancelledByClient) ...[
+                  _ClientCancelledBanner(reason: job.cancellationReason),
+                  const SizedBox(height: 16),
+                ],
 
                 // ── STANDARD lane: selected services + prices ────────────
                 if (isStandard && job.standardServiceItems.isNotEmpty) ...[
@@ -339,7 +348,15 @@ class _JobBody extends ConsumerWidget {
                 const SizedBox(height: 16),
 
                 // ── Location ─────────────────────────────────────────────
-                _LocationSection(job: job),
+                // Privacy: exact address/map/directions are only shown once
+                // this Ustaad is actually hired — before that the backend
+                // never sends exact coordinates/address (see
+                // WorkersService._toJobDto), so only an approximate area +
+                // distance card is shown.
+                if (isHired)
+                  _LocationSection(job: job)
+                else
+                  _ApproximateLocationCard(job: job),
                 const SizedBox(height: 16),
 
                 // ── Timeline ─────────────────────────────────────────────
@@ -391,13 +408,13 @@ class _JobBody extends ConsumerWidget {
                           _InfoRow(
                             icon: Icons.attach_money_rounded,
                             label: 'Estimated',
-                            value: 'PKR ${job.estimatedPrice!.toStringAsFixed(0)}',
+                            value: formatPkr(job.estimatedPrice),
                           ),
                         if (job.finalPrice != null)
                           _InfoRow(
                             icon: Icons.payments_outlined,
                             label: 'Final Price',
-                            value: 'PKR ${job.finalPrice!.toStringAsFixed(0)}',
+                            value: formatPkr(job.finalPrice),
                           ),
                       ],
                     ),
@@ -473,7 +490,7 @@ class _StandardServicesSection extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    'PKR ${item.lineTotal.toStringAsFixed(0)}',
+                    formatPkr(item.lineTotal),
                     style: const TextStyle(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w600,
@@ -494,7 +511,7 @@ class _StandardServicesSection extends StatelessWidget {
                 ),
               ),
               Text(
-                'PKR ${(job.finalPrice ?? job.standardServicesTotal ?? 0).toStringAsFixed(0)}',
+                formatPkr(job.finalPrice ?? job.standardServicesTotal ?? 0),
                 style: const TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w800,
@@ -1526,6 +1543,127 @@ class _DirectionsResult {
 }
 
 // ── Location section with map preview + directions ────────────────────────────
+
+// ── Client cancelled banner (shown to the previously-assigned Ustaad) ────────
+
+class _ClientCancelledBanner extends StatelessWidget {
+  final String? reason;
+  const _ClientCancelledBanner({required this.reason});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF1F2),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFFECDD3)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.info_outline_rounded, size: 18, color: _kRed),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Client cancelled this booking',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: _kRed,
+                  ),
+                ),
+                if (reason != null && reason!.isNotEmpty) ...[
+                  const SizedBox(height: 3),
+                  Text(
+                    reason!,
+                    style: const TextStyle(fontSize: 12.5, color: _kGray, height: 1.4),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Approximate location (shown before hire — no exact address/map) ──────────
+
+class _ApproximateLocationCard extends StatelessWidget {
+  final BookingEntity job;
+  const _ApproximateLocationCard({required this.job});
+
+  String? get _distanceLabel {
+    final km = job.distanceKm;
+    if (km == null) return null;
+    return km < 1 ? '${(km * 1000).round()} m away' : '${km.toStringAsFixed(1)} km away';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final distanceLabel = _distanceLabel;
+    return _Section(
+      title: 'Location',
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: _kBg,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: _kBorder),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.location_on_outlined, size: 16, color: _kLight),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    job.city.isNotEmpty
+                        ? 'Approximate area: ${job.city}'
+                        : 'Approximate area not available',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: _kDark,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (distanceLabel != null) ...[
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  const Icon(Icons.near_me_outlined, size: 16, color: _kLight),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Distance: $distanceLabel',
+                    style: const TextStyle(fontSize: 12.5, color: _kGray),
+                  ),
+                ],
+              ),
+            ],
+            const SizedBox(height: 8),
+            const Text(
+              'Exact address and map become visible once you are hired for this job.',
+              style: TextStyle(fontSize: 11.5, color: _kLight, height: 1.4),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 class _LocationSection extends ConsumerStatefulWidget {
   final BookingEntity job;

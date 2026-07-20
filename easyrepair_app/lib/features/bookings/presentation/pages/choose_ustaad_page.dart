@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/errors/failures.dart';
+import '../../../../core/utils/currency_utils.dart';
 import '../../domain/entities/booking_entity.dart';
 import '../../domain/entities/nearby_worker_entity.dart';
 import '../providers/booking_providers.dart';
@@ -174,10 +175,10 @@ class _ChooseUstaadPageState extends ConsumerState<ChooseUstaadPage> {
 
     final String? priceLabel = isStandard
         ? (standardTotal != null
-              ? 'Service Total Rs ${standardTotal.toStringAsFixed(0)}'
+              ? 'Service Total ${formatPkr(standardTotal)}'
               : null)
         : (booking.inspectionFeeSnapshot != null
-              ? 'Inspection fee Rs ${booking.inspectionFeeSnapshot!.toStringAsFixed(0)}'
+              ? 'Inspection fee ${formatPkr(booking.inspectionFeeSnapshot)}'
               : null);
 
     return Scaffold(
@@ -265,7 +266,7 @@ class _ChooseUstaadPageState extends ConsumerState<ChooseUstaadPage> {
                                   ),
                                 ),
                                 Text(
-                                  'Rs ${item.lineTotal.toStringAsFixed(0)}',
+                                  formatPkr(item.lineTotal),
                                   style: const TextStyle(
                                     fontSize: 13,
                                     color: _kDark,
@@ -291,7 +292,7 @@ class _ChooseUstaadPageState extends ConsumerState<ChooseUstaadPage> {
                               ),
                             ),
                             Text(
-                              'Rs ${standardTotal.toStringAsFixed(0)}',
+                              formatPkr(standardTotal),
                               style: const TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w700,

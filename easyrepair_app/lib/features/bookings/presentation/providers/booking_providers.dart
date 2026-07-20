@@ -94,8 +94,10 @@ class BookingsNotifier extends AsyncNotifier<List<BookingEntity>> {
   }
 
   /// Cancel a booking: patches the list item and syncs the detail provider.
-  Future<void> cancelBooking(String bookingId) async {
-    final result = await ref.read(cancelBookingUseCaseProvider).call(bookingId);
+  /// [reason] is required — the backend rejects an empty reason.
+  Future<void> cancelBooking(String bookingId, String reason) async {
+    final result =
+        await ref.read(cancelBookingUseCaseProvider).call(bookingId, reason);
     result.fold((failure) => throw failure, (updated) {
       patchBooking(updated);
       // Sync detail page if it is alive.

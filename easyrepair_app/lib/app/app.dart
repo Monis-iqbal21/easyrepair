@@ -14,11 +14,13 @@ import '../core/storage/secure_storage_service.dart';
 import '../core/theme/app_theme.dart';
 import '../core/widgets/app_banner_overlay.dart';
 import '../features/auth/presentation/providers/auth_providers.dart';
+import '../features/bookings/presentation/providers/booking_providers.dart';
 import '../features/chat/presentation/providers/chat_providers.dart';
 import '../features/notifications/data/datasources/notification_remote_datasource.dart';
 import '../features/notifications/data/repositories/notification_repository_impl.dart';
 import '../features/notifications/presentation/providers/notification_providers.dart';
 import '../features/worker/presentation/providers/worker_job_providers.dart';
+import '../features/worker/presentation/providers/worker_providers.dart';
 
 class EasyRepairApp extends ConsumerStatefulWidget {
   const EasyRepairApp({super.key});
@@ -30,6 +32,34 @@ class EasyRepairApp extends ConsumerStatefulWidget {
 class _EasyRepairAppState extends ConsumerState<EasyRepairApp>
     with WidgetsBindingObserver {
   bool _fcmTokenRegistered = false;
+
+  /// Event keys pushed to a worker when a booking becomes theirs — STANDARD/
+  /// INSPECTION direct hire (`booking.assigned`, see bookings.service.ts) and
+  /// BIDDING lane bid acceptance (`bid.accepted`, see bids.service.ts).
+  static const _assignedJobEventKeys = {'booking.assigned', 'bid.accepted'};
+
+  /// Worker-side lifecycle events that should silently refresh the CLIENT's
+  /// booking detail/list (and the inspection report for the report_submitted
+  /// case). See bookings.service.ts / inspection-reports.service.ts for the
+  /// eventKey source of each.
+  static const _clientLiveSyncEventKeys = {
+    'booking.status.en_route',
+    'booking.status.arrived',
+    'booking.status.in_progress',
+    'booking.inspection.report_submitted',
+    'booking.completed',
+    'booking.cancelled.by_worker',
+  };
+
+  /// Client-side lifecycle events (beyond hire/bid-accept, already covered by
+  /// [_assignedJobEventKeys]) that should silently refresh the WORKER's job
+  /// list/detail/profile stats.
+  static const _workerLiveSyncEventKeys = {
+    'booking.cancelled.by_client',
+    'booking.inspection.quote_accepted',
+    'booking.inspection.closed',
+    'booking.review.created',
+  };
 
   /// Queues a notification data map that arrived before the user finished
   /// authenticating (e.g. tapping a notification that cold-starts the app).
@@ -80,6 +110,20 @@ class _EasyRepairAppState extends ConsumerState<EasyRepairApp>
           // Refresh notification badge and chat list once on resume — no polling.
           ref.invalidate(unreadNotificationCountProvider);
           ref.invalidate(chatConversationsProvider);
+          // Covers a lifecycle push that arrived while backgrounded: per-page
+          // resume/poll handlers only run if that specific page is currently
+          // mounted, so refresh the list-level provider here unconditionally
+          // to catch e.g. Home-tab resumes too. Detail pages (keyed by a
+          // specific bookingId) keep their own resume/poll handlers since
+          // there's no single provider to invalidate without knowing which
+          // booking was open.
+          if (user.isWorker) {
+            ref.invalidate(workerJobsProvider);
+            ref.invalidate(newJobsProvider);
+            ref.invalidate(workerProfileProvider);
+          } else {
+            ref.invalidate(bookingsNotifierProvider);
+          }
         }
       default:
         break;
@@ -127,15 +171,11 @@ class _EasyRepairAppState extends ConsumerState<EasyRepairApp>
     ref.invalidate(notificationsProvider);
     ref.invalidate(unreadNotificationCountProvider);
 
-    // If a new_job notification arrives while a worker has the app open,
-    // immediately refresh the New Jobs tab so the job appears without waiting
-    // for the 30-second auto-poll.
     final eventKey = message.data['eventKey'] as String?;
-    if (eventKey == 'new_job') {
-      final user = ref.read(authStateProvider).valueOrNull;
-      if (user?.isWorker == true) {
-        ref.invalidate(newJobsProvider);
-      }
+    final bookingId = message.data['bookingId'] as String?;
+    final user = ref.read(authStateProvider).valueOrNull;
+    if (user != null) {
+      _refreshForEventKey(eventKey, isWorker: user.isWorker, bookingId: bookingId);
     }
 
     // On Android, FCM does NOT show a system-tray notification while the app
@@ -167,11 +207,9 @@ class _EasyRepairAppState extends ConsumerState<EasyRepairApp>
     Map<String, dynamic> data, {
     required bool isWorker,
   }) {
-    // When a worker taps a new_job notification, refresh the New Jobs feed
-    // so it is up-to-date when they return to that tab.
-    if (isWorker && (data['eventKey'] as String?) == 'new_job') {
-      ref.invalidate(newJobsProvider);
-    }
+    final eventKey = data['eventKey'] as String?;
+    final bookingId = data['bookingId'] as String?;
+    _refreshForEventKey(eventKey, isWorker: isWorker, bookingId: bookingId);
 
     final router = ref.read(routerProvider);
     NotificationNavigator.navigateByRouter(router, data, isWorker: isWorker);
@@ -192,6 +230,56 @@ class _EasyRepairAppState extends ConsumerState<EasyRepairApp>
       // No notificationId in payload — still refresh the count in case the
       // backend already marked it (e.g. via a different code path).
       ref.invalidate(unreadNotificationCountProvider);
+    }
+  }
+
+  /// Silently refreshes the relevant provider(s) for a booking-lifecycle
+  /// push notification — shared by the foreground-message handler and the
+  /// notification-tap handler so both paths react identically. Every
+  /// invalidate() here targets a non-autoDispose provider that preserves its
+  /// previous value while refetching (AsyncNotifier's isRefreshing /
+  /// copyWithPrevious), so none of this shows a full-tab spinner. No-op for
+  /// eventKeys not recognized below.
+  void _refreshForEventKey(
+    String? eventKey, {
+    required bool isWorker,
+    String? bookingId,
+  }) {
+    if (isWorker) {
+      if (eventKey == 'new_job') {
+        // A new_job notification arrived — immediately refresh the New Jobs
+        // tab so the job appears without waiting for the 30-second auto-poll.
+        ref.invalidate(newJobsProvider);
+      } else if (_assignedJobEventKeys.contains(eventKey)) {
+        // Worker was just hired/assigned (direct hire or accepted bid) —
+        // refresh My Jobs, New Jobs, and profile stats.
+        ref.invalidate(workerJobsProvider);
+        ref.invalidate(newJobsProvider);
+        ref.invalidate(workerProfileProvider);
+      } else if (_workerLiveSyncEventKeys.contains(eventKey)) {
+        // Client-side action on a booking this worker is assigned to
+        // (cancelled, quote accepted/closed, review left) — refresh the
+        // worker's list and, if we know which booking, its detail page too.
+        ref.invalidate(workerJobsProvider);
+        if (bookingId != null && bookingId.isNotEmpty) {
+          ref.invalidate(workerJobDetailProvider(bookingId));
+        }
+        if (eventKey == 'booking.review.created') {
+          // A new review can move the worker's average rating shown on Home.
+          ref.invalidate(workerProfileProvider);
+        }
+      }
+    } else if (_clientLiveSyncEventKeys.contains(eventKey)) {
+      // Worker-side lifecycle action on the client's booking — refresh the
+      // bookings list and, if we know which booking, its detail page (plus
+      // the inspection report when one was just submitted).
+      ref.invalidate(bookingsNotifierProvider);
+      if (bookingId != null && bookingId.isNotEmpty) {
+        ref.invalidate(bookingDetailProvider(bookingId));
+        if (eventKey == 'booking.inspection.report_submitted') {
+          ref.invalidate(inspectionReportProvider(bookingId));
+        }
+      }
     }
   }
 

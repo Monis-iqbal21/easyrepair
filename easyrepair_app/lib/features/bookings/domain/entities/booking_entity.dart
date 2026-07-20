@@ -494,11 +494,13 @@ class BookingStandardServiceItemEntity {
 /// relist.
 class BookingWorkerExclusionEntity {
   final String workerProfileId;
+  final String? workerName;
   final String? reason;
   final DateTime createdAt;
 
   const BookingWorkerExclusionEntity({
     required this.workerProfileId,
+    this.workerName,
     this.reason,
     required this.createdAt,
   });
@@ -538,10 +540,15 @@ class BookingEntity {
   final DateTime? startedAt;
   final double? estimatedPrice;
   final double? finalPrice;
+  /// Null when this booking isn't yet assigned to the viewing worker —
+  /// exact address is only ever sent to the assigned Ustaad.
   final String? address;
   final String city;
   final double latitude;
   final double longitude;
+  /// Server-computed distance in km — only populated on worker-facing
+  /// responses for a not-yet-assigned booking (see WorkersService._toJobDto).
+  final double? distanceKm;
   final DateTime? completedAt;
   final String? cancellationReason;
   final CancelledByRole? cancelledByRole;
@@ -569,6 +576,7 @@ class BookingEntity {
   final double? inspectionFeeSnapshot;
   final List<BookingWorkerExclusionEntity> workerExclusions;
   final String? lastWorkerCancellationReason;
+  final String? lastWorkerCancellationWorkerName;
   /// INSPECTION lane: true once the assigned worker has submitted their report.
   final bool inspectionReportSubmitted;
   /// INSPECTION lane: null until a report exists, then tracks the client's decision.
@@ -598,6 +606,7 @@ class BookingEntity {
     this.city = '',
     this.latitude = 0,
     this.longitude = 0,
+    this.distanceKm,
     this.completedAt,
     this.cancellationReason,
     this.cancelledByRole,
@@ -621,6 +630,7 @@ class BookingEntity {
     this.inspectionFeeSnapshot,
     this.workerExclusions = const [],
     this.lastWorkerCancellationReason,
+    this.lastWorkerCancellationWorkerName,
     this.inspectionReportSubmitted = false,
     this.inspectionDecisionStatus,
     this.inspectionReportSubmittedAt,
@@ -674,6 +684,7 @@ class BookingEntity {
       city: city,
       latitude: latitude,
       longitude: longitude,
+      distanceKm: distanceKm,
       completedAt: completedAt ?? this.completedAt,
       cancellationReason: cancellationReason ?? this.cancellationReason,
       cancelledByRole: cancelledByRole,
@@ -697,6 +708,7 @@ class BookingEntity {
       inspectionFeeSnapshot: inspectionFeeSnapshot,
       workerExclusions: workerExclusions,
       lastWorkerCancellationReason: lastWorkerCancellationReason,
+      lastWorkerCancellationWorkerName: lastWorkerCancellationWorkerName,
       inspectionReportSubmitted: inspectionReportSubmitted,
       inspectionDecisionStatus: inspectionDecisionStatus,
       inspectionReportSubmittedAt: inspectionReportSubmittedAt,

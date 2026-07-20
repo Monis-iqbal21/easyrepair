@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/errors/failures.dart';
+import '../../../../core/utils/currency_utils.dart';
 import '../../../../core/utils/distance_utils.dart';
 import '../../domain/entities/booking_entity.dart';
 import '../widgets/client_chat_action.dart';
@@ -398,6 +399,7 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
                     booking.lastWorkerCancellationReason!.isNotEmpty) ...[
                   _WorkerCancelledStrip(
                     reason: booking.lastWorkerCancellationReason!,
+                    workerName: booking.lastWorkerCancellationWorkerName,
                   ),
                   const SizedBox(height: 16),
                 ],
@@ -977,7 +979,7 @@ class _PricingCard extends StatelessWidget {
                   style: TextStyle(fontSize: 13, color: _kGray),
                 ),
                 Text(
-                  'EGP ${booking.estimatedPrice!.toStringAsFixed(0)}',
+                  formatPkr(booking.estimatedPrice),
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
@@ -999,7 +1001,7 @@ class _PricingCard extends StatelessWidget {
                   style: TextStyle(fontSize: 13, color: _kGray),
                 ),
                 Text(
-                  'EGP ${booking.finalPrice!.toStringAsFixed(0)}',
+                  formatPkr(booking.finalPrice),
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
@@ -1654,10 +1656,14 @@ class _MakeLiveAgainCard extends ConsumerWidget {
 
 class _WorkerCancelledStrip extends StatelessWidget {
   final String reason;
-  const _WorkerCancelledStrip({required this.reason});
+  final String? workerName;
+  const _WorkerCancelledStrip({required this.reason, this.workerName});
 
   @override
   Widget build(BuildContext context) {
+    final title = workerName != null && workerName!.isNotEmpty
+        ? 'Previous Ustaad cancelled: $workerName'
+        : 'Previous Ustaad cancelled';
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -1674,9 +1680,9 @@ class _WorkerCancelledStrip extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Previous Ustaad cancelled',
-                  style: TextStyle(
+                Text(
+                  title,
+                  style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
                     color: Color(0xFFBE123C),
@@ -1733,7 +1739,7 @@ class _StandardServicesCard extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    'Rs ${item.lineTotal.toStringAsFixed(0)}',
+                    formatPkr(item.lineTotal),
                     style: const TextStyle(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w600,
@@ -1754,7 +1760,7 @@ class _StandardServicesCard extends StatelessWidget {
                 ),
               ),
               Text(
-                'Rs ${(booking.finalPrice ?? booking.standardServicesTotal ?? 0).toStringAsFixed(0)}',
+                formatPkr(booking.finalPrice ?? booking.standardServicesTotal ?? 0),
                 style: const TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w800,
@@ -2321,6 +2327,7 @@ class _ActionButtons extends ConsumerWidget {
   }
 
   Future<void> _confirmCancel(BuildContext context, WidgetRef ref) async {
+    final reasonCtrl = TextEditingController();
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -2329,9 +2336,30 @@ class _ActionButtons extends ConsumerWidget {
           'Cancel Booking?',
           style: TextStyle(fontWeight: FontWeight.w700, color: _kDark),
         ),
-        content: Text(
-          'Cancel ${booking.serviceCategory} request ${booking.referenceId}?',
-          style: const TextStyle(color: _kGray, fontSize: 14),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Cancel ${booking.serviceCategory} request ${booking.referenceId}?',
+              style: const TextStyle(color: _kGray, fontSize: 14),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: reasonCtrl,
+              maxLines: 3,
+              decoration: InputDecoration(
+                hintText: 'Reason (required)',
+                filled: true,
+                fillColor: const Color(0xFFF9FAFB),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                ),
+                contentPadding: const EdgeInsets.all(12),
+              ),
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -2340,7 +2368,10 @@ class _ActionButtons extends ConsumerWidget {
                 style: TextStyle(color: _kGray)),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
+            onPressed: () {
+              if (reasonCtrl.text.trim().isEmpty) return;
+              Navigator.pop(ctx, true);
+            },
             child: const Text(
               'Yes, cancel',
               style: TextStyle(
@@ -2353,11 +2384,12 @@ class _ActionButtons extends ConsumerWidget {
       ),
     );
 
-    if (confirmed == true && context.mounted) {
+    final reason = reasonCtrl.text.trim();
+    if (confirmed == true && reason.isNotEmpty && context.mounted) {
       try {
         await ref
             .read(bookingsNotifierProvider.notifier)
-            .cancelBooking(booking.id);
+            .cancelBooking(booking.id, reason);
         if (context.mounted) context.pop();
       } catch (e) {
         if (context.mounted) {
