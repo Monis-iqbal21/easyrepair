@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +12,26 @@ import '../models/worker_review_model.dart';
 
 abstract class WorkerRemoteDatasource {
   Future<WorkerProfileModel> getProfile();
+
+  /// Partial update of the profile-completion text/checkbox fields.
+  /// Pass only the fields being changed — omitted params are left untouched.
+  Future<void> updateProfileCompletion({
+    String? fullLegalName,
+    String? residentialAddress,
+    int? experienceYears,
+    bool? legalNameConfirmed,
+    bool? generalAgreementAccepted,
+    bool? tradeAgreementAccepted,
+  });
+
+  Future<String> uploadCnicFront(File file);
+  Future<String> uploadCnicBack(File file);
+  Future<String> uploadLiveSelfie(File file);
+
+  /// Validates all required fields server-side and moves the profile to
+  /// SUBMITTED_FOR_REVIEW. Throws a Failure with the missing-fields message
+  /// if anything required is absent.
+  Future<void> submitProfileForReview();
 
   Future<List<Map<String, dynamic>>> getNewJobs();
 
@@ -105,6 +127,64 @@ class WorkerRemoteDatasourceImpl implements WorkerRemoteDatasource {
     return list
         .map((e) => WorkerSkillModel.fromJson(e as Map<String, dynamic>))
         .toList();
+  }
+
+  @override
+  Future<void> updateProfileCompletion({
+    String? fullLegalName,
+    String? residentialAddress,
+    int? experienceYears,
+    bool? legalNameConfirmed,
+    bool? generalAgreementAccepted,
+    bool? tradeAgreementAccepted,
+  }) async {
+    final body = <String, dynamic>{};
+    if (fullLegalName != null) body['fullLegalName'] = fullLegalName;
+    if (residentialAddress != null) {
+      body['residentialAddress'] = residentialAddress;
+    }
+    if (experienceYears != null) body['experienceYears'] = experienceYears;
+    if (legalNameConfirmed != null) {
+      body['legalNameConfirmed'] = legalNameConfirmed;
+    }
+    if (generalAgreementAccepted != null) {
+      body['generalAgreementAccepted'] = generalAgreementAccepted;
+    }
+    if (tradeAgreementAccepted != null) {
+      body['tradeAgreementAccepted'] = tradeAgreementAccepted;
+    }
+    await _dio.patch<void>('/workers/profile-completion', data: body);
+  }
+
+  Future<String> _uploadDocument(String path, File file) async {
+    final formData = FormData.fromMap({
+      'file': await MultipartFile.fromFile(file.path),
+    });
+    final response = await _dio.post<Map<String, dynamic>>(
+      path,
+      data: formData,
+    );
+    final data = response.data!['data'] as Map<String, dynamic>;
+    // Each endpoint returns a differently-named URL field — just take the
+    // single value present.
+    return data.values.first as String;
+  }
+
+  @override
+  Future<String> uploadCnicFront(File file) =>
+      _uploadDocument('/workers/profile-completion/cnic-front', file);
+
+  @override
+  Future<String> uploadCnicBack(File file) =>
+      _uploadDocument('/workers/profile-completion/cnic-back', file);
+
+  @override
+  Future<String> uploadLiveSelfie(File file) =>
+      _uploadDocument('/workers/profile-completion/selfie', file);
+
+  @override
+  Future<void> submitProfileForReview() async {
+    await _dio.post<void>('/workers/profile-completion/submit');
   }
 
   @override

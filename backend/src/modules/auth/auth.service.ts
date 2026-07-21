@@ -55,6 +55,7 @@ export class AuthService {
       firstName: dto.firstName,
       lastName: dto.lastName,
       role: dto.role as Role,
+      categoryId: dto.categoryId,
     });
 
     // New workers always start as PENDING verification

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/errors/failures.dart';
+import '../../../worker/presentation/providers/worker_providers.dart' show categoriesProvider;
 import '../providers/auth_providers.dart';
 import '../widgets/auth_text_field.dart';
 
@@ -22,7 +23,10 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   final _lastNameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
-  String _selectedRole = 'CLIENT';
+  String? _selectedRole;
+  String? _selectedCategoryId;
+  String? _roleError;
+  String? _skillError;
 
   @override
   void dispose() {
@@ -53,13 +57,24 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   }
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+    final formValid = _formKey.currentState!.validate();
+
+    setState(() {
+      _roleError = _selectedRole == null ? 'Please select your role' : null;
+      _skillError = (_selectedRole == 'WORKER' && _selectedCategoryId == null)
+          ? 'Please select your main skill'
+          : null;
+    });
+
+    if (!formValid || _roleError != null || _skillError != null) return;
+
     await ref.read(registerNotifierProvider.notifier).register(
           phone: _phoneController.text.trim(),
           password: _passwordController.text,
           firstName: _firstNameController.text.trim(),
           lastName: _lastNameController.text.trim(),
-          role: _selectedRole,
+          role: _selectedRole!,
+          categoryId: _selectedCategoryId,
         );
   }
 
@@ -171,9 +186,46 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                                 // Role picker
                                 _RolePicker(
                                   selected: _selectedRole,
-                                  onChanged: (v) =>
-                                      setState(() => _selectedRole = v),
+                                  onChanged: (v) => setState(() {
+                                    _selectedRole = v;
+                                    _roleError = null;
+                                    if (v != 'WORKER') {
+                                      _selectedCategoryId = null;
+                                      _skillError = null;
+                                    }
+                                  }),
                                 ),
+                                if (_roleError != null) ...[
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    _roleError!,
+                                    style: const TextStyle(
+                                      color: Color(0xFFDC2626),
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+
+                                if (_selectedRole == 'WORKER') ...[
+                                  const SizedBox(height: 16),
+                                  _MainSkillPicker(
+                                    selectedCategoryId: _selectedCategoryId,
+                                    onChanged: (id) => setState(() {
+                                      _selectedCategoryId = id;
+                                      _skillError = null;
+                                    }),
+                                  ),
+                                  if (_skillError != null) ...[
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      _skillError!,
+                                      style: const TextStyle(
+                                        color: Color(0xFFDC2626),
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ],
                                 const SizedBox(height: 28),
 
                                 _PrimaryButton(
@@ -291,7 +343,7 @@ class _AuthHeader extends StatelessWidget {
 // ── Role picker ───────────────────────────────────────────────────────────────
 
 class _RolePicker extends StatelessWidget {
-  final String selected;
+  final String? selected;
   final ValueChanged<String> onChanged;
 
   const _RolePicker({required this.selected, required this.onChanged});
@@ -332,6 +384,86 @@ class _RolePicker extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ],
+    );
+  }
+}
+
+// ── Main skill picker (Ustaad only) ─────────────────────────────────────────
+
+class _MainSkillPicker extends ConsumerWidget {
+  final String? selectedCategoryId;
+  final ValueChanged<String> onChanged;
+
+  const _MainSkillPicker({
+    required this.selectedCategoryId,
+    required this.onChanged,
+  });
+
+  static const _accent = Color(0xFFDB6234);
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final categoriesAsync = ref.watch(categoriesProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Main Skill',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF1A1A1A),
+          ),
+        ),
+        const SizedBox(height: 10),
+        categoriesAsync.when(
+          loading: () => const Padding(
+            padding: EdgeInsets.symmetric(vertical: 12),
+            child: Center(
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2, color: _accent),
+              ),
+            ),
+          ),
+          error: (e, _) => const Text(
+            'Failed to load skills. Please try again.',
+            style: TextStyle(color: Color(0xFFDC2626), fontSize: 12.5),
+          ),
+          data: (categories) => Container(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: selectedCategoryId,
+                isExpanded: true,
+                hint: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8),
+                  child: Text(
+                    'Select your main skill',
+                    style: TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
+                  ),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                items: categories
+                    .map((c) => DropdownMenuItem(
+                          value: c.id,
+                          child: Text(c.name, style: const TextStyle(fontSize: 14)),
+                        ))
+                    .toList(),
+                onChanged: (v) {
+                  if (v != null) onChanged(v);
+                },
+              ),
+            ),
+          ),
         ),
       ],
     );

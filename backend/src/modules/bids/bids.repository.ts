@@ -55,7 +55,7 @@ export class BidsRepository {
         firstName: true,
         lastName: true,
         status: true,
-        verificationStatus: true,
+        onboardingStatus: true,
         availabilityStatus: true,
         currentlyWorking: true,
         currentLat: true,
@@ -257,7 +257,7 @@ export class BidsRepository {
       // Mark worker as busy so they don't appear in new searches or new-jobs
       // feed — conditional on the worker still being genuinely assignable so
       // two concurrent bid-accepts (or an assignWorker + acceptBid race)
-      // can't both win. Worker eligibility (status/verification/profile) was
+      // can't both win. Worker eligibility (status/onboarding/profile) was
       // only checked at bid-creation time and may be stale by now, so it's
       // re-verified here as the final authoritative gate.
       const res = await tx.workerProfile.updateMany({
@@ -265,7 +265,7 @@ export class BidsRepository {
           id: workerProfileId,
           currentlyWorking: false,
           status: 'ACTIVE',
-          verificationStatus: 'VERIFIED',
+          onboardingStatus: 'APPROVED',
           availabilityStatus: 'ONLINE',
           profileCompleted: true,
         },

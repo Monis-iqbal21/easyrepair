@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:fpdart/fpdart.dart';
 
 import '../../../../core/errors/failures.dart';
@@ -10,6 +12,21 @@ import '../entities/worker_review_entity.dart';
 
 abstract class WorkerRepository {
   Future<Either<Failure, WorkerProfileEntity>> getProfile();
+
+  // ── Profile completion (Ustaad onboarding) ────────────────────────────
+  Future<Either<Failure, void>> updateProfileCompletion({
+    String? fullLegalName,
+    String? residentialAddress,
+    int? experienceYears,
+    bool? legalNameConfirmed,
+    bool? generalAgreementAccepted,
+    bool? tradeAgreementAccepted,
+  });
+
+  Future<Either<Failure, String>> uploadCnicFront(File file);
+  Future<Either<Failure, String>> uploadCnicBack(File file);
+  Future<Either<Failure, String>> uploadLiveSelfie(File file);
+  Future<Either<Failure, void>> submitProfileForReview();
 
   Future<Either<Failure, AvailabilityStatus>> updateAvailability({
     required AvailabilityStatus status,

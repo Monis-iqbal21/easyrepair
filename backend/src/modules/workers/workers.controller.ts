@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  Post,
   Patch,
   Put,
   Body,
@@ -20,6 +21,7 @@ import { BidsService } from '../bids/bids.service';
 import { UpdateAvailabilityDto } from './dto/update-availability.dto';
 import { UpdateLocationDto } from './dto/update-location.dto';
 import { UpdateSkillsDto } from './dto/update-skills.dto';
+import { UpdateProfileCompletionDto } from './dto/update-profile-completion.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -94,6 +96,84 @@ export class WorkersController {
     @Body() dto: UpdateSkillsDto,
   ) {
     return this.workersService.updateSkills(user.id, dto);
+  }
+
+  // ── Profile completion (Ustaad onboarding) ─────────────────────────────────
+
+  /**
+   * PATCH /workers/profile-completion
+   * Partial update of the profile-completion text/checkbox fields. Only
+   * allowed while onboardingStatus is DRAFT or CHANGES_REQUIRED.
+   */
+  @Patch('profile-completion')
+  @HttpCode(HttpStatus.OK)
+  updateProfileCompletion(
+    @CurrentUser() user: { id: string },
+    @Body() dto: UpdateProfileCompletionDto,
+  ) {
+    return this.workersService.updateProfileCompletion(user.id, dto);
+  }
+
+  /** POST /workers/profile-completion/cnic-front */
+  @Post('profile-completion/cnic-front')
+  @HttpCode(HttpStatus.OK)
+  @UseInterceptors(FileInterceptor('file'))
+  uploadCnicFront(
+    @CurrentUser() user: { id: string },
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    if (!file) throw new BadRequestException('No file uploaded');
+    return this.workersService.uploadCnicFront(
+      user.id,
+      file.buffer,
+      file.originalname,
+      file.mimetype,
+    );
+  }
+
+  /** POST /workers/profile-completion/cnic-back */
+  @Post('profile-completion/cnic-back')
+  @HttpCode(HttpStatus.OK)
+  @UseInterceptors(FileInterceptor('file'))
+  uploadCnicBack(
+    @CurrentUser() user: { id: string },
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    if (!file) throw new BadRequestException('No file uploaded');
+    return this.workersService.uploadCnicBack(
+      user.id,
+      file.buffer,
+      file.originalname,
+      file.mimetype,
+    );
+  }
+
+  /** POST /workers/profile-completion/selfie */
+  @Post('profile-completion/selfie')
+  @HttpCode(HttpStatus.OK)
+  @UseInterceptors(FileInterceptor('file'))
+  uploadLiveSelfie(
+    @CurrentUser() user: { id: string },
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    if (!file) throw new BadRequestException('No file uploaded');
+    return this.workersService.uploadLiveSelfie(
+      user.id,
+      file.buffer,
+      file.originalname,
+      file.mimetype,
+    );
+  }
+
+  /**
+   * POST /workers/profile-completion/submit
+   * Validates every required field is present, then moves the profile to
+   * SUBMITTED_FOR_REVIEW. Rejects with a list of missing fields otherwise.
+   */
+  @Post('profile-completion/submit')
+  @HttpCode(HttpStatus.OK)
+  submitProfileForReview(@CurrentUser() user: { id: string }) {
+    return this.workersService.submitProfileForReview(user.id);
   }
 
   // ── Worker jobs ──────────────────────────────────────────────────────────

@@ -15,6 +15,7 @@ import '../../domain/entities/worker_review_entity.dart';
 import '../providers/worker_providers.dart';
 import '../providers/worker_review_providers.dart';
 import '../widgets/worker_bottom_nav_bar.dart';
+import '../widgets/profile_completion_modal.dart';
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 const _kOrange     = Color(0xFFDB6234);
@@ -62,6 +63,20 @@ class _WorkerHomePageState extends ConsumerState<WorkerHomePage>
         : rawName;
     final profileAsync = ref.watch(workerProfileProvider);
 
+    // Show the "complete your profile" modal once per app session — fires on
+    // the first Home build after login/registration/resume-triggered refresh
+    // while onboarding isn't APPROVED yet. The persistent banner in
+    // _HomeBody covers returning to this screen afterward.
+    ref.listen(workerProfileProvider, (previous, next) {
+      final profile = next.valueOrNull;
+      if (profile == null || profile.isOnboardingApproved) return;
+      if (ref.read(onboardingModalShownProvider)) return;
+      ref.read(onboardingModalShownProvider.notifier).state = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted) showProfileCompletionModal(context);
+      });
+    });
+
     return Scaffold(
       backgroundColor: _kBg,
       extendBody: true,
@@ -104,6 +119,12 @@ class _HomeBody extends ConsumerWidget {
         slivers: [
           // Header
           SliverToBoxAdapter(child: _Header(firstName: firstName)),
+          // Persistent profile-completion CTA — always visible (not just the
+          // modal) so the worker has a way back without waiting for a resume.
+          if (!profile.isOnboardingApproved)
+            SliverToBoxAdapter(
+              child: _ProfileCompletionBanner(profile: profile),
+            ),
           // Hero card (online status + stats)
           SliverToBoxAdapter(child: _HeroCard(profile: profile)),
           // View New Jobs CTA
@@ -121,6 +142,80 @@ class _HomeBody extends ConsumerWidget {
           // Bottom spacer for nav bar
           const SliverToBoxAdapter(child: SizedBox(height: 100)),
         ],
+      ),
+    );
+  }
+}
+
+// ── Profile completion banner ────────────────────────────────────────────────
+
+class _ProfileCompletionBanner extends StatelessWidget {
+  final WorkerProfileEntity profile;
+  const _ProfileCompletionBanner({required this.profile});
+
+  (String, String) get _statusLabel => switch (profile.onboardingStatus) {
+        'SUBMITTED_FOR_REVIEW' => (
+            'Submitted for Review',
+            'Aap ki profile admin review mein hai.',
+          ),
+        'CHANGES_REQUIRED' => (
+            'Changes Required',
+            'Profile mein tabdeeli zaroori hai — details dekhein.',
+          ),
+        'REJECTED' => (
+            'Rejected',
+            'Profile reject ho gayi — wajah dekhein.',
+          ),
+        _ => (
+            'Profile Incomplete',
+            'Jobs hasil karne ke liye pehle profile approval zaroori hai.',
+          ),
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    final (title, subtitle) = _statusLabel;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+      child: GestureDetector(
+        onTap: () => context.push('/worker/profile-completion'),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFF7ED),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFFDBA74)),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.assignment_late_outlined,
+                  color: Color(0xFFC2541D), size: 22),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFFC2541D),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(fontSize: 12, color: _kGray),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded,
+                  color: Color(0xFFC2541D), size: 20),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -373,6 +468,7 @@ class _HeroCard extends ConsumerWidget {
                               : (isOnline ? 'Go Offline' : 'Go Online'),
                           isOnline: isOnline,
                           loading: isLoading,
+                          locked: !isOnline && !profile.isOnboardingApproved,
                           onTap: () => isOnline
                               ? _handleGoOffline(context, ref)
                               : _handleGoOnline(context, ref),
@@ -437,10 +533,18 @@ class _HeroCard extends ConsumerWidget {
   }
 
   Future<void> _handleGoOnline(BuildContext context, WidgetRef ref) async {
+    if (!profile.isOnboardingApproved) {
+      _showSnack(
+        context,
+        'Profile approval required before receiving jobs.\n'
+        'Jobs hasil karne ke liye pehle profile approval zaroori hai.',
+      );
+      return;
+    }
     final result =
         await ref.read(availabilityNotifierProvider.notifier).goOnline();
     if (result == AvailabilityToggleResult.needsSkills && context.mounted) {
-      await _showSkillsSheet(context, ref);
+      await showSkillsSheet(context, ref);
     } else if (context.mounted) {
       final err = ref.read(availabilityNotifierProvider).error;
       if (err != null) _showSnack(context, err.toString());
@@ -495,11 +599,13 @@ class _HeroToggleBtn extends StatelessWidget {
   final String label;
   final bool isOnline;
   final bool loading;
+  final bool locked;
   final VoidCallback onTap;
   const _HeroToggleBtn({
     required this.label,
     required this.isOnline,
     required this.loading,
+    this.locked = false,
     required this.onTap,
   });
 
@@ -507,34 +613,46 @@ class _HeroToggleBtn extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: loading ? null : onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: isOnline
-              ? Colors.white.withValues(alpha: 0.1)
-              : _kOrange,
-          borderRadius: BorderRadius.circular(20),
-          border: isOnline
-              ? Border.all(color: Colors.white.withValues(alpha: 0.2))
-              : null,
+      child: Opacity(
+        opacity: locked ? 0.5 : 1,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: isOnline
+                ? Colors.white.withValues(alpha: 0.1)
+                : _kOrange,
+            borderRadius: BorderRadius.circular(20),
+            border: isOnline
+                ? Border.all(color: Colors.white.withValues(alpha: 0.2))
+                : null,
+          ),
+          child: loading
+              ? const SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (locked) ...[
+                      const Icon(Icons.lock_outline_rounded, size: 12, color: Colors.white),
+                      const SizedBox(width: 4),
+                    ],
+                    Text(
+                      label,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
         ),
-        child: loading
-            ? SizedBox(
-                width: 14,
-                height: 14,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: isOnline ? Colors.white : Colors.white,
-                ),
-              )
-            : Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                ),
-              ),
       ),
     );
   }
@@ -1022,7 +1140,7 @@ class _SkillsSection extends ConsumerWidget {
               ),
               const Spacer(),
               GestureDetector(
-                onTap: () => _showSkillsSheet(context, ref),
+                onTap: () => showSkillsSheet(context, ref),
                 child: Text(
                   mainSkill == null ? '+ Select Main Skill' : 'Edit',
                   style: const TextStyle(
@@ -1305,7 +1423,7 @@ class _ReviewItem extends StatelessWidget {
 
 // ── Skills bottom sheet ───────────────────────────────────────────────────────
 
-Future<void> _showSkillsSheet(BuildContext context, WidgetRef ref) async {
+Future<void> showSkillsSheet(BuildContext context, WidgetRef ref) async {
   final profile = ref.read(workerProfileProvider).valueOrNull;
   // Only one main skill is allowed — pre-select just the first existing one
   // (legacy profiles saved before this rule may carry more than one; opening

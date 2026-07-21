@@ -17,6 +17,7 @@ class AuthRemoteDatasource {
     required String firstName,
     required String lastName,
     required String role,
+    String? categoryId,
   }) async {
     final response = await _dio.post(
       '/auth/register',
@@ -26,6 +27,7 @@ class AuthRemoteDatasource {
         'firstName': firstName,
         'lastName': lastName,
         'role': role,
+        if (categoryId != null) 'categoryId': categoryId,
       },
     );
     return AuthResponseModel.fromJson(response.data as Map<String, dynamic>);

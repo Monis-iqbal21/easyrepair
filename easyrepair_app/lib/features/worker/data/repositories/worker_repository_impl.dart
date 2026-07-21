@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:fpdart/fpdart.dart';
@@ -24,6 +26,77 @@ class WorkerRepositoryImpl implements WorkerRepository {
     try {
       final model = await _datasource.getProfile();
       return Right(model.toEntity());
+    } on DioException catch (e) {
+      return Left(dioExceptionToFailure(e));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> updateProfileCompletion({
+    String? fullLegalName,
+    String? residentialAddress,
+    int? experienceYears,
+    bool? legalNameConfirmed,
+    bool? generalAgreementAccepted,
+    bool? tradeAgreementAccepted,
+  }) async {
+    try {
+      await _datasource.updateProfileCompletion(
+        fullLegalName: fullLegalName,
+        residentialAddress: residentialAddress,
+        experienceYears: experienceYears,
+        legalNameConfirmed: legalNameConfirmed,
+        generalAgreementAccepted: generalAgreementAccepted,
+        tradeAgreementAccepted: tradeAgreementAccepted,
+      );
+      return const Right(null);
+    } on DioException catch (e) {
+      return Left(dioExceptionToFailure(e));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, String>> uploadCnicFront(File file) async {
+    try {
+      return Right(await _datasource.uploadCnicFront(file));
+    } on DioException catch (e) {
+      return Left(dioExceptionToFailure(e));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, String>> uploadCnicBack(File file) async {
+    try {
+      return Right(await _datasource.uploadCnicBack(file));
+    } on DioException catch (e) {
+      return Left(dioExceptionToFailure(e));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, String>> uploadLiveSelfie(File file) async {
+    try {
+      return Right(await _datasource.uploadLiveSelfie(file));
+    } on DioException catch (e) {
+      return Left(dioExceptionToFailure(e));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> submitProfileForReview() async {
+    try {
+      await _datasource.submitProfileForReview();
+      return const Right(null);
     } on DioException catch (e) {
       return Left(dioExceptionToFailure(e));
     } catch (e) {

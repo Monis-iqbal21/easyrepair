@@ -9,6 +9,7 @@ import '../../../bookings/domain/entities/booking_entity.dart';
 import '../../../bookings/presentation/widgets/inspection_badge.dart';
 import '../../domain/entities/new_job_entity.dart';
 import '../providers/worker_job_providers.dart';
+import '../widgets/onboarding_gate.dart';
 import '../widgets/worker_bottom_nav_bar.dart';
 import '../widgets/worker_chat_action.dart';
 
@@ -464,6 +465,7 @@ class _NewJobCard extends ConsumerWidget {
                         Expanded(
                           child: ElevatedButton.icon(
                             onPressed: () {
+                              if (!ensureApprovedOrWarn(context, ref)) return;
                               debugPrint('[NewJobCard] bid button pressed job.id=${job.id}');
                               final title = Uri.encodeComponent(job.displayTitle);
                               context.push('/worker/job/${job.id}/bid?title=$title');

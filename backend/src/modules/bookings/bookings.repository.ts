@@ -10,7 +10,6 @@ import {
   TimeSlot,
   UrgentWindow,
   Prisma,
-  VerificationStatus,
   WorkerStatus,
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -521,7 +520,7 @@ export class BookingsRepository {
         profileCompleted: true,
         currentlyWorking: true,
         status: true,
-        verificationStatus: true,
+        onboardingStatus: true,
       },
     });
   }
@@ -676,12 +675,6 @@ export class BookingsRepository {
           ? standardLadder
           : legacyLadder;
     const excludedIds = params.excludedWorkerIds ?? [];
-    // STANDARD and INSPECTION only list Ustaads with a completed profile —
-    // BIDDING keeps showing all eligible workers for now (see profileCompleted
-    // gate rollout notes in bookings.service.ts).
-    const requireProfileCompleted =
-      params.lane === BookingLane.STANDARD ||
-      params.lane === BookingLane.INSPECTION;
 
     type WorkerEntry = {
       id: string;
@@ -729,9 +722,9 @@ export class BookingsRepository {
           AND wp."currentLng" IS NOT NULL
           AND wp."locationUpdatedAt" > NOW() - INTERVAL '30 minutes'
           AND wp.status = 'ACTIVE'::"WorkerStatus"
-          AND wp."verificationStatus" = 'VERIFIED'::"VerificationStatus"
+          AND wp."onboardingStatus" = 'APPROVED'::"WorkerOnboardingStatus"
+          AND wp."profileCompleted" = TRUE
           AND wp.id != ALL(${excludedIds}::text[])
-          AND (${requireProfileCompleted}::boolean = FALSE OR wp."profileCompleted" = TRUE)
           AND EXISTS (
             SELECT 1 FROM worker_skills ws
             WHERE ws."workerProfileId" = wp.id
@@ -801,11 +794,6 @@ export class BookingsRepository {
 
     // Location freshness threshold — same 30-minute rule as the PostGIS path.
     const freshThreshold = new Date(Date.now() - 30 * 60 * 1000);
-    // STANDARD and INSPECTION only list Ustaads with a completed profile —
-    // see the matching comment in _findNearbyWorkersPostgis.
-    const requireProfileCompleted =
-      params.lane === BookingLane.STANDARD ||
-      params.lane === BookingLane.INSPECTION;
 
     // Fetch all eligible candidate workers once (avoids repeated DB round-trips).
     // The DB filters everything except the spatial radius (applied in TS below).
@@ -814,12 +802,12 @@ export class BookingsRepository {
         availabilityStatus: AvailabilityStatus.ONLINE,
         currentlyWorking: false,
         status: WorkerStatus.ACTIVE,
-        verificationStatus: VerificationStatus.VERIFIED,
+        onboardingStatus: 'APPROVED',
+        profileCompleted: true,
         currentLat: { not: null },
         currentLng: { not: null },
         locationUpdatedAt: { gte: freshThreshold },
         skills: { some: { categoryId: params.categoryId } },
-        ...(requireProfileCompleted ? { profileCompleted: true } : {}),
         ...(params.excludedWorkerIds && params.excludedWorkerIds.length > 0
           ? { id: { notIn: params.excludedWorkerIds } }
           : {}),
@@ -944,7 +932,7 @@ export class BookingsRepository {
           id: workerProfileId,
           currentlyWorking: false,
           status: 'ACTIVE',
-          verificationStatus: 'VERIFIED',
+          onboardingStatus: 'APPROVED',
           availabilityStatus: 'ONLINE',
           profileCompleted: true,
         },

@@ -69,6 +69,24 @@ class WorkerProfileEntity {
   final WorkerStatsEntity stats;
   final OngoingJobEntity? ongoingJob;
 
+  // ── Ustaad onboarding / profile completion ─────────────────────────────
+  final String? fullLegalName;
+  final String? residentialAddress;
+  final String? cnicFrontUrl;
+  final String? cnicBackUrl;
+  final String? liveSelfieUrl;
+  final String faceMatchStatus;
+  final String trainingStatus;
+  final String onboardingStatus;
+  final DateTime? legalNameConfirmedAt;
+  final DateTime? generalAgreementAcceptedAt;
+  final DateTime? tradeAgreementAcceptedAt;
+  final String? generalAgreementVersion;
+  final String? tradeAgreementVersion;
+  final DateTime? submittedForReviewAt;
+  final String? changesRequiredReason;
+  final String? rejectionReason;
+
   const WorkerProfileEntity({
     required this.id,
     required this.userId,
@@ -87,7 +105,26 @@ class WorkerProfileEntity {
     required this.skills,
     required this.stats,
     this.ongoingJob,
+    this.fullLegalName,
+    this.residentialAddress,
+    this.cnicFrontUrl,
+    this.cnicBackUrl,
+    this.liveSelfieUrl,
+    this.faceMatchStatus = 'PENDING',
+    this.trainingStatus = 'NOT_STARTED',
+    this.onboardingStatus = 'DRAFT',
+    this.legalNameConfirmedAt,
+    this.generalAgreementAcceptedAt,
+    this.tradeAgreementAcceptedAt,
+    this.generalAgreementVersion,
+    this.tradeAgreementVersion,
+    this.submittedForReviewAt,
+    this.changesRequiredReason,
+    this.rejectionReason,
   });
+
+  /// The single gate for hireability — go online, matching, bidding, hire.
+  bool get isOnboardingApproved => onboardingStatus == 'APPROVED';
 
   WorkerProfileEntity copyWith({
     AvailabilityStatus? availabilityStatus,
@@ -116,6 +153,22 @@ class WorkerProfileEntity {
       skills: skills ?? this.skills,
       stats: stats,
       ongoingJob: clearOngoingJob ? null : (ongoingJob ?? this.ongoingJob),
+      fullLegalName: fullLegalName,
+      residentialAddress: residentialAddress,
+      cnicFrontUrl: cnicFrontUrl,
+      cnicBackUrl: cnicBackUrl,
+      liveSelfieUrl: liveSelfieUrl,
+      faceMatchStatus: faceMatchStatus,
+      trainingStatus: trainingStatus,
+      onboardingStatus: onboardingStatus,
+      legalNameConfirmedAt: legalNameConfirmedAt,
+      generalAgreementAcceptedAt: generalAgreementAcceptedAt,
+      tradeAgreementAcceptedAt: tradeAgreementAcceptedAt,
+      generalAgreementVersion: generalAgreementVersion,
+      tradeAgreementVersion: tradeAgreementVersion,
+      submittedForReviewAt: submittedForReviewAt,
+      changesRequiredReason: changesRequiredReason,
+      rejectionReason: rejectionReason,
     );
   }
 }

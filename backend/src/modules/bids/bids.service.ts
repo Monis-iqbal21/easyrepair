@@ -8,7 +8,11 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
-import { BookingStatus, VerificationStatus, WorkerStatus } from '@prisma/client';
+import {
+  BookingStatus,
+  WorkerStatus,
+  WorkerOnboardingStatus,
+} from '@prisma/client';
 import { BidsRepository, BidWithRelations } from './bids.repository';
 import { BidResponseDto, BidWorkerDto } from './dto/bid-response.dto';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -41,8 +45,7 @@ export class BidsService {
       throw new ForbiddenException('Worker profile not found');
     }
 
-    this._assertWorkerEligible(workerProfile);
-    this._assertProfileCompleted(workerProfile);
+    this._assertWorkerApproved(workerProfile);
 
     const booking = await this.bidsRepository.findBookingById(bookingId);
     if (!booking) {
@@ -136,7 +139,7 @@ export class BidsService {
       throw new ForbiddenException('You do not own this bid');
     }
 
-    this._assertProfileCompleted(workerProfile);
+    this._assertWorkerApproved(workerProfile);
 
     if (bid.status !== 'PENDING') {
       throw new BadRequestException(
@@ -385,7 +388,7 @@ export class BidsService {
       throw new ForbiddenException('Worker profile not found');
     }
 
-    this._assertWorkerEligible(workerProfile);
+    this._assertWorkerApproved(workerProfile);
 
     const categoryIds = workerProfile.skills.map((s) => s.categoryId);
 
@@ -447,31 +450,27 @@ export class BidsService {
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
-  private _assertWorkerEligible(workerProfile: {
+  /**
+   * Single hireability gate — admin-approved onboarding is now required even
+   * to browse New Jobs, not just to bid/apply (previously getNewJobsForWorker
+   * only checked account status/verification and let an incomplete profile
+   * browse; that carve-out is intentionally removed per the onboarding flow).
+   */
+  private _assertWorkerApproved(workerProfile: {
     status: WorkerStatus;
-    verificationStatus: VerificationStatus;
+    onboardingStatus: WorkerOnboardingStatus;
+    profileCompleted: boolean;
   }): void {
     if (workerProfile.status !== WorkerStatus.ACTIVE) {
       throw new ForbiddenException('Worker account is not active');
     }
-    if (workerProfile.verificationStatus !== VerificationStatus.VERIFIED) {
-      throw new ForbiddenException('Worker account is not verified');
-    }
-  }
-
-  /**
-   * Gate for actions that commit a worker to a job (bid/apply/edit-bid).
-   * Deliberately NOT applied to read-only endpoints like getNewJobsForWorker —
-   * an incomplete-profile Ustaad can still browse jobs, just not act on them.
-   */
-  private _assertProfileCompleted(workerProfile: {
-    profileCompleted: boolean;
-  }): void {
-    if (!workerProfile.profileCompleted) {
+    if (
+      workerProfile.onboardingStatus !== WorkerOnboardingStatus.APPROVED ||
+      !workerProfile.profileCompleted
+    ) {
       throw new ForbiddenException(
         'Profile complete karein taake jobs apply kar saken.',
       );
     }
   }
-
 }

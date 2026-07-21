@@ -42,6 +42,35 @@ enum VerificationStatus {
   REJECTED
 }
 
+/// Ustaad onboarding/admin-review state machine. This is the authoritative
+/// gate for hireability (go online, matching, bidding, direct hire) —
+/// replacing the old verificationStatus-only gate. verificationStatus is
+/// kept on the schema (still mirrored by admin approve/reject) but no
+/// gating logic reads it anymore.
+enum WorkerOnboardingStatus {
+  DRAFT
+  SUBMITTED_FOR_REVIEW
+  CHANGES_REQUIRED
+  REJECTED
+  APPROVED
+}
+
+/// Manual admin review of CNIC photos vs. live selfie. No automatic face
+/// recognition is implemented — this is set by an admin only.
+enum FaceMatchStatus {
+  PENDING
+  MATCHED
+  NOT_MATCHED
+  NEEDS_REVIEW
+}
+
+enum TrainingStatus {
+  NOT_STARTED
+  INVITED
+  COMPLETED
+  NEEDS_RETRAINING
+}
+
 enum BookingUrgency {
   URGENT
   NORMAL
@@ -219,6 +248,30 @@ model WorkerProfile {
   totalRatings       Int                @default(0)
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
+
+  // ── Ustaad onboarding / profile completion ────────────────────────────
+  fullLegalName        String?
+  residentialAddress   String?
+  cnicFrontUrl         String?
+  cnicFrontStorageKey  String?
+  cnicBackUrl          String?
+  cnicBackStorageKey   String?
+  liveSelfieUrl        String?
+  liveSelfieStorageKey String?
+
+  faceMatchStatus  FaceMatchStatus        @default(PENDING)
+  trainingStatus   TrainingStatus         @default(NOT_STARTED)
+  onboardingStatus WorkerOnboardingStatus @default(DRAFT)
+
+  legalNameConfirmedAt       DateTime? @db.Timestamptz(3)
+  generalAgreementAcceptedAt DateTime? @db.Timestamptz(3)
+  tradeAgreementAcceptedAt   DateTime? @db.Timestamptz(3)
+  generalAgreementVersion    String?
+  tradeAgreementVersion      String?
+
+  submittedForReviewAt  DateTime? @db.Timestamptz(3)
+  changesRequiredReason String?
+  rejectionReason       String?
 
   skills             WorkerSkill[]
   documents          WorkerDocument[]

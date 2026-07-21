@@ -365,6 +365,9 @@ class _EasyRepairAppState extends ConsumerState<EasyRepairApp>
         ChatSocketService.instance.disconnect();
         // Reset permission session flag so it runs again on next login.
         AppPermissionService.instance.reset();
+        // Reset the onboarding-modal session flag so a different Ustaad
+        // logging in on the same app session sees it if they need to.
+        ref.read(onboardingModalShownProvider.notifier).state = false;
       }
     });
 

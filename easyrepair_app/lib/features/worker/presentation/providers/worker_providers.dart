@@ -1,13 +1,17 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fpdart/fpdart.dart';
 import 'package:geolocator/geolocator.dart';
 
+import '../../../../core/errors/failures.dart';
 import '../../data/repositories/worker_repository_impl.dart';
 import '../../domain/entities/worker_profile_entity.dart';
 import '../../domain/entities/worker_skill_entity.dart';
 import '../../domain/entities/category_entity.dart';
+import '../../domain/repositories/worker_repository.dart';
 
 // ── Worker Profile ────────────────────────────────────────────────────────────
 
@@ -509,3 +513,105 @@ final categoriesProvider = FutureProvider<List<CategoryEntity>>((ref) async {
 
 final selectedCategoryIdsProvider =
     StateProvider<Set<String>>((ref) => const {});
+
+// ── Profile completion (Ustaad onboarding) ──────────────────────────────────
+
+/// Whether the "complete your profile" modal has already been shown once in
+/// this app session — reset on logout. Prevents it from reappearing on every
+/// resume/navigation once the worker has seen and dismissed it; the worker
+/// can still reach the page anytime via the persistent Home banner.
+final onboardingModalShownProvider = StateProvider<bool>((ref) => false);
+
+class ProfileCompletionNotifier extends AsyncNotifier<void> {
+  @override
+  Future<void> build() async {}
+
+  /// Saves the given fields, then silently refreshes workerProfileProvider
+  /// so every screen reading it (Home, Profile, this page) sees the update.
+  /// Returns false (and leaves the Failure in state.error) on failure.
+  Future<bool> save({
+    String? fullLegalName,
+    String? residentialAddress,
+    int? experienceYears,
+    bool? legalNameConfirmed,
+    bool? generalAgreementAccepted,
+    bool? tradeAgreementAccepted,
+  }) async {
+    state = const AsyncLoading();
+    final result = await ref.read(workerRepositoryProvider).updateProfileCompletion(
+          fullLegalName: fullLegalName,
+          residentialAddress: residentialAddress,
+          experienceYears: experienceYears,
+          legalNameConfirmed: legalNameConfirmed,
+          generalAgreementAccepted: generalAgreementAccepted,
+          tradeAgreementAccepted: tradeAgreementAccepted,
+        );
+    return result.fold(
+      (failure) {
+        state = AsyncError(failure, StackTrace.current);
+        return false;
+      },
+      (_) async {
+        state = const AsyncData(null);
+        await ref.read(workerProfileProvider.notifier).silentRefresh();
+        return true;
+      },
+    );
+  }
+
+  Future<String?> uploadCnicFront(File file) => _upload(
+        (repo) => repo.uploadCnicFront(file),
+      );
+
+  Future<String?> uploadCnicBack(File file) => _upload(
+        (repo) => repo.uploadCnicBack(file),
+      );
+
+  Future<String?> uploadLiveSelfie(File file) => _upload(
+        (repo) => repo.uploadLiveSelfie(file),
+      );
+
+  Future<String?> _upload(
+    Future<Either<Failure, String>> Function(WorkerRepository repo) call,
+  ) async {
+    state = const AsyncLoading();
+    final result = await call(ref.read(workerRepositoryProvider));
+    return result.fold(
+      (failure) {
+        state = AsyncError(failure, StackTrace.current);
+        return null;
+      },
+      (url) {
+        state = const AsyncData(null);
+        // Fire-and-forget — the uploaded URL is already known locally for
+        // instant UI feedback; the silent refresh syncs everything else.
+        ref.read(workerProfileProvider.notifier).silentRefresh();
+        return url;
+      },
+    );
+  }
+
+  /// Validates all required fields server-side and moves the profile to
+  /// SUBMITTED_FOR_REVIEW. On failure, state.error carries the Failure whose
+  /// message lists exactly which fields are still missing.
+  Future<bool> submit() async {
+    state = const AsyncLoading();
+    final result = await ref.read(workerRepositoryProvider).submitProfileForReview();
+    return result.fold(
+      (failure) {
+        state = AsyncError(failure, StackTrace.current);
+        return false;
+      },
+      (_) async {
+        state = const AsyncData(null);
+        await ref.read(workerProfileProvider.notifier).silentRefresh();
+        return true;
+      },
+    );
+  }
+}
+
+final profileCompletionNotifierProvider =
+    AsyncNotifierProvider<ProfileCompletionNotifier, void>(
+  ProfileCompletionNotifier.new,
+);

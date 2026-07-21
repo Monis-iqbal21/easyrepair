@@ -22,6 +22,24 @@ class WorkerProfileModel {
   final WorkerStatsModel stats;
   final OngoingJobModel? ongoingJob;
 
+  // ── Ustaad onboarding / profile completion ─────────────────────────────
+  final String? fullLegalName;
+  final String? residentialAddress;
+  final String? cnicFrontUrl;
+  final String? cnicBackUrl;
+  final String? liveSelfieUrl;
+  final String faceMatchStatus;
+  final String trainingStatus;
+  final String onboardingStatus;
+  final DateTime? legalNameConfirmedAt;
+  final DateTime? generalAgreementAcceptedAt;
+  final DateTime? tradeAgreementAcceptedAt;
+  final String? generalAgreementVersion;
+  final String? tradeAgreementVersion;
+  final DateTime? submittedForReviewAt;
+  final String? changesRequiredReason;
+  final String? rejectionReason;
+
   const WorkerProfileModel({
     required this.id,
     required this.userId,
@@ -40,6 +58,22 @@ class WorkerProfileModel {
     required this.skills,
     required this.stats,
     this.ongoingJob,
+    this.fullLegalName,
+    this.residentialAddress,
+    this.cnicFrontUrl,
+    this.cnicBackUrl,
+    this.liveSelfieUrl,
+    this.faceMatchStatus = 'PENDING',
+    this.trainingStatus = 'NOT_STARTED',
+    this.onboardingStatus = 'DRAFT',
+    this.legalNameConfirmedAt,
+    this.generalAgreementAcceptedAt,
+    this.tradeAgreementAcceptedAt,
+    this.generalAgreementVersion,
+    this.tradeAgreementVersion,
+    this.submittedForReviewAt,
+    this.changesRequiredReason,
+    this.rejectionReason,
   });
 
   factory WorkerProfileModel.fromJson(Map<String, dynamic> json) {
@@ -66,6 +100,30 @@ class WorkerProfileModel {
       ongoingJob: json['ongoingJob'] != null
           ? OngoingJobModel.fromJson(json['ongoingJob'] as Map<String, dynamic>)
           : null,
+      fullLegalName: json['fullLegalName'] as String?,
+      residentialAddress: json['residentialAddress'] as String?,
+      cnicFrontUrl: json['cnicFrontUrl'] as String?,
+      cnicBackUrl: json['cnicBackUrl'] as String?,
+      liveSelfieUrl: json['liveSelfieUrl'] as String?,
+      faceMatchStatus: json['faceMatchStatus'] as String? ?? 'PENDING',
+      trainingStatus: json['trainingStatus'] as String? ?? 'NOT_STARTED',
+      onboardingStatus: json['onboardingStatus'] as String? ?? 'DRAFT',
+      legalNameConfirmedAt: json['legalNameConfirmedAt'] != null
+          ? DateTime.tryParse(json['legalNameConfirmedAt'] as String)
+          : null,
+      generalAgreementAcceptedAt: json['generalAgreementAcceptedAt'] != null
+          ? DateTime.tryParse(json['generalAgreementAcceptedAt'] as String)
+          : null,
+      tradeAgreementAcceptedAt: json['tradeAgreementAcceptedAt'] != null
+          ? DateTime.tryParse(json['tradeAgreementAcceptedAt'] as String)
+          : null,
+      generalAgreementVersion: json['generalAgreementVersion'] as String?,
+      tradeAgreementVersion: json['tradeAgreementVersion'] as String?,
+      submittedForReviewAt: json['submittedForReviewAt'] != null
+          ? DateTime.tryParse(json['submittedForReviewAt'] as String)
+          : null,
+      changesRequiredReason: json['changesRequiredReason'] as String?,
+      rejectionReason: json['rejectionReason'] as String?,
     );
   }
 
@@ -88,6 +146,22 @@ class WorkerProfileModel {
       skills: skills.map((s) => s.toEntity()).toList(),
       stats: stats.toEntity(),
       ongoingJob: ongoingJob?.toEntity(),
+      fullLegalName: fullLegalName,
+      residentialAddress: residentialAddress,
+      cnicFrontUrl: cnicFrontUrl,
+      cnicBackUrl: cnicBackUrl,
+      liveSelfieUrl: liveSelfieUrl,
+      faceMatchStatus: faceMatchStatus,
+      trainingStatus: trainingStatus,
+      onboardingStatus: onboardingStatus,
+      legalNameConfirmedAt: legalNameConfirmedAt,
+      generalAgreementAcceptedAt: generalAgreementAcceptedAt,
+      tradeAgreementAcceptedAt: tradeAgreementAcceptedAt,
+      generalAgreementVersion: generalAgreementVersion,
+      tradeAgreementVersion: tradeAgreementVersion,
+      submittedForReviewAt: submittedForReviewAt,
+      changesRequiredReason: changesRequiredReason,
+      rejectionReason: rejectionReason,
     );
   }
 }

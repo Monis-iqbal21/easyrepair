@@ -213,7 +213,11 @@ export class WorkersRepository {
    * INSPECTION direct-hire and BIDDING's createBid/editBid all require
    * profileCompleted=true). Clearing the skill correctly re-locks hireability.
    */
-  async replaceSkills(workerProfileId: string, categoryIds: string[]) {
+  async replaceSkills(
+    workerProfileId: string,
+    categoryIds: string[],
+    yearsExperience?: number,
+  ) {
     return this.prisma.$transaction(async (tx) => {
       await tx.workerSkill.deleteMany({ where: { workerProfileId } });
 
@@ -221,6 +225,7 @@ export class WorkersRepository {
         data: categoryIds.map((categoryId) => ({
           workerProfileId,
           categoryId,
+          ...(yearsExperience !== undefined ? { yearsExperience } : {}),
         })),
       });
 
@@ -237,6 +242,84 @@ export class WorkersRepository {
           },
         },
       });
+    });
+  }
+
+  /**
+   * Update years of experience on the worker's existing (single) skill row,
+   * without touching which category is selected. Used by the
+   * profile-completion form's "Experience in Years" field. No-op if the
+   * worker has no skill yet.
+   */
+  async updateSkillExperience(
+    workerProfileId: string,
+    yearsExperience: number,
+  ): Promise<void> {
+    await this.prisma.workerSkill.updateMany({
+      where: { workerProfileId },
+      data: { yearsExperience },
+    });
+  }
+
+  // ── Profile completion (Ustaad onboarding) ────────────────────────────────
+
+  /** Partial update of the profile-completion text/checkbox fields. */
+  async updateProfileCompletion(
+    workerProfileId: string,
+    data: Prisma.WorkerProfileUpdateInput,
+  ): Promise<WorkerProfileWithSkills> {
+    return this.prisma.workerProfile.update({
+      where: { id: workerProfileId },
+      data,
+      include: WORKER_PROFILE_INCLUDE,
+    });
+  }
+
+  async updateCnicFront(
+    workerProfileId: string,
+    url: string,
+    storageKey: string,
+  ): Promise<void> {
+    await this.prisma.workerProfile.update({
+      where: { id: workerProfileId },
+      data: { cnicFrontUrl: url, cnicFrontStorageKey: storageKey },
+    });
+  }
+
+  async updateCnicBack(
+    workerProfileId: string,
+    url: string,
+    storageKey: string,
+  ): Promise<void> {
+    await this.prisma.workerProfile.update({
+      where: { id: workerProfileId },
+      data: { cnicBackUrl: url, cnicBackStorageKey: storageKey },
+    });
+  }
+
+  async updateLiveSelfie(
+    workerProfileId: string,
+    url: string,
+    storageKey: string,
+  ): Promise<void> {
+    await this.prisma.workerProfile.update({
+      where: { id: workerProfileId },
+      data: { liveSelfieUrl: url, liveSelfieStorageKey: storageKey },
+    });
+  }
+
+  /** Move a DRAFT/CHANGES_REQUIRED profile into the admin review queue. */
+  async submitForReview(workerProfileId: string): Promise<WorkerProfileWithSkills> {
+    return this.prisma.workerProfile.update({
+      where: { id: workerProfileId },
+      data: {
+        onboardingStatus: 'SUBMITTED_FOR_REVIEW',
+        submittedForReviewAt: new Date(),
+        // Clear stale reasons from a previous review cycle.
+        changesRequiredReason: null,
+        rejectionReason: null,
+      },
+      include: WORKER_PROFILE_INCLUDE,
     });
   }
 

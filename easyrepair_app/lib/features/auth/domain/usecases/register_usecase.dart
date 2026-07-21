@@ -15,6 +15,7 @@ class RegisterUseCase {
     required String firstName,
     required String lastName,
     required String role,
+    String? categoryId,
   }) {
     return _repository.register(
       phone: phone,
@@ -22,6 +23,7 @@ class RegisterUseCase {
       firstName: firstName,
       lastName: lastName,
       role: role,
+      categoryId: categoryId,
     );
   }
 }

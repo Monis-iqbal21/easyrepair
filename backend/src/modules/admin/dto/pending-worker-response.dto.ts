@@ -1,4 +1,10 @@
-import { WorkerStatus, VerificationStatus } from '@prisma/client';
+import {
+  WorkerStatus,
+  VerificationStatus,
+  WorkerOnboardingStatus,
+  FaceMatchStatus,
+  TrainingStatus,
+} from '@prisma/client';
 
 export class WorkerSkillDto {
   id: string;
@@ -16,6 +22,11 @@ export class WorkerDocumentDto {
   createdAt: Date;
 }
 
+/**
+ * Admin-only view of a worker's onboarding submission. This is the one place
+ * CNIC/selfie URLs are legitimately exposed — never return these fields from
+ * any client- or other-worker-facing endpoint (booking/job/bid DTOs).
+ */
 export class PendingWorkerResponseDto {
   id: string;
   userId: string;
@@ -29,4 +40,22 @@ export class PendingWorkerResponseDto {
   skills: WorkerSkillDto[];
   documents: WorkerDocumentDto[];
   createdAt: Date;
+
+  // ── Onboarding submission ─────────────────────────────────────────────
+  fullLegalName: string | null;
+  residentialAddress: string | null;
+  cnicFrontUrl: string | null;
+  cnicBackUrl: string | null;
+  liveSelfieUrl: string | null;
+  faceMatchStatus: FaceMatchStatus;
+  trainingStatus: TrainingStatus;
+  onboardingStatus: WorkerOnboardingStatus;
+  legalNameConfirmedAt: Date | null;
+  generalAgreementAcceptedAt: Date | null;
+  tradeAgreementAcceptedAt: Date | null;
+  generalAgreementVersion: string | null;
+  tradeAgreementVersion: string | null;
+  submittedForReviewAt: Date | null;
+  changesRequiredReason: string | null;
+  rejectionReason: string | null;
 }

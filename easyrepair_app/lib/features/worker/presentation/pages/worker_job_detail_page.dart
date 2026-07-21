@@ -19,6 +19,7 @@ import '../../../bookings/presentation/widgets/inspection_report_card.dart';
 import '../../../bookings/presentation/widgets/media_attachment_widgets.dart';
 import '../providers/worker_job_providers.dart';
 import '../providers/worker_providers.dart';
+import '../widgets/onboarding_gate.dart';
 import '../widgets/worker_chat_action.dart';
 
 // ── Palette ───────────────────────────────────────────────────────────────────
@@ -180,6 +181,7 @@ class _JobBody extends ConsumerWidget {
                     width: double.infinity,
                     child: ElevatedButton.icon(
                       onPressed: () {
+                        if (!ensureApprovedOrWarn(context, ref)) return;
                         final title = job.title?.isNotEmpty == true
                             ? job.title!
                             : job.serviceCategory;

@@ -13,11 +13,11 @@ import '../../features/client/presentation/pages/client_profile_page.dart';
 import '../../features/bookings/presentation/pages/booking_detail_page.dart';
 import '../../features/bookings/presentation/pages/inspection_report_page.dart';
 import '../../features/client/presentation/pages/post_job_page.dart';
-import '../../features/worker/presentation/pages/verification_pending_page.dart';
 import '../../features/worker/presentation/pages/worker_home_page.dart';
 import '../../features/worker/presentation/pages/worker_jobs_page.dart';
 import '../../features/worker/presentation/pages/worker_chat_page.dart';
 import '../../features/worker/presentation/pages/worker_profile_page.dart';
+import '../../features/worker/presentation/pages/worker_profile_completion_page.dart';
 import '../../features/worker/presentation/pages/worker_bid_page.dart';
 import '../../features/worker/presentation/pages/worker_job_detail_page.dart';
 import '../../features/worker/presentation/pages/inspection_report_form_page.dart';
@@ -51,14 +51,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       final user = authState.valueOrNull;
       final isLoggedIn = user != null;
 
-      // From splash or auth route: dispatch to correct home
+      // From splash or auth route: dispatch to correct home.
+      // Workers always land on Home regardless of onboarding/approval status
+      // — the profile-completion modal/banner and action-level gating (Go
+      // Online, bid, apply) handle the "not approved yet" case there, rather
+      // than hard-blocking the whole app on a dead-end page.
       if (isSplash || (isLoggedIn && isAuthRoute)) {
         if (!isLoggedIn) return '/auth/login';
-        if (user!.isWorker) {
-          return user.isVerifiedWorker
-              ? '/worker/home'
-              : '/worker/verification-pending';
-        }
+        if (user!.isWorker) return '/worker/home';
         return '/client/home';
       }
 
@@ -157,6 +157,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, __) => const WorkerProfilePage(),
       ),
       GoRoute(
+        path: '/worker/profile-completion',
+        builder: (_, __) => const WorkerProfileCompletionPage(),
+      ),
+      GoRoute(
         path: '/worker/job/:id',
         builder: (_, state) => WorkerJobDetailPage(
           jobId: state.pathParameters['id']!,
@@ -185,10 +189,6 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/worker/reviews',
         builder: (_, __) => const WorkerReviewsPage(),
-      ),
-      GoRoute(
-        path: '/worker/verification-pending',
-        builder: (_, __) => const VerificationPendingPage(),
       ),
       GoRoute(
         path: '/client/track/:id',

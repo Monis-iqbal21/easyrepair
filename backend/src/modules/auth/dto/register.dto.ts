@@ -3,7 +3,9 @@ import {
   IsNotEmpty,
   MinLength,
   IsIn,
+  IsUUID,
   Matches,
+  ValidateIf,
 } from 'class-validator';
 
 export class RegisterDto {
@@ -30,4 +32,9 @@ export class RegisterDto {
     message: 'role must be CLIENT or WORKER',
   })
   role: 'CLIENT' | 'WORKER';
+
+  /** Required when role === 'WORKER' — the Ustaad's single main skill. */
+  @ValidateIf((o) => o.role === 'WORKER')
+  @IsUUID('4', { message: 'categoryId must be a valid main skill category' })
+  categoryId?: string;
 }

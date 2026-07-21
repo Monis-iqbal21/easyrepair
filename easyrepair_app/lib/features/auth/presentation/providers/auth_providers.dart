@@ -76,6 +76,7 @@ class RegisterNotifier extends AsyncNotifier<void> {
     required String firstName,
     required String lastName,
     required String role,
+    String? categoryId,
   }) async {
     state = const AsyncLoading();
     final result = await ref.read(registerUseCaseProvider).call(
@@ -84,6 +85,7 @@ class RegisterNotifier extends AsyncNotifier<void> {
           firstName: firstName,
           lastName: lastName,
           role: role,
+          categoryId: categoryId,
         );
     result.fold(
       (failure) => state = AsyncError(failure, StackTrace.current),

@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { VerificationStatus } from '@prisma/client';
+import { FaceMatchStatus, TrainingStatus } from '@prisma/client';
 import { AdminRepository, WorkerProfileAdminView } from './admin.repository';
 import { PendingWorkerResponseDto } from './dto/pending-worker-response.dto';
 
@@ -7,7 +7,7 @@ import { PendingWorkerResponseDto } from './dto/pending-worker-response.dto';
 export class AdminService {
   constructor(private readonly adminRepository: AdminRepository) {}
 
-  /** GET /admin/workers/pending — all worker profiles awaiting verification. */
+  /** GET /admin/workers/pending — worker profiles submitted and awaiting review. */
   async getPendingWorkers(): Promise<PendingWorkerResponseDto[]> {
     const workers = await this.adminRepository.findPendingWorkers();
     return workers.map((w) => this._toDto(w));
@@ -16,19 +16,55 @@ export class AdminService {
   /** PATCH /admin/workers/:id/approve */
   async approveWorker(workerProfileId: string): Promise<PendingWorkerResponseDto> {
     await this._ensureExists(workerProfileId);
-    const updated = await this.adminRepository.setVerificationStatus(
-      workerProfileId,
-      VerificationStatus.VERIFIED,
-    );
+    const updated = await this.adminRepository.approve(workerProfileId);
     return this._toDto(updated);
   }
 
   /** PATCH /admin/workers/:id/reject */
-  async rejectWorker(workerProfileId: string): Promise<PendingWorkerResponseDto> {
+  async rejectWorker(
+    workerProfileId: string,
+    reason: string,
+  ): Promise<PendingWorkerResponseDto> {
     await this._ensureExists(workerProfileId);
-    const updated = await this.adminRepository.setVerificationStatus(
+    const updated = await this.adminRepository.reject(workerProfileId, reason);
+    return this._toDto(updated);
+  }
+
+  /** PATCH /admin/workers/:id/request-changes */
+  async requestChanges(
+    workerProfileId: string,
+    reason: string,
+  ): Promise<PendingWorkerResponseDto> {
+    await this._ensureExists(workerProfileId);
+    const updated = await this.adminRepository.requestChanges(
       workerProfileId,
-      VerificationStatus.REJECTED,
+      reason,
+    );
+    return this._toDto(updated);
+  }
+
+  /** PATCH /admin/workers/:id/face-match */
+  async updateFaceMatchStatus(
+    workerProfileId: string,
+    status: FaceMatchStatus,
+  ): Promise<PendingWorkerResponseDto> {
+    await this._ensureExists(workerProfileId);
+    const updated = await this.adminRepository.setFaceMatchStatus(
+      workerProfileId,
+      status,
+    );
+    return this._toDto(updated);
+  }
+
+  /** PATCH /admin/workers/:id/training-status */
+  async updateTrainingStatus(
+    workerProfileId: string,
+    status: TrainingStatus,
+  ): Promise<PendingWorkerResponseDto> {
+    await this._ensureExists(workerProfileId);
+    const updated = await this.adminRepository.setTrainingStatus(
+      workerProfileId,
+      status,
     );
     return this._toDto(updated);
   }
@@ -64,6 +100,22 @@ export class AdminService {
         createdAt: d.createdAt,
       })),
       createdAt: w.createdAt,
+      fullLegalName: w.fullLegalName,
+      residentialAddress: w.residentialAddress,
+      cnicFrontUrl: w.cnicFrontUrl,
+      cnicBackUrl: w.cnicBackUrl,
+      liveSelfieUrl: w.liveSelfieUrl,
+      faceMatchStatus: w.faceMatchStatus,
+      trainingStatus: w.trainingStatus,
+      onboardingStatus: w.onboardingStatus,
+      legalNameConfirmedAt: w.legalNameConfirmedAt,
+      generalAgreementAcceptedAt: w.generalAgreementAcceptedAt,
+      tradeAgreementAcceptedAt: w.tradeAgreementAcceptedAt,
+      generalAgreementVersion: w.generalAgreementVersion,
+      tradeAgreementVersion: w.tradeAgreementVersion,
+      submittedForReviewAt: w.submittedForReviewAt,
+      changesRequiredReason: w.changesRequiredReason,
+      rejectionReason: w.rejectionReason,
     };
   }
 }

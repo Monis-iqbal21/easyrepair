@@ -1,5 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, VerificationStatus } from '@prisma/client';
+import {
+  Prisma,
+  VerificationStatus,
+  WorkerOnboardingStatus,
+  FaceMatchStatus,
+  TrainingStatus,
+} from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 
 const WORKER_PROFILE_ADMIN_INCLUDE = {
@@ -20,12 +26,12 @@ export type WorkerProfileAdminView = Prisma.WorkerProfileGetPayload<{
 export class AdminRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  /** Find all worker profiles awaiting verification, oldest first. */
+  /** Find all worker profiles currently awaiting an admin decision, oldest first. */
   async findPendingWorkers(): Promise<WorkerProfileAdminView[]> {
     return this.prisma.workerProfile.findMany({
-      where: { verificationStatus: VerificationStatus.PENDING },
+      where: { onboardingStatus: WorkerOnboardingStatus.SUBMITTED_FOR_REVIEW },
       include: WORKER_PROFILE_ADMIN_INCLUDE,
-      orderBy: { createdAt: 'asc' },
+      orderBy: { submittedForReviewAt: 'asc' },
     });
   }
 
@@ -37,14 +43,69 @@ export class AdminRepository {
     });
   }
 
-  /** Set verificationStatus and return the updated profile with relations. */
-  async setVerificationStatus(
+  /** Approve — the only path to hireability. Mirrors verificationStatus for legacy readers (e.g. Flutter's isVerifiedWorker). */
+  async approve(workerProfileId: string): Promise<WorkerProfileAdminView> {
+    return this.prisma.workerProfile.update({
+      where: { id: workerProfileId },
+      data: {
+        onboardingStatus: WorkerOnboardingStatus.APPROVED,
+        verificationStatus: VerificationStatus.VERIFIED,
+        rejectionReason: null,
+        changesRequiredReason: null,
+      },
+      include: WORKER_PROFILE_ADMIN_INCLUDE,
+    });
+  }
+
+  /** Reject with a reason — terminal unless the worker is allowed to resubmit later. */
+  async reject(
     workerProfileId: string,
-    status: VerificationStatus,
+    reason: string,
   ): Promise<WorkerProfileAdminView> {
     return this.prisma.workerProfile.update({
       where: { id: workerProfileId },
-      data: { verificationStatus: status },
+      data: {
+        onboardingStatus: WorkerOnboardingStatus.REJECTED,
+        verificationStatus: VerificationStatus.REJECTED,
+        rejectionReason: reason,
+      },
+      include: WORKER_PROFILE_ADMIN_INCLUDE,
+    });
+  }
+
+  /** Send back to the worker for edits, with a reason shown in the app. */
+  async requestChanges(
+    workerProfileId: string,
+    reason: string,
+  ): Promise<WorkerProfileAdminView> {
+    return this.prisma.workerProfile.update({
+      where: { id: workerProfileId },
+      data: {
+        onboardingStatus: WorkerOnboardingStatus.CHANGES_REQUIRED,
+        changesRequiredReason: reason,
+      },
+      include: WORKER_PROFILE_ADMIN_INCLUDE,
+    });
+  }
+
+  async setFaceMatchStatus(
+    workerProfileId: string,
+    status: FaceMatchStatus,
+  ): Promise<WorkerProfileAdminView> {
+    return this.prisma.workerProfile.update({
+      where: { id: workerProfileId },
+      data: { faceMatchStatus: status },
+      include: WORKER_PROFILE_ADMIN_INCLUDE,
+    });
+  }
+
+  async setTrainingStatus(
+    workerProfileId: string,
+    status: TrainingStatus,
+  ): Promise<WorkerProfileAdminView> {
+    return this.prisma.workerProfile.update({
+      where: { id: workerProfileId },
+      data: { trainingStatus: status },
       include: WORKER_PROFILE_ADMIN_INCLUDE,
     });
   }

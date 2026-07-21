@@ -11,6 +11,8 @@ abstract class AuthRepository {
     required String firstName,
     required String lastName,
     required String role,
+    /// Required when role == 'WORKER' — the Ustaad's single main skill.
+    String? categoryId,
   });
 
   Future<Either<Failure, AuthTokensEntity>> login({

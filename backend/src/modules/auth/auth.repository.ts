@@ -20,6 +20,8 @@ export class AuthRepository {
     firstName: string;
     lastName: string;
     role: Role;
+    /** WORKER only — the single main skill picked at registration. */
+    categoryId?: string;
   }): Promise<User> {
     return this.prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
@@ -39,13 +41,28 @@ export class AuthRepository {
           },
         });
       } else if (data.role === Role.WORKER) {
-        await tx.workerProfile.create({
+        const workerProfile = await tx.workerProfile.create({
           data: {
             userId: user.id,
             firstName: data.firstName,
             lastName: data.lastName,
           },
         });
+
+        if (data.categoryId) {
+          await tx.workerSkill.create({
+            data: {
+              workerProfileId: workerProfile.id,
+              categoryId: data.categoryId,
+            },
+          });
+          // Mirrors WorkersRepository.replaceSkills — having exactly one
+          // skill is what profileCompleted means.
+          await tx.workerProfile.update({
+            where: { id: workerProfile.id },
+            data: { profileCompleted: true },
+          });
+        }
       }
 
       return user;

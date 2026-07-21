@@ -12,6 +12,7 @@ import '../../../bids/domain/repositories/bid_repository.dart';
 import '../../../bids/presentation/providers/bid_providers.dart';
 import '../../domain/entities/new_job_entity.dart';
 import '../providers/worker_job_providers.dart';
+import '../widgets/onboarding_gate.dart';
 import '../widgets/worker_chat_action.dart';
 
 // ── Palette ───────────────────────────────────────────────────────────────────
@@ -71,6 +72,7 @@ class _WorkerBidPageState extends ConsumerState<WorkerBidPage> {
   }
 
   Future<void> _submit() async {
+    if (!ensureApprovedOrWarn(context, ref)) return;
     final amtStr = _amountCtrl.text.trim();
     if (amtStr.isEmpty) {
       _showSnack('Please enter a bid amount.', error: true);

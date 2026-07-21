@@ -789,7 +789,7 @@ export class BookingsService {
         'This worker is no longer available. Please choose another.',
       );
     }
-    if (!worker.profileCompleted) {
+    if (!worker.profileCompleted || worker.onboardingStatus !== 'APPROVED') {
       throw new BadRequestException(
         'This worker has not completed their profile yet and cannot be hired.',
       );

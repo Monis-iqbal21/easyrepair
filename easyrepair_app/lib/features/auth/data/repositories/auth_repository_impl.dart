@@ -23,6 +23,7 @@ class AuthRepositoryImpl implements AuthRepository {
     required String firstName,
     required String lastName,
     required String role,
+    String? categoryId,
   }) async {
     try {
       final model = await _datasource.register(
@@ -31,6 +32,7 @@ class AuthRepositoryImpl implements AuthRepository {
         firstName: firstName,
         lastName: lastName,
         role: role,
+        categoryId: categoryId,
       );
       await _storage.saveTokens(
         accessToken: model.accessToken,

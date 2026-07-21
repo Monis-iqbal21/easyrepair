@@ -6,9 +6,13 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
-import { AvailabilityStatus, BookingStatus } from '@prisma/client';
+import { AvailabilityStatus, BookingStatus, Prisma } from '@prisma/client';
 import { Queue } from 'bull';
-import { WorkerJobWithRelations, WorkersRepository } from './workers.repository';
+import {
+  WorkerJobWithRelations,
+  WorkerProfileWithSkills,
+  WorkersRepository,
+} from './workers.repository';
 import { NotificationsService } from '../notifications/notifications.service';
 import { StorageService } from '../storage/storage.service';
 import { UpdateAvailabilityDto } from './dto/update-availability.dto';
@@ -19,7 +23,16 @@ import {
 } from './workers.processor';
 import { UpdateSkillsDto } from './dto/update-skills.dto';
 import { UpdateLocationDto } from './dto/update-location.dto';
+import { UpdateProfileCompletionDto } from './dto/update-profile-completion.dto';
 import { haversineKm } from '../../common/utils/geo.util';
+
+/**
+ * Placeholder agreement versions — actual legal text will be provided later.
+ * Bumping these strings when real agreements ship will let us tell which
+ * (older) version a worker accepted.
+ */
+const GENERAL_AGREEMENT_VERSION = 'v1-placeholder';
+const TRADE_AGREEMENT_VERSION = 'v1-placeholder';
 import {
   WorkerJobAttachmentDto,
   WorkerJobResponseDto,
@@ -67,6 +80,193 @@ export class WorkersService {
     return { avatarUrl };
   }
 
+  // ── Profile completion (Ustaad onboarding) ─────────────────────────────────
+
+  /** Only DRAFT/CHANGES_REQUIRED profiles may be edited — once submitted or
+   * approved, the worker can't silently change what an admin already reviewed
+   * (or is reviewing). Shared by the text-field update and all 3 uploads. */
+  private _assertProfileEditable(onboardingStatus: string): void {
+    if (onboardingStatus !== 'DRAFT' && onboardingStatus !== 'CHANGES_REQUIRED') {
+      throw new BadRequestException(
+        'Profile cannot be edited while it is under review or already approved.',
+      );
+    }
+  }
+
+  async updateProfileCompletion(userId: string, dto: UpdateProfileCompletionDto) {
+    const profile = await this.workersRepository.findByUserId(userId);
+    if (!profile) throw new NotFoundException('Worker profile not found');
+    this._assertProfileEditable(profile.onboardingStatus);
+
+    const data: Prisma.WorkerProfileUpdateInput = {};
+    if (dto.fullLegalName !== undefined) data.fullLegalName = dto.fullLegalName;
+    if (dto.residentialAddress !== undefined) {
+      data.residentialAddress = dto.residentialAddress;
+    }
+    if (dto.legalNameConfirmed !== undefined) {
+      data.legalNameConfirmedAt = dto.legalNameConfirmed ? new Date() : null;
+    }
+    if (dto.generalAgreementAccepted !== undefined) {
+      data.generalAgreementAcceptedAt = dto.generalAgreementAccepted
+        ? new Date()
+        : null;
+      data.generalAgreementVersion = dto.generalAgreementAccepted
+        ? GENERAL_AGREEMENT_VERSION
+        : null;
+    }
+    if (dto.tradeAgreementAccepted !== undefined) {
+      data.tradeAgreementAcceptedAt = dto.tradeAgreementAccepted
+        ? new Date()
+        : null;
+      data.tradeAgreementVersion = dto.tradeAgreementAccepted
+        ? TRADE_AGREEMENT_VERSION
+        : null;
+    }
+
+    if (dto.experienceYears !== undefined) {
+      await this.workersRepository.updateSkillExperience(
+        profile.id,
+        dto.experienceYears,
+      );
+    }
+
+    const updated = await this.workersRepository.updateProfileCompletion(
+      profile.id,
+      data,
+    );
+    return this._toProfileCompletionDto(updated);
+  }
+
+  async uploadCnicFront(
+    userId: string,
+    buffer: Buffer,
+    originalName: string,
+    mimeType: string,
+  ) {
+    const profile = await this.workersRepository.findByUserId(userId);
+    if (!profile) throw new NotFoundException('Worker profile not found');
+    this._assertProfileEditable(profile.onboardingStatus);
+
+    const uploaded = await this.storageService.uploadFile(
+      buffer,
+      originalName,
+      mimeType,
+      `uploads/worker-documents/${profile.id}/cnic-front`,
+    );
+    await this.workersRepository.updateCnicFront(
+      profile.id,
+      uploaded.url,
+      uploaded.key,
+    );
+    return { cnicFrontUrl: uploaded.url };
+  }
+
+  async uploadCnicBack(
+    userId: string,
+    buffer: Buffer,
+    originalName: string,
+    mimeType: string,
+  ) {
+    const profile = await this.workersRepository.findByUserId(userId);
+    if (!profile) throw new NotFoundException('Worker profile not found');
+    this._assertProfileEditable(profile.onboardingStatus);
+
+    const uploaded = await this.storageService.uploadFile(
+      buffer,
+      originalName,
+      mimeType,
+      `uploads/worker-documents/${profile.id}/cnic-back`,
+    );
+    await this.workersRepository.updateCnicBack(
+      profile.id,
+      uploaded.url,
+      uploaded.key,
+    );
+    return { cnicBackUrl: uploaded.url };
+  }
+
+  async uploadLiveSelfie(
+    userId: string,
+    buffer: Buffer,
+    originalName: string,
+    mimeType: string,
+  ) {
+    const profile = await this.workersRepository.findByUserId(userId);
+    if (!profile) throw new NotFoundException('Worker profile not found');
+    this._assertProfileEditable(profile.onboardingStatus);
+
+    const uploaded = await this.storageService.uploadFile(
+      buffer,
+      originalName,
+      mimeType,
+      `uploads/worker-documents/${profile.id}/live-selfie`,
+    );
+    await this.workersRepository.updateLiveSelfie(
+      profile.id,
+      uploaded.url,
+      uploaded.key,
+    );
+    return { liveSelfieUrl: uploaded.url };
+  }
+
+  /**
+   * Validate every required field is present, then move the profile into
+   * SUBMITTED_FOR_REVIEW. Throws a single BadRequestException listing every
+   * missing field so the Flutter form can highlight all of them at once.
+   */
+  async submitProfileForReview(userId: string) {
+    const profile = await this.workersRepository.findByUserId(userId);
+    if (!profile) throw new NotFoundException('Worker profile not found');
+    this._assertProfileEditable(profile.onboardingStatus);
+
+    const missing: string[] = [];
+    if (!profile.fullLegalName) missing.push('Full legal name');
+    if (!profile.residentialAddress) missing.push('Residential address');
+    if (profile.skills.length !== 1) missing.push('Main skill');
+    if (!profile.cnicFrontUrl) missing.push('CNIC front image');
+    if (!profile.cnicBackUrl) missing.push('CNIC back image');
+    if (!profile.liveSelfieUrl) missing.push('Live selfie');
+    if (!profile.legalNameConfirmedAt) missing.push('Legal name confirmation');
+    if (!profile.generalAgreementAcceptedAt) missing.push('General Ustaad Agreement');
+    if (!profile.tradeAgreementAcceptedAt) missing.push('Trade-specific Agreement');
+
+    if (missing.length > 0) {
+      throw new BadRequestException(
+        `Please complete the following before submitting: ${missing.join(', ')}.`,
+      );
+    }
+
+    const updated = await this.workersRepository.submitForReview(profile.id);
+    return this._toProfileCompletionDto(updated);
+  }
+
+  private _toProfileCompletionDto(profile: WorkerProfileWithSkills) {
+    return {
+      id: profile.id,
+      fullLegalName: profile.fullLegalName,
+      residentialAddress: profile.residentialAddress,
+      cnicFrontUrl: profile.cnicFrontUrl,
+      cnicBackUrl: profile.cnicBackUrl,
+      liveSelfieUrl: profile.liveSelfieUrl,
+      faceMatchStatus: profile.faceMatchStatus,
+      trainingStatus: profile.trainingStatus,
+      onboardingStatus: profile.onboardingStatus,
+      legalNameConfirmedAt: profile.legalNameConfirmedAt,
+      generalAgreementAcceptedAt: profile.generalAgreementAcceptedAt,
+      tradeAgreementAcceptedAt: profile.tradeAgreementAcceptedAt,
+      generalAgreementVersion: profile.generalAgreementVersion,
+      tradeAgreementVersion: profile.tradeAgreementVersion,
+      submittedForReviewAt: profile.submittedForReviewAt,
+      changesRequiredReason: profile.changesRequiredReason,
+      rejectionReason: profile.rejectionReason,
+      skills: profile.skills.map((s) => ({
+        id: s.id,
+        yearsExperience: s.yearsExperience,
+        category: s.category,
+      })),
+    };
+  }
+
   // ── Profile & availability ───────────────────────────────────────────────
 
   /** Get the full worker dashboard profile including skills, stats, and ongoing job. */
@@ -102,6 +302,26 @@ export class WorkersService {
         yearsExperience: s.yearsExperience,
         category: s.category,
       })),
+      // ── Ustaad onboarding / profile completion ─────────────────────────
+      // Owner-only endpoint (JwtAuthGuard + CurrentUser scoping) — CNIC and
+      // selfie URLs must never appear in any client-facing or other-worker-
+      // facing DTO (booking/job responses, bid responses, etc.).
+      fullLegalName: profile.fullLegalName,
+      residentialAddress: profile.residentialAddress,
+      cnicFrontUrl: profile.cnicFrontUrl,
+      cnicBackUrl: profile.cnicBackUrl,
+      liveSelfieUrl: profile.liveSelfieUrl,
+      faceMatchStatus: profile.faceMatchStatus,
+      trainingStatus: profile.trainingStatus,
+      onboardingStatus: profile.onboardingStatus,
+      legalNameConfirmedAt: profile.legalNameConfirmedAt,
+      generalAgreementAcceptedAt: profile.generalAgreementAcceptedAt,
+      tradeAgreementAcceptedAt: profile.tradeAgreementAcceptedAt,
+      generalAgreementVersion: profile.generalAgreementVersion,
+      tradeAgreementVersion: profile.tradeAgreementVersion,
+      submittedForReviewAt: profile.submittedForReviewAt,
+      changesRequiredReason: profile.changesRequiredReason,
+      rejectionReason: profile.rejectionReason,
       stats,
       ongoingJob: ongoingJob
         ? {
@@ -129,6 +349,15 @@ export class WorkersService {
     ) {
       throw new UnprocessableEntityException(
         'Please select your main skill first.',
+      );
+    }
+
+    if (
+      dto.status === AvailabilityStatus.ONLINE &&
+      (profile.onboardingStatus !== 'APPROVED' || !profile.profileCompleted)
+    ) {
+      throw new UnprocessableEntityException(
+        'Profile approval required before receiving jobs.',
       );
     }
 
@@ -274,6 +503,7 @@ export class WorkersService {
     const skills = await this.workersRepository.replaceSkills(
       profile.id,
       dto.categoryIds,
+      dto.yearsExperience,
     );
     this.logger.log(
       `[updateSkills] saved ${skills.length} skills for workerProfileId=${profile.id}`,
