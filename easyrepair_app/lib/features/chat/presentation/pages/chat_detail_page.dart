@@ -43,15 +43,19 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
   bool _isSending = false;
   bool _isSendingAttachment = false;
   bool _isRecording = false;
+  bool _isPaused = false;
   Duration _recordingDuration = Duration.zero;
   Timer? _recordingTimer;
   String? _recordingPath;
   AudioRecorder? _recorder;
+  StreamSubscription<Amplitude>? _amplitudeSub;
+  final List<double> _amplitudeBars = [];
 
   @override
   void initState() {
     super.initState();
     ChatSocketService.instance.joinConversation(widget.conversationId);
+    _controller.addListener(_onTextChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       // Invalidate so the notifier re-fetches fresh messages every time this
@@ -61,10 +65,18 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
     });
   }
 
+  void _onTextChanged() {
+    // Rebuilds the input bar so the circular action button can switch
+    // between mic and send icons as the field goes empty/non-empty.
+    if (mounted) setState(() {});
+  }
+
   @override
   void dispose() {
     _recordingTimer?.cancel();
+    _amplitudeSub?.cancel();
     _recorder?.dispose();
+    _controller.removeListener(_onTextChanged);
     _controller.dispose();
     _scrollController.dispose();
     ChatSocketService.instance.leaveConversation(widget.conversationId);
@@ -239,14 +251,12 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
   Future<void> _startVoiceRecording() async {
     final status = await Permission.microphone.request();
     if (status.isPermanentlyDenied) {
-      _showError(
-        'Microphone access is permanently denied. Enable it in Settings.',
-      );
+      _showError('Microphone permission required to send voice message.');
       openAppSettings();
       return;
     }
     if (!status.isGranted) {
-      _showError('Microphone permission denied.');
+      _showError('Microphone permission required to send voice message.');
       return;
     }
     _recorder ??= AudioRecorder();
@@ -262,7 +272,9 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
 
     setState(() {
       _isRecording = true;
+      _isPaused = false;
       _recordingDuration = Duration.zero;
+      _amplitudeBars.clear();
     });
 
     _recordingTimer = Timer.periodic(const Duration(seconds: 1), (_) {
@@ -270,18 +282,56 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
         setState(() => _recordingDuration += const Duration(seconds: 1));
       }
     });
+
+    // Real amplitude stream from the recorder — drives the live waveform.
+    // The package pauses/resumes this stream internally alongside pause()/resume().
+    _amplitudeSub?.cancel();
+    _amplitudeSub = _recorder!
+        .onAmplitudeChanged(const Duration(milliseconds: 100))
+        .listen((amp) {
+      if (!mounted) return;
+      final normalized = ((amp.current + 45) / 45).clamp(0.0, 1.0);
+      setState(() {
+        _amplitudeBars.add(normalized);
+        if (_amplitudeBars.length > 100) {
+          _amplitudeBars.removeAt(0);
+        }
+      });
+    });
+  }
+
+  Future<void> _togglePauseResumeRecording() async {
+    if (!_isRecording || _recorder == null) return;
+    if (_isPaused) {
+      await _recorder!.resume();
+      _recordingTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (mounted) {
+          setState(() => _recordingDuration += const Duration(seconds: 1));
+        }
+      });
+      setState(() => _isPaused = false);
+    } else {
+      _recordingTimer?.cancel();
+      _recordingTimer = null;
+      await _recorder!.pause();
+      setState(() => _isPaused = true);
+    }
   }
 
   Future<void> _stopVoiceRecording() async {
     _recordingTimer?.cancel();
     _recordingTimer = null;
+    await _amplitudeSub?.cancel();
+    _amplitudeSub = null;
 
     final path = await _recorder?.stop();
     final filePath = path ?? _recordingPath;
 
     setState(() {
       _isRecording = false;
+      _isPaused = false;
       _recordingDuration = Duration.zero;
+      _amplitudeBars.clear();
     });
 
     if (filePath != null) {
@@ -292,19 +342,17 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
   Future<void> _cancelVoiceRecording() async {
     _recordingTimer?.cancel();
     _recordingTimer = null;
+    await _amplitudeSub?.cancel();
+    _amplitudeSub = null;
 
-    await _recorder?.stop();
-
-    if (_recordingPath != null) {
-      try {
-        final file = File(_recordingPath!);
-        if (await file.exists()) await file.delete();
-      } catch (_) {}
-    }
+    // cancel() stops the recorder and deletes the underlying temp file.
+    await _recorder?.cancel();
 
     setState(() {
       _isRecording = false;
+      _isPaused = false;
       _recordingDuration = Duration.zero;
+      _amplitudeBars.clear();
     });
   }
 
@@ -808,22 +856,23 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
                 ],
               ),
             ),
-          // Input or voice recording bar
-          if (_isRecording)
-            _VoiceRecordBar(
-              duration: _recordingDuration,
-              onStop: _stopVoiceRecording,
-              onCancel: _cancelVoiceRecording,
-            )
-          else
-            _InputBar(
-              controller: _controller,
-              isSending: _isSending,
-              isAttachmentBusy: _isSendingAttachment,
-              onSend: _send,
-              onAttachmentTap: _showAttachmentSheet,
-              onCameraTap: _showCameraSheet,
-            ),
+          // WhatsApp-style input bar: text field <-> recording bar, mic <-> send.
+          _ChatInputBar(
+            controller: _controller,
+            isSending: _isSending,
+            isAttachmentBusy: _isSendingAttachment,
+            isRecording: _isRecording,
+            isPaused: _isPaused,
+            recordingDuration: _recordingDuration,
+            amplitudeBars: _amplitudeBars,
+            onSendText: _send,
+            onAttachmentTap: _showAttachmentSheet,
+            onCameraTap: _showCameraSheet,
+            onStartRecording: _startVoiceRecording,
+            onCancelRecording: _cancelVoiceRecording,
+            onSendRecording: _stopVoiceRecording,
+            onTogglePauseResume: _togglePauseResumeRecording,
+          ),
         ],
       ),
     ),
@@ -1932,28 +1981,58 @@ class _MapGridPainter extends CustomPainter {
   bool shouldRepaint(_MapGridPainter old) => old.isMe != isMe;
 }
 
-// ── Input bar ─────────────────────────────────────────────────────────────────
+// ── Chat input bar (WhatsApp-style: text/mic <-> recording/send) ──────────────
 
-class _InputBar extends StatelessWidget {
+class _ChatInputBar extends StatelessWidget {
   final TextEditingController controller;
   final bool isSending;
   final bool isAttachmentBusy;
-  final VoidCallback onSend;
+  final bool isRecording;
+  final bool isPaused;
+  final Duration recordingDuration;
+  final List<double> amplitudeBars;
+  final VoidCallback onSendText;
   final VoidCallback onAttachmentTap;
   final VoidCallback onCameraTap;
+  final VoidCallback onStartRecording;
+  final VoidCallback onCancelRecording;
+  final VoidCallback onSendRecording;
+  final VoidCallback onTogglePauseResume;
 
-  const _InputBar({
+  const _ChatInputBar({
     required this.controller,
     required this.isSending,
     required this.isAttachmentBusy,
-    required this.onSend,
+    required this.isRecording,
+    required this.isPaused,
+    required this.recordingDuration,
+    required this.amplitudeBars,
+    required this.onSendText,
     required this.onAttachmentTap,
     required this.onCameraTap,
+    required this.onStartRecording,
+    required this.onCancelRecording,
+    required this.onSendRecording,
+    required this.onTogglePauseResume,
   });
+
+  void _onActionTap() {
+    if (isRecording) {
+      onSendRecording();
+      return;
+    }
+    if (controller.text.trim().isNotEmpty) {
+      onSendText();
+      return;
+    }
+    onStartRecording();
+  }
 
   @override
   Widget build(BuildContext context) {
     final bottomPadding = MediaQuery.of(context).padding.bottom;
+    final hasText = controller.text.trim().isNotEmpty;
+
     return Container(
       padding: EdgeInsets.fromLTRB(8, 10, 8, 10 + bottomPadding),
       decoration: const BoxDecoration(
@@ -1962,57 +2041,92 @@ class _InputBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Attachment (+) button
-          _IconBtn(
-            icon: Icons.add_rounded,
-            color: isAttachmentBusy
-                ? const Color(0xFF94A3B8)
-                : const Color(0xFF6B7280),
-            onTap: isAttachmentBusy ? null : onAttachmentTap,
+          if (!isRecording) ...[
+            // Attachment (+) button
+            _IconBtn(
+              icon: Icons.add_rounded,
+              color: isAttachmentBusy
+                  ? const Color(0xFF94A3B8)
+                  : const Color(0xFF6B7280),
+              onTap: isAttachmentBusy ? null : onAttachmentTap,
+            ),
+            const SizedBox(width: 4),
+          ],
+          // Text field <-> recording bar
+          Expanded(
+            child: isRecording
+                ? _RecordingBar(
+                    duration: recordingDuration,
+                    isPaused: isPaused,
+                    amplitudeBars: amplitudeBars,
+                    onCancel: onCancelRecording,
+                  )
+                : Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF9FAFB),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: controller,
+                            textInputAction: TextInputAction.send,
+                            onSubmitted: (_) => onSendText(),
+                            maxLines: 5,
+                            minLines: 1,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Color(0xFF1A1A1A),
+                            ),
+                            decoration: const InputDecoration(
+                              hintText: 'Type a message...',
+                              hintStyle: TextStyle(
+                                  color: Color(0xFF94A3B8), fontSize: 14),
+                              contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 10),
+                              border: InputBorder.none,
+                            ),
+                          ),
+                        ),
+                        // Camera button
+                        _IconBtn(
+                          icon: Icons.camera_alt_rounded,
+                          color: isAttachmentBusy
+                              ? const Color(0xFF94A3B8)
+                              : const Color(0xFF6B7280),
+                          onTap: isAttachmentBusy ? null : onCameraTap,
+                        ),
+                      ],
+                    ),
+                  ),
           ),
           const SizedBox(width: 4),
-          // Text field
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: const Color(0xFFF9FAFB),
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
-              ),
-              child: TextField(
-                controller: controller,
-                textInputAction: TextInputAction.send,
-                onSubmitted: (_) => onSend(),
-                maxLines: 5,
-                minLines: 1,
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: Color(0xFF1A1A1A),
+          // Pause/resume button — only while recording
+          if (isRecording) ...[
+            GestureDetector(
+              onTap: onTogglePauseResume,
+              child: Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF9FAFB),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
                 ),
-                decoration: const InputDecoration(
-                  hintText: 'Type a message...',
-                  hintStyle:
-                      TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
-                  contentPadding:
-                      EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  border: InputBorder.none,
+                child: Icon(
+                  isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded,
+                  color: const Color(0xFFDB6234),
+                  size: 22,
                 ),
               ),
             ),
-          ),
-          const SizedBox(width: 4),
-          // Camera button
-          _IconBtn(
-            icon: Icons.camera_alt_rounded,
-            color: isAttachmentBusy
-                ? const Color(0xFF94A3B8)
-                : const Color(0xFF6B7280),
-            onTap: isAttachmentBusy ? null : onCameraTap,
-          ),
-          const SizedBox(width: 4),
-          // Send button
+            const SizedBox(width: 4),
+          ],
+          // Mic / Send circular action button
           GestureDetector(
-            onTap: isSending ? null : onSend,
+            onTap: isSending ? null : _onActionTap,
             child: Container(
               width: 44,
               height: 44,
@@ -2030,8 +2144,13 @@ class _InputBar extends StatelessWidget {
                         valueColor: AlwaysStoppedAnimation(Colors.white),
                       ),
                     )
-                  : const Icon(Icons.send_rounded,
-                      color: Colors.white, size: 20),
+                  : Icon(
+                      isRecording || hasText
+                          ? Icons.send_rounded
+                          : Icons.mic_rounded,
+                      color: Colors.white,
+                      size: 20,
+                    ),
             ),
           ),
         ],
@@ -2059,85 +2178,136 @@ class _IconBtn extends StatelessWidget {
   }
 }
 
-// ── Voice record bar ──────────────────────────────────────────────────────────
+// ── Recording bar (replaces the text field while recording) ───────────────────
 
-class _VoiceRecordBar extends StatelessWidget {
+class _RecordingBar extends StatelessWidget {
   final Duration duration;
-  final VoidCallback onStop;
+  final bool isPaused;
+  final List<double> amplitudeBars;
   final VoidCallback onCancel;
 
-  const _VoiceRecordBar({
+  const _RecordingBar({
     required this.duration,
-    required this.onStop,
+    required this.isPaused,
+    required this.amplitudeBars,
     required this.onCancel,
   });
 
   String _fmt(Duration d) {
-    final m = d.inMinutes.toString().padLeft(2, '0');
+    final m = d.inMinutes;
     final s = (d.inSeconds % 60).toString().padLeft(2, '0');
     return '$m:$s';
   }
 
   @override
   Widget build(BuildContext context) {
-    final bottomPadding = MediaQuery.of(context).padding.bottom;
     return Container(
-      padding: EdgeInsets.fromLTRB(16, 12, 16, 12 + bottomPadding),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
+      height: 46,
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9FAFB),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
       child: Row(
         children: [
-          // Pulsing red dot
-          Container(
-            width: 10,
-            height: 10,
-            decoration: const BoxDecoration(
-              color: Color(0xFFEF4444),
-              shape: BoxShape.circle,
+          isPaused
+              ? const SizedBox(width: 9, height: 9)
+              : const _BlinkingDot(),
+          const SizedBox(width: 8),
+          SizedBox(
+            width: 34,
+            child: Text(
+              _fmt(duration),
+              style: const TextStyle(
+                fontSize: 13,
+                color: Color(0xFF1A1A1A),
+                fontFeatures: [FontFeature.tabularFigures()],
+              ),
             ),
           ),
-          const SizedBox(width: 10),
-          Text(
-            'Recording  ${_fmt(duration)}',
-            style: const TextStyle(
-              fontSize: 14,
-              color: Color(0xFF1A1A1A),
-              fontWeight: FontWeight.w500,
+          const SizedBox(width: 8),
+          Expanded(
+            child: ClipRect(
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: _Waveform(bars: amplitudeBars),
+              ),
             ),
           ),
-          const Spacer(),
-          // Cancel
-          TextButton(
-            onPressed: onCancel,
-            child: const Text(
-              'Cancel',
-              style: TextStyle(color: Color(0xFF6B7280), fontSize: 14),
-            ),
-          ),
-          const SizedBox(width: 4),
-          // Stop & send
+          const SizedBox(width: 6),
           GestureDetector(
-            onTap: onStop,
-            child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(
-                color: const Color(0xFFDB6234),
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: const Text(
-                'Send',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                ),
-              ),
+            onTap: onCancel,
+            child: const Padding(
+              padding: EdgeInsets.all(4),
+              child: Icon(Icons.delete_outline_rounded,
+                  color: Color(0xFFEF4444), size: 22),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _Waveform extends StatelessWidget {
+  final List<double> bars;
+  const _Waveform({required this.bars});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        for (final v in bars)
+          Container(
+            width: 2.5,
+            height: 4 + (v.clamp(0.0, 1.0) * 22),
+            margin: const EdgeInsets.symmetric(horizontal: 1),
+            decoration: BoxDecoration(
+              color: const Color(0xFFDB6234),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _BlinkingDot extends StatefulWidget {
+  const _BlinkingDot();
+
+  @override
+  State<_BlinkingDot> createState() => _BlinkingDotState();
+}
+
+class _BlinkingDotState extends State<_BlinkingDot>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 900),
+  )..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: Tween<double>(begin: 1, end: 0.25).animate(_controller),
+      child: const SizedBox(
+        width: 9,
+        height: 9,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: Color(0xFFEF4444),
+            shape: BoxShape.circle,
+          ),
+        ),
       ),
     );
   }
