@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -335,7 +336,15 @@ class _WorkerProfilePageState extends ConsumerState<WorkerProfilePage> {
                 ),
               ],
 
-              const SizedBox(height: 28),
+              const SizedBox(height: 20),
+
+              // ── Profile completion / approval status ──────────────────
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: _ProfileApprovalCard(),
+              ),
+
+              const SizedBox(height: 24),
 
               // ── Reviews Summary Card ─────────────────────────────────
               Padding(
@@ -435,6 +444,133 @@ class _WorkerProfilePageState extends ConsumerState<WorkerProfilePage> {
       );
     }
     return _InitialsWidget(initials: initials);
+  }
+}
+
+// ── Profile completion / approval status card ─────────────────────────────────
+
+class _ProfileApprovalCard extends ConsumerWidget {
+  (String, Color, Color, IconData) _visual(String onboardingStatus) => switch (onboardingStatus) {
+        'SUBMITTED_FOR_REVIEW' => (
+            'Submitted for Review',
+            const Color(0xFFB45309),
+            const Color(0xFFFFFBEB),
+            Icons.hourglass_top_rounded,
+          ),
+        'CHANGES_REQUIRED' => (
+            'Changes Required',
+            const Color(0xFFB45309),
+            const Color(0xFFFFF7ED),
+            Icons.edit_note_rounded,
+          ),
+        'REJECTED' => (
+            'Rejected',
+            const Color(0xFFDC2626),
+            const Color(0xFFFEF2F2),
+            Icons.cancel_outlined,
+          ),
+        'APPROVED' => (
+            'Approved',
+            const Color(0xFF15803D),
+            const Color(0xFFF0FDF4),
+            Icons.verified_rounded,
+          ),
+        _ => (
+            'Draft',
+            const Color(0xFF6B7280),
+            const Color(0xFFF1F5F9),
+            Icons.description_outlined,
+          ),
+      };
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profile = ref.watch(workerProfileProvider).valueOrNull;
+    if (profile == null) return const SizedBox.shrink();
+
+    final status = profile.onboardingStatus;
+    final (label, fg, bg, icon) = _visual(status);
+    final reason = status == 'CHANGES_REQUIRED'
+        ? profile.changesRequiredReason
+        : status == 'REJECTED'
+            ? profile.rejectionReason
+            : null;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text(
+                'Profile Approval',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF1A1A1A)),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(icon, size: 13, color: fg),
+                    const SizedBox(width: 4),
+                    Text(
+                      label,
+                      style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: fg),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (reason != null && reason.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(
+              reason,
+              style: const TextStyle(fontSize: 12.5, color: Color(0xFF6B7280), height: 1.4),
+            ),
+          ],
+          if (status != 'APPROVED') ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => context.push('/worker/profile-completion'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _kOrange,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('Complete Profile', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700)),
+                    SizedBox(height: 1),
+                    Text(
+                      'پروفائل مکمل کریں',
+                      textDirection: TextDirection.rtl,
+                      style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 }
 

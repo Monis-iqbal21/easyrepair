@@ -72,6 +72,7 @@ class WorkerProfileEntity {
   // ── Ustaad onboarding / profile completion ─────────────────────────────
   final String? fullLegalName;
   final String? residentialAddress;
+  final String? cnicNumber;
   final String? cnicFrontUrl;
   final String? cnicBackUrl;
   final String? liveSelfieUrl;
@@ -107,6 +108,7 @@ class WorkerProfileEntity {
     this.ongoingJob,
     this.fullLegalName,
     this.residentialAddress,
+    this.cnicNumber,
     this.cnicFrontUrl,
     this.cnicBackUrl,
     this.liveSelfieUrl,
@@ -155,6 +157,7 @@ class WorkerProfileEntity {
       ongoingJob: clearOngoingJob ? null : (ongoingJob ?? this.ongoingJob),
       fullLegalName: fullLegalName,
       residentialAddress: residentialAddress,
+      cnicNumber: cnicNumber,
       cnicFrontUrl: cnicFrontUrl,
       cnicBackUrl: cnicBackUrl,
       liveSelfieUrl: liveSelfieUrl,

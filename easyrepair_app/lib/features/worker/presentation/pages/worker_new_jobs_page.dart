@@ -7,8 +7,10 @@ import '../../../../core/errors/failures.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../../bookings/domain/entities/booking_entity.dart';
 import '../../../bookings/presentation/widgets/inspection_badge.dart';
+import '../../../bookings/presentation/widgets/booking_skeleton.dart';
 import '../../domain/entities/new_job_entity.dart';
 import '../providers/worker_job_providers.dart';
+import '../providers/worker_providers.dart';
 import '../widgets/onboarding_gate.dart';
 import '../widgets/worker_bottom_nav_bar.dart';
 import '../widgets/worker_chat_action.dart';
@@ -58,6 +60,10 @@ class _WorkerNewJobsPageState extends ConsumerState<WorkerNewJobsPage>
   Widget build(BuildContext context) {
     final jobsAsync = ref.watch(newJobsProvider);
     final notifier  = ref.read(newJobsProvider.notifier);
+    final workerProfile = ref.watch(workerProfileProvider).valueOrNull;
+    // Unknown-yet counts as approved so the page doesn't flash the
+    // incomplete-profile panel before the profile has even loaded once.
+    final isApproved = workerProfile?.isOnboardingApproved ?? true;
 
     return Scaffold(
       backgroundColor: _kBg,
@@ -117,44 +123,58 @@ class _WorkerNewJobsPageState extends ConsumerState<WorkerNewJobsPage>
 
             const SizedBox(height: 12),
 
-            // ── Filter bar ───────────────────────────────────────────────
-            _FilterBar(notifier: notifier),
-
-            const SizedBox(height: 8),
-
-            if (jobsAsync.hasError && jobsAsync.hasValue)
-              const _RefreshFailedBanner(),
-
-            // ── List ─────────────────────────────────────────────────────
-            Expanded(
-              child: jobsAsync.when(
-                skipError: true,
-                loading: () => const Center(
-                  child: CircularProgressIndicator(color: _kAccent, strokeWidth: 2),
+            if (!isApproved)
+              // Profile incomplete/not approved — never a fetch error, and
+              // there's nothing meaningful to filter/list yet either way.
+              const Expanded(
+                child: ProfileIncompleteState(
+                  romanUrdu:
+                      'Apni profile complete karain. Profile approval ke baad aapko new jobs nazar ayengi.',
+                  urdu:
+                      'اپنی پروفائل مکمل کریں۔ پروفائل منظور ہونے کے بعد آپ کو نئی jobs نظر آئیں گی۔',
                 ),
-                error: (err, _) => _ErrorState(
-                  message: err is Failure
-                      ? err.message
-                      : 'Failed to load new jobs.',
-                  onRetry: notifier.refresh,
-                ),
-                data: (jobs) => jobs.isEmpty
-                    ? const _EmptyState()
-                    : RefreshIndicator(
-                        color: _kAccent,
-                        backgroundColor: Colors.white,
-                        onRefresh: notifier.refresh,
-                        child: ListView.builder(
-                          padding: const EdgeInsets.fromLTRB(16, 4, 16, 110),
-                          itemCount: jobs.length,
-                          itemBuilder: (ctx, i) => _NewJobCard(
-                            key: ValueKey(jobs[i].id),
-                            job: jobs[i],
+              )
+            else ...[
+              // ── Filter bar ───────────────────────────────────────────────
+              _FilterBar(notifier: notifier),
+
+              const SizedBox(height: 8),
+
+              if (jobsAsync.hasError && jobsAsync.hasValue)
+                const _RefreshFailedBanner(),
+
+              // ── List ─────────────────────────────────────────────────────
+              Expanded(
+                child: jobsAsync.when(
+                  skipError: true,
+                  loading: () => const Padding(
+                    padding: EdgeInsets.fromLTRB(16, 4, 16, 0),
+                    child: BookingSkeleton(),
+                  ),
+                  error: (err, _) => _ErrorState(
+                    message: err is Failure
+                        ? err.message
+                        : 'Failed to load new jobs.',
+                    onRetry: notifier.refresh,
+                  ),
+                  data: (jobs) => jobs.isEmpty
+                      ? const _EmptyState()
+                      : RefreshIndicator(
+                          color: _kAccent,
+                          backgroundColor: Colors.white,
+                          onRefresh: notifier.refresh,
+                          child: ListView.builder(
+                            padding: const EdgeInsets.fromLTRB(16, 4, 16, 110),
+                            itemCount: jobs.length,
+                            itemBuilder: (ctx, i) => _NewJobCard(
+                              key: ValueKey(jobs[i].id),
+                              job: jobs[i],
+                            ),
                           ),
                         ),
-                      ),
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ),

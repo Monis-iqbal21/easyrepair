@@ -6,7 +6,7 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
-import { AvailabilityStatus, BookingStatus, Prisma } from '@prisma/client';
+import { AvailabilityStatus, BookingStatus, Prisma, AgreementType } from '@prisma/client';
 import { Queue } from 'bull';
 import {
   WorkerJobWithRelations,
@@ -15,6 +15,7 @@ import {
 } from './workers.repository';
 import { NotificationsService } from '../notifications/notifications.service';
 import { StorageService } from '../storage/storage.service';
+import { AgreementsService } from '../agreements/agreements.service';
 import { UpdateAvailabilityDto } from './dto/update-availability.dto';
 import {
   AUTO_OFFLINE_JOB,
@@ -25,14 +26,6 @@ import { UpdateSkillsDto } from './dto/update-skills.dto';
 import { UpdateLocationDto } from './dto/update-location.dto';
 import { UpdateProfileCompletionDto } from './dto/update-profile-completion.dto';
 import { haversineKm } from '../../common/utils/geo.util';
-
-/**
- * Placeholder agreement versions — actual legal text will be provided later.
- * Bumping these strings when real agreements ship will let us tell which
- * (older) version a worker accepted.
- */
-const GENERAL_AGREEMENT_VERSION = 'v1-placeholder';
-const TRADE_AGREEMENT_VERSION = 'v1-placeholder';
 import {
   WorkerJobAttachmentDto,
   WorkerJobResponseDto,
@@ -55,6 +48,7 @@ export class WorkersService {
     private readonly workersRepository: WorkersRepository,
     private readonly notificationsService: NotificationsService,
     private readonly storageService: StorageService,
+    private readonly agreementsService: AgreementsService,
     @InjectQueue(WORKERS_QUEUE) private readonly autoOfflineQueue: Queue,
   ) {}
 
@@ -103,24 +97,51 @@ export class WorkersService {
     if (dto.residentialAddress !== undefined) {
       data.residentialAddress = dto.residentialAddress;
     }
+    if (dto.cnicNumber !== undefined) data.cnicNumber = dto.cnicNumber;
     if (dto.legalNameConfirmed !== undefined) {
       data.legalNameConfirmedAt = dto.legalNameConfirmed ? new Date() : null;
     }
     if (dto.generalAgreementAccepted !== undefined) {
-      data.generalAgreementAcceptedAt = dto.generalAgreementAccepted
-        ? new Date()
-        : null;
-      data.generalAgreementVersion = dto.generalAgreementAccepted
-        ? GENERAL_AGREEMENT_VERSION
-        : null;
+      if (dto.generalAgreementAccepted) {
+        const template = await this.agreementsService.getActiveTemplate(
+          AgreementType.GENERAL_USTAAD,
+          null,
+        );
+        if (!template) {
+          throw new BadRequestException(
+            'General Ustaad Agreement is not available right now. Please try again later.',
+          );
+        }
+        data.generalAgreementAcceptedAt = new Date();
+        data.generalAgreementVersion = template.version;
+      } else {
+        data.generalAgreementAcceptedAt = null;
+        data.generalAgreementVersion = null;
+      }
     }
     if (dto.tradeAgreementAccepted !== undefined) {
-      data.tradeAgreementAcceptedAt = dto.tradeAgreementAccepted
-        ? new Date()
-        : null;
-      data.tradeAgreementVersion = dto.tradeAgreementAccepted
-        ? TRADE_AGREEMENT_VERSION
-        : null;
+      if (dto.tradeAgreementAccepted) {
+        const categoryId = profile.skills[0]?.category.id;
+        if (!categoryId) {
+          throw new BadRequestException(
+            'Select your main skill before accepting the trade agreement.',
+          );
+        }
+        const template = await this.agreementsService.getActiveTemplate(
+          AgreementType.TRADE_SPECIFIC,
+          categoryId,
+        );
+        if (!template) {
+          throw new BadRequestException(
+            'Trade-specific agreement is not available right now. Please try again later.',
+          );
+        }
+        data.tradeAgreementAcceptedAt = new Date();
+        data.tradeAgreementVersion = template.version;
+      } else {
+        data.tradeAgreementAcceptedAt = null;
+        data.tradeAgreementVersion = null;
+      }
     }
 
     if (dto.experienceYears !== undefined) {
@@ -130,11 +151,46 @@ export class WorkersService {
       );
     }
 
-    const updated = await this.workersRepository.updateProfileCompletion(
-      profile.id,
-      data,
-    );
+    let updated: WorkerProfileWithSkills;
+    try {
+      updated = await this.workersRepository.updateProfileCompletion(profile.id, data);
+    } catch (err) {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2002' &&
+        (err.meta?.target as string[] | undefined)?.includes('cnicNumber')
+      ) {
+        throw new BadRequestException(
+          'This CNIC number is already registered with another worker account.',
+        );
+      }
+      throw err;
+    }
     return this._toProfileCompletionDto(updated);
+  }
+
+  /**
+   * GET /workers/profile-completion/agreement-templates
+   * The exact text/version of the General (+ Trade, once a skill is picked)
+   * agreement the worker is about to accept — powers the "View Agreement"
+   * screen shown before the checkbox is ticked.
+   */
+  async getAgreementTemplates(userId: string) {
+    const profile = await this.workersRepository.findByUserId(userId);
+    if (!profile) throw new NotFoundException('Worker profile not found');
+    const categoryId = profile.skills[0]?.category.id ?? null;
+    return this.agreementsService.getTemplatesForWorker(categoryId);
+  }
+
+  /**
+   * GET /workers/profile-completion/agreements
+   * Owner-only list of this worker's own permanent acceptance records
+   * (with downloadable PDF URLs). Never exposed to clients or other workers.
+   */
+  async getMyAgreementAcceptances(userId: string) {
+    const profile = await this.workersRepository.findByUserId(userId);
+    if (!profile) throw new NotFoundException('Worker profile not found');
+    return this.agreementsService.listAcceptancesForWorker(profile.id);
   }
 
   async uploadCnicFront(
@@ -210,11 +266,18 @@ export class WorkersService {
   }
 
   /**
-   * Validate every required field is present, then move the profile into
-   * SUBMITTED_FOR_REVIEW. Throws a single BadRequestException listing every
-   * missing field so the Flutter form can highlight all of them at once.
+   * Validate every required field is present, create the two permanent
+   * AgreementAcceptance audit records (GENERAL_USTAAD + TRADE_SPECIFIC), then
+   * move the profile into SUBMITTED_FOR_REVIEW. Throws a single
+   * BadRequestException listing every missing field so the Flutter form can
+   * highlight all of them at once.
    */
-  async submitProfileForReview(userId: string) {
+  async submitProfileForReview(
+    userId: string,
+    userPhone: string,
+    ipAddress: string | null,
+    deviceInfo: string | null,
+  ) {
     const profile = await this.workersRepository.findByUserId(userId);
     if (!profile) throw new NotFoundException('Worker profile not found');
     this._assertProfileEditable(profile.onboardingStatus);
@@ -222,6 +285,7 @@ export class WorkersService {
     const missing: string[] = [];
     if (!profile.fullLegalName) missing.push('Full legal name');
     if (!profile.residentialAddress) missing.push('Residential address');
+    if (!profile.cnicNumber) missing.push('CNIC number');
     if (profile.skills.length !== 1) missing.push('Main skill');
     if (!profile.cnicFrontUrl) missing.push('CNIC front image');
     if (!profile.cnicBackUrl) missing.push('CNIC back image');
@@ -236,6 +300,24 @@ export class WorkersService {
       );
     }
 
+    // Permanent legal audit trail — never overwritten, never deleted. Safe to
+    // re-run: acceptAgreementsOnSubmit reuses any acceptance already recorded
+    // against the currently-active template version instead of duplicating it.
+    await this.agreementsService.acceptAgreementsOnSubmit({
+      workerProfileId: profile.id,
+      userId,
+      fullLegalName: profile.fullLegalName!,
+      cnicNumber: profile.cnicNumber!,
+      mobile: userPhone,
+      mainSkillCategoryId: profile.skills[0].category.id,
+      mainSkillName: profile.skills[0].category.name,
+      cnicFrontUrl: profile.cnicFrontUrl,
+      cnicBackUrl: profile.cnicBackUrl,
+      liveSelfieUrl: profile.liveSelfieUrl,
+      ipAddress,
+      deviceInfo,
+    });
+
     const updated = await this.workersRepository.submitForReview(profile.id);
     return this._toProfileCompletionDto(updated);
   }
@@ -245,6 +327,7 @@ export class WorkersService {
       id: profile.id,
       fullLegalName: profile.fullLegalName,
       residentialAddress: profile.residentialAddress,
+      cnicNumber: profile.cnicNumber,
       cnicFrontUrl: profile.cnicFrontUrl,
       cnicBackUrl: profile.cnicBackUrl,
       liveSelfieUrl: profile.liveSelfieUrl,
@@ -308,6 +391,7 @@ export class WorkersService {
       // facing DTO (booking/job responses, bid responses, etc.).
       fullLegalName: profile.fullLegalName,
       residentialAddress: profile.residentialAddress,
+      cnicNumber: profile.cnicNumber,
       cnicFrontUrl: profile.cnicFrontUrl,
       cnicBackUrl: profile.cnicBackUrl,
       liveSelfieUrl: profile.liveSelfieUrl,

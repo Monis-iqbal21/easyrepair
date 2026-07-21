@@ -7,6 +7,8 @@ import {
   Body,
   Param,
   Query,
+  Ip,
+  Headers,
   UseGuards,
   HttpCode,
   HttpStatus,
@@ -166,14 +168,43 @@ export class WorkersController {
   }
 
   /**
+   * GET /workers/profile-completion/agreement-templates
+   * Exact text/version of the agreements the worker is about to accept.
+   */
+  @Get('profile-completion/agreement-templates')
+  getAgreementTemplates(@CurrentUser() user: { id: string }) {
+    return this.workersService.getAgreementTemplates(user.id);
+  }
+
+  /**
+   * GET /workers/profile-completion/agreements
+   * Owner-only: this worker's own permanent agreement acceptance records
+   * (with downloadable PDF URLs).
+   */
+  @Get('profile-completion/agreements')
+  getMyAgreementAcceptances(@CurrentUser() user: { id: string }) {
+    return this.workersService.getMyAgreementAcceptances(user.id);
+  }
+
+  /**
    * POST /workers/profile-completion/submit
-   * Validates every required field is present, then moves the profile to
-   * SUBMITTED_FOR_REVIEW. Rejects with a list of missing fields otherwise.
+   * Validates every required field is present, records permanent agreement
+   * acceptances, then moves the profile to SUBMITTED_FOR_REVIEW. Rejects with
+   * a list of missing fields otherwise.
    */
   @Post('profile-completion/submit')
   @HttpCode(HttpStatus.OK)
-  submitProfileForReview(@CurrentUser() user: { id: string }) {
-    return this.workersService.submitProfileForReview(user.id);
+  submitProfileForReview(
+    @CurrentUser() user: { id: string; phone: string },
+    @Ip() ip: string,
+    @Headers('user-agent') userAgent?: string,
+  ) {
+    return this.workersService.submitProfileForReview(
+      user.id,
+      user.phone,
+      ip ?? null,
+      userAgent ?? null,
+    );
   }
 
   // ── Worker jobs ──────────────────────────────────────────────────────────

@@ -82,4 +82,14 @@ export class AdminController {
   ) {
     return this.adminService.updateTrainingStatus(workerProfileId, dto.status);
   }
+
+  /**
+   * GET /admin/workers/:workerProfileId/agreements
+   * Permanent legal audit records (General + Trade) with downloadable PDF
+   * URLs. Admin-only — never exposed on any client/worker-facing endpoint.
+   */
+  @Get(':workerProfileId/agreements')
+  getWorkerAgreements(@Param('workerProfileId') workerProfileId: string) {
+    return this.adminService.getWorkerAgreements(workerProfileId);
+  }
 }

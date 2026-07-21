@@ -5,11 +5,9 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/utils/currency_utils.dart';
-import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../../notifications/presentation/providers/notification_providers.dart';
 import '../../domain/entities/worker_profile_entity.dart';
 import '../../domain/entities/ongoing_job_entity.dart';
-import '../../domain/entities/worker_skill_entity.dart';
 import '../../domain/entities/category_entity.dart';
 import '../../domain/entities/worker_review_entity.dart';
 import '../providers/worker_providers.dart';
@@ -56,11 +54,6 @@ class _WorkerHomePageState extends ConsumerState<WorkerHomePage>
 
   @override
   Widget build(BuildContext context) {
-    final rawName =
-        ref.watch(authStateProvider).valueOrNull?.firstName ?? 'there';
-    final firstName = rawName.isNotEmpty
-        ? rawName[0].toUpperCase() + rawName.substring(1).toLowerCase()
-        : rawName;
     final profileAsync = ref.watch(workerProfileProvider);
 
     // Show the "complete your profile" modal once per app session — fires on
@@ -92,7 +85,6 @@ class _WorkerHomePageState extends ConsumerState<WorkerHomePage>
             onRetry: () => ref.read(workerProfileProvider.notifier).refresh(),
           ),
           data: (profile) => _HomeBody(
-            firstName: firstName,
             profile: profile,
           ),
         ),
@@ -105,9 +97,8 @@ class _WorkerHomePageState extends ConsumerState<WorkerHomePage>
 // ── Main body ─────────────────────────────────────────────────────────────────
 
 class _HomeBody extends ConsumerWidget {
-  final String firstName;
   final WorkerProfileEntity profile;
-  const _HomeBody({required this.firstName, required this.profile});
+  const _HomeBody({required this.profile});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -118,7 +109,7 @@ class _HomeBody extends ConsumerWidget {
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
           // Header
-          SliverToBoxAdapter(child: _Header(firstName: firstName)),
+          const SliverToBoxAdapter(child: _Header()),
           // Persistent profile-completion CTA — always visible (not just the
           // modal) so the worker has a way back without waiting for a resume.
           if (!profile.isOnboardingApproved)
@@ -133,10 +124,6 @@ class _HomeBody extends ConsumerWidget {
           SliverToBoxAdapter(child: _TodaySection(profile: profile)),
           // Performance section
           SliverToBoxAdapter(child: _PerformanceSection(profile: profile)),
-          // Skills section
-          SliverToBoxAdapter(
-            child: _SkillsSection(skills: profile.skills),
-          ),
           // Reviews section
           SliverToBoxAdapter(child: _ReviewsSection(profile: profile)),
           // Bottom spacer for nav bar
@@ -222,61 +209,34 @@ class _ProfileCompletionBanner extends StatelessWidget {
 }
 
 // ── Header ────────────────────────────────────────────────────────────────────
+//
+// Left: the worker's main skill (e.g. "Electrician") — logout moved to
+// Profile/settings, it no longer lives on Home top-left.
+// Right: notification bell.
 
 class _Header extends ConsumerWidget {
-  final String firstName;
-  const _Header({required this.firstName});
+  const _Header();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final initial = firstName.isNotEmpty ? firstName[0].toUpperCase() : 'W';
+    final skills = ref.watch(workerProfileProvider).valueOrNull?.skills;
+    final skillName = (skills != null && skills.isNotEmpty) ? skills.first.categoryName : null;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
       child: Row(
         children: [
-          // Avatar circle
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: _kOrange,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: _kOrange.withValues(alpha: 0.3),
-                  blurRadius: 10,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              initial,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Hello, $firstName',
-                  style: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700,
-                    color: _kDark,
-                  ),
-                ),
-                const Text(
-                  'Verified Handygo Ustaad',
-                  style: TextStyle(fontSize: 12, color: _kGray),
-                ),
-              ],
+            child: Text(
+              skillName ?? 'Skill not selected',
+              style: TextStyle(
+                fontSize: 19,
+                fontWeight: FontWeight.w800,
+                color: skillName != null ? _kDark : _kGray,
+                letterSpacing: -0.2,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
           // Notification bell
@@ -333,30 +293,6 @@ class _Header extends ConsumerWidget {
                   );
                 }),
               ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          // Logout
-          GestureDetector(
-            onTap: () => ref.read(logoutNotifierProvider.notifier).logout(),
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.06),
-                    blurRadius: 8,
-                  ),
-                ],
-              ),
-              child: const Icon(
-                Icons.logout_rounded,
-                size: 18,
-                color: _kGray,
-              ),
             ),
           ),
         ],
@@ -1106,93 +1042,6 @@ class _PerfCard extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-// ── Skills section ────────────────────────────────────────────────────────────
-
-class _SkillsSection extends ConsumerWidget {
-  final List<WorkerSkillEntity> skills;
-  const _SkillsSection({required this.skills});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // Only one main skill is allowed — show the first row if present. Legacy
-    // profiles saved before this rule may still carry more than one; only
-    // the first is shown here, and re-saving via the sheet trims to one.
-    final mainSkill = skills.isNotEmpty ? skills.first : null;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Text(
-                'Main Skill',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: _kDark,
-                ),
-              ),
-              const Spacer(),
-              GestureDetector(
-                onTap: () => showSkillsSheet(context, ref),
-                child: Text(
-                  mainSkill == null ? '+ Select Main Skill' : 'Edit',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: _kOrange,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(18),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 10,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
-            child: mainSkill == null
-                ? const Text(
-                    'No main skill selected yet.',
-                    style: TextStyle(fontSize: 13, color: _kGray),
-                  )
-                : Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: _kOrange.withValues(alpha: 0.09),
-                      borderRadius: BorderRadius.circular(50),
-                      border: Border.all(
-                        color: _kOrange.withValues(alpha: 0.3),
-                      ),
-                    ),
-                    child: Text(
-                      mainSkill.categoryName,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: _kOrange,
-                      ),
-                    ),
-                  ),
-          ),
-        ],
       ),
     );
   }

@@ -9,6 +9,7 @@ import '../entities/worker_skill_entity.dart';
 import '../entities/category_entity.dart';
 import '../entities/new_job_entity.dart';
 import '../entities/worker_review_entity.dart';
+import '../entities/agreement_template_entity.dart';
 
 abstract class WorkerRepository {
   Future<Either<Failure, WorkerProfileEntity>> getProfile();
@@ -17,6 +18,7 @@ abstract class WorkerRepository {
   Future<Either<Failure, void>> updateProfileCompletion({
     String? fullLegalName,
     String? residentialAddress,
+    String? cnicNumber,
     int? experienceYears,
     bool? legalNameConfirmed,
     bool? generalAgreementAccepted,
@@ -27,6 +29,9 @@ abstract class WorkerRepository {
   Future<Either<Failure, String>> uploadCnicBack(File file);
   Future<Either<Failure, String>> uploadLiveSelfie(File file);
   Future<Either<Failure, void>> submitProfileForReview();
+
+  /// Exact text/version of the agreements the worker is about to accept.
+  Future<Either<Failure, List<AgreementTemplateEntity>>> getAgreementTemplates();
 
   Future<Either<Failure, AvailabilityStatus>> updateAvailability({
     required AvailabilityStatus status,

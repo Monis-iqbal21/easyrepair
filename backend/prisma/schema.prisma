@@ -71,6 +71,11 @@ enum TrainingStatus {
   NEEDS_RETRAINING
 }
 
+enum AgreementType {
+  GENERAL_USTAAD
+  TRADE_SPECIFIC
+}
+
 enum BookingUrgency {
   URGENT
   NORMAL
@@ -152,6 +157,7 @@ model User {
   refreshTokens     RefreshToken[]
   notifications     Notification[]
   passwordResetOtps PasswordResetOtp[]
+  agreementAcceptances AgreementAcceptance[]
 
   conversationsAsClient Conversation[] @relation("ClientConversations")
   conversationsAsWorker Conversation[] @relation("WorkerConversations")
@@ -251,6 +257,9 @@ model WorkerProfile {
 
   // ── Ustaad onboarding / profile completion ────────────────────────────
   fullLegalName        String?
+  /// CNIC number (e.g. 12345-1234567-1) — unique across workers. Nullable
+  /// column with a unique index is safe: Postgres allows multiple NULLs.
+  cnicNumber           String?           @unique
   residentialAddress   String?
   cnicFrontUrl         String?
   cnicFrontStorageKey  String?
@@ -273,12 +282,13 @@ model WorkerProfile {
   changesRequiredReason String?
   rejectionReason       String?
 
-  skills             WorkerSkill[]
-  documents          WorkerDocument[]
-  bookings           Booking[]
-  bids               Bid[]
-  bookingExclusions  BookingWorkerExclusion[]
-  inspectionReports  InspectionReport[]
+  skills               WorkerSkill[]
+  documents            WorkerDocument[]
+  bookings             Booking[]
+  bids                 Bid[]
+  bookingExclusions    BookingWorkerExclusion[]
+  inspectionReports    InspectionReport[]
+  agreementAcceptances AgreementAcceptance[]
 
   @@map("worker_profiles")
 }
@@ -326,9 +336,10 @@ model ServiceCategory {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  bookings         Booking[]
-  workerSkills     WorkerSkill[]
-  standardServices StandardService[]
+  bookings           Booking[]
+  workerSkills       WorkerSkill[]
+  standardServices   StandardService[]
+  agreementTemplates AgreementTemplate[]
 
   @@map("service_categories")
 }
@@ -682,4 +693,87 @@ model Bid {
   @@index([bookingId])
   @@index([workerProfileId])
   @@map("bids")
+}
+
+/// A specific version of a legal agreement an Ustaad must accept.
+/// categoryId is null for GENERAL_USTAAD (applies to all trades) and set for
+/// TRADE_SPECIFIC (one per ServiceCategory). Templates are never deleted —
+/// AgreementAcceptance.agreementTemplateId is a Restrict FK, and publishing a
+/// new version means creating a NEW row with isActive=true while the old row
+/// (and every acceptance that references it) is left untouched forever.
+model AgreementTemplate {
+  id             String        @id @default(uuid())
+  type           AgreementType
+  categoryId     String?
+  category       ServiceCategory? @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  title          String
+  version        String
+  contentText    String
+  fileUrl        String?
+  fileStorageKey String?
+  /// SHA-256 of contentText, computed at creation — lets an acceptance record
+  /// prove exactly which text was agreed to even if this row were ever
+  /// (accidentally) edited in place.
+  contentHash    String
+  isActive       Boolean       @default(true)
+  createdAt      DateTime      @default(now())
+
+  acceptances AgreementAcceptance[]
+
+  @@index([type, categoryId, isActive])
+  @@map("agreement_templates")
+}
+
+/// Permanent legal audit record of one Ustaad accepting one specific
+/// AgreementTemplate version. Never updated after creation and never
+/// deleted — every field the agreement legally depends on (name, CNIC,
+/// mobile, skill, document references, the agreement text itself) is
+/// snapshotted here so the record remains meaningful even if the worker's
+/// profile or the template later changes.
+model AgreementAcceptance {
+  id                  String            @id @default(uuid())
+  workerProfileId     String
+  workerProfile       WorkerProfile     @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
+  userId              String
+  user                User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  agreementTemplateId String
+  agreementTemplate   AgreementTemplate @relation(fields: [agreementTemplateId], references: [id], onDelete: Restrict)
+
+  // Snapshot of the template at acceptance time (survives template changes).
+  agreementType             AgreementType
+  agreementTitle            String
+  agreementVersion          String
+  agreementContentSnapshot  String
+  agreementFileSnapshotUrl        String?
+  agreementFileSnapshotStorageKey String?
+  agreementHash             String
+
+  // Snapshot of the worker's identity/profile at acceptance time.
+  fullLegalNameSnapshot String
+  cnicNumberSnapshot    String
+  mobileSnapshot        String
+  mainSkillSnapshot     String
+  cnicFrontUrlSnapshot  String?
+  cnicBackUrlSnapshot   String?
+  liveSelfieUrlSnapshot String?
+
+  acceptedAt       DateTime @db.Timestamptz(3)
+  ipAddress        String?
+  deviceInfo       String?
+  checkboxAccepted Boolean  @default(true)
+
+  acceptancePdfUrl        String?
+  acceptancePdfStorageKey String?
+
+  createdAt DateTime @default(now())
+
+  /// One acceptance per (worker, template version) — re-submitting against
+  /// the same still-active version must not create a duplicate row. A new
+  /// template version is a different id, so it naturally requires a new
+  /// acceptance row instead of colliding with this constraint.
+  @@unique([workerProfileId, agreementTemplateId])
+  @@index([workerProfileId])
+  @@index([userId])
+  @@index([agreementTemplateId])
+  @@map("agreement_acceptances")
 }

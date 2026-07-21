@@ -2,10 +2,20 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { FaceMatchStatus, TrainingStatus } from '@prisma/client';
 import { AdminRepository, WorkerProfileAdminView } from './admin.repository';
 import { PendingWorkerResponseDto } from './dto/pending-worker-response.dto';
+import { AgreementsService } from '../agreements/agreements.service';
 
 @Injectable()
 export class AdminService {
-  constructor(private readonly adminRepository: AdminRepository) {}
+  constructor(
+    private readonly adminRepository: AdminRepository,
+    private readonly agreementsService: AgreementsService,
+  ) {}
+
+  /** GET /admin/workers/:id/agreements — permanent acceptance records + PDF URLs. */
+  async getWorkerAgreements(workerProfileId: string) {
+    await this._ensureExists(workerProfileId);
+    return this.agreementsService.listAcceptancesForWorker(workerProfileId);
+  }
 
   /** GET /admin/workers/pending — worker profiles submitted and awaiting review. */
   async getPendingWorkers(): Promise<PendingWorkerResponseDto[]> {

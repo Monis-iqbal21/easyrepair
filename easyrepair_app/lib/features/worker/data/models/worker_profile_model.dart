@@ -25,6 +25,7 @@ class WorkerProfileModel {
   // ── Ustaad onboarding / profile completion ─────────────────────────────
   final String? fullLegalName;
   final String? residentialAddress;
+  final String? cnicNumber;
   final String? cnicFrontUrl;
   final String? cnicBackUrl;
   final String? liveSelfieUrl;
@@ -60,6 +61,7 @@ class WorkerProfileModel {
     this.ongoingJob,
     this.fullLegalName,
     this.residentialAddress,
+    this.cnicNumber,
     this.cnicFrontUrl,
     this.cnicBackUrl,
     this.liveSelfieUrl,
@@ -102,6 +104,7 @@ class WorkerProfileModel {
           : null,
       fullLegalName: json['fullLegalName'] as String?,
       residentialAddress: json['residentialAddress'] as String?,
+      cnicNumber: json['cnicNumber'] as String?,
       cnicFrontUrl: json['cnicFrontUrl'] as String?,
       cnicBackUrl: json['cnicBackUrl'] as String?,
       liveSelfieUrl: json['liveSelfieUrl'] as String?,
@@ -148,6 +151,7 @@ class WorkerProfileModel {
       ongoingJob: ongoingJob?.toEntity(),
       fullLegalName: fullLegalName,
       residentialAddress: residentialAddress,
+      cnicNumber: cnicNumber,
       cnicFrontUrl: cnicFrontUrl,
       cnicBackUrl: cnicBackUrl,
       liveSelfieUrl: liveSelfieUrl,

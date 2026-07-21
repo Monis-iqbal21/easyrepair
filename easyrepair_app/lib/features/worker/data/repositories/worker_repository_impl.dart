@@ -13,6 +13,7 @@ import '../../domain/entities/worker_skill_entity.dart';
 import '../../domain/entities/category_entity.dart';
 import '../../domain/entities/new_job_entity.dart';
 import '../../domain/entities/worker_review_entity.dart';
+import '../../domain/entities/agreement_template_entity.dart';
 import '../../domain/repositories/worker_repository.dart';
 import '../datasources/worker_remote_datasource.dart';
 
@@ -37,6 +38,7 @@ class WorkerRepositoryImpl implements WorkerRepository {
   Future<Either<Failure, void>> updateProfileCompletion({
     String? fullLegalName,
     String? residentialAddress,
+    String? cnicNumber,
     int? experienceYears,
     bool? legalNameConfirmed,
     bool? generalAgreementAccepted,
@@ -46,12 +48,26 @@ class WorkerRepositoryImpl implements WorkerRepository {
       await _datasource.updateProfileCompletion(
         fullLegalName: fullLegalName,
         residentialAddress: residentialAddress,
+        cnicNumber: cnicNumber,
         experienceYears: experienceYears,
         legalNameConfirmed: legalNameConfirmed,
         generalAgreementAccepted: generalAgreementAccepted,
         tradeAgreementAccepted: tradeAgreementAccepted,
       );
       return const Right(null);
+    } on DioException catch (e) {
+      return Left(dioExceptionToFailure(e));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<AgreementTemplateEntity>>>
+      getAgreementTemplates() async {
+    try {
+      final models = await _datasource.getAgreementTemplates();
+      return Right(models.map((m) => m.toEntity()).toList());
     } on DioException catch (e) {
       return Left(dioExceptionToFailure(e));
     } catch (e) {

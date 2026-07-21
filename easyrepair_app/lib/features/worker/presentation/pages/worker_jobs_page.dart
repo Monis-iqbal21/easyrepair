@@ -9,6 +9,8 @@ import '../../../bookings/presentation/providers/booking_providers.dart';
 import '../../../bookings/presentation/widgets/booking_skeleton.dart';
 import '../../../bookings/presentation/widgets/inspection_badge.dart';
 import '../providers/worker_job_providers.dart';
+import '../providers/worker_providers.dart';
+import '../widgets/onboarding_gate.dart';
 import '../widgets/worker_bottom_nav_bar.dart';
 
 // ── Palette ───────────────────────────────────────────────────────────────────
@@ -59,6 +61,10 @@ class _WorkerJobsPageState extends ConsumerState<WorkerJobsPage>
     final notifier  = ref.read(workerJobsProvider.notifier);
     final filter    = ref.watch(workerJobsProvider.notifier
         .select((n) => n.currentFilter));
+    final workerProfile = ref.watch(workerProfileProvider).valueOrNull;
+    // Unknown-yet counts as approved so the page doesn't flash the
+    // incomplete-profile panel before the profile has even loaded once.
+    final isApproved = workerProfile?.isOnboardingApproved ?? true;
 
     return Scaffold(
       backgroundColor: _kBg,
@@ -84,43 +90,56 @@ class _WorkerJobsPageState extends ConsumerState<WorkerJobsPage>
 
             const SizedBox(height: 16),
 
-            // ── Filter tabs ──────────────────────────────────────────────
-            _FilterTabs(active: filter, onTap: notifier.setFilter),
-
-            const SizedBox(height: 4),
-
-            if (jobsAsync.hasError && jobsAsync.hasValue)
-              const _RefreshFailedBanner(),
-
-            // ── List ─────────────────────────────────────────────────────
-            Expanded(
-              child: jobsAsync.when(
-                skipError: true,
-                loading: () => const Padding(
-                  padding: EdgeInsets.fromLTRB(16, 4, 16, 0),
-                  child: BookingSkeleton(),
+            if (!isApproved)
+              // Profile incomplete/not approved — nothing meaningful to
+              // list or filter yet; never show it as a fetch error.
+              const Expanded(
+                child: ProfileIncompleteState(
+                  romanUrdu:
+                      'Apni profile complete karain. Approval ke baad aap apni jobs manage kar sakenge.',
+                  urdu:
+                      'اپنی پروفائل مکمل کریں۔ منظوری کے بعد آپ اپنی jobs manage کر سکیں گے۔',
                 ),
-                error: (err, _) => _ErrorState(
-                  message: err is Failure
-                      ? err.message
-                      : 'Failed to load jobs. Please try again.',
-                  onRetry: notifier.refresh,
-                ),
-                data: (jobs) => jobs.isEmpty
-                    ? _EmptyState(filter: filter)
-                    : RefreshIndicator(
-                        color: _kGreen,
-                        backgroundColor: Colors.white,
-                        onRefresh: notifier.refresh,
-                        child: ListView.builder(
-                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 110),
-                          itemCount: jobs.length,
-                          itemBuilder: (ctx, i) =>
-                              _JobCard(key: ValueKey(jobs[i].id), job: jobs[i]),
+              )
+            else ...[
+              // ── Filter tabs ──────────────────────────────────────────────
+              _FilterTabs(active: filter, onTap: notifier.setFilter),
+
+              const SizedBox(height: 4),
+
+              if (jobsAsync.hasError && jobsAsync.hasValue)
+                const _RefreshFailedBanner(),
+
+              // ── List ─────────────────────────────────────────────────────
+              Expanded(
+                child: jobsAsync.when(
+                  skipError: true,
+                  loading: () => const Padding(
+                    padding: EdgeInsets.fromLTRB(16, 4, 16, 0),
+                    child: BookingSkeleton(),
+                  ),
+                  error: (err, _) => _ErrorState(
+                    message: err is Failure
+                        ? err.message
+                        : 'Failed to load jobs. Please try again.',
+                    onRetry: notifier.refresh,
+                  ),
+                  data: (jobs) => jobs.isEmpty
+                      ? _EmptyState(filter: filter)
+                      : RefreshIndicator(
+                          color: _kGreen,
+                          backgroundColor: Colors.white,
+                          onRefresh: notifier.refresh,
+                          child: ListView.builder(
+                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 110),
+                            itemCount: jobs.length,
+                            itemBuilder: (ctx, i) =>
+                                _JobCard(key: ValueKey(jobs[i].id), job: jobs[i]),
                         ),
                       ),
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ),

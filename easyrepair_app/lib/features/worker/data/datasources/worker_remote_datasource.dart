@@ -9,6 +9,7 @@ import '../../../bookings/data/models/booking_model.dart';
 import '../models/worker_profile_model.dart';
 import '../models/category_model.dart';
 import '../models/worker_review_model.dart';
+import '../models/agreement_template_model.dart';
 
 abstract class WorkerRemoteDatasource {
   Future<WorkerProfileModel> getProfile();
@@ -18,11 +19,16 @@ abstract class WorkerRemoteDatasource {
   Future<void> updateProfileCompletion({
     String? fullLegalName,
     String? residentialAddress,
+    String? cnicNumber,
     int? experienceYears,
     bool? legalNameConfirmed,
     bool? generalAgreementAccepted,
     bool? tradeAgreementAccepted,
   });
+
+  /// The exact text/version of the agreements the worker is about to accept
+  /// — General always, Trade-specific once a main skill is selected.
+  Future<List<AgreementTemplateModel>> getAgreementTemplates();
 
   Future<String> uploadCnicFront(File file);
   Future<String> uploadCnicBack(File file);
@@ -133,6 +139,7 @@ class WorkerRemoteDatasourceImpl implements WorkerRemoteDatasource {
   Future<void> updateProfileCompletion({
     String? fullLegalName,
     String? residentialAddress,
+    String? cnicNumber,
     int? experienceYears,
     bool? legalNameConfirmed,
     bool? generalAgreementAccepted,
@@ -143,6 +150,7 @@ class WorkerRemoteDatasourceImpl implements WorkerRemoteDatasource {
     if (residentialAddress != null) {
       body['residentialAddress'] = residentialAddress;
     }
+    if (cnicNumber != null) body['cnicNumber'] = cnicNumber;
     if (experienceYears != null) body['experienceYears'] = experienceYears;
     if (legalNameConfirmed != null) {
       body['legalNameConfirmed'] = legalNameConfirmed;
@@ -154,6 +162,17 @@ class WorkerRemoteDatasourceImpl implements WorkerRemoteDatasource {
       body['tradeAgreementAccepted'] = tradeAgreementAccepted;
     }
     await _dio.patch<void>('/workers/profile-completion', data: body);
+  }
+
+  @override
+  Future<List<AgreementTemplateModel>> getAgreementTemplates() async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      '/workers/profile-completion/agreement-templates',
+    );
+    final list = response.data!['data'] as List<dynamic>;
+    return list
+        .map((e) => AgreementTemplateModel.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   Future<String> _uploadDocument(String path, File file) async {

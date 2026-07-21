@@ -11,6 +11,7 @@ import '../../data/repositories/worker_repository_impl.dart';
 import '../../domain/entities/worker_profile_entity.dart';
 import '../../domain/entities/worker_skill_entity.dart';
 import '../../domain/entities/category_entity.dart';
+import '../../domain/entities/agreement_template_entity.dart';
 import '../../domain/repositories/worker_repository.dart';
 
 // ── Worker Profile ────────────────────────────────────────────────────────────
@@ -509,6 +510,17 @@ final categoriesProvider = FutureProvider<List<CategoryEntity>>((ref) async {
   return result.fold((f) => throw f, (categories) => categories);
 });
 
+/// Exact text/version of the agreements the worker is about to accept —
+/// powers the profile-completion "View Agreement" screen. Re-fetched
+/// whenever workerProfileProvider changes (e.g. after picking a main skill)
+/// so the Trade-specific template appears as soon as it becomes relevant.
+final agreementTemplatesProvider =
+    FutureProvider<List<AgreementTemplateEntity>>((ref) async {
+  ref.watch(workerProfileProvider);
+  final result = await ref.read(workerRepositoryProvider).getAgreementTemplates();
+  return result.fold((f) => throw f, (templates) => templates);
+});
+
 // ── Selected skill ids for the skills sheet ───────────────────────────────────
 
 final selectedCategoryIdsProvider =
@@ -532,6 +544,7 @@ class ProfileCompletionNotifier extends AsyncNotifier<void> {
   Future<bool> save({
     String? fullLegalName,
     String? residentialAddress,
+    String? cnicNumber,
     int? experienceYears,
     bool? legalNameConfirmed,
     bool? generalAgreementAccepted,
@@ -541,6 +554,7 @@ class ProfileCompletionNotifier extends AsyncNotifier<void> {
     final result = await ref.read(workerRepositoryProvider).updateProfileCompletion(
           fullLegalName: fullLegalName,
           residentialAddress: residentialAddress,
+          cnicNumber: cnicNumber,
           experienceYears: experienceYears,
           legalNameConfirmed: legalNameConfirmed,
           generalAgreementAccepted: generalAgreementAccepted,

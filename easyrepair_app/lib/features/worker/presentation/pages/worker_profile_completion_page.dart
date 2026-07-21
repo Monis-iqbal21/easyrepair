@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../../core/errors/failures.dart';
 import '../../domain/entities/worker_profile_entity.dart';
+import '../../domain/entities/agreement_template_entity.dart';
 import '../providers/worker_providers.dart';
 import '../pages/worker_home_page.dart' show showSkillsSheet;
 
@@ -19,6 +20,20 @@ const _kBg = Color(0xFFF9FAFB);
 const _kRed = Color(0xFFDC2626);
 const _kGreen = Color(0xFF22C55E);
 
+// Missing-field keys used by both the validation set and each widget's
+// error lookup — kept as constants so a typo can't silently break a check.
+const _kFieldFullLegalName = 'fullLegalName';
+const _kFieldCnicNumber = 'cnicNumber';
+const _kFieldMainSkill = 'mainSkill';
+const _kFieldExperienceYears = 'experienceYears';
+const _kFieldResidentialAddress = 'residentialAddress';
+const _kFieldCnicFront = 'cnicFront';
+const _kFieldCnicBack = 'cnicBack';
+const _kFieldLiveSelfie = 'liveSelfie';
+const _kFieldLegalNameConfirmed = 'legalNameConfirmed';
+const _kFieldGeneralAgreement = 'generalAgreement';
+const _kFieldTradeAgreement = 'tradeAgreement';
+
 class WorkerProfileCompletionPage extends ConsumerStatefulWidget {
   const WorkerProfileCompletionPage({super.key});
 
@@ -29,8 +44,11 @@ class WorkerProfileCompletionPage extends ConsumerStatefulWidget {
 
 class _WorkerProfileCompletionPageState
     extends ConsumerState<WorkerProfileCompletionPage> {
+  static final _cnicPattern = RegExp(r'^\d{5}-\d{7}-\d{1}$');
+
   final _picker = ImagePicker();
   final _fullLegalNameCtrl = TextEditingController();
+  final _cnicNumberCtrl = TextEditingController();
   final _residentialAddressCtrl = TextEditingController();
   final _experienceYearsCtrl = TextEditingController();
 
@@ -42,9 +60,15 @@ class _WorkerProfileCompletionPageState
   bool _uploadingCnicBack = false;
   bool _uploadingSelfie = false;
 
+  /// Populated only after a failed Submit attempt — drives the red
+  /// borders/helper text below. Cleared per-field as the worker fixes each
+  /// one, so the form isn't stuck showing stale errors.
+  Set<String> _missingFields = {};
+
   @override
   void dispose() {
     _fullLegalNameCtrl.dispose();
+    _cnicNumberCtrl.dispose();
     _residentialAddressCtrl.dispose();
     _experienceYearsCtrl.dispose();
     super.dispose();
@@ -54,6 +78,7 @@ class _WorkerProfileCompletionPageState
     if (_prefilled) return;
     _prefilled = true;
     _fullLegalNameCtrl.text = profile.fullLegalName ?? '';
+    _cnicNumberCtrl.text = profile.cnicNumber ?? '';
     _residentialAddressCtrl.text = profile.residentialAddress ?? '';
     final exp = profile.skills.isNotEmpty ? profile.skills.first.yearsExperience : null;
     _experienceYearsCtrl.text = exp != null ? '$exp' : '';
@@ -65,12 +90,65 @@ class _WorkerProfileCompletionPageState
   bool _isEditable(String onboardingStatus) =>
       onboardingStatus == 'DRAFT' || onboardingStatus == 'CHANGES_REQUIRED';
 
+  void _clearFieldError(String field) {
+    if (_missingFields.contains(field)) {
+      setState(() => _missingFields.remove(field));
+    }
+  }
+
+  /// Bottom sheet letting the worker choose Camera or Gallery for a document
+  /// photo. Camera is listed first for all three (Live Selfie should
+  /// preferably use the camera; CNIC front/back are equally likely to be an
+  /// existing gallery photo), so both options are always offered.
+  static const _imageSourceOptions = [
+    (ImageSource.camera, Icons.camera_alt_outlined, 'Take Photo'),
+    (ImageSource.gallery, Icons.photo_library_outlined, 'Choose from Gallery'),
+  ];
+
+  Future<ImageSource?> _chooseImageSource() {
+    return showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE2E8F0),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 12),
+            for (final (source, icon, label) in _imageSourceOptions)
+              ListTile(
+                leading: Icon(icon, color: _kOrange),
+                title: Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                onTap: () => Navigator.pop(ctx, source),
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _pickAndUpload(
     Future<String?> Function(File file) uploader,
     void Function(bool) setUploading,
+    String fieldKey,
   ) async {
+    final source = await _chooseImageSource();
+    if (source == null || !mounted) return;
+
     final picked = await _picker.pickImage(
-      source: ImageSource.gallery,
+      source: source,
       imageQuality: 85,
       maxWidth: 1600,
     );
@@ -90,18 +168,49 @@ class _WorkerProfileCompletionPageState
           behavior: SnackBarBehavior.floating,
         ),
       );
+    } else {
+      _clearFieldError(fieldKey);
     }
   }
 
-  Future<void> _submit(WorkerProfileEntity profile) async {
+  /// Computes every missing/invalid field against the current form + already
+  /// -uploaded documents. Returns an empty set when everything required is
+  /// present and valid.
+  Set<String> _computeMissingFields(WorkerProfileEntity profile) {
+    final missing = <String>{};
+    if (_fullLegalNameCtrl.text.trim().isEmpty) missing.add(_kFieldFullLegalName);
+    if (!_cnicPattern.hasMatch(_cnicNumberCtrl.text.trim())) {
+      missing.add(_kFieldCnicNumber);
+    }
+    if (profile.skills.isEmpty) missing.add(_kFieldMainSkill);
     final years = int.tryParse(_experienceYearsCtrl.text.trim());
-    if (_fullLegalNameCtrl.text.trim().isEmpty ||
-        _residentialAddressCtrl.text.trim().isEmpty ||
-        years == null ||
-        years < 0) {
+    if (years == null || years < 0) missing.add(_kFieldExperienceYears);
+    if (_residentialAddressCtrl.text.trim().isEmpty) {
+      missing.add(_kFieldResidentialAddress);
+    }
+    if (profile.cnicFrontUrl == null || profile.cnicFrontUrl!.isEmpty) {
+      missing.add(_kFieldCnicFront);
+    }
+    if (profile.cnicBackUrl == null || profile.cnicBackUrl!.isEmpty) {
+      missing.add(_kFieldCnicBack);
+    }
+    if (profile.liveSelfieUrl == null || profile.liveSelfieUrl!.isEmpty) {
+      missing.add(_kFieldLiveSelfie);
+    }
+    if (!_legalNameConfirmed) missing.add(_kFieldLegalNameConfirmed);
+    if (!_generalAgreementAccepted) missing.add(_kFieldGeneralAgreement);
+    if (!_tradeAgreementAccepted) missing.add(_kFieldTradeAgreement);
+    return missing;
+  }
+
+  Future<void> _submit(WorkerProfileEntity profile) async {
+    final missing = _computeMissingFields(profile);
+    setState(() => _missingFields = missing);
+
+    if (missing.isNotEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please fill all fields with valid values.'),
+          content: Text('Please complete the highlighted fields below.'),
           backgroundColor: _kRed,
           behavior: SnackBarBehavior.floating,
         ),
@@ -109,9 +218,11 @@ class _WorkerProfileCompletionPageState
       return;
     }
 
+    final years = int.parse(_experienceYearsCtrl.text.trim());
     final notifier = ref.read(profileCompletionNotifierProvider.notifier);
     final saved = await notifier.save(
       fullLegalName: _fullLegalNameCtrl.text.trim(),
+      cnicNumber: _cnicNumberCtrl.text.trim(),
       residentialAddress: _residentialAddressCtrl.text.trim(),
       experienceYears: years,
       legalNameConfirmed: _legalNameConfirmed,
@@ -155,6 +266,14 @@ class _WorkerProfileCompletionPageState
   Widget build(BuildContext context) {
     final profileAsync = ref.watch(workerProfileProvider);
     final isSaving = ref.watch(profileCompletionNotifierProvider).isLoading;
+    final templatesAsync = ref.watch(agreementTemplatesProvider);
+    final templates = templatesAsync.asData?.value ?? const <AgreementTemplateEntity>[];
+    AgreementTemplateEntity? findTemplate(bool general) {
+      for (final t in templates) {
+        if (general ? t.isGeneral : t.isTrade) return t;
+      }
+      return null;
+    }
 
     return Scaffold(
       backgroundColor: _kBg,
@@ -192,6 +311,21 @@ class _WorkerProfileCompletionPageState
                   controller: _fullLegalNameCtrl,
                   hint: 'As written on your CNIC',
                   enabled: editable,
+                  hasError: _missingFields.contains(_kFieldFullLegalName),
+                  errorText: 'Full legal name is required.',
+                  onChanged: (_) => _clearFieldError(_kFieldFullLegalName),
+                ),
+                const SizedBox(height: 16),
+
+                _SectionLabel('CNIC Number'),
+                _TextInput(
+                  controller: _cnicNumberCtrl,
+                  hint: '12345-1234567-1',
+                  enabled: editable,
+                  keyboardType: TextInputType.number,
+                  hasError: _missingFields.contains(_kFieldCnicNumber),
+                  errorText: 'Enter a valid CNIC number (12345-1234567-1).',
+                  onChanged: (_) => _clearFieldError(_kFieldCnicNumber),
                 ),
                 const SizedBox(height: 16),
 
@@ -199,7 +333,11 @@ class _WorkerProfileCompletionPageState
                 _MainSkillRow(
                   skillName: mainSkillName,
                   editable: editable,
-                  onChangeTap: () => showSkillsSheet(context, ref),
+                  hasError: _missingFields.contains(_kFieldMainSkill),
+                  onChangeTap: () async {
+                    await showSkillsSheet(context, ref);
+                    _clearFieldError(_kFieldMainSkill);
+                  },
                 ),
                 const SizedBox(height: 16),
 
@@ -209,6 +347,9 @@ class _WorkerProfileCompletionPageState
                   hint: 'e.g. 3',
                   enabled: editable,
                   keyboardType: TextInputType.number,
+                  hasError: _missingFields.contains(_kFieldExperienceYears),
+                  errorText: 'Enter a valid number of years (0 or more).',
+                  onChanged: (_) => _clearFieldError(_kFieldExperienceYears),
                 ),
                 const SizedBox(height: 16),
 
@@ -218,6 +359,9 @@ class _WorkerProfileCompletionPageState
                   hint: 'House #, street, area, city',
                   enabled: editable,
                   maxLines: 3,
+                  hasError: _missingFields.contains(_kFieldResidentialAddress),
+                  errorText: 'Residential address is required.',
+                  onChanged: (_) => _clearFieldError(_kFieldResidentialAddress),
                 ),
                 const SizedBox(height: 20),
 
@@ -228,9 +372,11 @@ class _WorkerProfileCompletionPageState
                   imageUrl: profile.cnicFrontUrl,
                   uploading: _uploadingCnicFront,
                   editable: editable,
+                  hasError: _missingFields.contains(_kFieldCnicFront),
                   onTap: () => _pickAndUpload(
                     (f) => ref.read(profileCompletionNotifierProvider.notifier).uploadCnicFront(f),
                     (v) => _uploadingCnicFront = v,
+                    _kFieldCnicFront,
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -239,9 +385,11 @@ class _WorkerProfileCompletionPageState
                   imageUrl: profile.cnicBackUrl,
                   uploading: _uploadingCnicBack,
                   editable: editable,
+                  hasError: _missingFields.contains(_kFieldCnicBack),
                   onTap: () => _pickAndUpload(
                     (f) => ref.read(profileCompletionNotifierProvider.notifier).uploadCnicBack(f),
                     (v) => _uploadingCnicBack = v,
+                    _kFieldCnicBack,
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -250,9 +398,11 @@ class _WorkerProfileCompletionPageState
                   imageUrl: profile.liveSelfieUrl,
                   uploading: _uploadingSelfie,
                   editable: editable,
+                  hasError: _missingFields.contains(_kFieldLiveSelfie),
                   onTap: () => _pickAndUpload(
                     (f) => ref.read(profileCompletionNotifierProvider.notifier).uploadLiveSelfie(f),
                     (v) => _uploadingSelfie = v,
+                    _kFieldLiveSelfie,
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -262,30 +412,38 @@ class _WorkerProfileCompletionPageState
                 _AgreementCheckbox(
                   value: _legalNameConfirmed,
                   enabled: editable,
+                  hasError: _missingFields.contains(_kFieldLegalNameConfirmed),
                   label: 'I confirm my legal name matches my CNIC.',
-                  onChanged: (v) => setState(() => _legalNameConfirmed = v),
+                  onChanged: (v) {
+                    setState(() => _legalNameConfirmed = v);
+                    if (v) _clearFieldError(_kFieldLegalNameConfirmed);
+                  },
                 ),
                 _AgreementCheckbox(
                   value: _generalAgreementAccepted,
                   enabled: editable,
-                  label: 'I accept the General Ustaad Agreement.',
+                  hasError: _missingFields.contains(_kFieldGeneralAgreement),
+                  label: 'I accept the General Ustaad Agreement'
+                      '${findTemplate(true) != null ? ' (v${findTemplate(true)!.version})' : ''}.',
                   linkLabel: 'View Agreement',
-                  onViewTap: () => _showAgreementPlaceholder(
-                    context,
-                    'General Ustaad Agreement',
-                  ),
-                  onChanged: (v) => setState(() => _generalAgreementAccepted = v),
+                  onViewTap: () => _showAgreement(context, findTemplate(true)),
+                  onChanged: (v) {
+                    setState(() => _generalAgreementAccepted = v);
+                    if (v) _clearFieldError(_kFieldGeneralAgreement);
+                  },
                 ),
                 _AgreementCheckbox(
                   value: _tradeAgreementAccepted,
                   enabled: editable,
-                  label: 'I accept the Trade-specific Agreement.',
+                  hasError: _missingFields.contains(_kFieldTradeAgreement),
+                  label: 'I accept the Trade-specific Agreement'
+                      '${findTemplate(false) != null ? ' (v${findTemplate(false)!.version})' : ''}.',
                   linkLabel: 'View Agreement',
-                  onViewTap: () => _showAgreementPlaceholder(
-                    context,
-                    'Trade-specific Agreement',
-                  ),
-                  onChanged: (v) => setState(() => _tradeAgreementAccepted = v),
+                  onViewTap: () => _showAgreement(context, findTemplate(false)),
+                  onChanged: (v) {
+                    setState(() => _tradeAgreementAccepted = v);
+                    if (v) _clearFieldError(_kFieldTradeAgreement);
+                  },
                 ),
                 const SizedBox(height: 24),
 
@@ -326,15 +484,46 @@ class _WorkerProfileCompletionPageState
     );
   }
 
-  void _showAgreementPlaceholder(BuildContext context, String title) {
+  /// Shows the exact text/version of the agreement the worker is about to
+  /// accept. [template] is null while still loading (no active template
+  /// fetched yet, e.g. before a main skill is selected for the trade
+  /// agreement) — shown as a friendly notice rather than a blank dialog.
+  void _showAgreement(BuildContext context, AgreementTemplateEntity? template) {
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-        content: const Text(
-          'Agreement text will be added here soon. Placeholder for now.',
-          style: TextStyle(color: _kGray, fontSize: 13.5),
+        title: Text(
+          template?.title ?? 'Agreement',
+          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
+            child: template != null
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Version ${template.version}',
+                        style: const TextStyle(
+                          color: _kOrange,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        template.contentText,
+                        style: const TextStyle(color: _kDark, fontSize: 13, height: 1.5),
+                      ),
+                    ],
+                  )
+                : const Text(
+                    'Select your main skill first to load this agreement.',
+                    style: TextStyle(color: _kGray, fontSize: 13.5),
+                  ),
+          ),
         ),
         actions: [
           TextButton(
@@ -450,6 +639,9 @@ class _TextInput extends StatelessWidget {
   final bool enabled;
   final int maxLines;
   final TextInputType? keyboardType;
+  final bool hasError;
+  final String? errorText;
+  final ValueChanged<String>? onChanged;
 
   const _TextInput({
     required this.controller,
@@ -457,35 +649,52 @@ class _TextInput extends StatelessWidget {
     required this.enabled,
     this.maxLines = 1,
     this.keyboardType,
+    this.hasError = false,
+    this.errorText,
+    this.onChanged,
   });
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
-      controller: controller,
-      enabled: enabled,
-      maxLines: maxLines,
-      keyboardType: keyboardType,
-      style: const TextStyle(fontSize: 14, color: _kDark),
-      decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: const TextStyle(color: _kLight, fontSize: 13),
-        filled: true,
-        fillColor: enabled ? Colors.white : const Color(0xFFF1F5F9),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: _kBorder),
+    final borderColor = hasError ? _kRed : _kBorder;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          controller: controller,
+          enabled: enabled,
+          maxLines: maxLines,
+          keyboardType: keyboardType,
+          onChanged: onChanged,
+          style: const TextStyle(fontSize: 14, color: _kDark),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: const TextStyle(color: _kLight, fontSize: 13),
+            filled: true,
+            fillColor: enabled ? Colors.white : const Color(0xFFF1F5F9),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: borderColor, width: hasError ? 1.4 : 1),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: borderColor, width: hasError ? 1.4 : 1),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: hasError ? _kRed : _kOrange),
+            ),
+          ),
         ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: _kBorder),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: _kOrange),
-        ),
-      ),
+        if (hasError && errorText != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            errorText!,
+            style: const TextStyle(fontSize: 11.5, color: _kRed),
+          ),
+        ],
+      ],
     );
   }
 }
@@ -493,45 +702,59 @@ class _TextInput extends StatelessWidget {
 class _MainSkillRow extends StatelessWidget {
   final String? skillName;
   final bool editable;
+  final bool hasError;
   final VoidCallback onChangeTap;
 
   const _MainSkillRow({
     required this.skillName,
     required this.editable,
     required this.onChangeTap,
+    this.hasError = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _kBorder),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              skillName ?? 'Not selected',
-              style: TextStyle(
-                fontSize: 14,
-                color: skillName != null ? _kDark : _kLight,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: hasError ? _kRed : _kBorder, width: hasError ? 1.4 : 1),
           ),
-          if (editable)
-            GestureDetector(
-              onTap: onChangeTap,
-              child: const Text(
-                'Change',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: _kOrange),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  skillName ?? 'Not selected',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: skillName != null ? _kDark : _kLight,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
-            ),
+              if (editable)
+                GestureDetector(
+                  onTap: onChangeTap,
+                  child: const Text(
+                    'Change',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: _kOrange),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        if (hasError) ...[
+          const SizedBox(height: 4),
+          const Text(
+            'Please select your main skill.',
+            style: TextStyle(fontSize: 11.5, color: _kRed),
+          ),
         ],
-      ),
+      ],
     );
   }
 }
@@ -541,6 +764,7 @@ class _DocumentTile extends StatelessWidget {
   final String? imageUrl;
   final bool uploading;
   final bool editable;
+  final bool hasError;
   final VoidCallback onTap;
 
   const _DocumentTile({
@@ -549,58 +773,70 @@ class _DocumentTile extends StatelessWidget {
     required this.uploading,
     required this.editable,
     required this.onTap,
+    this.hasError = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final uploaded = imageUrl != null && imageUrl!.isNotEmpty;
+    final borderColor = hasError ? _kRed : (uploaded ? _kGreen.withValues(alpha: 0.4) : _kBorder);
     return GestureDetector(
       onTap: (editable && !uploading) ? onTap : null,
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: uploaded ? _kGreen.withValues(alpha: 0.4) : _kBorder,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: borderColor, width: hasError ? 1.4 : 1),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 56,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: uploading
+                      ? const Center(
+                          child: SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: _kOrange),
+                          ),
+                        )
+                      : uploaded
+                          ? Image.network(imageUrl!, fit: BoxFit.cover)
+                          : const Icon(Icons.image_outlined, color: _kLight, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: _kDark),
+                  ),
+                ),
+                Icon(
+                  uploaded ? Icons.check_circle_rounded : Icons.upload_outlined,
+                  size: 18,
+                  color: uploaded ? _kGreen : _kLight,
+                ),
+              ],
+            ),
           ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 56,
-              height: 42,
-              decoration: BoxDecoration(
-                color: const Color(0xFFF1F5F9),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: uploading
-                  ? const Center(
-                      child: SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: _kOrange),
-                      ),
-                    )
-                  : uploaded
-                      ? Image.network(imageUrl!, fit: BoxFit.cover)
-                      : const Icon(Icons.image_outlined, color: _kLight, size: 20),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                label,
-                style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: _kDark),
-              ),
-            ),
-            Icon(
-              uploaded ? Icons.check_circle_rounded : Icons.upload_outlined,
-              size: 18,
-              color: uploaded ? _kGreen : _kLight,
+          if (hasError) ...[
+            const SizedBox(height: 4),
+            const Text(
+              'Required — ضروری ہے',
+              style: TextStyle(fontSize: 11.5, color: _kRed),
             ),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -609,6 +845,7 @@ class _DocumentTile extends StatelessWidget {
 class _AgreementCheckbox extends StatelessWidget {
   final bool value;
   final bool enabled;
+  final bool hasError;
   final String label;
   final String? linkLabel;
   final VoidCallback? onViewTap;
@@ -619,6 +856,7 @@ class _AgreementCheckbox extends StatelessWidget {
     required this.enabled,
     required this.label,
     required this.onChanged,
+    this.hasError = false,
     this.linkLabel,
     this.onViewTap,
   });
@@ -636,6 +874,7 @@ class _AgreementCheckbox extends StatelessWidget {
             child: Checkbox(
               value: value,
               activeColor: _kOrange,
+              side: hasError ? const BorderSide(color: _kRed, width: 1.4) : null,
               onChanged: enabled ? (v) => onChanged(v ?? false) : null,
               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
@@ -664,6 +903,13 @@ class _AgreementCheckbox extends StatelessWidget {
                       ),
                     ),
                   ),
+                if (hasError) ...[
+                  const SizedBox(height: 2),
+                  const Text(
+                    'This confirmation is required.',
+                    style: TextStyle(fontSize: 11.5, color: _kRed),
+                  ),
+                ],
               ],
             ),
           ),
