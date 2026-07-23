@@ -32,6 +32,16 @@ export class AdminController {
     return this.adminService.getPendingWorkers();
   }
 
+  /**
+   * GET /admin/workers/:workerProfileId — full detail for one worker.
+   * Registered after the static 'pending' route so 'pending' is never
+   * swallowed by this param route.
+   */
+  @Get(':workerProfileId')
+  getWorkerById(@Param('workerProfileId') workerProfileId: string) {
+    return this.adminService.getWorkerById(workerProfileId);
+  }
+
   /** PATCH /admin/workers/:workerProfileId/approve */
   @Patch(':workerProfileId/approve')
   @HttpCode(HttpStatus.OK)

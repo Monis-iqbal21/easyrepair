@@ -43,6 +43,62 @@ export class AdminRepository {
     });
   }
 
+  /**
+   * Full admin detail view of a single worker, regardless of onboarding
+   * stage — used by the detail page even after approve/reject/changes.
+   */
+  async findWorkerByIdFull(
+    workerProfileId: string,
+  ): Promise<WorkerProfileAdminView | null> {
+    return this.prisma.workerProfile.findUnique({
+      where: { id: workerProfileId },
+      include: WORKER_PROFILE_ADMIN_INCLUDE,
+    });
+  }
+
+  /** Dashboard counters for the admin panel. */
+  async getStats(): Promise<{
+    pendingUstaads: number;
+    approvedUstaads: number;
+    rejectedUstaads: number;
+    changesRequiredUstaads: number;
+    totalWorkers: number;
+    totalUsers: number;
+  }> {
+    const [
+      pendingUstaads,
+      approvedUstaads,
+      rejectedUstaads,
+      changesRequiredUstaads,
+      totalWorkers,
+      totalUsers,
+    ] = await Promise.all([
+      this.prisma.workerProfile.count({
+        where: { onboardingStatus: WorkerOnboardingStatus.SUBMITTED_FOR_REVIEW },
+      }),
+      this.prisma.workerProfile.count({
+        where: { onboardingStatus: WorkerOnboardingStatus.APPROVED },
+      }),
+      this.prisma.workerProfile.count({
+        where: { onboardingStatus: WorkerOnboardingStatus.REJECTED },
+      }),
+      this.prisma.workerProfile.count({
+        where: { onboardingStatus: WorkerOnboardingStatus.CHANGES_REQUIRED },
+      }),
+      this.prisma.workerProfile.count(),
+      this.prisma.user.count(),
+    ]);
+
+    return {
+      pendingUstaads,
+      approvedUstaads,
+      rejectedUstaads,
+      changesRequiredUstaads,
+      totalWorkers,
+      totalUsers,
+    };
+  }
+
   /** Approve — the only path to hireability. Mirrors verificationStatus for legacy readers (e.g. Flutter's isVerifiedWorker). */
   async approve(workerProfileId: string): Promise<WorkerProfileAdminView> {
     return this.prisma.workerProfile.update({

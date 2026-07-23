@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { FaceMatchStatus, TrainingStatus } from '@prisma/client';
 import { AdminRepository, WorkerProfileAdminView } from './admin.repository';
 import { PendingWorkerResponseDto } from './dto/pending-worker-response.dto';
+import { AdminStatsResponseDto } from './dto/admin-stats-response.dto';
 import { AgreementsService } from '../agreements/agreements.service';
 
 @Injectable()
@@ -21,6 +22,21 @@ export class AdminService {
   async getPendingWorkers(): Promise<PendingWorkerResponseDto[]> {
     const workers = await this.adminRepository.findPendingWorkers();
     return workers.map((w) => this._toDto(w));
+  }
+
+  /**
+   * GET /admin/workers/:id — full detail for one worker, regardless of
+   * onboarding stage (works before submission and after approve/reject too).
+   */
+  async getWorkerById(workerProfileId: string): Promise<PendingWorkerResponseDto> {
+    const worker = await this.adminRepository.findWorkerByIdFull(workerProfileId);
+    if (!worker) throw new NotFoundException('Worker profile not found');
+    return this._toDto(worker);
+  }
+
+  /** GET /admin/stats — dashboard counters for the admin panel. */
+  async getStats(): Promise<AdminStatsResponseDto> {
+    return this.adminRepository.getStats();
   }
 
   /** PATCH /admin/workers/:id/approve */
@@ -111,6 +127,7 @@ export class AdminService {
       })),
       createdAt: w.createdAt,
       fullLegalName: w.fullLegalName,
+      cnicNumber: w.cnicNumber,
       residentialAddress: w.residentialAddress,
       cnicFrontUrl: w.cnicFrontUrl,
       cnicBackUrl: w.cnicBackUrl,

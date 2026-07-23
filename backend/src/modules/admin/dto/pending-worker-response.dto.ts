@@ -43,6 +43,7 @@ export class PendingWorkerResponseDto {
 
   // ── Onboarding submission ─────────────────────────────────────────────
   fullLegalName: string | null;
+  cnicNumber: string | null;
   residentialAddress: string | null;
   cnicFrontUrl: string | null;
   cnicBackUrl: string | null;
