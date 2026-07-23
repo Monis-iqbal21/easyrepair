@@ -38,6 +38,7 @@ const _kDark = Color(0xFF1A1A1A);
 const _kGray = Color(0xFF6B7280);
 const _kBorder = Color(0xFFE2E8F0);
 const _kSurface = Color(0xFFF9FAFB);
+const _kCream = Color(0xFFFAF0DD);
 const _kMaxVideoSecs = 30;
 
 class BookServicePage extends ConsumerStatefulWidget {
@@ -80,7 +81,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
   int _currentStep = 0;
   BookingEntity? _createdBooking;
 
-  BookingLane? _laneChoice;
+  BookingLane? _laneChoice = BookingLane.inspection;
   // Multi-select STANDARD-lane services, keyed by service id, insertion order
   // preserved (LinkedHashMap semantics of Dart's default Map) so the sent
   // standardServiceIds list matches the order the client tapped them in.
@@ -222,8 +223,8 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
       _laneChoice = booking.lane == BookingLane.standard
           ? BookingLane.standard
           : (booking.inspection || booking.hasLegacyInspectionPrefix)
-              ? BookingLane.inspection
-              : BookingLane.bidding;
+          ? BookingLane.inspection
+          : BookingLane.bidding;
       _titleCtrl.text = booking.title ?? '';
       _descriptionCtrl.text = booking.cleanDescription ?? '';
 
@@ -235,8 +236,8 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
         _pendingStandardServiceIdsToPreselect = ids.isNotEmpty
             ? ids
             : (booking.standardServiceId != null
-                ? [booking.standardServiceId!]
-                : const []);
+                  ? [booking.standardServiceId!]
+                  : const []);
       }
 
       _gpsLat = booking.latitude != 0 ? booking.latitude : null;
@@ -479,8 +480,10 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
       // DIAG-1: API key presence
       final key = AppConfig.googleMapsApiKey;
       if (key.isEmpty) {
-        debugPrint('[ReverseGeocode] ERROR: googleMapsApiKey is EMPTY — '
-            'check dart-define GOOGLE_MAPS_API_KEY');
+        debugPrint(
+          '[ReverseGeocode] ERROR: googleMapsApiKey is EMPTY — '
+          'check dart-define GOOGLE_MAPS_API_KEY',
+        );
       } else {
         final masked = key.length > 8
             ? '${key.substring(0, 4)}...${key.substring(key.length - 4)}'
@@ -512,8 +515,10 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
       client.close();
 
       // DIAG-4: raw response body (truncated to 500 chars)
-      debugPrint('[ReverseGeocode] Raw body (first 500 chars): '
-          '${body.length > 500 ? body.substring(0, 500) : body}');
+      debugPrint(
+        '[ReverseGeocode] Raw body (first 500 chars): '
+        '${body.length > 500 ? body.substring(0, 500) : body}',
+      );
 
       final json = jsonDecode(body) as Map<String, dynamic>;
       final status = json['status'] as String? ?? 'UNKNOWN';
@@ -524,12 +529,16 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
       if (status != 'OK') {
         final errMsg = json['error_message'] as String? ?? '';
         if (status == 'REQUEST_DENIED') {
-          debugPrint('[ReverseGeocode] ERROR: REQUEST_DENIED — '
-              'Google Geocoding API is likely not enabled for this key, '
-              'or the key is invalid/restricted. error_message: $errMsg');
+          debugPrint(
+            '[ReverseGeocode] ERROR: REQUEST_DENIED — '
+            'Google Geocoding API is likely not enabled for this key, '
+            'or the key is invalid/restricted. error_message: $errMsg',
+          );
         } else {
-          debugPrint('[ReverseGeocode] Non-OK status "$status". '
-              'error_message: $errMsg');
+          debugPrint(
+            '[ReverseGeocode] Non-OK status "$status". '
+            'error_message: $errMsg',
+          );
         }
         return null;
       }
@@ -589,7 +598,8 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
 
       // Last resort: never leave the address field empty after a successful
       // GPS fix — mirrors the "Pick on Map" flow, which always shows a label.
-      addr ??= 'Current location (${pos.latitude.toStringAsFixed(5)}, '
+      addr ??=
+          'Current location (${pos.latitude.toStringAsFixed(5)}, '
           '${pos.longitude.toStringAsFixed(5)})';
 
       debugPrint('[CaptureLocation] final resolved address: $addr');
@@ -953,7 +963,9 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
           bookingId,
           file,
           'audio/x-m4a',
-          durationSeconds: _recordingSeconds > 0 ? _recordingSeconds.toDouble() : null,
+          durationSeconds: _recordingSeconds > 0
+              ? _recordingSeconds.toDouble()
+              : null,
         );
     result.fold((failure) => throw failure, (_) {});
   }
@@ -1001,7 +1013,9 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
       );
     } else {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => WorkerDiscoveryMapPage(booking: booking)),
+        MaterialPageRoute(
+          builder: (_) => WorkerDiscoveryMapPage(booking: booking),
+        ),
       );
     }
   }
@@ -1043,11 +1057,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
               const Text(
                 'Your booking details have been updated successfully.',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: _kGray,
-                  height: 1.5,
-                ),
+                style: TextStyle(fontSize: 13, color: _kGray, height: 1.5),
               ),
               const SizedBox(height: 24),
               SizedBox(
@@ -1137,17 +1147,17 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
   // Returns null for unknown services, which falls back to emoji layout in ServiceCard.
   String? _serviceImagePath(String name) {
     return switch (name.toLowerCase()) {
-      'ac technician'          => 'assets/images/ac.jpg',
-      'electrician'            => 'assets/images/electrician.jpg',
-      'plumber'                => 'assets/images/plumber.jpg',
-      'handyman'               => 'assets/images/handyman.jpg',
-      'cleaner' || 'cleaning'  => 'assets/images/deepcleaning.png',
-      'painter'                => 'assets/images/painting.jpg',
-      'carpenter'              => 'assets/images/carpenter.jpg',
-      'pest control'           => 'assets/images/pest.png',
-      'car wash'               => 'assets/images/carwash.png',
-      'gardener'               => 'assets/images/gardening.jpg',
-      _                        => null,
+      'ac technician' => 'assets/images/ac.jpg',
+      'electrician' => 'assets/images/electrician.jpg',
+      'plumber' => 'assets/images/plumber.jpg',
+      'handyman' => 'assets/images/handyman.jpg',
+      'cleaner' || 'cleaning' => 'assets/images/deepcleaning.png',
+      'painter' => 'assets/images/painting.jpg',
+      'carpenter' => 'assets/images/carpenter.jpg',
+      'pest control' => 'assets/images/pest.png',
+      'car wash' => 'assets/images/carwash.png',
+      'gardener' => 'assets/images/gardening.jpg',
+      _ => null,
     };
   }
 
@@ -1186,10 +1196,20 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
               final cardWidth =
                   (constraints.maxWidth - spacing) / crossAxisCount;
               final imageHeight = cardWidth / 1.6;
-              final titleSize =
-                  rFont(cardWidth, 15, min: 13, max: 17, baseWidth: cardBaseW);
-              final subtitleSize =
-                  rFont(cardWidth, 12, min: 11, max: 13, baseWidth: cardBaseW);
+              final titleSize = rFont(
+                cardWidth,
+                15,
+                min: 13,
+                max: 17,
+                baseWidth: cardBaseW,
+              );
+              final subtitleSize = rFont(
+                cardWidth,
+                12,
+                min: 11,
+                max: 13,
+                baseWidth: cardBaseW,
+              );
               final textAreaHeight =
                   20.0 + titleSize * 1.6 + 3.0 + subtitleSize * 1.6 + 6.0;
               final childAspectRatio =
@@ -1490,10 +1510,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
           );
         }),
         const SizedBox(height: 4),
-        _infoNote(
-          'Nearby Ustaads are notified right away.',
-          color: _kRed,
-        ),
+        _infoNote('Nearby Ustaads are notified right away.', color: _kRed),
       ],
     );
   }
@@ -1991,11 +2008,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              icon,
-              size: 16,
-              color: enabled ? _kGreen : _kGray,
-            ),
+            Icon(icon, size: 16, color: enabled ? _kGreen : _kGray),
             const SizedBox(width: 6),
             Text(
               label,
@@ -2051,8 +2064,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
               localPath: file.path,
               onTap: () =>
                   _openPreviewDialog(localPath: file.path, isVideo: isVideo),
-              onRemove: () =>
-                  setState(() => _newAttachments.removeAt(idx)),
+              onRemove: () => setState(() => _newAttachments.removeAt(idx)),
             );
           }),
         ];
@@ -2163,10 +2175,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                     )
                   : localPath != null
                   ? InteractiveViewer(
-                      child: Image.file(
-                        File(localPath),
-                        fit: BoxFit.contain,
-                      ),
+                      child: Image.file(File(localPath), fit: BoxFit.contain),
                     )
                   : networkUrl != null
                   ? InteractiveViewer(
@@ -2194,11 +2203,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                     color: Colors.white24,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
-                    Icons.close,
-                    color: Colors.white,
-                    size: 20,
-                  ),
+                  child: const Icon(Icons.close, color: Colors.white, size: 20),
                 ),
               ),
             ),
@@ -2361,8 +2366,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                     labels[i],
                     style: TextStyle(
                       fontSize: 11,
-                      fontWeight:
-                          isActive ? FontWeight.w600 : FontWeight.w400,
+                      fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
                       color: (isDone || isActive) ? _kGreen : _kGray,
                     ),
                   ),
@@ -2383,10 +2387,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildLocationSection(),
-          const SizedBox(height: 8),
-        ],
+        children: [_buildLocationSection(), const SizedBox(height: 8)],
       ),
     );
   }
@@ -2418,15 +2419,13 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
             const SizedBox(height: 16),
             _buildInspectionInfoCard(),
             const SizedBox(height: 16),
-            _buildInspectionFeeStrip(),
-            const SizedBox(height: 16),
             _buildInspectionOptionalField(),
             const SizedBox(height: 16),
             _buildMediaSection(),
             const SizedBox(height: 12),
             _infoNote(
-              'You only pay the small fee for the visit. The repair price is '
-              'quoted in the app before any work starts.',
+              'Aap sirf aane ki fee dete hain. Repair ka rate app mein aata '
+              'hai — kaam shuru hone se pehle.',
               color: _kGreen,
             ),
           ] else if (_laneChoice == BookingLane.bidding) ...[
@@ -2436,8 +2435,8 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
             _buildMediaSection(),
             const SizedBox(height: 12),
             _infoNote(
-              'Ustaads will bid the full repair price. The bid you accept is '
-              'final — no changes at the door.',
+              'Ustaad poore repair ka rate bhejenge. Jo rate aap accept '
+              'karenge wohi final hai — darwaze par nahi badlega.',
               color: _kGreen,
             ),
           ],
@@ -2466,7 +2465,9 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
   }
 
   // ── Details step: 3-lane "What do you need?" card selector ────────────────
-  ServiceCategoryEntity? _resolveCategory(List<ServiceCategoryEntity> categories) {
+  ServiceCategoryEntity? _resolveCategory(
+    List<ServiceCategoryEntity> categories,
+  ) {
     if (_selectedService == null) return null;
     for (final c in categories) {
       if (c.name.toLowerCase() == _selectedService!.toLowerCase()) return c;
@@ -2541,72 +2542,291 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
       data: _resolveCategory,
       orElse: () => null,
     );
-    // Don't disable the card while categories are still loading — only once
-    // we know for sure the category has no inspection fee configured.
-    final inspectionAvailable = !categoriesLoaded || category?.inspectionFee != null;
-
-    final options = <Widget>[
-      if (!_isEditMode)
-        _laneOption(
-          lane: BookingLane.standard,
-          icon: Icons.build_circle_rounded,
-          title: 'Standard Services',
-          subtitle: 'Mounting / Installing / Service',
-        ),
-      _laneOption(
-        lane: BookingLane.inspection,
-        icon: Icons.search_rounded,
-        title: 'Masla maloom nhi hy',
-        subtitle: inspectionAvailable
-            ? 'Inspection karain'
-            : 'Not available for this service',
-        enabled: inspectionAvailable,
-      ),
-      _laneOption(
-        lane: BookingLane.bidding,
-        icon: Icons.forum_rounded,
-        title: 'Masla pata hy',
-        subtitle: 'Offers lain Ustaads se',
-      ),
-    ];
+    final inspectionAvailable =
+        !categoriesLoaded || category?.inspectionFee != null;
+    final inspectionFee = category?.inspectionFee;
 
     return _sectionCard(
-      title: 'What do you need?',
+      title: 'Aap ko kya chahiye?',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Apni zarurat chunain',
+            'Ek option chunain',
             style: TextStyle(fontSize: 12, color: _kGray),
           ),
-          const SizedBox(height: 14),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              const spacing = 10.0;
-              final rawWidth =
-                  (constraints.maxWidth - spacing * (options.length - 1)) /
-                      options.length;
-              final cardWidth = rawWidth >= 96
-                  ? rawWidth
-                  : (constraints.maxWidth < 96
-                      ? constraints.maxWidth
-                      : 96.0);
-              return Wrap(
-                spacing: spacing,
-                runSpacing: spacing,
-                children: [
-                  for (final option in options)
-                    SizedBox(width: cardWidth, child: option),
-                ],
-              );
-            },
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+            decoration: BoxDecoration(
+              color: _kCream,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Text(
+              'Masla samajhna humara kaam hai — aap ka nahi.',
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF7A4520),
+              ),
+            ),
           ),
+          const SizedBox(height: 14),
+          if (!_isEditMode) ...[
+            _laneRowOption(
+              lane: BookingLane.standard,
+              icon: Icons.build_circle_rounded,
+              title: 'Standard kaam',
+              subtitle: 'Lagwana, nikalwana, ya service',
+            ),
+            const SizedBox(height: 10),
+          ],
+          _laneHeroCard(fee: inspectionFee, enabled: inspectionAvailable),
+          const SizedBox(height: 16),
+          const Divider(height: 1, color: _kBorder),
+          const SizedBox(height: 12),
+          const Text(
+            'YA PHIR',
+            style: TextStyle(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF9AA0A8),
+              letterSpacing: 0.8,
+            ),
+          ),
+          const SizedBox(height: 8),
+          _laneSmallOption(
+            lane: BookingLane.bidding,
+            icon: Icons.forum_rounded,
+            title: 'Mujhe exact part pata hai',
+            subtitle: 'Ustaad rate bhejenge, aap chunain',
+          ),
+          if (_laneChoice == BookingLane.bidding) ...[
+            const SizedBox(height: 9),
+            Container(
+              padding: const EdgeInsets.all(11),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFFBEB),
+                borderRadius: BorderRadius.circular(11),
+                border: Border.all(color: const Color(0xFFFDE9BC)),
+              ),
+              child: const Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.warning_amber_rounded,
+                      size: 16, color: Color(0xFF8A5A08)),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Sirf tab chunain jab part ka poora yaqeen ho. Ghalat '
+                      'nikla to ustaad ka chakkar zaya jayega aur naya rate '
+                      'lagega.',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        height: 1.35,
+                        color: Color(0xFF8A5A08),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
 
-  Widget _laneOption({
+  Widget _laneHeroCard({required double? fee, required bool enabled}) {
+    final selected = _laneChoice == BookingLane.inspection;
+    return GestureDetector(
+      onTap: enabled
+          ? () => setState(() {
+                _laneChoice = BookingLane.inspection;
+                _selectedStandardServices.clear();
+              })
+          : () =>
+              _showError('Is service ke liye inspection available nahi hai.'),
+      child: Opacity(
+        opacity: enabled ? 1 : 0.45,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          width: double.infinity,
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: selected ? _kGreen.withValues(alpha: 0.05) : _kSurface,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: selected ? _kGreen : _kBorder,
+              width: selected ? 1.5 : 1,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: selected ? _kGreen : Colors.white,
+                      borderRadius: BorderRadius.circular(11),
+                      border: selected ? null : Border.all(color: _kBorder),
+                    ),
+                    child: Icon(
+                      Icons.search_rounded,
+                      size: 18,
+                      color: selected ? Colors.white : _kGray,
+                    ),
+                  ),
+                  const SizedBox(width: 11),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Kuch kharab hai',
+                          style: TextStyle(
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.w700,
+                            color: selected ? _kGreen : _kDark,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        const Text(
+                          'Masla kya hai, ye pata nahi',
+                          style: TextStyle(fontSize: 12.5, color: _kGray),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: _kGreen,
+                      borderRadius: BorderRadius.circular(5),
+                    ),
+                    child: const Text(
+                      'BEHTAR',
+                      style: TextStyle(
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                        letterSpacing: 0.9,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: _kCream,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Aane ki fee',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF7A4520),
+                      ),
+                    ),
+                    Text(
+                      fee != null ? formatPkr(fee) : '—',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFFC2541D),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 13),
+              _heroStep(1, 'Ustaad aa kar khud check karega'),
+              const SizedBox(height: 9),
+              _heroStep(2, 'App mein report aur pakka rate bhejega'),
+              const SizedBox(height: 9),
+              _heroStep(
+                  3, 'Pasand aaye to karwa lein, warna sirf aane ki fee'),
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFF0FDF4),
+                  borderRadius:
+                      BorderRadius.horizontal(right: Radius.circular(9)),
+                  border: Border(
+                    left: BorderSide(color: Color(0xFF22C55E), width: 3),
+                  ),
+                ),
+                child: const Text(
+                  'Rate batane se pehle kuch nahi khulta — jo kaha, wohi liya.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    height: 1.35,
+                    color: Color(0xFF166534),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _heroStep(int n, String text) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 19,
+          height: 19,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: _kGreen.withValues(alpha: 0.12),
+            shape: BoxShape.circle,
+          ),
+          child: Text(
+            '$n',
+            style: const TextStyle(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFFC2541D),
+            ),
+          ),
+        ),
+        const SizedBox(width: 9),
+        Expanded(
+          child: Text(
+            text,
+            style: const TextStyle(
+              fontSize: 12.5,
+              height: 1.3,
+              color: Color(0xFF3F4650),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _laneRowOption({
     required BookingLane lane,
     required IconData icon,
     required String title,
@@ -2622,6 +2842,171 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                   _selectedStandardServices.clear();
                 }
               })
+          : () => _showError(subtitle),
+      child: Opacity(
+        opacity: enabled ? 1 : 0.45,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          width: double.infinity,
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: selected ? _kGreen.withValues(alpha: 0.05) : _kSurface,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: selected ? _kGreen : _kBorder,
+              width: selected ? 1.5 : 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: selected ? _kGreen : Colors.white,
+                  borderRadius: BorderRadius.circular(11),
+                  border: selected ? null : Border.all(color: _kBorder),
+                ),
+                child: Icon(icon,
+                    size: 18, color: selected ? Colors.white : _kGray),
+              ),
+              const SizedBox(width: 11),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w700,
+                        color: selected ? _kGreen : _kDark,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(fontSize: 12.5, color: _kGray),
+                    ),
+                  ],
+                ),
+              ),
+              _laneRadio(selected),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _laneSmallOption({
+    required BookingLane lane,
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    bool enabled = true,
+  }) {
+    final selected = _laneChoice == lane;
+    return GestureDetector(
+      onTap: enabled
+          ? () => setState(() {
+                _laneChoice = lane;
+                _selectedStandardServices.clear();
+              })
+          : () => _showError(subtitle),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+        decoration: BoxDecoration(
+          color: selected ? _kGreen.withValues(alpha: 0.05) : Colors.white,
+          borderRadius: BorderRadius.circular(11),
+          border: Border.all(
+            color: selected ? _kGreen : _kBorder,
+            width: selected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 30,
+              height: 30,
+              decoration: BoxDecoration(
+                color: selected ? _kGreen : const Color(0xFFF1F2F4),
+                borderRadius: BorderRadius.circular(9),
+              ),
+              child: Icon(icon,
+                  size: 14, color: selected ? Colors.white : _kGray),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: selected ? _kGreen : _kDark,
+                    ),
+                  ),
+                  const SizedBox(height: 1),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(fontSize: 11.5, color: _kGray),
+                  ),
+                ],
+              ),
+            ),
+            _laneRadio(selected),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _laneRadio(bool selected) {
+    return Container(
+      width: 19,
+      height: 19,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: selected ? _kGreen : const Color(0xFFCBD0D6),
+          width: 2,
+        ),
+      ),
+      child: selected
+          ? Container(
+              width: 9,
+              height: 9,
+              decoration: const BoxDecoration(
+                color: _kGreen,
+                shape: BoxShape.circle,
+              ),
+            )
+          : null,
+    );
+  }
+
+  Widget _laneOption({
+    required BookingLane lane,
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    bool enabled = true,
+  }) {
+    final selected = _laneChoice == lane;
+    return GestureDetector(
+      onTap: enabled
+          ? () => setState(() {
+              _laneChoice = lane;
+              if (lane != BookingLane.standard) {
+                _selectedStandardServices.clear();
+              }
+            })
           : () => _showError(subtitle),
       child: Opacity(
         opacity: enabled ? 1 : 0.45,
@@ -2835,7 +3220,10 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                                   Expanded(
                                     child: Text(
                                       s.name,
-                                      style: const TextStyle(fontSize: 12.5, color: _kDark),
+                                      style: const TextStyle(
+                                        fontSize: 12.5,
+                                        color: _kDark,
+                                      ),
                                     ),
                                   ),
                                   Text(
@@ -3163,24 +3551,27 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
               ),
               child: isLast
                   ? (_isSubmitting
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : Text(
-                          _isEditMode ? 'Save Changes' : 'Book Service',
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ))
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Text(
+                            _isEditMode ? 'Save Changes' : 'Book Service',
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ))
                   : const Text(
                       'Next',
-                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
             ),
           ),
@@ -3285,11 +3676,7 @@ class _VoiceBarBtn extends StatelessWidget {
   final Widget child;
   final Color? bg;
 
-  const _VoiceBarBtn({
-    required this.onTap,
-    required this.child,
-    this.bg,
-  });
+  const _VoiceBarBtn({required this.onTap, required this.child, this.bg});
 
   @override
   Widget build(BuildContext context) {
@@ -3314,8 +3701,22 @@ class _AnimatedWaveform extends StatelessWidget {
   const _AnimatedWaveform({required this.animation});
 
   static const _heights = [
-    4.0, 9.0, 15.0, 7.0, 19.0, 12.0, 6.0, 14.0,
-    9.0, 5.0, 17.0, 11.0, 7.0, 13.0, 8.0, 10.0,
+    4.0,
+    9.0,
+    15.0,
+    7.0,
+    19.0,
+    12.0,
+    6.0,
+    14.0,
+    9.0,
+    5.0,
+    17.0,
+    11.0,
+    7.0,
+    13.0,
+    8.0,
+    10.0,
   ];
 
   @override
@@ -3342,7 +3743,14 @@ class _AnimatedWaveform extends StatelessWidget {
                       ? const EdgeInsets.only(right: 2)
                       : null,
                   decoration: BoxDecoration(
-                    color: _kGreen.withValues(alpha: 0.5 + 0.5 * (i.isEven ? animation.value : 1.0 - animation.value)),
+                    color: _kGreen.withValues(
+                      alpha:
+                          0.5 +
+                          0.5 *
+                              (i.isEven
+                                  ? animation.value
+                                  : 1.0 - animation.value),
+                    ),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
