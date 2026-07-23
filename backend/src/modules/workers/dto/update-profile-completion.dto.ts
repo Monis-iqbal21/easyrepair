@@ -7,6 +7,7 @@ import {
   Min,
   MaxLength,
   Matches,
+  Length,
 } from 'class-validator';
 
 /**
@@ -28,9 +29,12 @@ export class UpdateProfileCompletionDto {
   @MaxLength(500)
   residentialAddress?: string;
 
-  /** Pakistani CNIC — format 12345-1234567-1. */
+  /** Pakistani CNIC — format 12345-1234567-1 (exactly 15 characters). */
   @IsOptional()
   @IsString()
+  @Length(15, 15, {
+    message: 'CNIC number must be exactly 15 characters, e.g. 12345-1234567-1',
+  })
   @Matches(/^\d{5}-\d{7}-\d{1}$/, {
     message: 'CNIC number must be in the format 12345-1234567-1',
   })

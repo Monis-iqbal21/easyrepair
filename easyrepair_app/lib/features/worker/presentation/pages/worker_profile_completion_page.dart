@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -33,6 +34,34 @@ const _kFieldLiveSelfie = 'liveSelfie';
 const _kFieldLegalNameConfirmed = 'legalNameConfirmed';
 const _kFieldGeneralAgreement = 'generalAgreement';
 const _kFieldTradeAgreement = 'tradeAgreement';
+
+/// Formats free-typed or pasted input into Pakistan's CNIC layout
+/// (12345-1234567-1) live as the user types. Strips everything but digits
+/// first (so pasting an already-dashed CNIC just re-normalizes to the same
+/// format), caps at 13 raw digits, then inserts dashes after digit 5 and
+/// digit 12 — giving a fixed 15-character result (13 digits + 2 dashes).
+class _CnicInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final digits = newValue.text.replaceAll(RegExp(r'\D'), '');
+    final capped = digits.length > 13 ? digits.substring(0, 13) : digits;
+
+    final buffer = StringBuffer();
+    for (var i = 0; i < capped.length; i++) {
+      if (i == 5 || i == 12) buffer.write('-');
+      buffer.write(capped[i]);
+    }
+    final formatted = buffer.toString();
+
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+}
 
 class WorkerProfileCompletionPage extends ConsumerStatefulWidget {
   const WorkerProfileCompletionPage({super.key});
@@ -323,8 +352,9 @@ class _WorkerProfileCompletionPageState
                   hint: '12345-1234567-1',
                   enabled: editable,
                   keyboardType: TextInputType.number,
+                  inputFormatters: [_CnicInputFormatter()],
                   hasError: _missingFields.contains(_kFieldCnicNumber),
-                  errorText: 'Enter a valid CNIC number (12345-1234567-1).',
+                  errorText: 'Enter CNIC like 12345-1234567-1',
                   onChanged: (_) => _clearFieldError(_kFieldCnicNumber),
                 ),
                 const SizedBox(height: 16),
@@ -642,6 +672,7 @@ class _TextInput extends StatelessWidget {
   final bool hasError;
   final String? errorText;
   final ValueChanged<String>? onChanged;
+  final List<TextInputFormatter>? inputFormatters;
 
   const _TextInput({
     required this.controller,
@@ -652,6 +683,7 @@ class _TextInput extends StatelessWidget {
     this.hasError = false,
     this.errorText,
     this.onChanged,
+    this.inputFormatters,
   });
 
   @override
@@ -665,6 +697,7 @@ class _TextInput extends StatelessWidget {
           enabled: enabled,
           maxLines: maxLines,
           keyboardType: keyboardType,
+          inputFormatters: inputFormatters,
           onChanged: onChanged,
           style: const TextStyle(fontSize: 14, color: _kDark),
           decoration: InputDecoration(
