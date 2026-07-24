@@ -175,8 +175,11 @@ class _JobBody extends ConsumerWidget {
                   const SizedBox(height: 16),
                 ],
 
-                // ── Bid Now button (BIDDING lane, PENDING jobs only) ─────
-                if (isPending && !isStandard && !isInspection) ...[
+                // ── Bid Now button — normal BIDDING lane, or an INSPECTION
+                // job the customer reopened via "Find Other Ustaad". Ordinary
+                // Standard/Inspection jobs stay direct-assign-only. ─────────
+                if (isPending &&
+                    (isBidding || job.isOpenForFindOtherUstaadBidding)) ...[
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
@@ -415,7 +418,9 @@ class _JobBody extends ConsumerWidget {
                         if (job.finalPrice != null)
                           _InfoRow(
                             icon: Icons.payments_outlined,
-                            label: 'Final Price',
+                            label: job.isInspectionOnlyForCaller
+                                ? 'Inspection Fee Earned'
+                                : 'Final Price',
                             value: formatPkr(job.finalPrice),
                           ),
                       ],
@@ -798,6 +803,7 @@ class _InspectionLifecycleSection extends ConsumerWidget {
           InspectionWorkerAction.onMyWay => Icons.directions_car_filled_rounded,
           InspectionWorkerAction.arrived => Icons.location_on_rounded,
           InspectionWorkerAction.startInspection => Icons.search_rounded,
+          InspectionWorkerAction.startWork => Icons.build_rounded,
           InspectionWorkerAction.fillReport => Icons.assignment_outlined,
           InspectionWorkerAction.waitingForDecision => Icons.hourglass_top_rounded,
           InspectionWorkerAction.complete => Icons.check_circle_outline_rounded,

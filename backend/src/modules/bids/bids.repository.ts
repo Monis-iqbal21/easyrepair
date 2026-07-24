@@ -38,11 +38,16 @@ export class BidsRepository {
       select: {
         id: true,
         status: true,
+        lane: true,
         clientProfileId: true,
         categoryId: true,
         latitude: true,
         longitude: true,
         clientProfile: { select: { userId: true } },
+        inspectionReport: {
+          select: { decisionStatus: true, workerProfileId: true },
+        },
+        workerExclusions: { select: { workerProfileId: true } },
       },
     });
   }
@@ -60,6 +65,7 @@ export class BidsRepository {
         currentlyWorking: true,
         currentLat: true,
         currentLng: true,
+        locationUpdatedAt: true,
         profileCompleted: true,
         skills: { select: { categoryId: true } },
       },
@@ -233,8 +239,17 @@ export class BidsRepository {
       // finalPrice/platformFee are set here (mirroring assignWorkerToBooking's
       // STANDARD/INSPECTION behavior) so completion and worker earnings read
       // the accepted bid amount instead of staying null.
-      const booking = await tx.booking.update({
-        where: { id: bookingId },
+      // Conditional on workerProfileId still being null AND status still
+      // PENDING — closes a race where this booking was reassigned by
+      // another concurrent hire (e.g. the INSPECTION "Find Other Ustaad"
+      // flow's re-hire-the-inspector path) between this bid's creation and
+      // its acceptance; whichever transaction commits first wins.
+      const bookingRes = await tx.booking.updateMany({
+        where: {
+          id: bookingId,
+          workerProfileId: null,
+          status: BookingStatus.PENDING,
+        },
         data: {
           workerProfileId,
           status: BookingStatus.ACCEPTED,
@@ -242,6 +257,11 @@ export class BidsRepository {
           finalPrice,
           platformFee,
         },
+      });
+      if (bookingRes.count === 0) throw new WorkerUnavailableError();
+
+      const booking = await tx.booking.findUniqueOrThrow({
+        where: { id: bookingId },
         include: {
           category: { select: { name: true } },
           clientProfile: { select: { userId: true } },
@@ -318,6 +338,9 @@ export class BidsRepository {
           where: { workerProfileId },
           select: { id: true, updatedAt: true },
           take: 1,
+        },
+        inspectionReport: {
+          select: { decisionStatus: true, workerProfileId: true },
         },
       },
     });

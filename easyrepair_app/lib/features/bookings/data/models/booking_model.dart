@@ -239,6 +239,7 @@ class BookingModel {
   final DateTime? liveStartedAt;
   final DateTime? relistedAt;
   final AssignedWorkerModel? assignedWorker;
+  final AssignedWorkerModel? inspectingWorker;
   final int? availableWorkersCount;
   final double? acceptedBidAmount;
   final List<BookingAttachmentModel> attachments;
@@ -259,6 +260,7 @@ class BookingModel {
   final bool inspectionReportSubmitted;
   final String? inspectionDecisionStatus;
   final DateTime? inspectionReportSubmittedAt;
+  final bool isInspectionOnlyForCaller;
 
   const BookingModel({
     required this.id,
@@ -289,6 +291,7 @@ class BookingModel {
     this.liveStartedAt,
     this.relistedAt,
     this.assignedWorker,
+    this.inspectingWorker,
     this.availableWorkersCount,
     this.acceptedBidAmount,
     this.attachments = const [],
@@ -309,10 +312,13 @@ class BookingModel {
     this.inspectionReportSubmitted = false,
     this.inspectionDecisionStatus,
     this.inspectionReportSubmittedAt,
+    this.isInspectionOnlyForCaller = false,
   });
 
   factory BookingModel.fromJson(Map<String, dynamic> json) {
     final workerJson = json['worker'] as Map<String, dynamic>?;
+    final inspectingWorkerJson =
+        json['inspectingWorker'] as Map<String, dynamic>?;
     final reviewJson = json['review'] as Map<String, dynamic>?;
     final attachmentsJson = json['attachments'] as List<dynamic>? ?? [];
     final historyJson = json['statusHistory'] as List<dynamic>? ?? [];
@@ -369,6 +375,9 @@ class BookingModel {
           : null,
       assignedWorker:
           workerJson != null ? AssignedWorkerModel.fromJson(workerJson) : null,
+      inspectingWorker: inspectingWorkerJson != null
+          ? AssignedWorkerModel.fromJson(inspectingWorkerJson)
+          : null,
       availableWorkersCount: json['availableWorkersCount'] as int?,
       acceptedBidAmount: (json['acceptedBidAmount'] as num?)?.toDouble(),
       attachments: attachmentsJson
@@ -407,6 +416,8 @@ class BookingModel {
       inspectionReportSubmittedAt: json['inspectionReportSubmittedAt'] != null
           ? DateTime.tryParse(json['inspectionReportSubmittedAt'] as String)
           : null,
+      isInspectionOnlyForCaller:
+          json['isInspectionOnlyForCaller'] as bool? ?? false,
     );
   }
 
@@ -461,6 +472,7 @@ class BookingModel {
       liveStartedAt: liveStartedAt,
       relistedAt: relistedAt,
       assignedWorker: assignedWorker?.toEntity(),
+      inspectingWorker: inspectingWorker?.toEntity(),
       availableWorkersCount: availableWorkersCount,
       acceptedBidAmount: acceptedBidAmount,
       attachments: attachments.map((a) => a.toEntity()).toList(),
@@ -483,6 +495,7 @@ class BookingModel {
       inspectionDecisionStatus:
           InspectionDecisionStatusX.fromRaw(inspectionDecisionStatus),
       inspectionReportSubmittedAt: inspectionReportSubmittedAt,
+      isInspectionOnlyForCaller: isInspectionOnlyForCaller,
     );
   }
 }

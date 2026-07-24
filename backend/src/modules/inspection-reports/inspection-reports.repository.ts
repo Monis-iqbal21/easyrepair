@@ -17,9 +17,13 @@ export type InspectionBookingContext = {
   lane: string;
   status: string;
   workerProfileId: string | null;
+  categoryId: string;
+  latitude: number;
+  longitude: number;
   inspectionFeeSnapshot: number | null;
   clientProfile: { userId: string } | null;
   workerProfile: { userId: string } | null;
+  workerExclusions: { workerProfileId: string }[];
 };
 
 @Injectable()
@@ -28,6 +32,14 @@ export class InspectionReportsRepository {
 
   async findWorkerProfileByUserId(userId: string) {
     return this.prisma.workerProfile.findUnique({ where: { userId } });
+  }
+
+  /** Used only to authorize an eligible bidder's sanitized-report access. */
+  async findWorkerProfileWithSkillsByUserId(userId: string) {
+    return this.prisma.workerProfile.findUnique({
+      where: { userId },
+      include: { skills: { select: { categoryId: true } } },
+    });
   }
 
   async findBookingContext(
@@ -40,9 +52,13 @@ export class InspectionReportsRepository {
         lane: true,
         status: true,
         workerProfileId: true,
+        categoryId: true,
+        latitude: true,
+        longitude: true,
         inspectionFeeSnapshot: true,
         clientProfile: { select: { userId: true } },
         workerProfile: { select: { userId: true } },
+        workerExclusions: { select: { workerProfileId: true } },
       },
     });
   }
@@ -126,6 +142,22 @@ export class InspectionReportsRepository {
     return this.prisma.inspectionReport.update({
       where: { id: reportId },
       data: { decisionStatus: 'CLOSED_AFTER_INSPECTION', closedAt: new Date() },
+      include: INSPECTION_REPORT_INCLUDE,
+    });
+  }
+
+  /**
+   * Customer opted to find a different Ustaad — the report itself (quote,
+   * findings, photos, workerProfileId) is left completely untouched; only
+   * the decision marker changes. Reverts to ACCEPTED_REPAIR via markAccepted
+   * if the customer ends up re-hiring the same inspecting worker anyway.
+   */
+  async markFindOtherUstaad(
+    reportId: string,
+  ): Promise<InspectionReportWithRelations> {
+    return this.prisma.inspectionReport.update({
+      where: { id: reportId },
+      data: { decisionStatus: 'FIND_OTHER_USTAAD' },
       include: INSPECTION_REPORT_INCLUDE,
     });
   }

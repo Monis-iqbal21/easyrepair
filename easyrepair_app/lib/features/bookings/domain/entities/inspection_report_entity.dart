@@ -4,17 +4,19 @@ class InspectionReportPartEntity {
   final String id;
   final String name;
   final int quantity;
-  final double unitPrice;
+  /// Null in the sanitized view shown to a not-yet-hired bidder or a hired
+  /// different worker — they may see what parts are needed, never the price.
+  final double? unitPrice;
   final String? warranty;
-  final double lineTotal;
+  final double? lineTotal;
 
   const InspectionReportPartEntity({
     required this.id,
     required this.name,
     required this.quantity,
-    required this.unitPrice,
+    this.unitPrice,
     this.warranty,
-    required this.lineTotal,
+    this.lineTotal,
   });
 }
 
@@ -33,13 +35,17 @@ class InspectionReportPhotoEntity {
 class InspectionReportEntity {
   final String id;
   final String bookingId;
-  final String workerProfileId;
+  /// Null in the sanitized bidder/hired-different-worker view.
+  final String? workerProfileId;
   final String? issueFound;
   final String? recommendedRepair;
-  final double labourCost;
+  /// Null in the sanitized view — never shown before hiring the inspector.
+  final double? labourCost;
   final bool partsNeeded;
-  final double partsTotal;
-  final double repairQuoteTotal;
+  /// Null in the sanitized view.
+  final double? partsTotal;
+  /// Null in the sanitized view.
+  final double? repairQuoteTotal;
   final double? inspectionFeeSnapshot;
   final String? notes;
   final String? voiceNoteUrl;
@@ -52,16 +58,21 @@ class InspectionReportEntity {
   final DateTime? acceptedAt;
   final DateTime? closedAt;
 
+  /// True when this is the sanitized bidder/hired-different-worker view —
+  /// no pricing fields present. Widgets should hide the whole pricing
+  /// summary card rather than show misleading zeros.
+  bool get isSanitized => labourCost == null;
+
   const InspectionReportEntity({
     required this.id,
     required this.bookingId,
-    required this.workerProfileId,
+    this.workerProfileId,
     this.issueFound,
     this.recommendedRepair,
-    required this.labourCost,
+    this.labourCost,
     required this.partsNeeded,
-    required this.partsTotal,
-    required this.repairQuoteTotal,
+    this.partsTotal,
+    this.repairQuoteTotal,
     this.inspectionFeeSnapshot,
     this.notes,
     this.voiceNoteUrl,

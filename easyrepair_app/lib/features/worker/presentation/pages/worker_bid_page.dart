@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -507,7 +509,7 @@ class _CurrentBidCard extends StatelessWidget {
 
 // ── Bid form ──────────────────────────────────────────────────────────────────
 
-class _BidForm extends StatelessWidget {
+class _BidForm extends StatefulWidget {
   final TextEditingController amountCtrl;
   final bool isSubmitting;
   final BidEntity? existingBid;
@@ -521,8 +523,53 @@ class _BidForm extends StatelessWidget {
   });
 
   @override
+  State<_BidForm> createState() => _BidFormState();
+}
+
+class _BidFormState extends State<_BidForm> {
+  Timer? _ticker;
+  late int _remaining;
+
+  @override
+  void initState() {
+    super.initState();
+    _remaining = widget.existingBid?.cooldownRemainingSeconds ?? 0;
+    _startTicker();
+  }
+
+  @override
+  void didUpdateWidget(covariant _BidForm oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // A fresh bid lookup (e.g. after resubmitting) carries a new
+    // server-authoritative remaining value — resync and restart the local
+    // tick-down from it rather than trusting the device clock on its own.
+    final fresh = widget.existingBid?.cooldownRemainingSeconds ?? 0;
+    if (fresh != (oldWidget.existingBid?.cooldownRemainingSeconds ?? 0)) {
+      _remaining = fresh;
+      _startTicker();
+    }
+  }
+
+  void _startTicker() {
+    _ticker?.cancel();
+    if (_remaining <= 0) return;
+    _ticker = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted) return;
+      setState(() => _remaining = _remaining > 0 ? _remaining - 1 : 0);
+      if (_remaining <= 0) t.cancel();
+    });
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final hasExisting = existingBid != null;
+    final hasExisting = widget.existingBid != null;
+    final onCooldown = hasExisting && _remaining > 0;
     final label = hasExisting ? 'Update Bid' : 'Submit Bid';
 
     return Container(
@@ -545,16 +592,22 @@ class _BidForm extends StatelessWidget {
           ),
           if (hasExisting) ...[
             const SizedBox(height: 4),
-            const Text(
-              'You can update your bid after a 1-minute cooldown.',
-              style: TextStyle(fontSize: 11.5, color: _kLight),
+            Text(
+              onCooldown
+                  ? 'You can update your bid in ${_remaining}s.'
+                  : 'You can update your bid now.',
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: onCooldown ? FontWeight.w600 : FontWeight.normal,
+                color: onCooldown ? const Color(0xFFB45309) : _kLight,
+              ),
             ),
           ],
           const SizedBox(height: 14),
           _FormField(
             label: 'Bid Amount (PKR) *',
             child: TextField(
-              controller: amountCtrl,
+              controller: widget.amountCtrl,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               inputFormatters: [
                 FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
@@ -568,7 +621,8 @@ class _BidForm extends StatelessWidget {
             width: double.infinity,
             height: 48,
             child: ElevatedButton(
-              onPressed: isSubmitting ? null : onSubmit,
+              onPressed:
+                  (widget.isSubmitting || onCooldown) ? null : widget.onSubmit,
               style: ElevatedButton.styleFrom(
                 backgroundColor: _kGreen,
                 disabledBackgroundColor: _kGreen.withValues(alpha: 0.5),
@@ -578,14 +632,14 @@ class _BidForm extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: isSubmitting
+              child: widget.isSubmitting
                   ? const SizedBox(
                       width: 18,
                       height: 18,
                       child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                     )
                   : Text(
-                      label,
+                      onCooldown ? '$label (${_remaining}s)' : label,
                       style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                     ),
             ),

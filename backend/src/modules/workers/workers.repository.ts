@@ -76,7 +76,7 @@ const WORKER_JOB_INCLUDE = {
     select: { id: true, rating: true, comment: true, createdAt: true },
   },
   inspectionReport: {
-    select: { decisionStatus: true, createdAt: true },
+    select: { decisionStatus: true, createdAt: true, workerProfileId: true },
   },
 } satisfies Prisma.BookingInclude;
 
@@ -340,56 +340,95 @@ export class WorkersRepository {
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
 
-    const [completedJobs, activeJobs, todayCompleted, cancellationRate, responseData] =
-      await Promise.all([
-        // Shared helper — single source of truth, see worker-stats.util.ts
-        computeCompletedJobs(this.prisma, workerProfileId),
-        this.prisma.booking.count({
-          where: {
-            workerProfileId,
-            status: {
-              in: [
-                BookingStatus.ACCEPTED,
-                BookingStatus.EN_ROUTE,
-                BookingStatus.ARRIVED,
-                BookingStatus.IN_PROGRESS,
-              ],
-            },
+    const [
+      completedJobsAssigned,
+      inspectionOnlyCompletedCount,
+      activeJobs,
+      todayCompleted,
+      todayInspectedForOtherUstaad,
+      cancellationRate,
+      responseData,
+    ] = await Promise.all([
+      // Shared helper — single source of truth, see worker-stats.util.ts
+      computeCompletedJobs(this.prisma, workerProfileId),
+      // Lifetime count of jobs this worker only inspected where a
+      // different Ustaad ended up hired for the repair — without this,
+      // completedJobs would silently undercount the inspector's real
+      // track record once Booking.workerProfileId moves away from them.
+      this.prisma.inspectionReport.count({
+        where: {
+          workerProfileId,
+          decisionStatus: 'FIND_OTHER_USTAAD',
+          booking: { status: BookingStatus.COMPLETED },
+        },
+      }),
+      this.prisma.booking.count({
+        where: {
+          workerProfileId,
+          status: {
+            in: [
+              BookingStatus.ACCEPTED,
+              BookingStatus.EN_ROUTE,
+              BookingStatus.ARRIVED,
+              BookingStatus.IN_PROGRESS,
+            ],
           },
-        }),
-        // Today's completed bookings with pricing for earnings. For
-        // INSPECTION-lane jobs, finalPrice is labour+parts merged — the
-        // related InspectionReport.labourCost/decisionStatus are what
-        // calculateCommissionBase uses to exclude parts correctly.
-        this.prisma.booking.findMany({
-          where: {
-            workerProfileId,
+        },
+      }),
+      // Today's completed bookings CURRENTLY assigned to this worker, with
+      // pricing for earnings. For INSPECTION-lane jobs, finalPrice is
+      // labour+parts merged — the related InspectionReport.labourCost/
+      // decisionStatus are what calculateCommissionBase uses to exclude
+      // parts correctly. If this worker inspected the job but a DIFFERENT
+      // Ustaad ended up hired for the repair (the "Find Other Ustaad"
+      // outcome), it won't be workerProfileId-matched here anymore — that
+      // case is covered separately by todayInspectedForOtherUstaad below.
+      this.prisma.booking.findMany({
+        where: {
+          workerProfileId,
+          status: BookingStatus.COMPLETED,
+          completedAt: { gte: todayStart },
+        },
+        select: {
+          lane: true,
+          finalPrice: true,
+          platformFee: true,
+          inspectionReport: {
+            select: { labourCost: true, decisionStatus: true },
+          },
+        },
+      }),
+      // Bookings this worker inspected where the customer chose "Find
+      // Other Ustaad" and a DIFFERENT worker ended up hired for the repair
+      // (decisionStatus stays FIND_OTHER_USTAAD forever in that case — it
+      // only reverts to ACCEPTED_REPAIR if this same worker is re-hired,
+      // which is already covered by the query above). This worker still
+      // earns the inspection-fee portion regardless of who did the repair.
+      this.prisma.inspectionReport.findMany({
+        where: {
+          workerProfileId,
+          decisionStatus: 'FIND_OTHER_USTAAD',
+          booking: {
             status: BookingStatus.COMPLETED,
             completedAt: { gte: todayStart },
           },
-          select: {
-            lane: true,
-            finalPrice: true,
-            platformFee: true,
-            inspectionReport: {
-              select: { labourCost: true, decisionStatus: true },
-            },
-          },
-        }),
-        // Shared helper — single source of truth, see worker-stats.util.ts
-        computeCancellationRate(this.prisma, workerProfileId),
-        // Jobs with acceptedAt for response time calculation
-        this.prisma.booking.findMany({
-          where: { workerProfileId, acceptedAt: { not: null } },
-          select: { createdAt: true, acceptedAt: true },
-        }),
-      ]);
+        },
+        select: { booking: { select: { inspectionFeeSnapshot: true } } },
+      }),
+      // Shared helper — single source of truth, see worker-stats.util.ts
+      computeCancellationRate(this.prisma, workerProfileId),
+      // Jobs with acceptedAt for response time calculation
+      this.prisma.booking.findMany({
+        where: { workerProfileId, acceptedAt: { not: null } },
+        select: { createdAt: true, acceptedAt: true },
+      }),
+    ]);
 
     // Earnings = sum of (commission base - platformFee) for completed jobs
     // today, using the same calculateCommissionBase/calculateWorkerEarning
     // helpers as the rest of the commission engine — see commission.util.ts
     // for exactly how parts are excluded per lane/decision.
-    const todayEarnings = todayCompleted.reduce((sum, b) => {
+    const workEarnings = todayCompleted.reduce((sum, b) => {
       const commissionBase = calculateCommissionBase({
         lane: b.lane,
         finalPrice: b.finalPrice,
@@ -402,6 +441,19 @@ export class WorkersRepository {
       const platformFee = b.platformFee ?? calculatePlatformFee(commissionBase);
       return sum + calculateWorkerEarning(commissionBase, platformFee);
     }, 0);
+
+    // Inspection-fee-only earnings for jobs this worker inspected but a
+    // different Ustaad performed the repair on.
+    const inspectionOnlyEarnings = todayInspectedForOtherUstaad.reduce(
+      (sum, r) => {
+        const fee = r.booking.inspectionFeeSnapshot;
+        if (fee == null) return sum;
+        return sum + calculateWorkerEarning(fee, calculatePlatformFee(fee));
+      },
+      0,
+    );
+
+    const todayEarnings = workEarnings + inspectionOnlyEarnings;
 
     // Average response time in minutes; null when no acceptedAt data exists
     let avgResponseMinutes: number | null = null;
@@ -419,7 +471,16 @@ export class WorkersRepository {
       else responseLabel = 'Slow';
     }
 
-    return { completedJobs, activeJobs, todayEarnings, cancellationRate, avgResponseMinutes, responseLabel };
+    const completedJobs = completedJobsAssigned + inspectionOnlyCompletedCount;
+
+    return {
+      completedJobs,
+      activeJobs,
+      todayEarnings,
+      cancellationRate,
+      avgResponseMinutes,
+      responseLabel,
+    };
   }
 
   /** Find the single ongoing job for this worker (if any). */
@@ -485,6 +546,32 @@ export class WorkersRepository {
   }
 
   /**
+   * Completed bookings where this worker was the ORIGINAL inspector but a
+   * DIFFERENT Ustaad ended up performing the work (Booking.workerProfileId
+   * no longer points to them) — without this, their inspection-fee earning
+   * would silently vanish from their own completed-jobs history once
+   * reassigned. Mirrors the same query shape used by getJobStats' earnings
+   * split. Only meaningful for the 'completed' filter — an inspector has no
+   * further action to take, so this is intentionally excluded from
+   * active/cancelled views.
+   */
+  async findInspectionOnlyCompletedJobsByWorkerProfileId(
+    workerProfileId: string,
+  ): Promise<WorkerJobWithRelations[]> {
+    return this.prisma.booking.findMany({
+      where: {
+        status: BookingStatus.COMPLETED,
+        inspectionReport: {
+          workerProfileId,
+          decisionStatus: 'FIND_OTHER_USTAAD',
+        },
+      },
+      include: WORKER_JOB_INCLUDE,
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  /**
    * Fetch a single booking by id, scoped to the given workerProfileId so
    * workers can never access bookings that don't belong to them.
    */
@@ -516,6 +603,30 @@ export class WorkersRepository {
         status: BookingStatus.PENDING,
         workerProfileId: null,
         categoryId: { in: categoryIds },
+      },
+      include: WORKER_JOB_INCLUDE,
+    });
+  }
+
+  /**
+   * Single-booking counterpart to findInspectionOnlyCompletedJobsByWorkerProfileId
+   * — lets the original inspector open a completed job's detail page (e.g.
+   * tapping it from their own history list) even though a different Ustaad
+   * ended up performing the work and Booking.workerProfileId no longer
+   * points to them.
+   */
+  async findInspectionOnlyCompletedJobById(
+    bookingId: string,
+    workerProfileId: string,
+  ): Promise<WorkerJobWithRelations | null> {
+    return this.prisma.booking.findFirst({
+      where: {
+        id: bookingId,
+        status: BookingStatus.COMPLETED,
+        inspectionReport: {
+          workerProfileId,
+          decisionStatus: 'FIND_OTHER_USTAAD',
+        },
       },
       include: WORKER_JOB_INCLUDE,
     });

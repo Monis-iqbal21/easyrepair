@@ -24,6 +24,9 @@ class BidEntity {
   final int editCount;
   final DateTime createdAt;
   final DateTime updatedAt;
+  /// Server-authoritative seconds remaining before this bid can be
+  /// resubmitted/updated — only populated by the "my bid" lookup; 0 elsewhere.
+  final int cooldownRemainingSeconds;
 
   const BidEntity({
     required this.id,
@@ -35,6 +38,7 @@ class BidEntity {
     required this.editCount,
     required this.createdAt,
     required this.updatedAt,
+    this.cooldownRemainingSeconds = 0,
   });
 
   /// True when the worker can still edit (only one edit allowed after submit).

@@ -625,7 +625,27 @@ export class WorkersService {
       profile.id,
       statusFilter,
     );
-    return jobs.map((j) => this._toJobDto(j, profile.id));
+
+    // A worker who only inspected a job that was later reassigned to a
+    // different Ustaad (via "Find Other Ustaad") no longer matches
+    // Booking.workerProfileId once it's completed — merge their inspection-
+    // fee-earning entries back in so this contribution never disappears
+    // from their own history. Scoped to 'completed' only: there's nothing
+    // left for them to do, so it has no place in active/cancelled.
+    let merged = jobs;
+    if (statusFilter === 'completed') {
+      const inspectionOnlyJobs =
+        await this.workersRepository.findInspectionOnlyCompletedJobsByWorkerProfileId(
+          profile.id,
+        );
+      const seenIds = new Set(jobs.map((j) => j.id));
+      merged = [
+        ...jobs,
+        ...inspectionOnlyJobs.filter((j) => !seenIds.has(j.id)),
+      ];
+    }
+
+    return merged.map((j) => this._toJobDto(j, profile.id));
   }
 
   /** Get a single job by id, scoped to the authenticated worker. */
@@ -659,12 +679,26 @@ export class WorkersService {
       }
     }
 
+    // Second fallback: a completed job this worker only inspected, later
+    // reassigned to a different Ustaad — lets them open it from their own
+    // history even though they're no longer Booking.workerProfileId.
     if (!job) {
-      this.logger.warn(`[getWorkerJobById] job not found bookingId=${bookingId} workerProfileId=${profile.id}`);
+      job = await this.workersRepository.findInspectionOnlyCompletedJobById(
+        bookingId,
+        profile.id,
+      );
+    }
+
+    if (!job) {
+      this.logger.warn(
+        `[getWorkerJobById] job not found bookingId=${bookingId} workerProfileId=${profile.id}`,
+      );
       throw new NotFoundException('Job not found');
     }
 
-    this.logger.debug(`[getWorkerJobById] found job bookingId=${bookingId} status=${job.status}`);
+    this.logger.debug(
+      `[getWorkerJobById] found job bookingId=${bookingId} status=${job.status}`,
+    );
     return this._toJobDto(job, profile.id, {
       lat: profile.currentLat,
       lng: profile.currentLng,
@@ -894,9 +928,22 @@ export class WorkersService {
     }));
 
     const isAssignedToCaller = job.workerProfileId === workerProfileId;
+    // This job appears in the caller's history solely because they were the
+    // ORIGINAL inspector, not the worker who performed (or is performing)
+    // the work — never show the other worker's earned finalPrice here, only
+    // the inspection fee this caller actually earned.
+    const isInspectionOnlyForCaller =
+      !isAssignedToCaller &&
+      job.inspectionReport?.workerProfileId === workerProfileId &&
+      job.inspectionReport?.decisionStatus === 'FIND_OTHER_USTAAD';
     const distanceKm = isAssignedToCaller
       ? null
-      : haversineKm(job.latitude, job.longitude, workerCoords?.lat, workerCoords?.lng);
+      : haversineKm(
+          job.latitude,
+          job.longitude,
+          workerCoords?.lat,
+          workerCoords?.lng,
+        );
 
     return {
       id: job.id,
@@ -920,9 +967,14 @@ export class WorkersService {
       startedAt: job.startedAt?.toISOString() ?? null,
       completedAt: job.completedAt?.toISOString() ?? null,
       cancellationReason: job.cancellationReason ?? null,
-      cancelledByRole: (job.cancelledByRole as 'CLIENT' | 'WORKER' | null) ?? null,
-      estimatedPrice: job.estimatedPrice ?? null,
-      finalPrice: job.finalPrice ?? null,
+      cancelledByRole:
+        (job.cancelledByRole as 'CLIENT' | 'WORKER' | null) ?? null,
+      estimatedPrice: isInspectionOnlyForCaller
+        ? null
+        : (job.estimatedPrice ?? null),
+      finalPrice: isInspectionOnlyForCaller
+        ? (job.inspectionFeeSnapshot ?? null)
+        : (job.finalPrice ?? null),
       // Privacy: exact address/coordinates/phone are only ever included once
       // this worker is actually assigned. Not-yet-assigned callers (New Job
       // detail) only get city + distanceKm.
@@ -947,6 +999,7 @@ export class WorkersService {
       inspectionDecisionStatus: job.inspectionReport?.decisionStatus ?? null,
       inspectionReportSubmittedAt:
         job.inspectionReport?.createdAt.toISOString() ?? null,
+      isInspectionOnlyForCaller,
     };
   }
 

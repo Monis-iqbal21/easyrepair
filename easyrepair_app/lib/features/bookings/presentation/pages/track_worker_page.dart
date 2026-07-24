@@ -473,7 +473,15 @@ class _StatusCard extends StatelessWidget {
 
   const _StatusCard({required this.booking});
 
-  bool get _isInspection => booking.lane == BookingLane.inspection;
+  // Once a DIFFERENT worker than the original inspector has been hired via
+  // "Find Other Ustaad", they're performing WORK, not inspecting — even
+  // though booking.lane stays INSPECTION and decisionStatus stays
+  // FIND_OTHER_USTAAD forever. Falling through to the STANDARD/BIDDING
+  // branch below gives correct "Work In Progress" wording with zero
+  // duplication.
+  bool get _isInspection =>
+      booking.lane == BookingLane.inspection &&
+      !booking.isDifferentWorkerPerformingWork;
 
   // STANDARD/BIDDING share the same status-driven headline — once hired,
   // wording is identical regardless of whether the hire came from direct
@@ -977,7 +985,15 @@ class _ProgressTimeline extends StatelessWidget {
 
   const _ProgressTimeline({required this.booking});
 
-  bool get _isInspection => booking.lane == BookingLane.inspection;
+  // Once a DIFFERENT worker than the original inspector has been hired via
+  // "Find Other Ustaad", they're performing WORK, not inspecting — even
+  // though booking.lane stays INSPECTION and decisionStatus stays
+  // FIND_OTHER_USTAAD forever. Falling through to the STANDARD/BIDDING
+  // branch below gives correct "Work In Progress" wording with zero
+  // duplication.
+  bool get _isInspection =>
+      booking.lane == BookingLane.inspection &&
+      !booking.isDifferentWorkerPerformingWork;
 
   // INSPECTION lane: Hired -> Ustaad on the way -> Arrived -> Inspection in
   // progress -> Report submitted -> Quote accepted/Closed after inspection ->

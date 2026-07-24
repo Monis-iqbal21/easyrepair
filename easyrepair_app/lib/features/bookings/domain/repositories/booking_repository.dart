@@ -118,4 +118,16 @@ abstract class BookingRepository {
   Future<Either<Failure, BookingEntity>> closeAfterInspection(
     String bookingId,
   );
+
+  /// Client: "Find Other Ustaad" — pays only the inspection fee, preserves
+  /// the report/quote/inspecting worker, reopens the booking for bidding.
+  Future<Either<Failure, BookingEntity>> findOtherUstaad(
+    String bookingId,
+  );
+
+  /// Client: re-hires the original inspecting worker after "Find Other
+  /// Ustaad", using their already-submitted quote.
+  Future<Either<Failure, BookingEntity>> hireInspectingWorker(
+    String bookingId,
+  );
 }

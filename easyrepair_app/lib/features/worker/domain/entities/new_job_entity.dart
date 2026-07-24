@@ -55,6 +55,14 @@ class NewJobEntity {
   final bool inspection;
   final BookingLane lane;
   final List<BookingStandardServiceItemEntity> standardServiceItems;
+  /// Server-computed: true for BIDDING lane, or an INSPECTION job the
+  /// customer reopened via "Find Other Ustaad". False for ordinary
+  /// Standard/Inspection direct-assign jobs.
+  final bool isOpenForBidding;
+  /// Server-authoritative seconds remaining before this worker's existing
+  /// bid on this job can be resubmitted/updated. 0 when no bid yet or no
+  /// cooldown active.
+  final int myBidCooldownRemainingSeconds;
 
   const NewJobEntity({
     required this.id,
@@ -78,13 +86,18 @@ class NewJobEntity {
     this.inspection = false,
     this.lane = BookingLane.bidding,
     this.standardServiceItems = const [],
+    this.isOpenForBidding = false,
+    this.myBidCooldownRemainingSeconds = 0,
   });
 
   bool get isStandardLane => lane == BookingLane.standard;
   bool get isInspectionLane => lane == BookingLane.inspection;
-  /// True for any direct-assignment lane (STANDARD or INSPECTION) — neither
-  /// supports bidding, so "Bid Now" / bid-count UI must never show for them.
-  bool get isDirectAssignLane => isStandardLane || isInspectionLane;
+  /// True for a direct-assignment job that ISN'T open for bidding — ordinary
+  /// STANDARD, or an INSPECTION job still in its normal (non-reopened) state.
+  /// An INSPECTION job the customer reopened via "Find Other Ustaad" is
+  /// bid-actionable, so it's deliberately excluded here.
+  bool get isDirectAssignLane =>
+      isStandardLane || (isInspectionLane && !isOpenForBidding);
 
   double get standardServicesTotal => standardServiceItems.fold<double>(
         0,

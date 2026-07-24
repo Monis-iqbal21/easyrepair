@@ -320,4 +320,32 @@ class BookingRepositoryImpl implements BookingRepository {
       return Left(ServerFailure(e.toString()));
     }
   }
+
+  @override
+  Future<Either<Failure, BookingEntity>> findOtherUstaad(
+    String bookingId,
+  ) async {
+    try {
+      final model = await _dataSource.findOtherUstaad(bookingId);
+      return Right(model.toEntity());
+    } on Failure catch (f) {
+      return Left(f);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, BookingEntity>> hireInspectingWorker(
+    String bookingId,
+  ) async {
+    try {
+      final model = await _dataSource.hireInspectingWorker(bookingId);
+      return Right(model.toEntity());
+    } on Failure catch (f) {
+      return Left(f);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
 }

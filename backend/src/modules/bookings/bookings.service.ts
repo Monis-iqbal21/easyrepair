@@ -698,6 +698,11 @@ export class BookingsService {
         'This booking already has an assigned worker.',
       );
     }
+    if (booking.inspectionReport?.decisionStatus === 'FIND_OTHER_USTAAD') {
+      throw new BadRequestException(
+        'This job is open for bidding from other Ustaads. Use the bidding flow instead.',
+      );
+    }
     if (
       booking.lane !== BookingLane.STANDARD &&
       booking.lane !== BookingLane.INSPECTION
@@ -776,6 +781,11 @@ export class BookingsService {
     if (booking.workerProfileId !== null) {
       throw new ConflictException(
         'This booking already has an assigned worker.',
+      );
+    }
+    if (booking.inspectionReport?.decisionStatus === 'FIND_OTHER_USTAAD') {
+      throw new BadRequestException(
+        'This job is open for bidding from other Ustaads. Use the bidding flow instead.',
       );
     }
     if (
@@ -1184,6 +1194,101 @@ export class BookingsService {
   }
 
   /**
+   * INSPECTION lane, third outcome: called by InspectionReportsService after
+   * the report's decisionStatus is marked FIND_OTHER_USTAAD. Releases the
+   * inspecting worker and reopens the booking as PENDING/unassigned — same
+   * shape as a fresh biddable booking — then fires the nearby-worker push.
+   * The InspectionReport itself is never touched here.
+   */
+  async reopenInspectionForBidding(
+    bookingId: string,
+    inspectingWorkerProfileId: string,
+    categoryId: string,
+    lat: number,
+    lng: number,
+  ): Promise<void> {
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + BOOKING_EXPIRY_MS);
+
+    await this.bookingsRepository.reopenForFindOtherUstaad(
+      bookingId,
+      inspectingWorkerProfileId,
+      now,
+      expiresAt,
+    );
+
+    void this._scheduleExpiry(bookingId, expiresAt).catch((err) => {
+      this.logger.warn(
+        `[expiry] scheduleExpiry failed for bookingId=${bookingId}: ${(err as Error)?.message}`,
+      );
+    });
+
+    void this._notifyNearbyWorkersForPostInspectionBidding(
+      bookingId,
+      categoryId,
+      lat,
+      lng,
+      inspectingWorkerProfileId,
+    );
+  }
+
+  /**
+   * INSPECTION lane, third outcome: customer re-hires the original
+   * inspecting worker after having pressed "Find Other Ustaad". Reuses the
+   * exact same labour-only commission math as a normal accepted quote.
+   * Double-hire-safe (atomic conditional update in the repository); throws
+   * ConflictException if the job was already hired to someone else in the
+   * meantime, or if the inspecting worker is no longer eligible/online.
+   */
+  async rehireInspectingWorker(
+    userId: string,
+    bookingId: string,
+    workerProfileId: string,
+    repairQuoteTotal: number,
+    labourCost: number,
+  ): Promise<BookingResponseDto> {
+    const platformFee = calculatePlatformFee(labourCost);
+
+    let updated: BookingWithRelations;
+    try {
+      updated = await this.bookingsRepository.rehireInspectingWorker(
+        bookingId,
+        workerProfileId,
+        repairQuoteTotal,
+        platformFee,
+      );
+    } catch (err) {
+      if (err instanceof WorkerUnavailableError) {
+        throw new ConflictException(
+          'This Ustaad is no longer available. Please choose another option.',
+        );
+      }
+      throw err;
+    }
+
+    if (updated.workerProfile?.userId) {
+      void this.notificationsService.notify({
+        userId: updated.workerProfile.userId,
+        eventKey: 'booking.assigned',
+        title: 'Naya kaam assign hua hai',
+        body: 'Aapko dobara hire kar liya gaya hai. Details app mein check karein.',
+        bookingId,
+        route: `/worker/job/${bookingId}`,
+        actorUserId: userId,
+        actorRole: 'CLIENT',
+        entityType: 'booking',
+        entityId: bookingId,
+      });
+      void this.chatService.ensureConversationForBooking(
+        userId,
+        updated.workerProfile.userId,
+      );
+    }
+
+    return this._toDto(updated);
+  }
+
+  /**
    * POST /bookings/:id/worker-cancel — worker cancels before starting the job.
    * Only allowed while status is ACCEPTED, EN_ROUTE, or ARRIVED — once the
    * page would show "In Progress" the cancel button must already be hidden
@@ -1482,6 +1587,69 @@ export class BookingsService {
     }
   }
 
+  /**
+   * INSPECTION lane, third outcome ("Find Other Ustaad"): pushes nearby
+   * eligible workers once the booking reopens for bidding. Same eligibility
+   * criteria as findNearbyWorkers everywhere else (online, approved, active,
+   * available, matching category, within radius), explicitly excludes the
+   * inspecting worker via excludedWorkerIds, and never includes the
+   * inspecting worker's quoted price, exact address/coordinates, or
+   * customer phone. Deduped per booking/worker pair, same pattern as the
+   * other nearby-worker notifiers. Fire-and-forget.
+   */
+  private async _notifyNearbyWorkersForPostInspectionBidding(
+    bookingId: string,
+    categoryId: string,
+    lat: number,
+    lng: number,
+    excludeWorkerProfileId: string,
+  ): Promise<void> {
+    try {
+      const { workers } = await this.bookingsRepository.findNearbyWorkers({
+        categoryId,
+        lat,
+        lng,
+        lane: BookingLane.INSPECTION,
+        excludedWorkerIds: [excludeWorkerProfileId],
+      });
+      if (workers.length === 0) return;
+
+      const userIdByWorkerId =
+        await this.bookingsRepository.findUserIdsByWorkerProfileIds(
+          workers.map((w) => w.id),
+        );
+
+      const eventKey = 'booking.inspection.find_other_ustaad_available';
+      for (const w of workers) {
+        const userId = userIdByWorkerId.get(w.id);
+        if (!userId) continue;
+
+        const alreadyNotified =
+          await this.notificationsService.wasAlreadyNotified(
+            userId,
+            bookingId,
+            eventKey,
+          );
+        if (alreadyNotified) continue;
+
+        void this.notificationsService.notify({
+          userId,
+          eventKey,
+          title: 'Naya Inspection Wala Kaam',
+          body: 'Inspection report dekh kar apni price bid karein.',
+          bookingId,
+          route: `/worker/job/${bookingId}`,
+          entityType: 'booking',
+          entityId: bookingId,
+        });
+      }
+    } catch (err) {
+      this.logger.warn(
+        `[find-other-ustaad-notify] failed for bookingId=${bookingId}: ${(err as Error)?.message}`,
+      );
+    }
+  }
+
   // ── Private helpers ────────────────────────────────────────────────────────
 
   private _resolveAttachmentType(mimeType: string): AttachmentType {
@@ -1515,6 +1683,20 @@ export class BookingsService {
           currentLat: wp.currentLat ?? null,
           currentLng: wp.currentLng ?? null,
           phone: wp.user.phone,
+        }
+      : null;
+
+    const iwp = booking.inspectionReport?.workerProfile;
+    const inspectingWorker: WorkerSummaryDto | null = iwp
+      ? {
+          id: iwp.id,
+          firstName: iwp.firstName,
+          lastName: iwp.lastName,
+          rating: iwp.rating,
+          avatarUrl: iwp.avatarUrl,
+          currentLat: iwp.currentLat ?? null,
+          currentLng: iwp.currentLng ?? null,
+          phone: iwp.user.phone,
         }
       : null;
 
@@ -1607,6 +1789,7 @@ export class BookingsService {
       liveStartedAt: booking.liveStartedAt?.toISOString() ?? null,
       relistedAt: booking.relistedAt?.toISOString() ?? null,
       worker,
+      inspectingWorker,
       availableWorkersCount: null,
       attachments,
       review,

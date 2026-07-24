@@ -191,8 +191,10 @@ class _ReportBody extends ConsumerWidget {
                               style: const TextStyle(fontSize: 13.5, color: _kDark),
                             ),
                           ),
-                          Text(formatPkr(p.lineTotal),
-                              style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: _kDark)),
+                          // Price hidden in the sanitized bidder/hired-different-worker view.
+                          if (p.lineTotal != null)
+                            Text(formatPkr(p.lineTotal!),
+                                style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: _kDark)),
                         ],
                       ),
                     ),
@@ -201,32 +203,35 @@ class _ReportBody extends ConsumerWidget {
               ),
             ),
           ],
-          const SizedBox(height: 12),
           // Repair quote total = labour + parts only. The inspection fee is
-          // never shown here — see file-level doc comment for why.
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: _kPrimaryLight, borderRadius: BorderRadius.circular(16)),
-            child: Column(
-              children: [
-                _summaryLine('Parts total', report.partsTotal),
-                _summaryLine('Labour', report.labourCost),
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 8),
-                  child: Divider(height: 1),
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('Repair quote total', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: _kDark)),
-                    Text(formatPkr(report.repairQuoteTotal),
-                        style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17, color: _kPrimary)),
-                  ],
-                ),
-              ],
+          // never shown here — see file-level doc comment for why. Hidden
+          // entirely in the sanitized bidder/hired-different-worker view.
+          if (!report.isSanitized) ...[
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(color: _kPrimaryLight, borderRadius: BorderRadius.circular(16)),
+              child: Column(
+                children: [
+                  _summaryLine('Parts total', report.partsTotal!),
+                  _summaryLine('Labour', report.labourCost!),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                    child: Divider(height: 1),
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Repair quote total', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: _kDark)),
+                      Text(formatPkr(report.repairQuoteTotal!),
+                          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17, color: _kPrimary)),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
+          ],
           if (showDecisionButtons && isPending) ...[
             const SizedBox(height: 20),
             SizedBox(
@@ -243,6 +248,20 @@ class _ReportBody extends ConsumerWidget {
                 child: isDeciding
                     ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                     : const Text('Accept Quote & Continue Repair', style: TextStyle(fontWeight: FontWeight.w800)),
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: isDeciding ? null : () => _findOtherUstaad(context, ref),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFFB45309),
+                  side: const BorderSide(color: Color(0xFFB45309)),
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                child: const Text('Find Other Ustaad', style: TextStyle(fontWeight: FontWeight.w800)),
               ),
             ),
             const SizedBox(height: 10),
@@ -354,6 +373,64 @@ class _ReportBody extends ConsumerWidget {
       }
     }
   }
+
+  Future<void> _findOtherUstaad(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: const Text(
+          'Find another Ustaad?',
+          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
+        ),
+        content: const Text(
+          'Your inspection fee is already paid. We\'ll open this job for '
+          'nearby Ustaads to bid on — you can hire someone new, or hire the '
+          'same Ustaad again using their original quote.',
+          style: TextStyle(color: _kGray, fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel', style: TextStyle(color: _kGray)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFB45309),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Find Other Ustaad'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    try {
+      await ref.read(inspectionDecisionNotifierProvider.notifier).findOtherUstaad(bookingId);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Looking for other Ustaads nearby.'),
+            backgroundColor: Color(0xFFB45309),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        Navigator.of(context).pop();
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e is Failure ? e.message : 'Action failed. Try again.'),
+            backgroundColor: _kError,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
 }
 
 class _DecisionBadge extends StatelessWidget {
@@ -369,6 +446,8 @@ class _DecisionBadge extends StatelessWidget {
         ('Quote accepted — repair in progress', _kSuccess),
       InspectionDecisionStatus.closedAfterInspection =>
         ('Closed after inspection', const Color(0xFF2563EB)),
+      InspectionDecisionStatus.findOtherUstaad =>
+        ('Finding another Ustaad — open for bidding', const Color(0xFFB45309)),
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

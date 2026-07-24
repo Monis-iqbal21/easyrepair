@@ -96,6 +96,15 @@ export class WorkerJobResponseDto {
     | 'PENDING_CLIENT_DECISION'
     | 'ACCEPTED_REPAIR'
     | 'CLOSED_AFTER_INSPECTION'
+    | 'FIND_OTHER_USTAAD'
     | null;
   inspectionReportSubmittedAt: string | null;
+  /**
+   * True when this entry appears in the caller's job list solely because
+   * they were the ORIGINAL inspector on a booking a different Ustaad ended
+   * up performing (via "Find Other Ustaad") — finalPrice/estimatedPrice
+   * above reflect the inspection fee they earned, not the other worker's
+   * work amount.
+   */
+  isInspectionOnlyForCaller: boolean;
 }

@@ -9,6 +9,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import {
+  BookingLane,
   BookingStatus,
   WorkerStatus,
   WorkerOnboardingStatus,
@@ -20,6 +21,13 @@ import { ChatService } from '../chat/chat.service';
 import { WorkerUnavailableError } from '../../common/errors/worker-unavailable.error';
 import { haversineKm } from '../../common/utils/geo.util';
 import { calculatePlatformFee } from '../../common/utils/commission.util';
+import {
+  assertEligibleForInspectionBidding,
+  isEligibleForInspectionBidding,
+} from '../../common/utils/inspection-bidder-eligibility.util';
+
+/** Rebid/update cooldown, measured off the bid row's own updatedAt. Server-time authoritative. */
+const BID_COOLDOWN_SECONDS = 60;
 
 @Injectable()
 export class BidsService {
@@ -59,19 +67,43 @@ export class BidsService {
       );
     }
 
-    const existing = await this.bidsRepository.findExistingBid(bookingId, workerProfile.id);
+    // BIDDING is always biddable. INSPECTION is biddable only once the
+    // customer has explicitly opted to "Find Other Ustaad" — ordinary
+    // Inspection/Standard bookings must never accept bids.
+    const isFindOtherUstaadOpen =
+      booking.lane === BookingLane.INSPECTION &&
+      booking.inspectionReport?.decisionStatus === 'FIND_OTHER_USTAAD';
+    if (booking.lane !== BookingLane.BIDDING && !isFindOtherUstaadOpen) {
+      throw new BadRequestException(
+        'Bidding is not available for this booking.',
+      );
+    }
+    if (isFindOtherUstaadOpen) {
+      // Reopened inspection jobs enforce the full approved/active/profile-
+      // completed/online/category/radius/fresh-GPS gate (same standard as
+      // the nearby-worker notification pipeline), plus exclusion of the
+      // original inspecting worker. Normal BIDDING lane deliberately stays
+      // more permissive (workers may browse/bid while offline/distant) —
+      // this gate is scoped to isFindOtherUstaadOpen only.
+      assertEligibleForInspectionBidding(
+        workerProfile,
+        booking,
+        booking.inspectionReport?.workerProfileId ?? null,
+      );
+    }
+
+    const existing = await this.bidsRepository.findExistingBid(
+      bookingId,
+      workerProfile.id,
+    );
 
     if (existing) {
-      // Enforce 1-minute cooldown before allowing a re-submit/update.
-      const secondsSinceUpdate =
-        (Date.now() - new Date(existing.updatedAt).getTime()) / 1000;
-      if (secondsSinceUpdate < 60) {
-        const waitSecs = Math.ceil(60 - secondsSinceUpdate);
-        throw new HttpException(
-          `Please wait ${waitSecs} second${waitSecs === 1 ? '' : 's'} before updating your bid`,
-          HttpStatus.TOO_MANY_REQUESTS,
-        );
-      }
+      // Enforce cooldown before allowing a re-submit/update. Server clock is
+      // authoritative (compared against the DB row's own updatedAt) — a
+      // client can't bypass this by resubmitting from another device or
+      // retrying the request, since the check is always re-evaluated
+      // against the persisted timestamp, not anything the client sends.
+      this._assertCooldownElapsed(existing.updatedAt);
 
       // Update existing bid in-place instead of creating a duplicate.
       const updated = await this.bidsRepository.updateBidAmountAndMessage(
@@ -158,15 +190,46 @@ export class BidsService {
       );
     }
 
-    const updated = await this.bidsRepository.updateBid(bidId, { amount, message });
+    // Re-check the same reopened-inspection eligibility gate enforced at bid
+    // creation — a worker could have gone offline/left the radius since
+    // their original bid, so editing must re-verify, not just creating.
+    const fullBooking = await this.bidsRepository.findBookingById(
+      bid.booking.id,
+    );
+    if (fullBooking) {
+      const isFindOtherUstaadOpen =
+        fullBooking.lane === BookingLane.INSPECTION &&
+        fullBooking.inspectionReport?.decisionStatus === 'FIND_OTHER_USTAAD';
+      if (isFindOtherUstaadOpen) {
+        assertEligibleForInspectionBidding(
+          workerProfile,
+          fullBooking,
+          fullBooking.inspectionReport?.workerProfileId ?? null,
+        );
+      }
+    }
+
+    // Same 60s cooldown as the POST re-submit path in createBid, keyed off
+    // the same server-authoritative bid.updatedAt clock — PATCH must not be
+    // usable as a bypass route for the amount-change cooldown.
+    this._assertCooldownElapsed(bid.updatedAt);
+
+    const updated = await this.bidsRepository.updateBid(bidId, {
+      amount,
+      message,
+    });
     this.logger.log(`[editBid] updated bidId=${bidId}`);
     return updated;
   }
 
   // ── Worker: get my bid on a booking ─────────────────────────────────────
 
-  async getMyBid(userId: string, bookingId: string): Promise<BidWithRelations> {
-    const workerProfile = await this.bidsRepository.findWorkerProfileByUserId(userId);
+  async getMyBid(
+    userId: string,
+    bookingId: string,
+  ): Promise<BidWithRelations & { cooldownRemainingSeconds: number }> {
+    const workerProfile =
+      await this.bidsRepository.findWorkerProfileByUserId(userId);
     if (!workerProfile) {
       throw new ForbiddenException('Worker profile not found');
     }
@@ -176,18 +239,33 @@ export class BidsService {
       throw new NotFoundException(`Booking ${bookingId} not found`);
     }
 
-    const bid = await this.bidsRepository.findMyBidOnBooking(bookingId, workerProfile.id);
+    const bid = await this.bidsRepository.findMyBidOnBooking(
+      bookingId,
+      workerProfile.id,
+    );
     if (!bid) {
       throw new NotFoundException('You have not placed a bid on this booking');
     }
 
-    return bid;
+    // Server-authoritative remaining cooldown, same clock basis as createBid.
+    const secondsSinceUpdate =
+      (Date.now() - new Date(bid.updatedAt).getTime()) / 1000;
+    const cooldownRemainingSeconds = Math.max(
+      0,
+      Math.ceil(BID_COOLDOWN_SECONDS - secondsSinceUpdate),
+    );
+
+    return { ...bid, cooldownRemainingSeconds };
   }
 
   // ── Client: list bids for a booking ─────────────────────────────────────
 
-  async getBidsForBooking(userId: string, bookingId: string): Promise<BidResponseDto[]> {
-    const clientProfile = await this.bidsRepository.findClientProfileByUserId(userId);
+  async getBidsForBooking(
+    userId: string,
+    bookingId: string,
+  ): Promise<BidResponseDto[]> {
+    const clientProfile =
+      await this.bidsRepository.findClientProfileByUserId(userId);
     if (!clientProfile) {
       throw new ForbiddenException('Client profile not found');
     }
@@ -403,10 +481,28 @@ export class BidsService {
       return [];
     }
 
-    const bookings = await this.bidsRepository.findAvailableJobsForWorker(
+    const allBookings = await this.bidsRepository.findAvailableJobsForWorker(
       workerProfile.id,
       categoryIds,
     );
+
+    // Reopened (FIND_OTHER_USTAAD) inspection jobs are hidden from a worker's
+    // New Jobs feed if they wouldn't pass the same eligibility gate enforced
+    // at report-view/bid-create time (offline, out of radius, stale GPS, or
+    // the original inspector themselves) — avoids showing an actionable-
+    // looking tile the worker can't actually open or bid on. Normal BIDDING
+    // and ordinary Standard/Inspection jobs are untouched.
+    const bookings = allBookings.filter((b) => {
+      const isReopenedInspection =
+        b.lane === 'INSPECTION' &&
+        b.inspectionReport?.decisionStatus === 'FIND_OTHER_USTAAD';
+      if (!isReopenedInspection) return true;
+      return isEligibleForInspectionBidding(
+        workerProfile,
+        b,
+        b.inspectionReport?.workerProfileId ?? null,
+      );
+    });
 
     const result = bookings.map((b) => {
       const distanceKm = haversineKm(
@@ -418,6 +514,26 @@ export class BidsService {
 
       const myBid = b.bids?.[0] ?? null;
       const hasMyBid = myBid !== null;
+      // Server-authoritative remaining cooldown so Flutter can render a
+      // countdown without trusting the device clock.
+      let myBidCooldownRemainingSeconds = 0;
+      if (myBid) {
+        const secondsSinceUpdate =
+          (Date.now() - new Date(myBid.updatedAt).getTime()) / 1000;
+        myBidCooldownRemainingSeconds = Math.max(
+          0,
+          Math.ceil(BID_COOLDOWN_SECONDS - secondsSinceUpdate),
+        );
+      }
+
+      // INSPECTION jobs are only actionable-as-a-bid once the customer has
+      // opted to "Find Other Ustaad" — ordinary Standard/Inspection jobs
+      // stay direct-assign-only (see NewJobEntity.isDirectAssignLane on the
+      // Flutter side, which reads this field for the lane==inspection case).
+      const isOpenForBidding =
+        b.lane === 'BIDDING' ||
+        (b.lane === 'INSPECTION' &&
+          b.inspectionReport?.decisionStatus === 'FIND_OTHER_USTAAD');
 
       return {
         id: b.id,
@@ -435,6 +551,8 @@ export class BidsService {
         createdAt: b.createdAt,
         inspection: b.inspection,
         lane: b.lane,
+        inspectionDecisionStatus: b.inspectionReport?.decisionStatus ?? null,
+        isOpenForBidding,
         standardServiceItems: b.standardServiceItems.map((item) => ({
           id: item.id,
           standardServiceId: item.standardServiceId,
@@ -448,6 +566,7 @@ export class BidsService {
         distanceKm,
         hasMyBid,
         myBidUpdatedAt: myBid?.updatedAt ?? null,
+        myBidCooldownRemainingSeconds,
         workerProfileId: b.workerProfileId ?? null,
       };
     });
@@ -456,6 +575,28 @@ export class BidsService {
   }
 
   // ── Helpers ──────────────────────────────────────────────────────────────
+
+  /**
+   * Single cooldown gate shared by every bid-amount-changing route (POST
+   * re-submit and PATCH edit alike) so there is exactly one cooldown clock
+   * per bid, keyed off the DB row's own @updatedAt — never client-supplied
+   * data — making it authoritative across devices and unbypassable by
+   * switching routes.
+   */
+  private _assertCooldownElapsed(lastUpdatedAt: Date): void {
+    const secondsSinceUpdate =
+      (Date.now() - new Date(lastUpdatedAt).getTime()) / 1000;
+    if (secondsSinceUpdate < BID_COOLDOWN_SECONDS) {
+      const waitSecs = Math.ceil(BID_COOLDOWN_SECONDS - secondsSinceUpdate);
+      throw new HttpException(
+        {
+          message: `Please wait ${waitSecs} second${waitSecs === 1 ? '' : 's'} before updating your bid`,
+          cooldownRemainingSeconds: waitSecs,
+        },
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+  }
 
   /**
    * Single hireability gate — admin-approved onboarding is now required even

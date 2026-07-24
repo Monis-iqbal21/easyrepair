@@ -337,6 +337,21 @@ class _BidsSheet extends ConsumerWidget {
           ),
         ),
 
+        // ── Pinned inspecting-Ustaad card (post-inspection "Find Other
+        // Ustaad" flow only) — not a normal competing bid, shown once above
+        // the bid list, with the option to re-hire them using their
+        // original quote instead of a submitted Bid.
+        if (booking.inspectingWorker != null)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: _InspectingWorkerOfferCard(
+                worker: booking.inspectingWorker!,
+                bookingId: booking.id,
+              ),
+            ),
+          ),
+
         // ── Bid list / states ─────────────────────────────────────────────
         bidsAsync.when(
           skipError: true,
@@ -643,6 +658,226 @@ class _BidOfferCard extends ConsumerWidget {
           SnackBar(
             content: const Text('Worker hired successfully'),
             backgroundColor: _kGreen,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute<void>(
+            builder: (_) => TrackWorkerPage(bookingId: bookingId),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e is Failure ? e.message : 'Failed to hire worker.'),
+            backgroundColor: const Color(0xFFEF4444),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+}
+
+// ── Pinned inspecting-Ustaad card ───────────────────────────────────────────────
+// Not a normal competing bid — the customer can re-hire this worker using
+// their already-submitted inspection quote instead of accepting a Bid row.
+
+const _kAmber = Color(0xFFB45309);
+
+class _InspectingWorkerOfferCard extends ConsumerWidget {
+  final AssignedWorkerEntity worker;
+  final String bookingId;
+
+  const _InspectingWorkerOfferCard({
+    required this.worker,
+    required this.bookingId,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final reportAsync = ref.watch(inspectionReportProvider(bookingId));
+    final isHiring = ref.watch(inspectionDecisionNotifierProvider).isLoading;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFBEB),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFFDE9BC)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: _kAmber,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: const Text(
+              'INSPECTED THIS JOB',
+              style: TextStyle(
+                fontSize: 9.5,
+                fontWeight: FontWeight.w800,
+                color: Colors.white,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: const BoxDecoration(color: _kGreen, shape: BoxShape.circle),
+                child: worker.avatarUrl != null
+                    ? ClipOval(
+                        child: Image.network(
+                          worker.avatarUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) => _InitialsLabel(worker.initials),
+                        ),
+                      )
+                    : _InitialsLabel(worker.initials),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      worker.fullName,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: _kDark,
+                      ),
+                    ),
+                    if (worker.rating != null) ...[
+                      const SizedBox(height: 3),
+                      Row(
+                        children: [
+                          const Icon(Icons.star_rounded, size: 13, color: Color(0xFFF59E0B)),
+                          const SizedBox(width: 3),
+                          Text(
+                            worker.rating!.toStringAsFixed(1),
+                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: _kGray),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              reportAsync.maybeWhen(
+                data: (r) => r.repairQuoteTotal != null
+                    ? Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: _kAmber.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: _kAmber.withValues(alpha: 0.3)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              formatPkr(r.repairQuoteTotal!),
+                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _kAmber),
+                            ),
+                            const Text('their quote', style: TextStyle(fontSize: 10, color: _kAmber)),
+                          ],
+                        ),
+                      )
+                    : const SizedBox.shrink(),
+                orElse: () => const SizedBox.shrink(),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Inspection completed by this Ustaad.',
+            style: TextStyle(fontSize: 11.5, color: _kGray),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(child: _ChatButton(workerProfileId: worker.id)),
+              const SizedBox(width: 10),
+              Expanded(
+                flex: 2,
+                child: FilledButton.icon(
+                  onPressed: isHiring ? null : () => _confirmHire(context, ref),
+                  icon: isHiring
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Icon(Icons.check_circle_outline_rounded, size: 16),
+                  label: Text(isHiring ? 'Hiring…' : 'Hire Again'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: _kAmber,
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _confirmHire(BuildContext context, WidgetRef ref) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Hire ${worker.firstName} again?',
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: _kDark),
+        ),
+        content: const Text(
+          'They\'ll continue using their original inspection quote.',
+          style: TextStyle(fontSize: 13, color: _kGray),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel', style: TextStyle(color: _kGray)),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: FilledButton.styleFrom(backgroundColor: _kAmber),
+            child: const Text('Hire'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true || !context.mounted) return;
+
+    try {
+      await ref.read(inspectionDecisionNotifierProvider.notifier).hireInspectingWorker(bookingId);
+      if (context.mounted) {
+        ref.invalidate(bookingDetailProvider(bookingId));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Worker hired successfully'),
+            backgroundColor: _kAmber,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             duration: const Duration(seconds: 2),

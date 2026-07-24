@@ -169,4 +169,35 @@ export class InspectionReportsController {
       bookingId,
     );
   }
+
+  /**
+   * POST /bookings/:bookingId/inspection-report/find-other-ustaad —
+   * client only. Third inspection outcome: pay inspection fee, reopen for
+   * bidding from other Ustaads while preserving the original report/quote.
+   */
+  @Post('find-other-ustaad')
+  @Roles(Role.CLIENT)
+  findOtherUstaad(
+    @CurrentUser() user: { id: string },
+    @Param('bookingId') bookingId: string,
+  ) {
+    return this.inspectionReportsService.findOtherUstaad(user.id, bookingId);
+  }
+
+  /**
+   * POST /bookings/:bookingId/inspection-report/hire-inspector — client
+   * only. Re-hires the original inspecting worker after "Find Other Ustaad"
+   * using their already-submitted quote.
+   */
+  @Post('hire-inspector')
+  @Roles(Role.CLIENT)
+  hireInspectingWorker(
+    @CurrentUser() user: { id: string },
+    @Param('bookingId') bookingId: string,
+  ) {
+    return this.inspectionReportsService.hireInspectingWorker(
+      user.id,
+      bookingId,
+    );
+  }
 }

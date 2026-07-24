@@ -511,7 +511,28 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
                   if (booking.estimatedPrice != null ||
                       booking.finalPrice != null)
                     const SizedBox(height: 16),
-                  _WorkerCard(worker: booking.assignedWorker!),
+                  // INSPECTION lane, "Find Other Ustaad" outcome where a
+                  // DIFFERENT worker ended up hired than who inspected — show
+                  // both, clearly labeled. Same worker still renders as one
+                  // clean card below (no confusing duplicate).
+                  if (booking.inspectingWorker != null &&
+                      booking.inspectingWorker!.id != booking.assignedWorker!.id) ...[
+                    _WorkerCard(
+                      worker: booking.inspectingWorker!,
+                      label: 'Inspection completed by',
+                    ),
+                    const SizedBox(height: 12),
+                    _WorkerCard(
+                      worker: booking.assignedWorker!,
+                      label: 'Work being completed by',
+                    ),
+                  ] else
+                    _WorkerCard(
+                      worker: booking.assignedWorker!,
+                      label: booking.inspectingWorker != null
+                          ? 'Inspection & repair by'
+                          : 'Assigned Worker',
+                    ),
                   const SizedBox(height: 16),
                   _WorkerMapSection(
                     worker: booking.assignedWorker!,
@@ -527,11 +548,25 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
                     _ReviewWorkerButton(onTap: _openReviewModal),
                   ],
                 ] else if (booking.status == BookingStatus.pending &&
-                    booking.lane == BookingLane.bidding) ...[
+                    (booking.lane == BookingLane.bidding ||
+                        booking.isOpenForFindOtherUstaadBidding)) ...[
                   const SizedBox(height: 16),
+                  // Still no repair worker hired yet — the original
+                  // inspector's card is shown pinned above the bids/offers
+                  // entry point (see also worker_discovery_map_page.dart,
+                  // which pins the same worker at the top of the list).
+                  if (booking.isOpenForFindOtherUstaadBidding &&
+                      booking.inspectingWorker != null) ...[
+                    _WorkerCard(
+                      worker: booking.inspectingWorker!,
+                      label: 'Inspection completed by',
+                    ),
+                    const SizedBox(height: 12),
+                  ],
                   _ViewBidsButton(booking: booking),
                 ] else if (booking.status == BookingStatus.pending &&
                     booking.lane != BookingLane.bidding &&
+                    !booking.isOpenForFindOtherUstaadBidding &&
                     !isExpired) ...[
                   const SizedBox(height: 16),
                   _ChooseUstaadButton(booking: booking),
@@ -950,6 +985,20 @@ class _PricingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isCompleted = booking.status == BookingStatus.completed;
+    // Only the FIND_OTHER_USTAAD outcome (a different Ustaad ended up hired)
+    // actually charges the inspection fee separately from the work amount —
+    // booking.finalPrice there is the accepted bid only, never merged with
+    // the fee. CLOSED_AFTER_INSPECTION and ACCEPTED_REPAIR (including a
+    // rehired original inspector) both fall through to the plain single
+    // "Final Price" line below: for CLOSED_AFTER_INSPECTION, finalPrice IS
+    // the fee (set once at assignment, never touched again) — showing it a
+    // second time as a "breakdown" would double it. For ACCEPTED_REPAIR the
+    // fee is waived and finalPrice is the repair quote alone.
+    final showInspectionBreakdown = isCompleted &&
+        booking.lane == BookingLane.inspection &&
+        booking.inspectionDecisionStatus == InspectionDecisionStatus.findOtherUstaad &&
+        booking.inspectionFeeSnapshot != null;
+    final hasWorkCharge = showInspectionBreakdown && booking.finalPrice != null;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -991,7 +1040,65 @@ class _PricingCard extends StatelessWidget {
                 ),
               ],
             ),
-          if (isCompleted && booking.finalPrice != null) ...[
+          if (showInspectionBreakdown) ...[
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Inspection Charges',
+                  style: TextStyle(fontSize: 13, color: _kGray),
+                ),
+                Text(
+                  formatPkr(booking.inspectionFeeSnapshot),
+                  style: const TextStyle(fontSize: 14, color: _kDark),
+                ),
+              ],
+            ),
+            if (hasWorkCharge) ...[
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Work Charges',
+                    style: TextStyle(fontSize: 13, color: _kGray),
+                  ),
+                  Text(
+                    formatPkr(booking.finalPrice),
+                    style: const TextStyle(fontSize: 14, color: _kDark),
+                  ),
+                ],
+              ),
+            ],
+            const SizedBox(height: 8),
+            const Divider(height: 1, color: _kBorder),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Total',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: _kDark,
+                  ),
+                ),
+                Text(
+                  formatPkr(
+                    booking.inspectionFeeSnapshot! +
+                        (hasWorkCharge ? booking.finalPrice! : 0),
+                  ),
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: _kDark,
+                  ),
+                ),
+              ],
+            ),
+          ] else if (isCompleted && booking.finalPrice != null) ...[
             const SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1021,8 +1128,9 @@ class _PricingCard extends StatelessWidget {
 
 class _WorkerCard extends StatelessWidget {
   final AssignedWorkerEntity worker;
+  final String label;
 
-  const _WorkerCard({required this.worker});
+  const _WorkerCard({required this.worker, this.label = 'Assigned Worker'});
 
   @override
   Widget build(BuildContext context) {
@@ -1036,9 +1144,9 @@ class _WorkerCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Assigned Worker',
-            style: TextStyle(
+          Text(
+            label,
+            style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w700,
               color: _kDark,

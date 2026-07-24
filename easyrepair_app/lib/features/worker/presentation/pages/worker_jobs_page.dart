@@ -699,6 +699,7 @@ class _InspectionActionBtn extends ConsumerWidget {
         InspectionWorkerAction.onMyWay => Icons.directions_car_filled_rounded,
         InspectionWorkerAction.arrived => Icons.location_on_rounded,
         InspectionWorkerAction.startInspection => Icons.search_rounded,
+        InspectionWorkerAction.startWork => Icons.build_rounded,
         InspectionWorkerAction.fillReport => Icons.assignment_outlined,
         InspectionWorkerAction.waitingForDecision => Icons.hourglass_top_rounded,
         InspectionWorkerAction.complete => Icons.check_circle_outline_rounded,

@@ -240,6 +240,9 @@ class WorkerRepositoryImpl implements WorkerRepository {
           .map((e) => BookingStandardServiceItemModel.fromJson(
               e as Map<String, dynamic>).toEntity())
           .toList(),
+      isOpenForBidding: j['isOpenForBidding'] as bool? ?? false,
+      myBidCooldownRemainingSeconds:
+          (j['myBidCooldownRemainingSeconds'] as num?)?.toInt() ?? 0,
     );
   }
 

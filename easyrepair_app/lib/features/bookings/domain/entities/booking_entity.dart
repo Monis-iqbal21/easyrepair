@@ -160,13 +160,22 @@ extension BookingCancellationX on BookingEntity {
 /// Decision recorded on an INSPECTION-lane booking's report once the worker
 /// has submitted it — drives both the worker's next action and the client's
 /// report card/decision buttons.
-enum InspectionDecisionStatus { pendingClientDecision, acceptedRepair, closedAfterInspection }
+enum InspectionDecisionStatus {
+  pendingClientDecision,
+  acceptedRepair,
+  closedAfterInspection,
+  /// Customer paid the inspection fee and opted to find a different Ustaad —
+  /// the booking is reopened for bidding while the original report/quote and
+  /// inspecting worker stay preserved untouched.
+  findOtherUstaad,
+}
 
 extension InspectionDecisionStatusX on InspectionDecisionStatus {
   String get raw => switch (this) {
         InspectionDecisionStatus.pendingClientDecision => 'PENDING_CLIENT_DECISION',
         InspectionDecisionStatus.acceptedRepair => 'ACCEPTED_REPAIR',
         InspectionDecisionStatus.closedAfterInspection => 'CLOSED_AFTER_INSPECTION',
+        InspectionDecisionStatus.findOtherUstaad => 'FIND_OTHER_USTAAD',
       };
 
   static InspectionDecisionStatus? fromRaw(String? raw) {
@@ -174,6 +183,7 @@ extension InspectionDecisionStatusX on InspectionDecisionStatus {
       'PENDING_CLIENT_DECISION' => InspectionDecisionStatus.pendingClientDecision,
       'ACCEPTED_REPAIR' => InspectionDecisionStatus.acceptedRepair,
       'CLOSED_AFTER_INSPECTION' => InspectionDecisionStatus.closedAfterInspection,
+      'FIND_OTHER_USTAAD' => InspectionDecisionStatus.findOtherUstaad,
       _ => null,
     };
   }
@@ -186,6 +196,7 @@ enum InspectionWorkerAction {
   onMyWay,
   arrived,
   startInspection,
+  startWork,
   fillReport,
   waitingForDecision,
   complete,
@@ -196,6 +207,7 @@ extension InspectionWorkerActionX on InspectionWorkerAction {
         InspectionWorkerAction.onMyWay => 'On My Way',
         InspectionWorkerAction.arrived => 'Arrived',
         InspectionWorkerAction.startInspection => 'Start Inspection',
+        InspectionWorkerAction.startWork => 'Start Work',
         InspectionWorkerAction.fillReport => 'Fill Inspection Report',
         InspectionWorkerAction.waitingForDecision => 'Waiting for Client Decision',
         InspectionWorkerAction.complete => 'Complete Job',
@@ -209,6 +221,7 @@ extension InspectionWorkerActionX on InspectionWorkerAction {
         InspectionWorkerAction.onMyWay => 'On the way — client notified.',
         InspectionWorkerAction.arrived => 'Marked as arrived.',
         InspectionWorkerAction.startInspection => 'Inspection started.',
+        InspectionWorkerAction.startWork => 'Work started.',
         InspectionWorkerAction.fillReport => '',
         InspectionWorkerAction.waitingForDecision => '',
         InspectionWorkerAction.complete => 'Job marked as completed.',
@@ -216,23 +229,48 @@ extension InspectionWorkerActionX on InspectionWorkerAction {
 }
 
 extension BookingInspectionLifecycleX on BookingEntity {
+  /// True once a DIFFERENT worker than the original inspector has been hired
+  /// to perform the repair (customer used "Find Other Ustaad" and accepted a
+  /// bid from someone other than the inspector). booking.lane stays
+  /// INSPECTION and the report/decisionStatus stay FIND_OTHER_USTAAD forever
+  /// in this case, but this worker is doing WORK, not inspecting — every
+  /// worker-facing surface must show work wording/lifecycle for them, never
+  /// inspection wording, and must let them complete the job normally.
+  bool get isDifferentWorkerPerformingWork =>
+      lane == BookingLane.inspection &&
+      assignedWorker != null &&
+      inspectingWorker != null &&
+      assignedWorker!.id != inspectingWorker!.id;
+
   /// The single next lifecycle action a worker should take for this
   /// INSPECTION-lane assigned job, or null when the lane isn't INSPECTION or
   /// the booking isn't in an active worker-facing status.
   InspectionWorkerAction? get inspectionWorkerNextAction {
     if (lane != BookingLane.inspection) return null;
+    final differentWorker = isDifferentWorkerPerformingWork;
     return switch (status) {
       BookingStatus.accepted => InspectionWorkerAction.onMyWay,
       BookingStatus.enRoute => InspectionWorkerAction.arrived,
-      BookingStatus.arrived => InspectionWorkerAction.startInspection,
+      BookingStatus.arrived => differentWorker
+          ? InspectionWorkerAction.startWork
+          : InspectionWorkerAction.startInspection,
       BookingStatus.inProgress => !inspectionReportSubmitted
           ? InspectionWorkerAction.fillReport
-          : inspectionDecisionStatus == InspectionDecisionStatus.acceptedRepair
+          : (inspectionDecisionStatus == InspectionDecisionStatus.acceptedRepair ||
+                  differentWorker)
               ? InspectionWorkerAction.complete
               : InspectionWorkerAction.waitingForDecision,
       _ => null,
     };
   }
+
+  /// True once the customer has pressed "Find Other Ustaad" and this
+  /// INSPECTION-lane booking has reopened for bidding from other Ustaads —
+  /// drives the client's bids-page routing and the worker's New Jobs
+  /// bid-actionable state, same as a normal BIDDING-lane job.
+  bool get isOpenForFindOtherUstaadBidding =>
+      lane == BookingLane.inspection &&
+      inspectionDecisionStatus == InspectionDecisionStatus.findOtherUstaad;
 }
 
 extension BookingStatusX on BookingStatus {
@@ -556,6 +594,11 @@ class BookingEntity {
   final DateTime? liveStartedAt;
   final DateTime? relistedAt;
   final AssignedWorkerEntity? assignedWorker;
+  /// INSPECTION lane: the worker who performed the inspection — permanent,
+  /// independent of [assignedWorker]. Usually the same person; differs once
+  /// "Find Other Ustaad" results in a different worker being hired for the
+  /// repair ([assignedWorker] then reflects the hired repair worker).
+  final AssignedWorkerEntity? inspectingWorker;
   final int? availableWorkersCount;
   final double? acceptedBidAmount;
   final List<BookingAttachmentEntity> attachments;
@@ -582,6 +625,11 @@ class BookingEntity {
   /// INSPECTION lane: null until a report exists, then tracks the client's decision.
   final InspectionDecisionStatus? inspectionDecisionStatus;
   final DateTime? inspectionReportSubmittedAt;
+  /// Worker-job-detail only: true when this entry appears in the caller's
+  /// own history solely because they were the ORIGINAL inspector on a
+  /// booking a different Ustaad ended up performing — finalPrice above is
+  /// the inspection fee they earned, not the other worker's work amount.
+  final bool isInspectionOnlyForCaller;
 
   const BookingEntity({
     required this.id,
@@ -614,6 +662,7 @@ class BookingEntity {
     this.liveStartedAt,
     this.relistedAt,
     this.assignedWorker,
+    this.inspectingWorker,
     this.availableWorkersCount,
     this.acceptedBidAmount,
     this.attachments = const [],
@@ -634,6 +683,7 @@ class BookingEntity {
     this.inspectionReportSubmitted = false,
     this.inspectionDecisionStatus,
     this.inspectionReportSubmittedAt,
+    this.isInspectionOnlyForCaller = false,
   });
 
   /// Sum of all selected STANDARD-lane sub-service prices (× quantity).
@@ -654,6 +704,7 @@ class BookingEntity {
     double? finalPrice,
     double? acceptedBidAmount,
     AssignedWorkerEntity? assignedWorker,
+    AssignedWorkerEntity? inspectingWorker,
     DateTime? completedAt,
     String? cancellationReason,
     List<BookingAttachmentEntity>? attachments,
@@ -692,6 +743,7 @@ class BookingEntity {
       liveStartedAt: liveStartedAt,
       relistedAt: relistedAt,
       assignedWorker: assignedWorker ?? this.assignedWorker,
+      inspectingWorker: inspectingWorker ?? this.inspectingWorker,
       availableWorkersCount: availableWorkersCount ?? this.availableWorkersCount,
       acceptedBidAmount: acceptedBidAmount ?? this.acceptedBidAmount,
       attachments: attachments ?? this.attachments,

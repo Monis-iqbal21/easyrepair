@@ -11,10 +11,14 @@ import {
   InspectionReportWithRelations,
 } from './inspection-reports.repository';
 import { CreateInspectionReportDto } from './dto/create-inspection-report.dto';
-import { InspectionReportResponseDto } from './dto/inspection-report-response.dto';
+import {
+  InspectionReportResponseDto,
+  SanitizedInspectionReportResponseDto,
+} from './dto/inspection-report-response.dto';
 import { StorageService } from '../storage/storage.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { BookingsService } from '../bookings/bookings.service';
+import { assertEligibleForInspectionBidding } from '../../common/utils/inspection-bidder-eligibility.util';
 
 const MAX_PHOTOS = 6;
 
@@ -140,27 +144,65 @@ export class InspectionReportsService {
     return this._toDto(report, booking);
   }
 
-  /** GET /bookings/:id/inspection-report — client (owner), assigned worker, or admin. */
+  /**
+   * GET /bookings/:id/inspection-report — client (owner), the inspecting
+   * worker, admin, or (during/after "Find Other Ustaad") an eligible bidder
+   * or the hired-but-different repair worker. Only the client, an admin, and
+   * the ORIGINAL INSPECTING worker ever see the full report with pricing —
+   * a hired different worker or a not-yet-hired bidder always gets the
+   * sanitized view, since neither should see the inspector's original
+   * quote/prices.
+   */
   async getReport(
     userId: string,
     role: string,
     bookingId: string,
-  ): Promise<InspectionReportResponseDto> {
+  ): Promise<
+    InspectionReportResponseDto | SanitizedInspectionReportResponseDto
+  > {
     const booking = await this.repository.findBookingContext(bookingId);
     if (!booking) throw new NotFoundException('Booking not found');
 
     if (role === 'CLIENT' && booking.clientProfile?.userId !== userId) {
       throw new ForbiddenException('Not your booking');
     }
-    if (role === 'WORKER' && booking.workerProfile?.userId !== userId) {
-      throw new ForbiddenException('You are not assigned to this booking');
+
+    if (role === 'WORKER') {
+      const workerProfile =
+        await this.repository.findWorkerProfileByUserId(userId);
+      const report = await this.repository.findByBookingId(bookingId);
+
+      // The original inspector always sees their own full report — even
+      // long after Booking.workerProfileId has moved to a different Ustaad
+      // (e.g. opening it from their own completed-jobs history). Checked
+      // before the "currently assigned" branch below, otherwise this exact
+      // case would incorrectly fall into the bidder path and get rejected
+      // by that path's own-inspector exclusion.
+      if (report && workerProfile?.id === report.workerProfileId) {
+        return this._toDto(report, booking);
+      }
+
+      if (booking.workerProfile?.userId !== userId) {
+        // Not currently assigned and not the inspector — may still be an
+        // eligible bidder while this booking is open via "Find Other Ustaad".
+        return this._getSanitizedReportForBidder(userId, booking);
+      }
+
+      if (!report) {
+        throw new NotFoundException(
+          'No inspection report for this booking yet.',
+        );
+      }
+      // Assigned to perform the repair, but inspected by someone else —
+      // still never expose that worker's original quote/prices.
+      return this._toSanitizedDto(report);
     }
 
+    // CLIENT / ADMIN
     const report = await this.repository.findByBookingId(bookingId);
     if (!report) {
       throw new NotFoundException('No inspection report for this booking yet.');
     }
-
     return this._toDto(report, booking);
   }
 
@@ -218,6 +260,113 @@ export class InspectionReportsService {
     return this._toDto(updated, booking);
   }
 
+  /**
+   * POST /bookings/:id/inspection-report/find-other-ustaad — client only.
+   * Third inspection outcome: pays the inspection fee (already collected at
+   * assignment), preserves the report/quote/inspecting worker untouched, and
+   * reopens the booking for bidding from other eligible nearby Ustaads.
+   * Repeated taps are naturally rejected by _authorizeClientDecision once
+   * decisionStatus is no longer PENDING_CLIENT_DECISION.
+   */
+  async findOtherUstaad(
+    userId: string,
+    bookingId: string,
+  ): Promise<InspectionReportResponseDto> {
+    const { booking, report } = await this._authorizeClientDecision(
+      userId,
+      bookingId,
+    );
+
+    await this.repository.markFindOtherUstaad(report.id);
+    await this.bookingsService.reopenInspectionForBidding(
+      bookingId,
+      report.workerProfileId,
+      booking.categoryId,
+      booking.latitude,
+      booking.longitude,
+    );
+
+    const freshBooking = await this.repository.findBookingContext(bookingId);
+    const freshReport = await this.repository.findByBookingId(bookingId);
+    if (!freshBooking || !freshReport) {
+      throw new NotFoundException('Booking not found');
+    }
+    return this._toDto(freshReport, freshBooking);
+  }
+
+  /**
+   * POST /bookings/:id/inspection-report/hire-inspector — client only.
+   * Customer changed their mind during "Find Other Ustaad" and re-hires the
+   * original inspecting worker using their already-submitted report/quote —
+   * collapses back into the same outcome as "Accept Quote & Continue
+   * Repair" (decisionStatus reverts to ACCEPTED_REPAIR), so completion and
+   * earnings logic need no special-casing for this sub-case.
+   */
+  async hireInspectingWorker(
+    userId: string,
+    bookingId: string,
+  ): Promise<InspectionReportResponseDto> {
+    const booking = await this.repository.findBookingContext(bookingId);
+    if (!booking) throw new NotFoundException('Booking not found');
+    if (booking.clientProfile?.userId !== userId) {
+      throw new ForbiddenException('Not your booking');
+    }
+    const report = await this.repository.findByBookingId(bookingId);
+    if (!report) {
+      throw new NotFoundException('No inspection report for this booking yet.');
+    }
+    if (report.decisionStatus !== 'FIND_OTHER_USTAAD') {
+      throw new BadRequestException(
+        `This action is only available while finding another Ustaad (current: ${report.decisionStatus}).`,
+      );
+    }
+
+    // Atomic re-assignment (double-hire safe) lives in BookingsService,
+    // reusing the exact same commission math as a normal accepted quote.
+    await this.bookingsService.rehireInspectingWorker(
+      userId,
+      bookingId,
+      report.workerProfileId,
+      report.repairQuoteTotal,
+      report.labourCost,
+    );
+    const updated = await this.repository.markAccepted(report.id);
+
+    const freshBooking = await this.repository.findBookingContext(bookingId);
+    if (!freshBooking) throw new NotFoundException('Booking not found');
+    return this._toDto(updated, freshBooking);
+  }
+
+  private async _getSanitizedReportForBidder(
+    userId: string,
+    booking: InspectionBookingContext,
+  ): Promise<SanitizedInspectionReportResponseDto> {
+    const workerProfile =
+      await this.repository.findWorkerProfileWithSkillsByUserId(userId);
+    if (!workerProfile)
+      throw new ForbiddenException('Worker profile not found');
+
+    const report = await this.repository.findByBookingId(booking.id);
+    if (!report) {
+      throw new NotFoundException('No inspection report for this booking yet.');
+    }
+    if (report.decisionStatus !== 'FIND_OTHER_USTAAD') {
+      throw new ForbiddenException('This job is no longer open for bidding.');
+    }
+
+    // Full approved/active/profile-completed/online/category/radius/fresh-GPS
+    // gate, plus exclusion of the original inspecting worker — same standard
+    // enforced at bid-creation time, so viewing the report can't be used to
+    // sidestep the eligibility rules that gate bidding itself.
+    assertEligibleForInspectionBidding(
+      workerProfile,
+      booking,
+      report.workerProfileId,
+    );
+
+    return this._toSanitizedDto(report);
+  }
+
   private async _authorizeClientDecision(userId: string, bookingId: string) {
     const booking = await this.repository.findBookingContext(bookingId);
     if (!booking) throw new NotFoundException('Booking not found');
@@ -258,7 +407,8 @@ export class InspectionReportsService {
       decisionStatus: report.decisionStatus as
         | 'PENDING_CLIENT_DECISION'
         | 'ACCEPTED_REPAIR'
-        | 'CLOSED_AFTER_INSPECTION',
+        | 'CLOSED_AFTER_INSPECTION'
+        | 'FIND_OTHER_USTAAD',
       parts: report.parts.map((p) => ({
         id: p.id,
         name: p.name,
@@ -275,6 +425,36 @@ export class InspectionReportsService {
       createdAt: report.createdAt.toISOString(),
       acceptedAt: report.acceptedAt?.toISOString() ?? null,
       closedAt: report.closedAt?.toISOString() ?? null,
+    };
+  }
+
+  /** No labourCost/partsTotal/repairQuoteTotal/part-prices — bidder-safe view. */
+  private _toSanitizedDto(
+    report: InspectionReportWithRelations,
+  ): SanitizedInspectionReportResponseDto {
+    return {
+      id: report.id,
+      bookingId: report.bookingId,
+      issueFound: report.issueFound,
+      recommendedRepair: report.recommendedRepair,
+      notes: report.notes ?? null,
+      voiceNoteUrl: report.voiceNoteUrl ?? null,
+      voiceNoteMimeType: report.voiceNoteMimeType ?? null,
+      voiceNoteDurationSeconds: report.voiceNoteDurationSeconds ?? null,
+      partsNeeded: report.partsNeeded,
+      decisionStatus: report.decisionStatus as 'FIND_OTHER_USTAAD',
+      parts: report.parts.map((p) => ({
+        id: p.id,
+        name: p.name,
+        quantity: p.quantity,
+        warranty: p.warranty ?? null,
+      })),
+      photos: report.photos.map((ph) => ({
+        id: ph.id,
+        url: ph.url,
+        createdAt: ph.createdAt.toISOString(),
+      })),
+      createdAt: report.createdAt.toISOString(),
     };
   }
 }

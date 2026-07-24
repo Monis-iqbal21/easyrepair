@@ -138,6 +138,12 @@ enum InspectionDecisionStatus {
   PENDING_CLIENT_DECISION
   ACCEPTED_REPAIR
   CLOSED_AFTER_INSPECTION
+  /// Customer paid the inspection fee and opted to find a different Ustaad
+  /// to perform the work — the booking reopens for bidding while the
+  /// original InspectionReport (and its workerProfileId/quote) is preserved
+  /// untouched. Reverts to ACCEPTED_REPAIR if the customer ends up re-hiring
+  /// the same inspecting worker anyway.
+  FIND_OTHER_USTAAD
 }
 
 model User {

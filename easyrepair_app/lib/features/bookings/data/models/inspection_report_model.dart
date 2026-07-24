@@ -6,17 +6,17 @@ class InspectionReportPartModel {
   final String id;
   final String name;
   final int quantity;
-  final double unitPrice;
+  final double? unitPrice;
   final String? warranty;
-  final double lineTotal;
+  final double? lineTotal;
 
   const InspectionReportPartModel({
     required this.id,
     required this.name,
     required this.quantity,
-    required this.unitPrice,
+    this.unitPrice,
     this.warranty,
-    required this.lineTotal,
+    this.lineTotal,
   });
 
   factory InspectionReportPartModel.fromJson(Map<String, dynamic> json) {
@@ -24,9 +24,10 @@ class InspectionReportPartModel {
       id: json['id'] as String? ?? '',
       name: json['name'] as String? ?? '',
       quantity: (json['quantity'] as num?)?.toInt() ?? 1,
-      unitPrice: (json['unitPrice'] as num?)?.toDouble() ?? 0,
+      // Absent (not zero) in the sanitized bidder view — a price was never sent.
+      unitPrice: (json['unitPrice'] as num?)?.toDouble(),
       warranty: json['warranty'] as String?,
-      lineTotal: (json['lineTotal'] as num?)?.toDouble() ?? 0,
+      lineTotal: (json['lineTotal'] as num?)?.toDouble(),
     );
   }
 
@@ -76,13 +77,14 @@ String resolveInspectionReportMediaUrl(String raw) {
 class InspectionReportModel {
   final String id;
   final String bookingId;
-  final String workerProfileId;
+  /// Absent in the sanitized bidder/hired-different-worker view.
+  final String? workerProfileId;
   final String? issueFound;
   final String? recommendedRepair;
-  final double labourCost;
+  final double? labourCost;
   final bool partsNeeded;
-  final double partsTotal;
-  final double repairQuoteTotal;
+  final double? partsTotal;
+  final double? repairQuoteTotal;
   final double? inspectionFeeSnapshot;
   final String? notes;
   final String? voiceNoteUrl;
@@ -98,13 +100,13 @@ class InspectionReportModel {
   const InspectionReportModel({
     required this.id,
     required this.bookingId,
-    required this.workerProfileId,
+    this.workerProfileId,
     this.issueFound,
     this.recommendedRepair,
-    required this.labourCost,
+    this.labourCost,
     required this.partsNeeded,
-    required this.partsTotal,
-    required this.repairQuoteTotal,
+    this.partsTotal,
+    this.repairQuoteTotal,
     this.inspectionFeeSnapshot,
     this.notes,
     this.voiceNoteUrl,
@@ -125,13 +127,14 @@ class InspectionReportModel {
     return InspectionReportModel(
       id: json['id'] as String? ?? '',
       bookingId: json['bookingId'] as String? ?? '',
-      workerProfileId: json['workerProfileId'] as String? ?? '',
+      workerProfileId: json['workerProfileId'] as String?,
       issueFound: json['issueFound'] as String?,
       recommendedRepair: json['recommendedRepair'] as String?,
-      labourCost: (json['labourCost'] as num?)?.toDouble() ?? 0,
+      // Absent (not zero) in the sanitized bidder/hired-different-worker view.
+      labourCost: (json['labourCost'] as num?)?.toDouble(),
       partsNeeded: json['partsNeeded'] as bool? ?? false,
-      partsTotal: (json['partsTotal'] as num?)?.toDouble() ?? 0,
-      repairQuoteTotal: (json['repairQuoteTotal'] as num?)?.toDouble() ?? 0,
+      partsTotal: (json['partsTotal'] as num?)?.toDouble(),
+      repairQuoteTotal: (json['repairQuoteTotal'] as num?)?.toDouble(),
       inspectionFeeSnapshot:
           (json['inspectionFeeSnapshot'] as num?)?.toDouble(),
       notes: json['notes'] as String?,

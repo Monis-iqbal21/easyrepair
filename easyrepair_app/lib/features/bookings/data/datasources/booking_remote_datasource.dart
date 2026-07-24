@@ -59,6 +59,8 @@ abstract class BookingRemoteDataSource {
   Future<InspectionReportModel> getInspectionReport(String bookingId);
   Future<BookingModel> acceptInspectionQuote(String bookingId);
   Future<BookingModel> closeAfterInspection(String bookingId);
+  Future<BookingModel> findOtherUstaad(String bookingId);
+  Future<BookingModel> hireInspectingWorker(String bookingId);
 }
 
 class BookingRemoteDataSourceImpl implements BookingRemoteDataSource {
@@ -418,6 +420,26 @@ class BookingRemoteDataSourceImpl implements BookingRemoteDataSource {
   Future<BookingModel> closeAfterInspection(String bookingId) async {
     try {
       await _dio.post('/bookings/$bookingId/inspection-report/close');
+      return getBookingById(bookingId);
+    } on DioException catch (e) {
+      throw dioExceptionToFailure(e);
+    }
+  }
+
+  @override
+  Future<BookingModel> findOtherUstaad(String bookingId) async {
+    try {
+      await _dio.post('/bookings/$bookingId/inspection-report/find-other-ustaad');
+      return getBookingById(bookingId);
+    } on DioException catch (e) {
+      throw dioExceptionToFailure(e);
+    }
+  }
+
+  @override
+  Future<BookingModel> hireInspectingWorker(String bookingId) async {
+    try {
+      await _dio.post('/bookings/$bookingId/inspection-report/hire-inspector');
       return getBookingById(bookingId);
     } on DioException catch (e) {
       throw dioExceptionToFailure(e);

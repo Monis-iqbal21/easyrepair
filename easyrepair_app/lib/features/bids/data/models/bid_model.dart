@@ -17,6 +17,7 @@ class BidModel {
   final int editCount;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final int cooldownRemainingSeconds;
 
   const BidModel({
     required this.id,
@@ -28,6 +29,7 @@ class BidModel {
     required this.editCount,
     required this.createdAt,
     required this.updatedAt,
+    this.cooldownRemainingSeconds = 0,
   });
 
   factory BidModel.fromJson(Map<String, dynamic> json) {
@@ -41,6 +43,8 @@ class BidModel {
       editCount: (json['editCount'] as num?)?.toInt() ?? 0,
       createdAt: DateTime.tryParse(json['createdAt']?.toString() ?? '') ?? DateTime.now(),
       updatedAt: DateTime.tryParse(json['updatedAt']?.toString() ?? '') ?? DateTime.now(),
+      cooldownRemainingSeconds:
+          (json['cooldownRemainingSeconds'] as num?)?.toInt() ?? 0,
     );
   }
 
@@ -54,6 +58,7 @@ class BidModel {
         editCount: editCount,
         createdAt: createdAt,
         updatedAt: updatedAt,
+        cooldownRemainingSeconds: cooldownRemainingSeconds,
       );
 }
 

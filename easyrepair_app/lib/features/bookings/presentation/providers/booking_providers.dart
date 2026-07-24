@@ -948,6 +948,7 @@ extension InspectionWorkerActionDispatchX on InspectionWorkerAction {
       InspectionWorkerAction.onMyWay => notifier.onMyWay(bookingId),
       InspectionWorkerAction.arrived => notifier.arrived(bookingId),
       InspectionWorkerAction.startInspection => notifier.start(bookingId),
+      InspectionWorkerAction.startWork => notifier.start(bookingId),
       InspectionWorkerAction.complete => notifier.complete(bookingId),
       InspectionWorkerAction.fillReport ||
       InspectionWorkerAction.waitingForDecision =>
@@ -1056,6 +1057,16 @@ class InspectionDecisionNotifier extends AsyncNotifier<void> {
   Future<void> closeAfterInspection(String bookingId) => _run(
         bookingId,
         () => ref.read(bookingRepositoryProvider).closeAfterInspection(bookingId),
+      );
+
+  Future<void> findOtherUstaad(String bookingId) => _run(
+        bookingId,
+        () => ref.read(bookingRepositoryProvider).findOtherUstaad(bookingId),
+      );
+
+  Future<void> hireInspectingWorker(String bookingId) => _run(
+        bookingId,
+        () => ref.read(bookingRepositoryProvider).hireInspectingWorker(bookingId),
       );
 }
 

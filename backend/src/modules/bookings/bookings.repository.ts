@@ -123,6 +123,21 @@ export const BOOKING_INCLUDE = {
     select: {
       decisionStatus: true,
       createdAt: true,
+      // Permanent record of who inspected — kept even after a different
+      // worker is hired for the repair (Booking.workerProfileId changes,
+      // this never does), so the client can show "Inspection completed by".
+      workerProfile: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          avatarUrl: true,
+          rating: true,
+          currentLat: true,
+          currentLng: true,
+          user: { select: { phone: true } },
+        },
+      },
     },
   },
 } satisfies Prisma.BookingInclude;
@@ -941,6 +956,115 @@ export class BookingsRepository {
         data: { currentlyWorking: true },
       });
       if (res.count === 0) throw new WorkerUnavailableError();
+    });
+
+    return this.prisma.booking.findUniqueOrThrow({
+      where: { id: bookingId },
+      include: BOOKING_INCLUDE,
+    });
+  }
+
+  /**
+   * Customer paid the inspection fee and chose to find a different Ustaad.
+   * Releases the inspecting worker (currentlyWorking=false) and reopens the
+   * booking as PENDING/unassigned — exactly like a fresh biddable booking —
+   * while InspectionReport (including workerProfileId and the original
+   * quote) is left completely untouched by the caller.
+   */
+  async reopenForFindOtherUstaad(
+    bookingId: string,
+    inspectingWorkerProfileId: string,
+    now: Date,
+    expiresAt: Date,
+  ): Promise<BookingWithRelations> {
+    await this.prisma.$transaction(async (tx) => {
+      await tx.booking.update({
+        where: { id: bookingId },
+        data: {
+          workerProfileId: null,
+          status: BookingStatus.PENDING,
+          liveStartedAt: now,
+          expiresAt,
+        },
+      });
+      await tx.bookingStatusHistory.create({
+        data: {
+          bookingId,
+          status: BookingStatus.PENDING,
+          note: 'Client opted to find a different Ustaad after inspection',
+        },
+      });
+      // Release the inspecting worker so they're matchable/available again.
+      await tx.workerProfile.update({
+        where: { id: inspectingWorkerProfileId },
+        data: { currentlyWorking: false },
+      });
+    });
+
+    return this.prisma.booking.findUniqueOrThrow({
+      where: { id: bookingId },
+      include: BOOKING_INCLUDE,
+    });
+  }
+
+  /**
+   * Customer decided to re-hire the original inspecting worker after all
+   * (having pressed "Find Other Ustaad" earlier). Atomically re-assigns the
+   * booking back to them and rejects any bids submitted in the meantime —
+   * same "only one hire can succeed" shape as assignWorkerToBooking, with an
+   * added conditional guard on the Booking row itself (workerProfileId=null
+   * AND status=PENDING) so a concurrent bid-accept by another worker can't
+   * both succeed.
+   */
+  async rehireInspectingWorker(
+    bookingId: string,
+    workerProfileId: string,
+    finalPrice: number,
+    platformFee: number,
+  ): Promise<BookingWithRelations> {
+    await this.prisma.$transaction(async (tx) => {
+      const bookingRes = await tx.booking.updateMany({
+        where: {
+          id: bookingId,
+          workerProfileId: null,
+          status: BookingStatus.PENDING,
+        },
+        data: {
+          workerProfileId,
+          status: BookingStatus.ACCEPTED,
+          acceptedAt: new Date(),
+          finalPrice,
+          platformFee,
+        },
+      });
+      if (bookingRes.count === 0) throw new WorkerUnavailableError();
+
+      await tx.bookingStatusHistory.create({
+        data: {
+          bookingId,
+          status: BookingStatus.ACCEPTED,
+          note: 'Client re-hired the original inspecting Ustaad',
+        },
+      });
+
+      // The job is no longer open — no other worker can be hired for it.
+      await tx.bid.updateMany({
+        where: { bookingId, status: BidStatus.PENDING },
+        data: { status: BidStatus.REJECTED },
+      });
+
+      const workerRes = await tx.workerProfile.updateMany({
+        where: {
+          id: workerProfileId,
+          currentlyWorking: false,
+          status: 'ACTIVE',
+          onboardingStatus: 'APPROVED',
+          availabilityStatus: 'ONLINE',
+          profileCompleted: true,
+        },
+        data: { currentlyWorking: true },
+      });
+      if (workerRes.count === 0) throw new WorkerUnavailableError();
     });
 
     return this.prisma.booking.findUniqueOrThrow({

@@ -112,6 +112,14 @@ export class BookingResponseDto {
   liveStartedAt: string | null;
   relistedAt: string | null;
   worker: WorkerSummaryDto | null;
+  /**
+   * INSPECTION lane: the worker who performed the inspection — permanent
+   * record, independent of `worker` above. Usually the same person as
+   * `worker`, but differs once the customer uses "Find Other Ustaad" and
+   * hires someone else for the repair; `worker` then reflects the hired
+   * repair worker while this always still identifies the original inspector.
+   */
+  inspectingWorker: WorkerSummaryDto | null;
   availableWorkersCount: number | null;
   attachments: BookingAttachmentDto[];
   review: BookingReviewDto | null;
@@ -128,6 +136,7 @@ export class BookingResponseDto {
     | 'PENDING_CLIENT_DECISION'
     | 'ACCEPTED_REPAIR'
     | 'CLOSED_AFTER_INSPECTION'
+    | 'FIND_OTHER_USTAAD'
     | null;
   inspectionReportSubmittedAt: string | null;
 }
