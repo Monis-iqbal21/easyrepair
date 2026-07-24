@@ -124,7 +124,10 @@ class _ChooseUstaadPageState extends ConsumerState<ChooseUstaadPage> {
   }
 
   Future<void> _chatWithWorker(NearbyWorkerEntity worker) async {
-    await openClientChatForBooking(context, ref, widget.booking.id);
+    // Uses the client-facing endpoint (workerProfileId-based) — this is a
+    // candidate worker not yet assigned to the booking, so the worker-only
+    // "for-booking" endpoint would 403 here.
+    await openClientChatWithWorker(context, ref, worker.id);
   }
 
   Future<void> _refreshStandardSearch() async {

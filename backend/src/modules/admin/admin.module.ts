@@ -4,9 +4,10 @@ import { AdminStatsController } from './admin-stats.controller';
 import { AdminService } from './admin.service';
 import { AdminRepository } from './admin.repository';
 import { AgreementsModule } from '../agreements/agreements.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [AgreementsModule],
+  imports: [AgreementsModule, NotificationsModule],
   controllers: [AdminController, AdminStatsController],
   providers: [AdminService, AdminRepository],
 })

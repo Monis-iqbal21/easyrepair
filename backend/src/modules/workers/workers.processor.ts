@@ -47,8 +47,8 @@ export class WorkersProcessor {
     void this.notificationsService.notify({
       userId,
       eventKey: 'worker.auto_offline',
-      title: 'You have been set offline',
-      body: 'You were automatically set offline after 7 hours. Go online again to receive new jobs.',
+      title: 'Aap offline ho gaye hain',
+      body: '7 ghantay baad aap automatically offline ho gaye hain. Naye kaam paane ke liye dobara online hon.',
       route: '/worker/home',
       entityType: 'worker',
       entityId: workerProfileId,

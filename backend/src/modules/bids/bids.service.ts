@@ -19,6 +19,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { ChatService } from '../chat/chat.service';
 import { WorkerUnavailableError } from '../../common/errors/worker-unavailable.error';
 import { haversineKm } from '../../common/utils/geo.util';
+import { calculatePlatformFee } from '../../common/utils/commission.util';
 
 @Injectable()
 export class BidsService {
@@ -334,13 +335,19 @@ export class BidsService {
       throw new BadRequestException('This bid is no longer available');
     }
 
+    // BIDDING has no parts concept — the accepted bid amount is the full
+    // labour/service commission base.
+    const finalPrice = Number(bid.amount);
+    const platformFee = calculatePlatformFee(finalPrice);
+
     let booking: Awaited<ReturnType<typeof this.bidsRepository.acceptBid>>;
     try {
       booking = await this.bidsRepository.acceptBid(
         bidId,
         bid.booking.id,
         bid.workerProfile.id,
-        Number(bid.amount),
+        finalPrice,
+        platformFee,
       );
     } catch (err) {
       if (err instanceof WorkerUnavailableError) {

@@ -180,13 +180,14 @@ export class InspectionReportsService {
     await this.bookingsService.setInspectionRepairPrice(
       bookingId,
       updated.repairQuoteTotal,
+      updated.labourCost,
     );
 
     if (booking.workerProfile?.userId) {
       void this.notificationsService.notify({
         userId: booking.workerProfile.userId,
         eventKey: 'booking.inspection.quote_accepted',
-        title: 'Quote Accepted',
+        title: 'Quote accept ho gaya hai',
         body: 'Client ne aap ka quote accept kar liya hai. Repair continue karein.',
         bookingId,
         route: `/worker/job/${bookingId}`,

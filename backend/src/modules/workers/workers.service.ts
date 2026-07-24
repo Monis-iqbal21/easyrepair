@@ -463,7 +463,11 @@ export class WorkersService {
       dto.lng,
     );
 
-    await this._syncAutoOfflineJob(
+    // Fire-and-forget: this talks to Redis/Bull and must never block or
+    // time out the Go Online response — the availability flip above has
+    // already committed by this point. Errors are caught inside the method
+    // and logged, never thrown, so this can't fail the request either way.
+    void this._syncAutoOfflineJob(
       profile.id,
       userId,
       previousStatus,
@@ -491,41 +495,49 @@ export class WorkersService {
   ): Promise<void> {
     const jobId = `auto-offline-${workerProfileId}`;
 
-    if (newStatus === AvailabilityStatus.ONLINE) {
-      if (previousStatus !== AvailabilityStatus.ONLINE) {
-        // True transition into ONLINE — remove any stale job and start a fresh timer.
+    try {
+      if (newStatus === AvailabilityStatus.ONLINE) {
+        if (previousStatus !== AvailabilityStatus.ONLINE) {
+          // True transition into ONLINE — remove any stale job and start a fresh timer.
+          const existing = await this.autoOfflineQueue.getJob(jobId);
+          if (existing) {
+            await existing.remove();
+            this.logger.log(
+              `[auto-offline] removed stale job on ONLINE transition for workerProfileId=${workerProfileId}`,
+            );
+          }
+          const data: AutoOfflineJobData = { workerProfileId, userId };
+          await this.autoOfflineQueue.add(AUTO_OFFLINE_JOB, data, {
+            jobId,
+            delay: AUTO_OFFLINE_DELAY_MS,
+            removeOnComplete: true,
+            removeOnFail: false,
+          });
+          this.logger.log(
+            `[auto-offline] scheduled in 7 h for workerProfileId=${workerProfileId}`,
+          );
+        } else {
+          // Already ONLINE — leave the existing delayed job untouched.
+          this.logger.debug(
+            `[auto-offline] already online, timer preserved for workerProfileId=${workerProfileId}`,
+          );
+        }
+      } else {
+        // Worker going OFFLINE or BUSY — cancel any pending auto-offline job.
         const existing = await this.autoOfflineQueue.getJob(jobId);
         if (existing) {
           await existing.remove();
           this.logger.log(
-            `[auto-offline] removed stale job on ONLINE transition for workerProfileId=${workerProfileId}`,
+            `[auto-offline] cancelled job (worker → ${newStatus}) for workerProfileId=${workerProfileId}`,
           );
         }
-        const data: AutoOfflineJobData = { workerProfileId, userId };
-        await this.autoOfflineQueue.add(AUTO_OFFLINE_JOB, data, {
-          jobId,
-          delay: AUTO_OFFLINE_DELAY_MS,
-          removeOnComplete: true,
-          removeOnFail: false,
-        });
-        this.logger.log(
-          `[auto-offline] scheduled in 7 h for workerProfileId=${workerProfileId}`,
-        );
-      } else {
-        // Already ONLINE — leave the existing delayed job untouched.
-        this.logger.debug(
-          `[auto-offline] already online, timer preserved for workerProfileId=${workerProfileId}`,
-        );
       }
-    } else {
-      // Worker going OFFLINE or BUSY — cancel any pending auto-offline job.
-      const existing = await this.autoOfflineQueue.getJob(jobId);
-      if (existing) {
-        await existing.remove();
-        this.logger.log(
-          `[auto-offline] cancelled job (worker → ${newStatus}) for workerProfileId=${workerProfileId}`,
-        );
-      }
+    } catch (err) {
+      // Never let a slow/unreachable Redis break Go Online — the
+      // availabilityStatus DB write already succeeded regardless of this.
+      this.logger.warn(
+        `[auto-offline] sync failed for workerProfileId=${workerProfileId}: ${(err as Error)?.message}`,
+      );
     }
   }
 

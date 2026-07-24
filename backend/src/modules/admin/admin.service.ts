@@ -4,12 +4,14 @@ import { AdminRepository, WorkerProfileAdminView } from './admin.repository';
 import { PendingWorkerResponseDto } from './dto/pending-worker-response.dto';
 import { AdminStatsResponseDto } from './dto/admin-stats-response.dto';
 import { AgreementsService } from '../agreements/agreements.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class AdminService {
   constructor(
     private readonly adminRepository: AdminRepository,
     private readonly agreementsService: AgreementsService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   /** GET /admin/workers/:id/agreements — permanent acceptance records + PDF URLs. */
@@ -66,6 +68,33 @@ export class AdminService {
       workerProfileId,
       reason,
     );
+
+    // Fire-and-forget push to the worker — must never block/fail the admin
+    // response. Guarded against an accidental rapid double-click on the
+    // admin "Request Changes" button (10s window) without permanently
+    // blocking a legitimate future changes-required cycle for this worker.
+    void (async () => {
+      const eventKey = 'worker.onboarding.changes_required';
+      const alreadySent = await this.notificationsService.wasRecentlyNotifiedForEntity(
+        updated.user.id,
+        'worker_profile',
+        workerProfileId,
+        eventKey,
+        10_000,
+      );
+      if (alreadySent) return;
+
+      void this.notificationsService.notify({
+        userId: updated.user.id,
+        eventKey,
+        title: 'Profile mein changes required hain',
+        body: 'Apni application check karein aur required changes complete karein.',
+        route: '/worker/profile-completion',
+        entityType: 'worker_profile',
+        entityId: workerProfileId,
+      });
+    })();
+
     return this._toDto(updated);
   }
 

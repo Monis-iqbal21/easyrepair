@@ -41,6 +41,7 @@ import { CreateReviewDto } from './dto/create-review.dto';
 import { StorageService } from '../storage/storage.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ChatService } from '../chat/chat.service';
+import { calculatePlatformFee } from '../../common/utils/commission.util';
 
 /** 72 hours in milliseconds — auto-expiry window for PENDING bookings, all lanes. */
 const BOOKING_EXPIRY_MS = 72 * 60 * 60 * 1000;
@@ -207,6 +208,17 @@ export class BookingsService {
       );
     });
 
+    // BIDDING has no direct-assign step — push nearby eligible workers
+    // immediately so they can bid in real time instead of only polling.
+    if (lane === BookingLane.BIDDING) {
+      void this._notifyNearbyWorkersForBidding(
+        booking.id,
+        category.id,
+        dto.latitude,
+        dto.longitude,
+      );
+    }
+
     return this._toDto(booking);
   }
 
@@ -281,8 +293,8 @@ export class BookingsService {
       void this.notificationsService.notify({
         userId: updated.workerProfile.userId,
         eventKey: 'booking.cancelled.by_client',
-        title: 'Job Cancelled',
-        body: `Client cancelled: ${reason}`,
+        title: 'Kaam cancel ho gaya',
+        body: `Client ne cancel kar diya: ${reason}`,
         bookingId,
         route: `/worker/job/${bookingId}`,
         actorUserId: userId,
@@ -539,8 +551,8 @@ export class BookingsService {
       void this.notificationsService.notify({
         userId: updated.workerProfile.userId,
         eventKey: 'booking.review.created',
-        title: 'New Review',
-        body: `Your client left you a ${dto.rating}-star review.`,
+        title: 'Naya review mila hai',
+        body: `Customer ne aapko ${dto.rating}-star review diya hai. App mein check karein.`,
         bookingId,
         route: `/worker/job/${bookingId}`,
         actorUserId: userId,
@@ -817,12 +829,20 @@ export class BookingsService {
           : booking.standardServicePriceSnapshot ?? undefined
         : booking.inspectionFeeSnapshot ?? undefined;
 
+    // Commission is computed on this same amount at assignment time — for
+    // STANDARD it's the final labour/service total; for INSPECTION it's the
+    // visit fee (only overwritten later if the customer accepts a repair
+    // quote, see setInspectionRepairPrice).
+    const platformFee =
+      finalPrice !== undefined ? calculatePlatformFee(finalPrice) : undefined;
+
     let updated: BookingWithRelations;
     try {
       updated = await this.bookingsRepository.assignWorkerToBooking(
         bookingId,
         workerProfileId,
         finalPrice,
+        platformFee,
       );
     } catch (err) {
       if (err instanceof WorkerUnavailableError) {
@@ -845,11 +865,11 @@ export class BookingsService {
       const hireBody =
         booking.lane === BookingLane.STANDARD
           ? 'Mubarak ho! Client ne aap ko Standard job ke liye hire kar liya hai.'
-          : "You've been assigned to a new job. Tap to view details.";
+          : 'Aapko ek naya kaam assign hua hai. Details app mein check karein.';
       void this.notificationsService.notify({
         userId: worker.userId,
         eventKey: 'booking.assigned',
-        title: 'New Job Assigned',
+        title: 'Naya kaam assign hua hai',
         body: hireBody,
         bookingId,
         route: `/worker/job/${bookingId}`,
@@ -1063,8 +1083,8 @@ export class BookingsService {
       void this.notificationsService.notify({
         userId: updated.workerProfile.userId,
         eventKey: 'booking.completed',
-        title: 'Job Completed',
-        body: 'Job successfully marked as completed.',
+        title: 'Kaam complete ho gaya',
+        body: 'Booking complete mark ho gayi hai.',
         bookingId,
         route: `/worker/job/${bookingId}`,
         actorUserId: userId,
@@ -1126,7 +1146,7 @@ export class BookingsService {
       void this.notificationsService.notify({
         userId: updated.workerProfile.userId,
         eventKey: 'booking.inspection.closed',
-        title: 'Inspection Closed',
+        title: 'Inspection band ho gayi',
         body: 'Client ne inspection ke baad job close kar di hai.',
         bookingId,
         route: `/worker/job/${bookingId}`,
@@ -1150,8 +1170,17 @@ export class BookingsService {
   async setInspectionRepairPrice(
     bookingId: string,
     repairQuoteTotal: number,
+    labourCost: number,
   ): Promise<void> {
-    await this.bookingsRepository.updateFinalPrice(bookingId, repairQuoteTotal);
+    // Commission is 18% of labourCost ONLY — repairQuoteTotal (the customer's
+    // payable amount) includes parts, which must never be commissioned or
+    // counted toward the worker's earning.
+    const platformFee = calculatePlatformFee(labourCost);
+    await this.bookingsRepository.updateFinalPrice(
+      bookingId,
+      repairQuoteTotal,
+      platformFee,
+    );
   }
 
   /**
@@ -1378,7 +1407,7 @@ export class BookingsService {
         void this.notificationsService.notify({
           userId,
           eventKey,
-          title: 'New Standard Job',
+          title: 'Naya standard kaam',
           body: 'Aap ko ek Standard job ke liye client ko suggest kiya ja raha hai.',
           bookingId,
           route: `/worker/jobs/${bookingId}`,
@@ -1389,6 +1418,66 @@ export class BookingsService {
     } catch (err) {
       this.logger.warn(
         `[worker-listed] notify failed for bookingId=${bookingId}: ${(err as Error)?.message}`,
+      );
+    }
+  }
+
+  /**
+   * BIDDING lane has no direct-assign step — workers otherwise only
+   * discover these jobs by polling "New Jobs". This pushes an immediate
+   * notification to nearby eligible workers (online, approved, active,
+   * available, matching category, within radius — same criteria as
+   * findNearbyWorkers everywhere else) right when the booking is created,
+   * so they can bid in real time. Deduped per booking/worker pair via the
+   * notifications table, same pattern as _notifyWorkersListedForStandardJob.
+   * Fire-and-forget — must never block or fail booking creation.
+   */
+  private async _notifyNearbyWorkersForBidding(
+    bookingId: string,
+    categoryId: string,
+    lat: number,
+    lng: number,
+  ): Promise<void> {
+    try {
+      const { workers } = await this.bookingsRepository.findNearbyWorkers({
+        categoryId,
+        lat,
+        lng,
+        lane: BookingLane.BIDDING,
+      });
+      if (workers.length === 0) return;
+
+      const userIdByWorkerId =
+        await this.bookingsRepository.findUserIdsByWorkerProfileIds(
+          workers.map((w) => w.id),
+        );
+
+      const eventKey = 'booking.bidding.available';
+      for (const w of workers) {
+        const userId = userIdByWorkerId.get(w.id);
+        if (!userId) continue;
+
+        const alreadyNotified = await this.notificationsService.wasAlreadyNotified(
+          userId,
+          bookingId,
+          eventKey,
+        );
+        if (alreadyNotified) continue;
+
+        void this.notificationsService.notify({
+          userId,
+          eventKey,
+          title: 'Naya bidding kaam available hai',
+          body: 'Qareebi customer ne kaam post kiya hai. Apni offer bhejein.',
+          bookingId,
+          route: `/worker/jobs/${bookingId}`,
+          entityType: 'booking',
+          entityId: bookingId,
+        });
+      }
+    } catch (err) {
+      this.logger.warn(
+        `[bidding-notify] failed for bookingId=${bookingId}: ${(err as Error)?.message}`,
       );
     }
   }

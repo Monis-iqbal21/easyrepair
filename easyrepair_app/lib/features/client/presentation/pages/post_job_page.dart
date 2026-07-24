@@ -1161,8 +1161,8 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     };
   }
 
-  // ── A. Service selection (kept for edit mode / future use) ───────────────
-  // ignore: unused_element
+  // ── A. Service selection — shown when no service was preselected (e.g.
+  // "Book Urgently", which pushes straight to this page with no category) ──
   Widget _buildServiceSection() {
     final categoriesAsync = ref.watch(clientBookingCategoriesProvider);
 
@@ -1234,6 +1234,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                     emojiBackgroundColor: categoryEmojiBgColor(cat.name),
                     imagePath: _serviceImagePath(cat.name),
                     isSelected: _selectedService == cat.name,
+                    locked: !kLaunchActiveServiceCategories.contains(cat.name),
                     onTap: () => setState(() => _selectedService = cat.name),
                   );
                 },
@@ -2381,13 +2382,25 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
 
   // ── Step 1: Service address ────────────────────────────────────────────────
   Widget _buildStep1() {
+    // Entry points like "Book Urgently" push here with no preselected
+    // service — show the category picker first so a category (and therefore
+    // standard services) can actually be resolved afterward.
+    final showServicePicker = !_isEditMode && _selectedService == null;
+
     return SingleChildScrollView(
       key: const ValueKey(0),
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [_buildLocationSection(), const SizedBox(height: 8)],
+        children: [
+          if (showServicePicker) ...[
+            _buildServiceSection(),
+            const SizedBox(height: 16),
+          ],
+          _buildLocationSection(),
+          const SizedBox(height: 8),
+        ],
       ),
     );
   }
@@ -3411,7 +3424,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
   // ── Mode B: "How inspection works" info card ───────────────────────────────
   Widget _buildInspectionInfoCard() {
     const steps = [
-      'Ustaads bid a small inspection fee.',
+      'Inspection fee fixed hai.',
       'Ustaad visits, finds the problem, and gives you a fixed repair quote '
           'in the app.',
       'Accept his quote and continue, or get bids from other Ustaads — your '

@@ -872,6 +872,9 @@ class _ServiceSection extends StatelessWidget {
                       emojiBackgroundColor: s.emojiBg,
                       imagePath: s.imagePath,
                       useImageStyle: true,
+                      locked: !kLaunchActiveServiceCategories.contains(
+                        s.backendName,
+                      ),
                       onTap: () => onItemTap(s),
                     ),
                   ),

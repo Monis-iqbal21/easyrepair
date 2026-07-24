@@ -906,6 +906,7 @@ export class BookingsRepository {
     bookingId: string,
     workerProfileId: string,
     finalPrice?: number,
+    platformFee?: number,
   ): Promise<BookingWithRelations> {
     await this.prisma.$transaction(async (tx) => {
       await tx.booking.update({
@@ -915,6 +916,7 @@ export class BookingsRepository {
           status: BookingStatus.ACCEPTED,
           acceptedAt: new Date(),
           finalPrice: finalPrice ?? undefined,
+          platformFee: platformFee ?? undefined,
         },
       });
 
@@ -1046,11 +1048,20 @@ export class BookingsRepository {
     });
   }
 
-  /** Overwrite the confirmed final price (e.g. INSPECTION quote acceptance). */
-  async updateFinalPrice(bookingId: string, finalPrice: number): Promise<void> {
+  /**
+   * Overwrite the confirmed final price and its commission fee (e.g.
+   * INSPECTION quote acceptance) — the two are always set together so
+   * `platformFee` never drifts from whatever `finalPrice`/commission base
+   * it was actually computed from.
+   */
+  async updateFinalPrice(
+    bookingId: string,
+    finalPrice: number,
+    platformFee?: number,
+  ): Promise<void> {
     await this.prisma.booking.update({
       where: { id: bookingId },
-      data: { finalPrice },
+      data: { finalPrice, platformFee: platformFee ?? undefined },
     });
   }
 

@@ -87,6 +87,17 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
   /// True while the user is actively dragging the map.
   bool _isDragging = false;
 
+  /// Debounces reverse-geocode calls until the map has been idle for a beat —
+  /// cancelled on every new move/idle so a quick series of drags only ever
+  /// spends one API call, on the final settled position.
+  Timer? _geocodeDebounce;
+
+  /// Bumped on every new reverse-geocode attempt. A response is only applied
+  /// if it's still the latest one requested — guards against a slow/
+  /// out-of-order network response from an earlier position overwriting the
+  /// address for a position the user has since moved to.
+  int _geocodeGeneration = 0;
+
   // ── Search ─────────────────────────────────────────────────────────────────
   final _searchCtrl  = TextEditingController();
   bool _searching    = false;
@@ -123,6 +134,7 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
   void dispose() {
     _searchCtrl.dispose();
     _debounce?.cancel();
+    _geocodeDebounce?.cancel();
     _mapCtrl?.dispose();
     _geoDio.close(force: true);
     super.dispose();
@@ -193,6 +205,7 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
 
   Future<void> _resolveAndSet(LatLng latlng) async {
     if (!mounted) return;
+    final myGeneration = ++_geocodeGeneration;
     setState(() {
       _picked           = latlng;
       _cameraCenter     = latlng;
@@ -201,6 +214,10 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
     });
     final address = await _reverseGeocode(latlng);
     if (!mounted) return;
+    // A newer request has since started (user moved the map again before
+    // this one returned) — drop this stale result instead of overwriting a
+    // fresher selection with an out-of-order response.
+    if (myGeneration != _geocodeGeneration) return;
     setState(() {
       _addressLabel     = address;
       _reverseGeocoding = false;
@@ -219,9 +236,12 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
   void _onCameraMove(CameraPosition pos) {
     _cameraCenter = pos.target;
     if (!_isDragging) setState(() => _isDragging = true);
+    // A new gesture is in progress — drop any pending debounced geocode from
+    // a previous idle so it can never fire against a now-stale position.
+    _geocodeDebounce?.cancel();
   }
 
-  Future<void> _onCameraIdle() async {
+  void _onCameraIdle() {
     if (mounted) setState(() => _isDragging = false);
     if (_skipNextIdle) {
       _skipNextIdle = false;
@@ -229,7 +249,13 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
     }
     final center = _cameraCenter;
     if (center == null) return;
-    await _resolveAndSet(center);
+
+    // Debounce ~600ms so a quick series of small drag-stops only spends one
+    // reverse-geocode call, on the position the map actually settles at.
+    _geocodeDebounce?.cancel();
+    _geocodeDebounce = Timer(const Duration(milliseconds: 600), () {
+      if (mounted) _resolveAndSet(center);
+    });
   }
 
   // ── Places Autocomplete ────────────────────────────────────────────────────
@@ -322,6 +348,10 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
       }
 
       if (!mounted) return;
+      // Invalidate any in-flight/pending drag-based geocode so it can never
+      // overwrite this prediction-selected address if it resolves later.
+      _geocodeDebounce?.cancel();
+      _geocodeGeneration++;
       setState(() {
         _picked           = latlng;
         _cameraCenter     = latlng;

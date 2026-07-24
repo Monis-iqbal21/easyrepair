@@ -93,4 +93,32 @@ export class NotificationsRepository {
     });
     return found !== null;
   }
+
+  /**
+   * Check whether this exact eventKey/entityId/userId notification was sent
+   * within the last [sinceMs] — used to guard non-booking events (e.g. admin
+   * onboarding actions) against accidental duplicates from a rapid
+   * double-click, without permanently blocking a legitimate future repeat of
+   * the same event (unlike existsForBookingAndUser, which is an unbounded
+   * check appropriate only for one-time-per-booking events).
+   */
+  async existsRecentForEntity(
+    userId: string,
+    entityType: string,
+    entityId: string,
+    eventKey: string,
+    sinceMs: number,
+  ): Promise<boolean> {
+    const found = await this.prisma.notification.findFirst({
+      where: {
+        userId,
+        entityType,
+        entityId,
+        eventKey,
+        createdAt: { gte: new Date(Date.now() - sinceMs) },
+      },
+      select: { id: true },
+    });
+    return found !== null;
+  }
 }

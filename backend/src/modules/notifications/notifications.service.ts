@@ -150,6 +150,23 @@ export class NotificationsService {
     );
   }
 
+  /** See NotificationsRepository.existsRecentForEntity. */
+  async wasRecentlyNotifiedForEntity(
+    userId: string,
+    entityType: string,
+    entityId: string,
+    eventKey: string,
+    sinceMs: number,
+  ): Promise<boolean> {
+    return this.notificationsRepository.existsRecentForEntity(
+      userId,
+      entityType,
+      entityId,
+      eventKey,
+      sinceMs,
+    );
+  }
+
   async getNotifications(userId: string): Promise<Notification[]> {
     return this.notificationsRepository.findByUserId(userId);
   }

@@ -5,6 +5,11 @@ import {
   computeCancellationRate,
   computeCompletedJobs,
 } from '../../common/utils/worker-stats.util';
+import {
+  calculateCommissionBase,
+  calculatePlatformFee,
+  calculateWorkerEarning,
+} from '../../common/utils/commission.util';
 
 // ---------------------------------------------------------------------------
 // Worker profile include
@@ -352,14 +357,24 @@ export class WorkersRepository {
             },
           },
         }),
-        // Today's completed bookings with pricing for earnings
+        // Today's completed bookings with pricing for earnings. For
+        // INSPECTION-lane jobs, finalPrice is labour+parts merged — the
+        // related InspectionReport.labourCost/decisionStatus are what
+        // calculateCommissionBase uses to exclude parts correctly.
         this.prisma.booking.findMany({
           where: {
             workerProfileId,
             status: BookingStatus.COMPLETED,
             completedAt: { gte: todayStart },
           },
-          select: { finalPrice: true, platformFee: true },
+          select: {
+            lane: true,
+            finalPrice: true,
+            platformFee: true,
+            inspectionReport: {
+              select: { labourCost: true, decisionStatus: true },
+            },
+          },
         }),
         // Shared helper — single source of truth, see worker-stats.util.ts
         computeCancellationRate(this.prisma, workerProfileId),
@@ -370,10 +385,22 @@ export class WorkersRepository {
         }),
       ]);
 
-    // Earnings = sum of (finalPrice - platformFee) for completed jobs today
+    // Earnings = sum of (commission base - platformFee) for completed jobs
+    // today, using the same calculateCommissionBase/calculateWorkerEarning
+    // helpers as the rest of the commission engine — see commission.util.ts
+    // for exactly how parts are excluded per lane/decision.
     const todayEarnings = todayCompleted.reduce((sum, b) => {
-      const earned = (b.finalPrice ?? 0) - (b.platformFee ?? 0);
-      return sum + Math.max(0, earned);
+      const commissionBase = calculateCommissionBase({
+        lane: b.lane,
+        finalPrice: b.finalPrice,
+        inspectionReport: b.inspectionReport,
+      });
+      if (commissionBase === null) return sum;
+      // Bookings completed before platformFee was persisted at
+      // assign/accept time — computed safely here rather than requiring a
+      // backfill/migration of historical rows.
+      const platformFee = b.platformFee ?? calculatePlatformFee(commissionBase);
+      return sum + calculateWorkerEarning(commissionBase, platformFee);
     }, 0);
 
     // Average response time in minutes; null when no acceptedAt data exists

@@ -841,7 +841,7 @@ class _SummaryCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           const Text(
-            'Inspection fee is not added here — it is waived if the client continues repair, or charged alone if they close after inspection.',
+            'Agar customer repair continue karwata hai to inspection fee waive ho jayegi.',
             style: TextStyle(color: Colors.white60, fontSize: 11.5, height: 1.4),
           ),
         ],

@@ -4,6 +4,17 @@ import '../../../../core/presentation/responsive_utils.dart';
 
 const _kAccent = Color(0xFF1D9E75);
 
+/// Only these categories are launch-approved for booking. Any other category
+/// (by name) renders as a locked "Coming Soon" tile wherever [ServiceCard] is
+/// used — home page and the booking-form category picker alike — without
+/// touching the backend or deleting/deactivating anything in the DB.
+const Set<String> kLaunchActiveServiceCategories = {
+  'AC Technician',
+  'Electrician',
+  'Plumber',
+  'Carpenter',
+};
+
 class ServiceCard extends StatelessWidget {
   final String title;
   final String emoji;
@@ -18,6 +29,10 @@ class ServiceCard extends StatelessWidget {
   /// When false (booking form selector) it uses the emoji+Book Now layout.
   final bool useImageStyle;
 
+  /// When true, renders a dimmed "Coming Soon" tile and disables tapping
+  /// regardless of [onTap].
+  final bool locked;
+
   const ServiceCard({
     super.key,
     required this.title,
@@ -28,27 +43,31 @@ class ServiceCard extends StatelessWidget {
     this.isSelected = false,
     this.imagePath,
     this.useImageStyle = false,
+    this.locked = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final effectiveOnTap = locked ? null : onTap;
+
     // Homepage / image-tile style: always use _ImageTile (with emoji fallback).
     if (useImageStyle || imagePath != null) {
       return GestureDetector(
-        onTap: onTap,
+        onTap: effectiveOnTap,
         child: _ImageTile(
           imagePath: imagePath,
           emoji: emoji,
           title: title,
           backgroundColor: backgroundColor,
           emojiBackgroundColor: emojiBackgroundColor,
+          locked: locked,
         ),
       );
     }
 
     // Booking form selector style: emoji + Book Now / Selected badge.
     return GestureDetector(
-      onTap: onTap,
+      onTap: effectiveOnTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         decoration: BoxDecoration(
@@ -68,6 +87,7 @@ class ServiceCard extends StatelessWidget {
           title: title,
           emojiBackgroundColor: emojiBackgroundColor,
           isSelected: isSelected,
+          locked: locked,
         ),
       ),
     );
@@ -84,6 +104,7 @@ class _ImageTile extends StatelessWidget {
   final String title;
   final Color backgroundColor;
   final Color emojiBackgroundColor;
+  final bool locked;
 
   const _ImageTile({
     required this.imagePath,
@@ -91,6 +112,7 @@ class _ImageTile extends StatelessWidget {
     required this.title,
     required this.backgroundColor,
     required this.emojiBackgroundColor,
+    this.locked = false,
   });
 
   @override
@@ -105,14 +127,42 @@ class _ImageTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
           child: AspectRatio(
             aspectRatio: 1 / 0.55,
-            child: imagePath != null
-                ? Image.asset(
-                    imagePath!,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => _placeholder(),
-                  )
-                : _placeholder(),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                imagePath != null
+                    ? Image.asset(
+                        imagePath!,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => _placeholder(),
+                      )
+                    : _placeholder(),
+                if (locked) ...[
+                  Container(color: Colors.black.withValues(alpha: 0.45)),
+                  Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Text(
+                        'Coming Soon',
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF1A1A1A),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ),
         ),
         const SizedBox(height: 6),
@@ -121,7 +171,7 @@ class _ImageTile extends StatelessWidget {
           style: TextStyle(
             fontSize: titleSize,
             fontWeight: FontWeight.w700,
-            color: const Color(0xFF1A1A1A),
+            color: locked ? const Color(0xFF94A3B8) : const Color(0xFF1A1A1A),
           ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
@@ -146,12 +196,14 @@ class _EmojiLayout extends StatelessWidget {
   final String title;
   final Color emojiBackgroundColor;
   final bool isSelected;
+  final bool locked;
 
   const _EmojiLayout({
     required this.emoji,
     required this.title,
     required this.emojiBackgroundColor,
     required this.isSelected,
+    this.locked = false,
   });
 
   @override
@@ -175,21 +227,21 @@ class _EmojiLayout extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF1A1A1A),
+              color: locked ? const Color(0xFF94A3B8) : const Color(0xFF1A1A1A),
             ),
           ),
           const SizedBox(height: 6),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
-              color: _kAccent,
+              color: locked ? const Color(0xFF94A3B8) : _kAccent,
               borderRadius: BorderRadius.circular(6),
             ),
             child: Text(
-              isSelected ? 'Selected ✓' : 'Book Now',
+              locked ? 'Coming Soon' : (isSelected ? 'Selected ✓' : 'Book Now'),
               style: const TextStyle(
                 fontSize: 11,
                 color: Colors.white,

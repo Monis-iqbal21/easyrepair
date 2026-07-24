@@ -2293,7 +2293,14 @@ class _ActionButtons extends ConsumerWidget {
             icon: Icons.chat_bubble_outline_rounded,
             color: _kGreen,
             bgColor: const Color(0xFFFFF0EB),
-            onTap: () => openClientChatForBooking(context, ref, booking.id),
+            // Client-facing endpoint (workerProfileId-based) — has no
+            // booking-status restriction, so this still works after the job
+            // is COMPLETED, unlike the worker-only "for-booking" endpoint.
+            onTap: () => openClientChatWithWorker(
+              context,
+              ref,
+              booking.assignedWorker!.id,
+            ),
           ),
         if (showChat && (canEdit || showCancel)) const SizedBox(height: 10),
         if (canEdit)

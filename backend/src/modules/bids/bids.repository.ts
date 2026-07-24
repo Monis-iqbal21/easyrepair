@@ -214,6 +214,7 @@ export class BidsRepository {
     bookingId: string,
     workerProfileId: string,
     finalPrice: number,
+    platformFee: number,
   ) {
     return this.prisma.$transaction(async (tx) => {
       // Accept the chosen bid
@@ -229,9 +230,9 @@ export class BidsRepository {
       });
 
       // Assign worker and transition booking to ACCEPTED.
-      // finalPrice is set here (mirroring assignWorkerToBooking's STANDARD/
-      // INSPECTION behavior) so completion and worker earnings read the
-      // accepted bid amount instead of staying null.
+      // finalPrice/platformFee are set here (mirroring assignWorkerToBooking's
+      // STANDARD/INSPECTION behavior) so completion and worker earnings read
+      // the accepted bid amount instead of staying null.
       const booking = await tx.booking.update({
         where: { id: bookingId },
         data: {
@@ -239,6 +240,7 @@ export class BidsRepository {
           status: BookingStatus.ACCEPTED,
           acceptedAt: new Date(),
           finalPrice,
+          platformFee,
         },
         include: {
           category: { select: { name: true } },

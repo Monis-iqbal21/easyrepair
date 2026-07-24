@@ -159,7 +159,10 @@ class NewJobsNotifier extends AsyncNotifier<List<NewJobEntity>> {
   List<NewJobEntity> _applyFilter(List<NewJobEntity> jobs) {
     return switch (_filter) {
       NewJobFilter.myBids => jobs.where((j) => j.hasMyBid).toList(),
-      NewJobFilter.notBidYet => jobs.where((j) => !j.hasMyBid).toList(),
+      // Standard/Inspection are direct-assign lanes — bidding doesn't apply
+      // to them at all, so they must never appear as "not yet bid on".
+      NewJobFilter.notBidYet =>
+        jobs.where((j) => !j.hasMyBid && !j.isDirectAssignLane).toList(),
       NewJobFilter.all => jobs,
     };
   }
