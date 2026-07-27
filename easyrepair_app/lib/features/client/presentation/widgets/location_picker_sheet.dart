@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show Factory;
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -605,6 +607,15 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
             onTap                 : _onMapTap,
             onCameraMove          : _onCameraMove,
             onCameraIdle          : _onCameraIdle,
+            // Claim pan/drag gestures immediately so they can't be won by the
+            // enclosing modal bottom sheet's drag-to-dismiss detector — without
+            // this, dragging the map was being interpreted as a swipe to close
+            // the sheet instead of panning the camera.
+            gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
+              Factory<OneSequenceGestureRecognizer>(
+                () => EagerGestureRecognizer(),
+              ),
+            },
             markers               : const {},
             mapType               : MapType.normal,
             myLocationEnabled     : true,

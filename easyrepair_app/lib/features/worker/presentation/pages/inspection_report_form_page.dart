@@ -422,7 +422,7 @@ class _InspectionReportFormPageState
                             child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                           )
                         : const Text(
-                            'Submit Report',
+                            'Report submit karain',
                             style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
                           ),
                   ),
@@ -823,8 +823,8 @@ class _SummaryCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _line('Parts total', formatPkr(partsTotal)),
-          _line('Labour', formatPkr(labourCost)),
+          _line('Parts ki total raqam', formatPkr(partsTotal)),
+          _line('Mazdoori', formatPkr(labourCost)),
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 8),
             child: Divider(height: 1, color: Colors.white24),
@@ -832,7 +832,7 @@ class _SummaryCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Repair quote total', style: TextStyle(color: Colors.white, fontSize: 15.5, fontWeight: FontWeight.w800)),
+              const Text('Kam ki puri raqam', style: TextStyle(color: Colors.white, fontSize: 15.5, fontWeight: FontWeight.w800)),
               Text(
                 formatPkr(finalQuote),
                 style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w900),

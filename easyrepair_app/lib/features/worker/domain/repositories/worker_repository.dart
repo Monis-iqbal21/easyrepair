@@ -10,6 +10,7 @@ import '../entities/category_entity.dart';
 import '../entities/new_job_entity.dart';
 import '../entities/worker_review_entity.dart';
 import '../entities/agreement_template_entity.dart';
+import '../entities/earning_history_entity.dart';
 
 abstract class WorkerRepository {
   Future<Either<Failure, WorkerProfileEntity>> getProfile();
@@ -69,4 +70,7 @@ abstract class WorkerRepository {
 
   /// Returns aggregate rating stats (average + total count).
   Future<Either<Failure, WorkerReviewSummaryEntity>> getWorkerReviewSummary();
+
+  /// All-time completed-job earnings grouped by date (gross, newest first).
+  Future<Either<Failure, List<EarningHistoryDayEntity>>> getEarningsHistory();
 }

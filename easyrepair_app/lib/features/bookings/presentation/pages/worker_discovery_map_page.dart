@@ -388,6 +388,7 @@ class _BidsSheet extends ConsumerWidget {
                       key: ValueKey(pending[index].bid.id),
                       bidWorker: pending[index],
                       bookingId: booking.id,
+                      isPostInspectionReopen: booking.inspectingWorker != null,
                     );
                   },
                   childCount: pending.length * 2 - 1,
@@ -429,10 +430,17 @@ class _BidOfferCard extends ConsumerWidget {
   final BidWithWorkerEntity bidWorker;
   final String bookingId;
 
+  /// True when this bid is on a job reopened after inspection (the booking
+  /// still has an original inspecting Ustaad) — hiring this bidder is hiring
+  /// a DIFFERENT worker than whoever inspected, so the client must be told
+  /// the inspection fee is charged separately from this bid.
+  final bool isPostInspectionReopen;
+
   const _BidOfferCard({
     super.key,
     required this.bidWorker,
     required this.bookingId,
+    this.isPostInspectionReopen = false,
   });
 
   @override
@@ -630,9 +638,30 @@ class _BidOfferCard extends ConsumerWidget {
             color: _kDark,
           ),
         ),
-        content: Text(
-          'Accept ${bidWorker.fullName}\'s bid of ${formatPkr(bidWorker.bid.amount)}?',
-          style: const TextStyle(fontSize: 13, color: _kGray),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Accept ${bidWorker.fullName}\'s bid of ${formatPkr(bidWorker.bid.amount)}?',
+              style: const TextStyle(fontSize: 13, color: _kGray),
+            ),
+            if (isPostInspectionReopen) ...[
+              const SizedBox(height: 10),
+              const Text(
+                'Inspection karne wale Ustaad ko inspection fee alag deni '
+                'hogi. Naya Ustaad apne offer ke mutabiq kaam ki puri raqam '
+                'charge karega. Inspection fee uske offer mein adjust nahi '
+                'hogi.',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  color: _kAmber,
+                  fontWeight: FontWeight.w600,
+                  height: 1.4,
+                ),
+              ),
+            ],
+          ],
         ),
         actions: [
           TextButton(

@@ -2,6 +2,7 @@ import { BookingLane, InspectionDecisionStatus } from '@prisma/client';
 import {
   PLATFORM_COMMISSION_RATE,
   calculateCommissionBase,
+  calculateGrossWorkerEarning,
   calculatePlatformFee,
   calculateWorkerEarning,
 } from './commission.util';
@@ -129,6 +130,62 @@ describe('commission.util', () => {
       expect(base).toBe(acceptedBid);
       expect(platformFee).toBe(540);
       expect(workerEarning).toBe(2460);
+    });
+  });
+
+  describe('calculateGrossWorkerEarning', () => {
+    // Worker-facing earnings (home dashboard, job detail, earning history)
+    // must show the full gross amount, never the commission-deducted net.
+    it('returns the full finalPrice for STANDARD, not the net amount', () => {
+      const gross = calculateGrossWorkerEarning({
+        lane: BookingLane.STANDARD,
+        finalPrice: 1000,
+      });
+      expect(gross).toBe(1000);
+      expect(gross).not.toBe(
+        calculateWorkerEarning(1000, calculatePlatformFee(1000)),
+      );
+    });
+
+    it('returns the full accepted bid amount for BIDDING', () => {
+      expect(
+        calculateGrossWorkerEarning({
+          lane: BookingLane.BIDDING,
+          finalPrice: 2500,
+        }),
+      ).toBe(2500);
+    });
+
+    it('excludes parts and returns only labourCost for an accepted INSPECTION repair', () => {
+      expect(
+        calculateGrossWorkerEarning({
+          lane: BookingLane.INSPECTION,
+          finalPrice: 3000,
+          inspectionReport: {
+            labourCost: 1800,
+            decisionStatus: InspectionDecisionStatus.ACCEPTED_REPAIR,
+          },
+        }),
+      ).toBe(1800);
+    });
+
+    it('returns the inspection fee itself when closed after inspection', () => {
+      expect(
+        calculateGrossWorkerEarning({
+          lane: BookingLane.INSPECTION,
+          finalPrice: 800,
+          inspectionReport: null,
+        }),
+      ).toBe(800);
+    });
+
+    it('returns 0 (never null) when finalPrice was never set', () => {
+      expect(
+        calculateGrossWorkerEarning({
+          lane: BookingLane.STANDARD,
+          finalPrice: null,
+        }),
+      ).toBe(0);
     });
   });
 });

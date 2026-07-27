@@ -30,8 +30,11 @@ export class AdminService {
    * GET /admin/workers/:id — full detail for one worker, regardless of
    * onboarding stage (works before submission and after approve/reject too).
    */
-  async getWorkerById(workerProfileId: string): Promise<PendingWorkerResponseDto> {
-    const worker = await this.adminRepository.findWorkerByIdFull(workerProfileId);
+  async getWorkerById(
+    workerProfileId: string,
+  ): Promise<PendingWorkerResponseDto> {
+    const worker =
+      await this.adminRepository.findWorkerByIdFull(workerProfileId);
     if (!worker) throw new NotFoundException('Worker profile not found');
     return this._toDto(worker);
   }
@@ -42,9 +45,39 @@ export class AdminService {
   }
 
   /** PATCH /admin/workers/:id/approve */
-  async approveWorker(workerProfileId: string): Promise<PendingWorkerResponseDto> {
+  async approveWorker(
+    workerProfileId: string,
+  ): Promise<PendingWorkerResponseDto> {
     await this._ensureExists(workerProfileId);
     const updated = await this.adminRepository.approve(workerProfileId);
+
+    // Fire-and-forget push to the worker — must never block/fail the admin
+    // response. Guarded against a retried/double-clicked admin approval
+    // (10s window) the same way requestChanges is, without permanently
+    // blocking a genuinely new approval cycle for this worker.
+    void (async () => {
+      const eventKey = 'worker.onboarding.approved';
+      const alreadySent =
+        await this.notificationsService.wasRecentlyNotifiedForEntity(
+          updated.user.id,
+          'worker_profile',
+          workerProfileId,
+          eventKey,
+          10_000,
+        );
+      if (alreadySent) return;
+
+      void this.notificationsService.notify({
+        userId: updated.user.id,
+        eventKey,
+        title: 'Apki Profile Approve hogai hy',
+        body: 'Apki Profile Approve hogai hy. App khol kar dekhein.',
+        route: '/worker/home',
+        entityType: 'worker_profile',
+        entityId: workerProfileId,
+      });
+    })();
+
     return this._toDto(updated);
   }
 
@@ -75,13 +108,14 @@ export class AdminService {
     // blocking a legitimate future changes-required cycle for this worker.
     void (async () => {
       const eventKey = 'worker.onboarding.changes_required';
-      const alreadySent = await this.notificationsService.wasRecentlyNotifiedForEntity(
-        updated.user.id,
-        'worker_profile',
-        workerProfileId,
-        eventKey,
-        10_000,
-      );
+      const alreadySent =
+        await this.notificationsService.wasRecentlyNotifiedForEntity(
+          updated.user.id,
+          'worker_profile',
+          workerProfileId,
+          eventKey,
+          10_000,
+        );
       if (alreadySent) return;
 
       const trimmedReason = reason?.trim();

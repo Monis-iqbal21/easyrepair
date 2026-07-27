@@ -1,3 +1,4 @@
+import { BadRequestException } from '@nestjs/common';
 import { WorkersService } from './workers.service';
 
 describe('WorkersService.updateAvailability', () => {
@@ -96,5 +97,127 @@ describe('WorkersService.updateAvailability', () => {
       ),
     ]);
     expect(result).toBeDefined();
+  });
+});
+
+/** Minimal booking shape satisfying WorkersService._toJobDto's field reads. */
+function makeCancelJobFixture(status: string, workerProfileId = 'worker-1') {
+  return {
+    id: 'booking-1',
+    workerProfileId,
+    category: { name: 'Electrician' },
+    title: null,
+    description: 'Fix the socket',
+    status,
+    urgency: 'NORMAL',
+    timeSlot: null,
+    scheduledAt: null,
+    createdAt: new Date(),
+    inspection: false,
+    lane: 'STANDARD',
+    standardServiceItems: [],
+    urgentWindow: null,
+    acceptedAt: new Date(),
+    enRouteAt: null,
+    arrivedAt: null,
+    startedAt: null,
+    completedAt: null,
+    cancellationReason: null,
+    cancelledByRole: null,
+    estimatedPrice: null,
+    finalPrice: null,
+    inspectionFeeSnapshot: null,
+    addressLine: 'House 1',
+    city: 'Karachi',
+    latitude: 24.86,
+    longitude: 67.0,
+    clientProfile: {
+      firstName: 'Ali',
+      lastName: 'Khan',
+      user: { phone: '+923001234567' },
+    },
+    attachments: [],
+    statusHistory: [],
+    review: null,
+    inspectionReport: null,
+  };
+}
+
+describe('WorkersService.cancelJob', () => {
+  let workersRepository: any;
+  let notificationsService: any;
+  let service: WorkersService;
+
+  beforeEach(() => {
+    workersRepository = {
+      findByUserId: jest.fn().mockResolvedValue({ id: 'worker-1' }),
+      findJobByIdAndWorkerProfileId: jest.fn(),
+      cancelJobByWorker: jest.fn(),
+    };
+    notificationsService = { notify: jest.fn().mockResolvedValue(undefined) };
+    service = new WorkersService(
+      workersRepository,
+      notificationsService,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+  });
+
+  // Must match BookingEntity.canWorkerCancel in the Flutter app — ACCEPTED,
+  // EN_ROUTE, or ARRIVED. A mismatch here means the Flutter UI shows a
+  // Cancel button the backend then silently rejects, so the job never
+  // actually reaches CANCELLED (and so never shows up in the worker's
+  // Cancelled tab).
+  it.each(['ACCEPTED', 'EN_ROUTE', 'ARRIVED'])(
+    'allows cancelling a job with status %s',
+    async (status) => {
+      workersRepository.findJobByIdAndWorkerProfileId.mockResolvedValue(
+        makeCancelJobFixture(status),
+      );
+      workersRepository.cancelJobByWorker.mockResolvedValue(
+        makeCancelJobFixture('CANCELLED'),
+      );
+
+      await expect(
+        service.cancelJob('user-1', 'booking-1', 'changed my mind'),
+      ).resolves.toBeDefined();
+      expect(workersRepository.cancelJobByWorker).toHaveBeenCalledWith(
+        'booking-1',
+        'worker-1',
+        'changed my mind',
+      );
+    },
+  );
+
+  it('rejects cancelling a job that is already IN_PROGRESS', async () => {
+    workersRepository.findJobByIdAndWorkerProfileId.mockResolvedValue(
+      makeCancelJobFixture('IN_PROGRESS'),
+    );
+
+    await expect(
+      service.cancelJob('user-1', 'booking-1'),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(workersRepository.cancelJobByWorker).not.toHaveBeenCalled();
+  });
+
+  it('notifies the client when the worker cancels', async () => {
+    workersRepository.findJobByIdAndWorkerProfileId.mockResolvedValue(
+      makeCancelJobFixture('ARRIVED'),
+    );
+    workersRepository.cancelJobByWorker.mockResolvedValue({
+      ...makeCancelJobFixture('CANCELLED'),
+      clientProfile: {
+        ...makeCancelJobFixture('CANCELLED').clientProfile,
+        userId: 'client-user-1',
+      },
+    });
+
+    await service.cancelJob('user-1', 'booking-1');
+
+    expect(notificationsService.notify).toHaveBeenCalledTimes(1);
+    const call = notificationsService.notify.mock.calls[0][0];
+    expect(call.userId).toBe('client-user-1');
+    expect(call.eventKey).toBe('booking.cancelled.by_worker');
   });
 });

@@ -32,9 +32,14 @@ export interface CommissionBaseInput {
  * Returns null when there is nothing to base a commission on (e.g. finalPrice
  * was never set) — callers should treat that booking as contributing 0.
  */
-export function calculateCommissionBase(input: CommissionBaseInput): number | null {
+export function calculateCommissionBase(
+  input: CommissionBaseInput,
+): number | null {
   if (input.lane === BookingLane.INSPECTION && input.inspectionReport) {
-    if (input.inspectionReport.decisionStatus === InspectionDecisionStatus.ACCEPTED_REPAIR) {
+    if (
+      input.inspectionReport.decisionStatus ===
+      InspectionDecisionStatus.ACCEPTED_REPAIR
+    ) {
       return input.inspectionReport.labourCost;
     }
     return input.finalPrice;
@@ -53,4 +58,18 @@ export function calculateWorkerEarning(
   platformFee: number,
 ): number {
   return Math.max(0, Math.round((commissionBase - platformFee) * 100) / 100);
+}
+
+/**
+ * The worker-facing gross earning for a completed booking — the full
+ * pre-commission amount (same value `calculatePlatformFee`'s 18% is computed
+ * from), exposed under a clearer name for earnings/stats/history display.
+ * Worker-facing screens must always show this, never `calculateWorkerEarning`
+ * — HandyGo's commission is a company-accounting concern only, never
+ * presented to the Ustaad as a deduction from their own earning.
+ */
+export function calculateGrossWorkerEarning(
+  input: CommissionBaseInput,
+): number {
+  return calculateCommissionBase(input) ?? 0;
 }

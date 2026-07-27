@@ -14,6 +14,7 @@ import '../../domain/entities/category_entity.dart';
 import '../../domain/entities/new_job_entity.dart';
 import '../../domain/entities/worker_review_entity.dart';
 import '../../domain/entities/agreement_template_entity.dart';
+import '../../domain/entities/earning_history_entity.dart';
 import '../../domain/repositories/worker_repository.dart';
 import '../datasources/worker_remote_datasource.dart';
 
@@ -319,6 +320,19 @@ class WorkerRepositoryImpl implements WorkerRepository {
     try {
       final model = await _datasource.getWorkerReviewSummary();
       return Right(model.toEntity());
+    } on DioException catch (e) {
+      return Left(dioExceptionToFailure(e));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<EarningHistoryDayEntity>>>
+      getEarningsHistory() async {
+    try {
+      final models = await _datasource.getEarningsHistory();
+      return Right(models.map((m) => m.toEntity()).toList());
     } on DioException catch (e) {
       return Left(dioExceptionToFailure(e));
     } catch (e) {

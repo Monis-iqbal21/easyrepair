@@ -16,6 +16,7 @@ import '../../../../core/presentation/pages/general_info_page.dart';
 import '../../../../core/presentation/pages/privacy_policy_page.dart';
 import '../../../../core/presentation/pages/terms_conditions_page.dart';
 import '../pages/worker_reviews_page.dart';
+import '../pages/earning_history_page.dart';
 import '../providers/worker_providers.dart';
 import '../providers/worker_review_providers.dart';
 import '../widgets/worker_bottom_nav_bar.dart';
@@ -375,10 +376,19 @@ class _WorkerProfilePageState extends ConsumerState<WorkerProfilePage> {
                         _SettingsItem(
                           icon: Icons.star_outline_rounded,
                           label: 'Mere Reviews',
-                          showDivider: false,
                           onTap: () => Navigator.of(context).push(
                             MaterialPageRoute(
                               builder: (_) => const WorkerReviewsPage(),
+                            ),
+                          ),
+                        ),
+                        _SettingsItem(
+                          icon: Icons.savings_outlined,
+                          label: 'Earning History',
+                          showDivider: false,
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const EarningHistoryPage(),
                             ),
                           ),
                         ),

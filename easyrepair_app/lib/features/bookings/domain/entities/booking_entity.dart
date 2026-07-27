@@ -140,15 +140,16 @@ extension BookingCancellationX on BookingEntity {
   bool get canClientCancel =>
       status == BookingStatus.pending || status == BookingStatus.accepted;
 
-  /// Worker can cancel any time before starting the job — ACCEPTED, EN_ROUTE,
-  /// or ARRIVED. Once IN_PROGRESS (work/inspection actually started) — and
-  /// therefore also once a report has been submitted, a decision has been
-  /// made, or the job is completed — cancelling is no longer allowed.
-  /// Applies to all lanes.
+  /// Worker can cancel an assigned job any time up through IN_PROGRESS —
+  /// ACCEPTED, EN_ROUTE, ARRIVED, or IN_PROGRESS. Once a decision has been
+  /// made or the job is completed/cancelled, cancelling is no longer
+  /// possible. Applies to all lanes. Must match BookingsService
+  /// .workerCancelBooking's cancellable set on the backend exactly.
   bool get canWorkerCancel =>
       status == BookingStatus.accepted ||
       status == BookingStatus.enRoute ||
-      status == BookingStatus.arrived;
+      status == BookingStatus.arrived ||
+      status == BookingStatus.inProgress;
 
   /// INSPECTION-lane-specific alias for [canWorkerCancel] — identical rule,
   /// kept as a distinct getter for call sites that want to assert the lane

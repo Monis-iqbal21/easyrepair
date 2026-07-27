@@ -645,7 +645,13 @@ export class BookingsRepository {
       return a.distanceMeters - b.distanceMeters;
     });
     const recommendedCount =
-      ranked.length >= 6 ? 3 : ranked.length >= 3 ? 2 : ranked.length >= 1 ? 1 : 0;
+      ranked.length >= 6
+        ? 3
+        : ranked.length >= 3
+          ? 2
+          : ranked.length >= 1
+            ? 1
+            : 0;
     const recommendedIds = new Set(
       ranked.slice(0, recommendedCount).map((w) => w.id),
     );
@@ -1209,50 +1215,35 @@ export class BookingsRepository {
   }
 
   /**
-   * Worker cancels before starting the job (ACCEPTED/EN_ROUTE/ARRIVED): free
-   * the worker, record a BookingWorkerExclusion row (so this worker never
-   * reappears for this booking, surviving relist), clear the assignment, and
-   * return the booking to PENDING so the client can choose a new worker —
-   * reusing all existing exclusion/nearby-worker logic with zero extra
-   * branching.
+   * Worker cancels an assigned job (ACCEPTED/EN_ROUTE/ARRIVED/IN_PROGRESS):
+   * terminally CANCELS the booking — status CANCELLED, cancelledByRole
+   * WORKER, reason preserved, workerProfileId left untouched so the
+   * cancelling worker still sees it in their own My Jobs → Cancelled/history.
+   * Deliberately does NOT return the booking to PENDING/New Jobs — the
+   * client must post a new booking (or use "Find Other Ustaad" for
+   * INSPECTION) rather than have it silently reassigned to a different
+   * worker.
    */
   async workerCancelBooking(
     bookingId: string,
     workerProfileId: string,
     reason: string,
-    expiresAt: Date,
-    liveStartedAt: Date,
   ): Promise<BookingWithRelations> {
     await this.prisma.$transaction(async (tx) => {
       await tx.booking.update({
         where: { id: bookingId },
         data: {
-          status: BookingStatus.PENDING,
-          workerProfileId: null,
-          acceptedAt: null,
-          enRouteAt: null,
-          // Reset now that ARRIVED is a cancellable state too — a re-hired
-          // worker's timeline must not inherit the previous worker's arrival.
-          arrivedAt: null,
+          status: BookingStatus.CANCELLED,
+          cancelledAt: new Date(),
           cancellationReason: reason,
           cancelledByRole: 'WORKER',
-          expiresAt,
-          liveStartedAt,
         },
-      });
-
-      await tx.bookingWorkerExclusion.upsert({
-        where: {
-          bookingId_workerProfileId: { bookingId, workerProfileId },
-        },
-        create: { bookingId, workerProfileId, reason },
-        update: { reason },
       });
 
       await tx.bookingStatusHistory.create({
         data: {
           bookingId,
-          status: BookingStatus.PENDING,
+          status: BookingStatus.CANCELLED,
           note: `Worker cancelled: ${reason}`,
         },
       });

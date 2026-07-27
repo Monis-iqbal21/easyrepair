@@ -2577,7 +2577,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Text(
-              'Masla samajhna humara kaam hai — aap ka nahi.',
+              'Masla samajhna hamara kaam hai — aapka nahi.',
               style: TextStyle(
                 fontSize: 12.5,
                 fontWeight: FontWeight.w600,
@@ -2591,7 +2591,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
               lane: BookingLane.standard,
               icon: Icons.build_circle_rounded,
               title: 'Standard kaam',
-              subtitle: 'Lagwana, nikalwana, ya service',
+              subtitle: 'Kaam aur qeemat pehle se clear.',
             ),
             const SizedBox(height: 10),
           ],
@@ -2627,8 +2627,11 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
               child: const Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.warning_amber_rounded,
-                      size: 16, color: Color(0xFF8A5A08)),
+                  Icon(
+                    Icons.warning_amber_rounded,
+                    size: 16,
+                    color: Color(0xFF8A5A08),
+                  ),
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -2656,11 +2659,11 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     return GestureDetector(
       onTap: enabled
           ? () => setState(() {
-                _laneChoice = BookingLane.inspection;
-                _selectedStandardServices.clear();
-              })
+              _laneChoice = BookingLane.inspection;
+              _selectedStandardServices.clear();
+            })
           : () =>
-              _showError('Is service ke liye inspection available nahi hai.'),
+                _showError('Is service ke liye inspection available nahi hai.'),
       child: Opacity(
         opacity: enabled ? 1 : 0.45,
         child: AnimatedContainer(
@@ -2717,8 +2720,10 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                     ),
                   ),
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 7,
+                      vertical: 3,
+                    ),
                     decoration: BoxDecoration(
                       color: _kGreen,
                       borderRadius: BorderRadius.circular(5),
@@ -2735,67 +2740,82 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              Container(
-                width: double.infinity,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                decoration: BoxDecoration(
-                  color: _kCream,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Aane ki fee',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF7A4520),
+              // Full detail (fee, steps, guarantee note) only when Inspection
+              // is the SELECTED lane — otherwise this card must stay a
+              // compact option like Standard's, or its full detail block
+              // pushes Standard's fixed-price services section (which
+              // renders right after the whole lane selector) far down the
+              // screen whenever Standard is actually selected.
+              if (selected) ...[
+                const SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _kCream,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Inspection Fee',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF7A4520),
+                        ),
                       ),
-                    ),
-                    Text(
-                      fee != null ? formatPkr(fee) : '—',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFFC2541D),
+                      Text(
+                        fee != null ? formatPkr(fee) : '—',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFFC2541D),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 13),
-              _heroStep(1, 'Ustaad aa kar khud check karega'),
-              const SizedBox(height: 9),
-              _heroStep(2, 'App mein report aur pakka rate bhejega'),
-              const SizedBox(height: 9),
-              _heroStep(
-                  3, 'Pasand aaye to karwa lein, warna sirf aane ki fee'),
-              const SizedBox(height: 12),
-              Container(
-                width: double.infinity,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                decoration: const BoxDecoration(
-                  color: Color(0xFFF0FDF4),
-                  borderRadius:
-                      BorderRadius.horizontal(right: Radius.circular(9)),
-                  border: Border(
-                    left: BorderSide(color: Color(0xFF22C55E), width: 3),
+                    ],
                   ),
                 ),
-                child: const Text(
-                  'Rate batane se pehle kuch nahi khulta — jo kaha, wohi liya.',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    height: 1.35,
-                    color: Color(0xFF166534),
+                const SizedBox(height: 13),
+                _heroStep(1, 'Ustaad aa kar khud check karega'),
+                const SizedBox(height: 9),
+                _heroStep(2, 'Kaam shuru karne se pehle rate clear hoga.'),
+                const SizedBox(height: 9),
+                _heroStep(
+                  3,
+                  'Pasand aaye to kaam karwa lein, warna sirf inspection fee dein.',
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF0FDF4),
+                    borderRadius: BorderRadius.horizontal(
+                      right: Radius.circular(9),
+                    ),
+                    border: Border(
+                      left: BorderSide(color: Color(0xFF22C55E), width: 3),
+                    ),
+                  ),
+                  child: const Text(
+                    'Rate batane se pehle kuch nahi khulta — jo kaha, wohi liya.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      height: 1.35,
+                      color: Color(0xFF166534),
+                    ),
                   ),
                 ),
-              ),
+              ],
             ],
           ),
         ),
@@ -2850,11 +2870,11 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     return GestureDetector(
       onTap: enabled
           ? () => setState(() {
-                _laneChoice = lane;
-                if (lane != BookingLane.standard) {
-                  _selectedStandardServices.clear();
-                }
-              })
+              _laneChoice = lane;
+              if (lane != BookingLane.standard) {
+                _selectedStandardServices.clear();
+              }
+            })
           : () => _showError(subtitle),
       child: Opacity(
         opacity: enabled ? 1 : 0.45,
@@ -2880,8 +2900,11 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                   borderRadius: BorderRadius.circular(11),
                   border: selected ? null : Border.all(color: _kBorder),
                 ),
-                child: Icon(icon,
-                    size: 18, color: selected ? Colors.white : _kGray),
+                child: Icon(
+                  icon,
+                  size: 18,
+                  color: selected ? Colors.white : _kGray,
+                ),
               ),
               const SizedBox(width: 11),
               Expanded(
@@ -2923,9 +2946,9 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     return GestureDetector(
       onTap: enabled
           ? () => setState(() {
-                _laneChoice = lane;
-                _selectedStandardServices.clear();
-              })
+              _laneChoice = lane;
+              _selectedStandardServices.clear();
+            })
           : () => _showError(subtitle),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
@@ -2948,8 +2971,11 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                 color: selected ? _kGreen : const Color(0xFFF1F2F4),
                 borderRadius: BorderRadius.circular(9),
               ),
-              child: Icon(icon,
-                  size: 14, color: selected ? Colors.white : _kGray),
+              child: Icon(
+                icon,
+                size: 14,
+                color: selected ? Colors.white : _kGray,
+              ),
             ),
             const SizedBox(width: 10),
             Expanded(

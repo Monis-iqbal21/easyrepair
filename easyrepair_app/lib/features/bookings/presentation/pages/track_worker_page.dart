@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart' show Factory;
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -46,7 +48,20 @@ class _TrackWorkerPageState extends ConsumerState<TrackWorkerPage> {
     // live without being an aggressive poll (per product spec: 10-15s while
     // this page is open).
     _refreshTimer = Timer.periodic(const Duration(seconds: 12), (_) {
-      if (mounted) ref.invalidate(bookingDetailProvider(widget.bookingId));
+      if (!mounted) return;
+      // Stop polling once the job is no longer live/trackable (e.g. the
+      // worker cancelled mid-job) — there's nothing left to track live.
+      final status =
+          ref.read(bookingDetailProvider(widget.bookingId)).valueOrNull?.status;
+      final isTerminal = status == BookingStatus.completed ||
+          status == BookingStatus.cancelled ||
+          status == BookingStatus.rejected ||
+          status == BookingStatus.expired;
+      if (isTerminal) {
+        _refreshTimer?.cancel();
+        return;
+      }
+      ref.invalidate(bookingDetailProvider(widget.bookingId));
     });
   }
 
@@ -226,7 +241,22 @@ class _TrackingMap extends StatefulWidget {
 class _TrackingMapState extends State<_TrackingMap> {
   GoogleMapController? _mapCtrl;
   BitmapDescriptor? _workerIcon;
-  String? _iconLoadedForUrl;
+  String? _iconLoadedForKey;
+
+  /// The avatar circle's radius as a fraction of the composited icon's total
+  /// height — used as the marker anchor so the pin still points at the
+  /// worker's actual coordinate, not the name label below it.
+  double _workerIconAnchorY = 1.0;
+
+  /// True once the client has manually panned/zoomed the map. After that,
+  /// the periodic booking-refresh poll (every 12s, see
+  /// _TrackWorkerPageState) must never force the camera again — only the
+  /// client's own gestures move it from here on.
+  bool _userInteracted = false;
+
+  /// Set right before this widget's own animateCamera call so the resulting
+  /// onCameraMoveStarted isn't mistaken for a user gesture.
+  bool _isProgrammaticCameraMove = false;
 
   bool get _hasJobLoc =>
       widget.booking.latitude != 0 || widget.booking.longitude != 0;
@@ -253,71 +283,161 @@ class _TrackingMapState extends State<_TrackingMap> {
   }
 
   void _maybeLoadWorkerIcon() {
-    final avatarUrl = widget.booking.assignedWorker?.avatarUrl;
-    if (avatarUrl == null || avatarUrl.isEmpty) return;
-    if (avatarUrl == _iconLoadedForUrl) return;
-    _iconLoadedForUrl = avatarUrl;
-    _buildAvatarMarkerIcon(avatarUrl).then((icon) {
-      if (!mounted || icon == null || _iconLoadedForUrl != avatarUrl) return;
-      setState(() => _workerIcon = icon);
+    final worker = widget.booking.assignedWorker;
+    if (worker == null) return;
+    final key = '${worker.avatarUrl}|${worker.firstName}';
+    if (key == _iconLoadedForKey) return;
+    _iconLoadedForKey = key;
+    _buildWorkerMarkerIcon(worker.firstName, worker.avatarUrl).then((built) {
+      if (!mounted || built == null || _iconLoadedForKey != key) return;
+      setState(() {
+        _workerIcon = built.icon;
+        _workerIconAnchorY = built.anchorY;
+      });
     });
   }
 
-  /// Composites the worker's avatar into a circular map marker (green ring,
-  /// white border). Returns null on any failure (missing image, decode
-  /// error, network timeout) so the caller falls back to a colored pin —
-  /// this must never crash the tracking page.
-  Future<BitmapDescriptor?> _buildAvatarMarkerIcon(String avatarUrl) async {
+  /// Composites the worker's avatar (or initials, if no photo) plus an
+  /// always-visible name label into one marker bitmap — InfoWindow only
+  /// shows on tap, but the client needs the Ustaad's name visible at a
+  /// glance while tracking. Returns null on any failure (missing image,
+  /// decode error, network timeout) so the caller falls back to a plain
+  /// colored pin — this must never crash the tracking page.
+  Future<({BitmapDescriptor icon, double anchorY})?> _buildWorkerMarkerIcon(
+    String name,
+    String? avatarUrl,
+  ) async {
     try {
-      final completer = Completer<ui.Image>();
-      final stream = NetworkImage(avatarUrl).resolve(const ImageConfiguration());
-      late final ImageStreamListener listener;
-      listener = ImageStreamListener(
-        (info, _) {
-          completer.complete(info.image);
-          stream.removeListener(listener);
-        },
-        onError: (error, stack) {
-          if (!completer.isCompleted) completer.completeError(error, stack);
-          stream.removeListener(listener);
-        },
-      );
-      stream.addListener(listener);
-      final image = await completer.future.timeout(const Duration(seconds: 6));
+      const avatarSize = 128.0;
+      const gap = 6.0;
+      const labelHeight = 34.0;
+      const canvasWidth = 160.0;
+      const canvasHeight = avatarSize + gap + labelHeight;
+      const avatarCenter = Offset(canvasWidth / 2, avatarSize / 2);
+      const avatarRadius = avatarSize / 2;
 
-      const size = 128.0;
+      ui.Image? avatarImage;
+      if (avatarUrl != null && avatarUrl.isNotEmpty) {
+        avatarImage = await _loadNetworkImage(avatarUrl);
+      }
+
       final recorder = ui.PictureRecorder();
       final canvas = Canvas(recorder);
-      const center = Offset(size / 2, size / 2);
-      const radius = size / 2;
 
-      canvas.drawCircle(center, radius, Paint()..color = _kGreen);
-      canvas.drawCircle(center, radius - 5, Paint()..color = Colors.white);
-      canvas.save();
-      canvas.clipPath(
-        Path()..addOval(Rect.fromCircle(center: center, radius: radius - 8)),
+      canvas.drawCircle(avatarCenter, avatarRadius, Paint()..color = _kGreen);
+      canvas.drawCircle(
+        avatarCenter,
+        avatarRadius - 5,
+        Paint()..color = Colors.white,
       );
-      canvas.drawImageRect(
-        image,
-        Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
-        const Rect.fromLTWH(8, 8, size - 16, size - 16),
-        Paint(),
+      if (avatarImage != null) {
+        canvas.save();
+        canvas.clipPath(
+          Path()..addOval(
+            Rect.fromCircle(center: avatarCenter, radius: avatarRadius - 8),
+          ),
+        );
+        canvas.drawImageRect(
+          avatarImage,
+          Rect.fromLTWH(
+            0,
+            0,
+            avatarImage.width.toDouble(),
+            avatarImage.height.toDouble(),
+          ),
+          Rect.fromCircle(center: avatarCenter, radius: avatarRadius - 8),
+          Paint(),
+        );
+        canvas.restore();
+      } else {
+        final initials = name.isNotEmpty ? name[0].toUpperCase() : '?';
+        final initialsPainter = TextPainter(
+          text: TextSpan(
+            text: initials,
+            style: const TextStyle(
+              color: _kGreen,
+              fontSize: 40,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          textDirection: ui.TextDirection.ltr,
+        )..layout();
+        initialsPainter.paint(
+          canvas,
+          avatarCenter -
+              Offset(initialsPainter.width / 2, initialsPainter.height / 2),
+        );
+      }
+
+      final namePainter = TextPainter(
+        text: TextSpan(
+          text: name,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        textDirection: ui.TextDirection.ltr,
+        maxLines: 1,
+        ellipsis: '…',
+      )..layout(maxWidth: canvasWidth - 16);
+
+      final labelRect = Rect.fromLTWH(
+        (canvasWidth - (namePainter.width + 20)) / 2,
+        avatarSize + gap,
+        namePainter.width + 20,
+        labelHeight,
       );
-      canvas.restore();
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(labelRect, const Radius.circular(15)),
+        Paint()..color = _kDark,
+      );
+      namePainter.paint(
+        canvas,
+        Offset(
+          labelRect.left + 10,
+          labelRect.top + (labelHeight - namePainter.height) / 2,
+        ),
+      );
 
       final rendered = await recorder.endRecording().toImage(
-            size.toInt(),
-            size.toInt(),
+            canvasWidth.toInt(),
+            canvasHeight.toInt(),
           );
       final bytes = await rendered.toByteData(format: ui.ImageByteFormat.png);
       if (bytes == null) return null;
-      return BitmapDescriptor.bytes(bytes.buffer.asUint8List());
+      return (
+        icon: BitmapDescriptor.bytes(bytes.buffer.asUint8List()),
+        anchorY: avatarSize / 2 / canvasHeight,
+      );
     } catch (_) {
       return null;
     }
   }
 
+  Future<ui.Image> _loadNetworkImage(String url) async {
+    final completer = Completer<ui.Image>();
+    final stream = NetworkImage(url).resolve(const ImageConfiguration());
+    late final ImageStreamListener listener;
+    listener = ImageStreamListener(
+      (info, _) {
+        completer.complete(info.image);
+        stream.removeListener(listener);
+      },
+      onError: (error, stack) {
+        if (!completer.isCompleted) completer.completeError(error, stack);
+        stream.removeListener(listener);
+      },
+    );
+    stream.addListener(listener);
+    return completer.future.timeout(const Duration(seconds: 6));
+  }
+
   void _fitBounds() {
+    // Respect the client's own pan/zoom — the 12s poll must not keep
+    // yanking the camera back to a fit bounds view once they've taken over.
+    if (_userInteracted) return;
     final worker = widget.booking.assignedWorker;
     if (worker?.currentLat == null || worker?.currentLng == null || !_hasJobLoc) {
       return;
@@ -331,6 +451,7 @@ class _TrackingMapState extends State<_TrackingMap> {
       minLng = math.min(minLng, p.longitude);
       maxLng = math.max(maxLng, p.longitude);
     }
+    _isProgrammaticCameraMove = true;
     _mapCtrl?.animateCamera(
       CameraUpdate.newLatLngBounds(
         LatLngBounds(
@@ -340,6 +461,14 @@ class _TrackingMapState extends State<_TrackingMap> {
         60,
       ),
     );
+  }
+
+  void _onCameraMoveStarted() {
+    if (_isProgrammaticCameraMove) {
+      _isProgrammaticCameraMove = false;
+    } else {
+      _userInteracted = true;
+    }
   }
 
   Set<Marker> _buildMarkers() {
@@ -365,6 +494,10 @@ class _TrackingMapState extends State<_TrackingMap> {
           position: LatLng(worker!.currentLat!, worker.currentLng!),
           icon: _workerIcon ??
               BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
+          // The composited icon has the name label below the avatar circle,
+          // so the anchor must point at the circle's center, not the image
+          // center, or the pin would visually sit south of the actual fix.
+          anchor: Offset(0.5, _workerIcon != null ? _workerIconAnchorY : 1.0),
           infoWindow: InfoWindow(title: worker.fullName),
         ),
       );
@@ -420,10 +553,20 @@ class _TrackingMapState extends State<_TrackingMap> {
                 _mapCtrl = c;
                 _fitBounds();
               },
+              onCameraMoveStarted: _onCameraMoveStarted,
               zoomControlsEnabled: false,
               myLocationButtonEnabled: false,
               myLocationEnabled: false,
               mapToolbarEnabled: false,
+              // This map sits inside the page's SingleChildScrollView — claim
+              // pan/zoom gestures within its own bounds immediately so they
+              // aren't lost to the page's scroll gesture (same fix as the
+              // client location picker and the worker job-location map).
+              gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
+                Factory<OneSequenceGestureRecognizer>(
+                  () => EagerGestureRecognizer(),
+                ),
+              },
             ),
           ),
           if (worker != null && !hasWorkerLoc)

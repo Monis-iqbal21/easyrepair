@@ -7,6 +7,7 @@ import '../../domain/entities/booking_entity.dart';
 import '../../domain/entities/inspection_report_entity.dart';
 import '../providers/booking_providers.dart';
 import '../widgets/media_attachment_widgets.dart';
+import 'worker_discovery_map_page.dart';
 
 const _kPrimary = Color(0xFFDB6234);
 const _kPrimaryLight = Color(0xFFF5E8E0);
@@ -417,7 +418,18 @@ class _ReportBody extends ConsumerWidget {
             behavior: SnackBarBehavior.floating,
           ),
         );
-        Navigator.of(context).pop();
+        // findOtherUstaad's _run already pushed the reopened booking into
+        // bookingDetailProvider, so this resolves immediately without a
+        // network round-trip. Go straight to the existing bidding/find-
+        // workers page instead of just popping back to booking details.
+        final booking = await ref.read(bookingDetailProvider(bookingId).future);
+        if (context.mounted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (_) => WorkerDiscoveryMapPage(booking: booking),
+            ),
+          );
+        }
       }
     } catch (e) {
       if (context.mounted) {

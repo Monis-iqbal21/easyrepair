@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:intl/intl.dart';
 
 import '../../../../core/utils/currency_utils.dart';
 import '../../../notifications/presentation/providers/notification_providers.dart';
+import '../../data/repositories/worker_repository_impl.dart';
 import '../../domain/entities/worker_profile_entity.dart';
 import '../../domain/entities/ongoing_job_entity.dart';
 import '../../domain/entities/category_entity.dart';
@@ -212,7 +215,7 @@ class _ProfileCompletionBanner extends StatelessWidget {
 //
 // Left: the worker's main skill (e.g. "Electrician") — logout moved to
 // Profile/settings, it no longer lives on Home top-left.
-// Right: notification bell.
+// Right: current area/road label, then the notification bell.
 
 class _Header extends ConsumerWidget {
   const _Header();
@@ -239,6 +242,8 @@ class _Header extends ConsumerWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ),
+          const _LocationLabel(),
+          const SizedBox(width: 10),
           // Notification bell
           GestureDetector(
             onTap: () => context.push('/notifications'),
@@ -296,6 +301,170 @@ class _Header extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Current area/road label — tap to manually refresh live location ───────────
+//
+// Shows a short area/road name (never a full address). Tapping re-fetches the
+// device's current position (bounded permission + GPS timeouts), reverse-
+// geocodes it, and — only if it moved meaningfully from the background
+// tracker's last synced fix — pushes it to the backend via the same
+// /workers/location endpoint the tracker itself uses, so client-side worker
+// discovery reflects it immediately without waiting for the next tracker
+// tick. Entirely self-contained: never touches LocationTrackerNotifier's own
+// state/timer, so it can't interfere with the existing background tracker.
+class _LocationLabel extends ConsumerStatefulWidget {
+  const _LocationLabel();
+
+  @override
+  ConsumerState<_LocationLabel> createState() => _LocationLabelState();
+}
+
+class _LocationLabelState extends ConsumerState<_LocationLabel> {
+  static const _movedThresholdMeters = 40.0;
+
+  String? _label;
+  bool _loading = false;
+  bool _error = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _refresh();
+  }
+
+  Future<void> _refresh() async {
+    if (_loading) return;
+    setState(() {
+      _loading = true;
+      _error = false;
+    });
+
+    try {
+      var perm =
+          await Geolocator.checkPermission().timeout(const Duration(seconds: 3));
+      if (perm == LocationPermission.denied) {
+        perm = await Geolocator.requestPermission();
+      }
+      if (perm == LocationPermission.denied ||
+          perm == LocationPermission.deniedForever) {
+        if (mounted) setState(() => _error = true);
+        return;
+      }
+
+      final pos = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 8),
+        ),
+      );
+
+      final marks = await placemarkFromCoordinates(pos.latitude, pos.longitude)
+          .timeout(const Duration(seconds: 6));
+      String? label;
+      if (marks.isNotEmpty) {
+        final m = marks.first;
+        if (m.thoroughfare != null && m.thoroughfare!.isNotEmpty) {
+          label = m.thoroughfare;
+        } else if (m.subLocality != null && m.subLocality!.isNotEmpty) {
+          label = m.subLocality;
+        } else if (m.locality != null && m.locality!.isNotEmpty) {
+          label = m.locality;
+        }
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _label = label;
+        _error = label == null;
+      });
+
+      // Push to the backend only if this fix meaningfully differs from the
+      // background tracker's last synced position — avoids spamming an
+      // update for a worker who hasn't actually moved.
+      final tracker = ref.read(locationTrackerProvider);
+      final movedMeaningfully = tracker.lastSyncedLat == null ||
+          tracker.lastSyncedLng == null ||
+          Geolocator.distanceBetween(
+                tracker.lastSyncedLat!,
+                tracker.lastSyncedLng!,
+                pos.latitude,
+                pos.longitude,
+              ) >
+              _movedThresholdMeters;
+      if (movedMeaningfully) {
+        await ref
+            .read(workerRepositoryProvider)
+            .updateLocationOnly(lat: pos.latitude, lng: pos.longitude);
+      }
+    } catch (_) {
+      if (mounted) setState(() => _error = true);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final text = _loading
+        ? 'Locating…'
+        : _error
+            ? 'Tap to retry'
+            : (_label ?? 'Tap for location');
+
+    return GestureDetector(
+      onTap: _refresh,
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 110),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 8,
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (_loading)
+              const SizedBox(
+                width: 12,
+                height: 12,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: _kOrange,
+                ),
+              )
+            else
+              Icon(
+                _error
+                    ? Icons.location_off_outlined
+                    : Icons.location_on_rounded,
+                size: 14,
+                color: _error ? _kGray : _kOrange,
+              ),
+            const SizedBox(width: 5),
+            Flexible(
+              child: Text(
+                text,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: _error ? _kGray : _kDark,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -818,16 +987,50 @@ class _ActiveJobCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
-            Align(
-              alignment: Alignment.centerRight,
-              child: Text(
-                'View details →',
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: _kOrange,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                GestureDetector(
+                  onTap: () =>
+                      context.push('/worker/job/${job.id}?openMap=true'),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 7,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _kOrange.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: _kOrange.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.map_outlined, size: 14, color: _kOrange),
+                        SizedBox(width: 5),
+                        Text(
+                          'Map',
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                            color: _kOrange,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
+                const Text(
+                  'View details →',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: _kOrange,
+                  ),
+                ),
+              ],
             ),
           ],
         ),

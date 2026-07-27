@@ -255,16 +255,15 @@ export class WorkersController {
     @Param('id') id: string,
     @Body('status') status: string,
   ) {
-    if (status !== BookingStatus.EN_ROUTE && status !== BookingStatus.IN_PROGRESS) {
+    if (
+      status !== BookingStatus.EN_ROUTE &&
+      status !== BookingStatus.IN_PROGRESS
+    ) {
       throw new BadRequestException(
         "status must be 'EN_ROUTE' or 'IN_PROGRESS'",
       );
     }
-    return this.workersService.updateJobStatus(
-      user.id,
-      id,
-      status as 'EN_ROUTE' | 'IN_PROGRESS',
-    );
+    return this.workersService.updateJobStatus(user.id, id, status);
   }
 
   /**
@@ -285,10 +284,7 @@ export class WorkersController {
   /** PATCH /workers/jobs/:id/complete — mark an active job as COMPLETED */
   @Patch('jobs/:id/complete')
   @HttpCode(HttpStatus.OK)
-  completeJob(
-    @CurrentUser() user: { id: string },
-    @Param('id') id: string,
-  ) {
+  completeJob(@CurrentUser() user: { id: string }, @Param('id') id: string) {
     return this.workersService.completeJob(user.id, id);
   }
 
@@ -316,5 +312,16 @@ export class WorkersController {
   @Get('reviews/summary')
   getWorkerReviewSummary(@CurrentUser() user: { id: string }) {
     return this.workersService.getWorkerReviewSummary(user.id);
+  }
+
+  // ── Earnings ─────────────────────────────────────────────────────────────
+
+  /**
+   * GET /workers/earnings/history
+   * All-time completed-job earnings grouped by date (gross, newest first).
+   */
+  @Get('earnings/history')
+  getEarningsHistory(@CurrentUser() user: { id: string }) {
+    return this.workersService.getEarningsHistory(user.id);
   }
 }

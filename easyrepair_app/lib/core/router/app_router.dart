@@ -164,6 +164,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/worker/job/:id',
         builder: (_, state) => WorkerJobDetailPage(
           jobId: state.pathParameters['id']!,
+          openMapOnLoad: state.uri.queryParameters['openMap'] == 'true',
         ),
       ),
       GoRoute(

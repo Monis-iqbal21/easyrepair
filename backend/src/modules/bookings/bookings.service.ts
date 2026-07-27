@@ -156,7 +156,10 @@ export class BookingsService {
       standardServicePriceSnapshot = resolved.standardServicePriceSnapshot;
       estimatedPrice = resolved.estimatedPrice;
     } else if (lane === BookingLane.INSPECTION) {
-      if (category.inspectionFee === null || category.inspectionFee === undefined) {
+      if (
+        category.inspectionFee === null ||
+        category.inspectionFee === undefined
+      ) {
         throw new BadRequestException(
           `Inspection is not available for "${category.name}".`,
         );
@@ -198,7 +201,9 @@ export class BookingsService {
       liveStartedAt: now,
     });
 
-    this.logger.log(`[createBooking] created bookingId=${booking.id} lane=${lane}`);
+    this.logger.log(
+      `[createBooking] created bookingId=${booking.id} lane=${lane}`,
+    );
 
     // Fire-and-forget: expiry scheduling talks to Redis/Bull and must never
     // block or fail the booking-creation response.
@@ -617,7 +622,9 @@ export class BookingsService {
       fileName: uploaded.fileName,
       mimeType: uploaded.mimeType,
       sizeBytes: uploaded.sizeBytes,
-      durationSeconds: Number.isFinite(durationSeconds) ? durationSeconds : undefined,
+      durationSeconds: Number.isFinite(durationSeconds)
+        ? durationSeconds
+        : undefined,
     });
 
     return {
@@ -869,7 +876,11 @@ export class BookingsService {
       );
     }
 
-    if (booking.workerExclusions.some((e) => e.workerProfileId === workerProfileId)) {
+    if (
+      booking.workerExclusions.some(
+        (e) => e.workerProfileId === workerProfileId,
+      )
+    ) {
       throw new BadRequestException(
         'This Ustaad is not eligible for this booking.',
       );
@@ -908,8 +919,8 @@ export class BookingsService {
               (sum, item) => sum + item.priceSnapshot * item.quantity,
               0,
             )
-          : booking.standardServicePriceSnapshot ?? undefined
-        : booking.inspectionFeeSnapshot ?? undefined;
+          : (booking.standardServicePriceSnapshot ?? undefined)
+        : (booking.inspectionFeeSnapshot ?? undefined);
 
     // Commission is computed on this same amount at assignment time — for
     // STANDARD it's the final labour/service total; for INSPECTION it's the
@@ -979,7 +990,8 @@ export class BookingsService {
   ): Promise<BookingWithRelations> {
     const workerProfile =
       await this.bookingsRepository.findWorkerProfileByUserId(userId);
-    if (!workerProfile) throw new ForbiddenException('Worker profile not found');
+    if (!workerProfile)
+      throw new ForbiddenException('Worker profile not found');
 
     const booking = await this.bookingsRepository.findBookingById(bookingId);
     if (!booking) throw new NotFoundException('Booking not found');
@@ -1361,11 +1373,12 @@ export class BookingsService {
   }
 
   /**
-   * POST /bookings/:id/worker-cancel — worker cancels before starting the job.
-   * Only allowed while status is ACCEPTED, EN_ROUTE, or ARRIVED — once the
-   * page would show "In Progress" the cancel button must already be hidden
-   * client-side, and the backend enforces the same rule so a stale client
-   * can't bypass it.
+   * POST /bookings/:id/worker-cancel — worker cancels an assigned job.
+   * Allowed while status is ACCEPTED, EN_ROUTE, ARRIVED, or IN_PROGRESS.
+   * Terminally cancels the booking (status CANCELLED) rather than returning
+   * it to PENDING — it must never silently reappear in New Jobs for another
+   * worker to pick up; the client has to post a new booking (or, for
+   * INSPECTION, use "Find Other Ustaad").
    */
   async workerCancelBooking(
     userId: string,
@@ -1373,41 +1386,27 @@ export class BookingsService {
     reason: string,
   ): Promise<BookingResponseDto> {
     const booking = await this._authorizeAssignedWorker(userId, bookingId);
-    // Worker may cancel any time before starting the job (ACCEPTED/EN_ROUTE/
-    // ARRIVED) — once IN_PROGRESS (inspection/repair actually started), or
-    // once a report/decision exists on an INSPECTION booking, cancellation
-    // is no longer allowed. Matches BookingEntity.canWorkerCancel on Flutter.
+    // Matches BookingEntity.canWorkerCancel on Flutter.
     const cancellable: BookingStatus[] = [
       BookingStatus.ACCEPTED,
       BookingStatus.EN_ROUTE,
       BookingStatus.ARRIVED,
+      BookingStatus.IN_PROGRESS,
     ];
     if (!cancellable.includes(booking.status)) {
       throw new BadRequestException(
-        `Cannot cancel a job with status ${booking.status}. Workers may only cancel before starting the job.`,
+        `Cannot cancel a job with status ${booking.status}.`,
       );
     }
 
     const workerProfile =
       await this.bookingsRepository.findWorkerProfileByUserId(userId);
 
-    // Booking is live/searching again — restart its 72h expiry window.
-    const now = new Date();
-    const expiresAt = new Date(now.getTime() + BOOKING_EXPIRY_MS);
-
     const updated = await this.bookingsRepository.workerCancelBooking(
       bookingId,
       workerProfile!.id,
       reason,
-      expiresAt,
-      now,
     );
-
-    void this._scheduleExpiry(bookingId, expiresAt).catch((err) => {
-      this.logger.warn(
-        `[expiry] scheduleExpiry failed for bookingId=${bookingId}: ${(err as Error)?.message}`,
-      );
-    });
 
     if (updated.clientProfile?.userId) {
       void this.notificationsService.notify({
@@ -1534,7 +1533,9 @@ export class BookingsService {
   private _withQueueTimeout<T>(promise: Promise<T>, label: string): Promise<T> {
     return new Promise<T>((resolve, reject) => {
       const timer = setTimeout(() => {
-        reject(new Error(`${label} timed out after ${EXPIRY_QUEUE_TIMEOUT_MS}ms`));
+        reject(
+          new Error(`${label} timed out after ${EXPIRY_QUEUE_TIMEOUT_MS}ms`),
+        );
       }, EXPIRY_QUEUE_TIMEOUT_MS);
 
       promise
@@ -1574,11 +1575,12 @@ export class BookingsService {
         const userId = userIdByWorkerId.get(w.id);
         if (!userId) continue;
 
-        const alreadyNotified = await this.notificationsService.wasAlreadyNotified(
-          userId,
-          bookingId,
-          eventKey,
-        );
+        const alreadyNotified =
+          await this.notificationsService.wasAlreadyNotified(
+            userId,
+            bookingId,
+            eventKey,
+          );
         if (alreadyNotified) continue;
 
         void this.notificationsService.notify({
@@ -1634,11 +1636,12 @@ export class BookingsService {
         const userId = userIdByWorkerId.get(w.id);
         if (!userId) continue;
 
-        const alreadyNotified = await this.notificationsService.wasAlreadyNotified(
-          userId,
-          bookingId,
-          eventKey,
-        );
+        const alreadyNotified =
+          await this.notificationsService.wasAlreadyNotified(
+            userId,
+            bookingId,
+            eventKey,
+          );
         if (alreadyNotified) continue;
 
         void this.notificationsService.notify({
@@ -1668,6 +1671,15 @@ export class BookingsService {
    * inspecting worker's quoted price, exact address/coordinates, or
    * customer phone. Deduped per booking/worker pair, same pattern as the
    * other nearby-worker notifiers. Fire-and-forget.
+   *
+   * Deliberately passes lane: BIDDING (not INSPECTION) to findNearbyWorkers —
+   * a reopened job is no longer a direct-assign fixed-fee job, it behaves
+   * like a bidding job for worker-matching purposes. Passing INSPECTION here
+   * made findNearbyWorkers use the tight 5→7km "direct-assign" radius ladder
+   * instead of the wide legacy ladder (up to 20km), silently under-reaching
+   * eligible workers — inspection-bidder-eligibility.util.ts's
+   * MAX_INSPECTION_BID_RADIUS_KM=20 (used by New Jobs listing and bid
+   * eligibility) was never actually matched by this notification search.
    */
   private async _notifyNearbyWorkersForPostInspectionBidding(
     bookingId: string,
@@ -1681,7 +1693,7 @@ export class BookingsService {
         categoryId,
         lat,
         lng,
-        lane: BookingLane.INSPECTION,
+        lane: BookingLane.BIDDING,
         excludedWorkerIds: [excludeWorkerProfileId],
       });
       if (workers.length === 0) return;
@@ -1856,7 +1868,8 @@ export class BookingsService {
       startedAt: booking.startedAt?.toISOString() ?? null,
       completedAt: booking.completedAt?.toISOString() ?? null,
       cancellationReason: booking.cancellationReason ?? null,
-      cancelledByRole: (booking.cancelledByRole as 'CLIENT' | 'WORKER' | null) ?? null,
+      cancelledByRole:
+        (booking.cancelledByRole as 'CLIENT' | 'WORKER' | null) ?? null,
       expiresAt: booking.expiresAt?.toISOString() ?? null,
       liveStartedAt: booking.liveStartedAt?.toISOString() ?? null,
       relistedAt: booking.relistedAt?.toISOString() ?? null,
@@ -1870,7 +1883,8 @@ export class BookingsService {
       lastWorkerCancellationReason,
       lastWorkerCancellationWorkerName,
       inspectionReportSubmitted: booking.inspectionReport != null,
-      inspectionDecisionStatus: booking.inspectionReport?.decisionStatus ?? null,
+      inspectionDecisionStatus:
+        booking.inspectionReport?.decisionStatus ?? null,
       inspectionReportSubmittedAt:
         booking.inspectionReport?.createdAt.toISOString() ?? null,
     };

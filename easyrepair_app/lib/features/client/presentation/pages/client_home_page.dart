@@ -210,6 +210,109 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage> {
     );
   }
 
+  // Book Urgently entry point: a quick category-selection step showing only
+  // launch-active services (no "Coming Soon" tiles), then hands off into the
+  // exact same normal booking flow/route used from the service grid above —
+  // preserving the picked category via the same `service=` query param.
+  void _showUrgentCategoryPicker(BuildContext context) {
+    final availableItems = [
+      for (final sec in _kSections)
+        for (final item in sec.items)
+          if (kLaunchActiveServiceCategories.contains(item.backendName)) item,
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetCtx) {
+        return Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(sheetCtx).size.height * 0.75,
+          ),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFCBD5E1),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Book Urgently',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: _kDark,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 4),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Choose a service to get help right away.',
+                    style: TextStyle(fontSize: 13, color: _kGray),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Flexible(
+                child: GridView.builder(
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                  itemCount: availableItems.length,
+                  gridDelegate:
+                      const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    mainAxisSpacing: 12,
+                    crossAxisSpacing: 12,
+                    childAspectRatio: 1.35,
+                  ),
+                  itemBuilder: (_, i) {
+                    final item = availableItems[i];
+                    return ServiceCard(
+                      title: item.displayTitle,
+                      emoji: item.emoji,
+                      backgroundColor: item.bg,
+                      emojiBackgroundColor: item.emojiBg,
+                      imagePath: item.imagePath,
+                      useImageStyle: true,
+                      onTap: () {
+                        Navigator.of(sheetCtx).pop();
+                        context.push(
+                          '/client/post-job?service='
+                          '${Uri.encodeComponent(item.backendName)}',
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authStateProvider);
@@ -485,7 +588,7 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage> {
 
                     // ── Urgent help card ──────────────────────────────────────
                     _UrgentHelpCard(
-                      onBookUrgently: () => context.push('/client/post-job'),
+                      onBookUrgently: () => _showUrgentCategoryPicker(context),
                     ),
 
                     const SizedBox(height: 24),

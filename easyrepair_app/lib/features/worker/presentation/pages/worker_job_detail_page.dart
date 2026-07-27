@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show Factory;
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
@@ -43,7 +45,16 @@ void _goBackOrHome(BuildContext context) {
 
 class WorkerJobDetailPage extends ConsumerWidget {
   final String jobId;
-  const WorkerJobDetailPage({super.key, required this.jobId});
+
+  /// When true, opens the in-app full-screen job map as soon as the booking
+  /// loads — used by the worker home page's active-job-card "Map" button.
+  final bool openMapOnLoad;
+
+  const WorkerJobDetailPage({
+    super.key,
+    required this.jobId,
+    this.openMapOnLoad = false,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -62,7 +73,7 @@ class WorkerJobDetailPage extends ConsumerWidget {
           message: err is Failure ? err.message : 'Failed to load job.',
           onRetry: () => ref.invalidate(workerJobDetailProvider(jobId)),
         ),
-        data: (job) => _JobBody(job: job),
+        data: (job) => _JobBody(job: job, openMapOnLoad: openMapOnLoad),
       ),
     );
   }
@@ -113,7 +124,8 @@ class _AppBar extends StatelessWidget implements PreferredSizeWidget {
 
 class _JobBody extends ConsumerWidget {
   final BookingEntity job;
-  const _JobBody({required this.job});
+  final bool openMapOnLoad;
+  const _JobBody({required this.job, this.openMapOnLoad = false});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -359,7 +371,7 @@ class _JobBody extends ConsumerWidget {
                 // WorkersService._toJobDto), so only an approximate area +
                 // distance card is shown.
                 if (isHired)
-                  _LocationSection(job: job)
+                  _LocationSection(job: job, openMapOnLoad: openMapOnLoad)
                 else
                   _ApproximateLocationCard(job: job),
                 const SizedBox(height: 16),
@@ -1675,7 +1687,14 @@ class _ApproximateLocationCard extends StatelessWidget {
 
 class _LocationSection extends ConsumerStatefulWidget {
   final BookingEntity job;
-  const _LocationSection({required this.job});
+
+  /// When true, opens the full-screen map automatically once (used by the
+  /// worker home page's active-job-card "Map" button, which deep-links
+  /// straight into this section's existing full-screen map instead of an
+  /// external maps app).
+  final bool openMapOnLoad;
+
+  const _LocationSection({required this.job, this.openMapOnLoad = false});
 
   @override
   ConsumerState<_LocationSection> createState() => _LocationSectionState();
@@ -1702,6 +1721,10 @@ class _LocationSectionState extends ConsumerState<_LocationSection>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    if (widget.openMapOnLoad && _hasJobLoc) {
+      WidgetsBinding.instance
+          .addPostFrameCallback((_) => _openFullScreenMap());
+    }
   }
 
   @override
@@ -1710,6 +1733,39 @@ class _LocationSectionState extends ConsumerState<_LocationSection>
     _dirTimer?.cancel();
     _mapCtrl?.dispose();
     super.dispose();
+  }
+
+  /// Opens the existing full-screen job map — shared by the expand button
+  /// and the worker home page's active-job-card "Map" button.
+  Future<void> _openFullScreenMap() async {
+    _dirTimer?.cancel();
+    _dirTimer = null;
+    final result = await Navigator.push<_DirectionsResult>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => _FullScreenMapPage(
+          job: widget.job,
+          initialDirectionsActive: _directionsActive,
+          initialWorkerPos: _workerPos,
+          initialRoutePoints: _routePoints,
+        ),
+      ),
+    );
+    if (!mounted) return;
+    if (result != null) {
+      setState(() {
+        _directionsActive = result.directionsActive;
+        _workerPos = result.workerPos;
+        _routePoints = result.routePoints;
+      });
+    }
+    if (_directionsActive) {
+      final pts = _routePoints.isNotEmpty
+          ? _routePoints
+          : (_workerPos != null ? [_workerPos!, _jobLatLng] : <LatLng>[]);
+      _fitBoundsForPoints(pts);
+      _startDirTimer();
+    }
   }
 
   @override
@@ -1750,32 +1806,58 @@ class _LocationSectionState extends ConsumerState<_LocationSection>
     setState(() => _gettingLocation = true);
 
     LatLng? workerPos;
-
-    final tracker = ref.read(locationTrackerProvider);
-    if (tracker.lastSyncedLat != null && tracker.lastSyncedLng != null) {
-      workerPos = LatLng(tracker.lastSyncedLat!, tracker.lastSyncedLng!);
-    } else {
-      try {
-        final p = await Geolocator.getCurrentPosition(
-          locationSettings: const LocationSettings(
-            accuracy: LocationAccuracy.high,
-            timeLimit: Duration(seconds: 8),
-          ),
-        );
-        workerPos = LatLng(p.latitude, p.longitude);
-      } catch (_) {
-        final last = await Geolocator.getLastKnownPosition();
-        if (last != null) workerPos = LatLng(last.latitude, last.longitude);
+    String? errorMessage;
+    try {
+      final tracker = ref.read(locationTrackerProvider);
+      if (tracker.lastSyncedLat != null && tracker.lastSyncedLng != null) {
+        workerPos = LatLng(tracker.lastSyncedLat!, tracker.lastSyncedLng!);
+      } else {
+        var perm = await Geolocator.checkPermission();
+        if (perm == LocationPermission.denied) {
+          perm = await Geolocator.requestPermission();
+        }
+        if (perm == LocationPermission.denied ||
+            perm == LocationPermission.deniedForever) {
+          errorMessage = 'Location permission denied.';
+        } else {
+          try {
+            final p = await Geolocator.getCurrentPosition(
+              locationSettings: const LocationSettings(
+                accuracy: LocationAccuracy.high,
+                timeLimit: Duration(seconds: 8),
+              ),
+            );
+            workerPos = LatLng(p.latitude, p.longitude);
+          } catch (_) {
+            // Timed out or the platform failed to produce a fresh fix —
+            // fall back to the last known position. Guarded by its own
+            // try/catch so a failure here (e.g. permission revoked mid-
+            // flow) can never leave the loader spinning forever.
+            try {
+              final last = await Geolocator.getLastKnownPosition();
+              if (last != null) {
+                workerPos = LatLng(last.latitude, last.longitude);
+              }
+            } catch (_) {
+              // workerPos stays null — handled by the check below.
+            }
+          }
+        }
       }
+    } finally {
+      // Always stop the loader — success, permission denial, timeout, or
+      // any other error all land here.
+      if (mounted) setState(() => _gettingLocation = false);
     }
 
     if (!mounted) return;
 
     if (workerPos == null) {
-      setState(() => _gettingLocation = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Unable to get your location for directions.'),
+        SnackBar(
+          content: Text(
+            errorMessage ?? 'Unable to get your location for directions.',
+          ),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -1785,7 +1867,6 @@ class _LocationSectionState extends ConsumerState<_LocationSection>
     setState(() {
       _workerPos = workerPos;
       _directionsActive = true;
-      _gettingLocation = false;
     });
     _fitBoundsForPoints([workerPos, _jobLatLng]);
 
@@ -2003,6 +2084,17 @@ class _LocationSectionState extends ConsumerState<_LocationSection>
                     myLocationButtonEnabled: false,
                     myLocationEnabled: false,
                     mapToolbarEnabled: false,
+                    // This inline preview sits inside the page's
+                    // SingleChildScrollView — its pan/zoom gestures were
+                    // competing with the page scroll's own gesture detector.
+                    // Claim gestures within the map's bounds immediately
+                    // (same fix as the client location picker) so drag/pinch
+                    // moves the map smoothly instead of losing the arena.
+                    gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
+                      Factory<OneSequenceGestureRecognizer>(
+                        () => EagerGestureRecognizer(),
+                      ),
+                    },
                   ),
                 ),
                 // Expand / fullscreen button
@@ -2010,39 +2102,7 @@ class _LocationSectionState extends ConsumerState<_LocationSection>
                   top: 8,
                   right: 8,
                   child: GestureDetector(
-                    onTap: () async {
-                      _dirTimer?.cancel();
-                      _dirTimer = null;
-                      final result =
-                          await Navigator.push<_DirectionsResult>(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => _FullScreenMapPage(
-                            job: widget.job,
-                            initialDirectionsActive: _directionsActive,
-                            initialWorkerPos: _workerPos,
-                            initialRoutePoints: _routePoints,
-                          ),
-                        ),
-                      );
-                      if (!mounted) return;
-                      if (result != null) {
-                        setState(() {
-                          _directionsActive = result.directionsActive;
-                          _workerPos = result.workerPos;
-                          _routePoints = result.routePoints;
-                        });
-                      }
-                      if (_directionsActive) {
-                        final pts = _routePoints.isNotEmpty
-                            ? _routePoints
-                            : (_workerPos != null
-                                ? [_workerPos!, _jobLatLng]
-                                : <LatLng>[]);
-                        _fitBoundsForPoints(pts);
-                        _startDirTimer();
-                      }
-                    },
+                    onTap: _openFullScreenMap,
                     child: Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
@@ -2322,31 +2382,54 @@ class _FullScreenMapPageState extends ConsumerState<_FullScreenMapPage>
     setState(() => _gettingLocation = true);
 
     LatLng? workerPos;
-    final tracker = ref.read(locationTrackerProvider);
-    if (tracker.lastSyncedLat != null && tracker.lastSyncedLng != null) {
-      workerPos = LatLng(tracker.lastSyncedLat!, tracker.lastSyncedLng!);
-    } else {
-      try {
-        final p = await Geolocator.getCurrentPosition(
-          locationSettings: const LocationSettings(
-            accuracy: LocationAccuracy.high,
-            timeLimit: Duration(seconds: 8),
-          ),
-        );
-        workerPos = LatLng(p.latitude, p.longitude);
-      } catch (_) {
-        final last = await Geolocator.getLastKnownPosition();
-        if (last != null) workerPos = LatLng(last.latitude, last.longitude);
+    String? errorMessage;
+    try {
+      final tracker = ref.read(locationTrackerProvider);
+      if (tracker.lastSyncedLat != null && tracker.lastSyncedLng != null) {
+        workerPos = LatLng(tracker.lastSyncedLat!, tracker.lastSyncedLng!);
+      } else {
+        var perm = await Geolocator.checkPermission();
+        if (perm == LocationPermission.denied) {
+          perm = await Geolocator.requestPermission();
+        }
+        if (perm == LocationPermission.denied ||
+            perm == LocationPermission.deniedForever) {
+          errorMessage = 'Location permission denied.';
+        } else {
+          try {
+            final p = await Geolocator.getCurrentPosition(
+              locationSettings: const LocationSettings(
+                accuracy: LocationAccuracy.high,
+                timeLimit: Duration(seconds: 8),
+              ),
+            );
+            workerPos = LatLng(p.latitude, p.longitude);
+          } catch (_) {
+            try {
+              final last = await Geolocator.getLastKnownPosition();
+              if (last != null) {
+                workerPos = LatLng(last.latitude, last.longitude);
+              }
+            } catch (_) {
+              // workerPos stays null — handled by the check below.
+            }
+          }
+        }
       }
+    } finally {
+      // Always stop the loader — success, permission denial, timeout, or
+      // any other error all land here.
+      if (mounted) setState(() => _gettingLocation = false);
     }
 
     if (!mounted) return;
 
     if (workerPos == null) {
-      setState(() => _gettingLocation = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Unable to get your location for directions.'),
+        SnackBar(
+          content: Text(
+            errorMessage ?? 'Unable to get your location for directions.',
+          ),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -2356,7 +2439,6 @@ class _FullScreenMapPageState extends ConsumerState<_FullScreenMapPage>
     setState(() {
       _workerPos = workerPos;
       _directionsActive = true;
-      _gettingLocation = false;
     });
     _fitBoundsForPoints([workerPos, _jobLatLng]);
 

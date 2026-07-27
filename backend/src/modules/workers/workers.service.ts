@@ -6,7 +6,12 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
-import { AvailabilityStatus, BookingStatus, Prisma, AgreementType } from '@prisma/client';
+import {
+  AvailabilityStatus,
+  BookingStatus,
+  Prisma,
+  AgreementType,
+} from '@prisma/client';
 import { Queue } from 'bull';
 import {
   WorkerJobWithRelations,
@@ -80,14 +85,20 @@ export class WorkersService {
    * approved, the worker can't silently change what an admin already reviewed
    * (or is reviewing). Shared by the text-field update and all 3 uploads. */
   private _assertProfileEditable(onboardingStatus: string): void {
-    if (onboardingStatus !== 'DRAFT' && onboardingStatus !== 'CHANGES_REQUIRED') {
+    if (
+      onboardingStatus !== 'DRAFT' &&
+      onboardingStatus !== 'CHANGES_REQUIRED'
+    ) {
       throw new BadRequestException(
         'Profile cannot be edited while it is under review or already approved.',
       );
     }
   }
 
-  async updateProfileCompletion(userId: string, dto: UpdateProfileCompletionDto) {
+  async updateProfileCompletion(
+    userId: string,
+    dto: UpdateProfileCompletionDto,
+  ) {
     const profile = await this.workersRepository.findByUserId(userId);
     if (!profile) throw new NotFoundException('Worker profile not found');
     this._assertProfileEditable(profile.onboardingStatus);
@@ -153,7 +164,10 @@ export class WorkersService {
 
     let updated: WorkerProfileWithSkills;
     try {
-      updated = await this.workersRepository.updateProfileCompletion(profile.id, data);
+      updated = await this.workersRepository.updateProfileCompletion(
+        profile.id,
+        data,
+      );
     } catch (err) {
       if (
         err instanceof Prisma.PrismaClientKnownRequestError &&
@@ -291,8 +305,10 @@ export class WorkersService {
     if (!profile.cnicBackUrl) missing.push('CNIC back image');
     if (!profile.liveSelfieUrl) missing.push('Live selfie');
     if (!profile.legalNameConfirmedAt) missing.push('Legal name confirmation');
-    if (!profile.generalAgreementAcceptedAt) missing.push('General Ustaad Agreement');
-    if (!profile.tradeAgreementAcceptedAt) missing.push('Trade-specific Agreement');
+    if (!profile.generalAgreementAcceptedAt)
+      missing.push('General Ustaad Agreement');
+    if (!profile.tradeAgreementAcceptedAt)
+      missing.push('Trade-specific Agreement');
 
     if (missing.length > 0) {
       throw new BadRequestException(
@@ -653,7 +669,9 @@ export class WorkersService {
     userId: string,
     bookingId: string,
   ): Promise<WorkerJobResponseDto> {
-    this.logger.debug(`[getWorkerJobById] userId=${userId} bookingId=${bookingId}`);
+    this.logger.debug(
+      `[getWorkerJobById] userId=${userId} bookingId=${bookingId}`,
+    );
 
     const profile = await this.workersRepository.findByUserId(userId);
     if (!profile) throw new NotFoundException('Worker profile not found');
@@ -847,9 +865,13 @@ export class WorkersService {
     );
     if (!job) throw new NotFoundException('Job not found');
 
+    // Must match BookingEntity.canWorkerCancel in the Flutter app exactly —
+    // ACCEPTED, EN_ROUTE, or ARRIVED. Once IN_PROGRESS, cancelling is no
+    // longer allowed for any lane.
     const cancellable: BookingStatus[] = [
       BookingStatus.ACCEPTED,
       BookingStatus.EN_ROUTE,
+      BookingStatus.ARRIVED,
     ];
     if (!cancellable.includes(job.status)) {
       throw new BadRequestException(
@@ -915,9 +937,7 @@ export class WorkersService {
     );
 
     const cp = job.clientProfile;
-    const clientName = cp
-      ? `${cp.firstName} ${cp.lastName}`.trim()
-      : null;
+    const clientName = cp ? `${cp.firstName} ${cp.lastName}`.trim() : null;
 
     const standardServiceItems = job.standardServiceItems.map((item) => ({
       id: item.id,
@@ -988,12 +1008,12 @@ export class WorkersService {
       attachments,
       statusHistory,
       review: job.review
-        ? {
+        ? ({
             id: job.review.id,
             rating: job.review.rating,
             comment: job.review.comment ?? null,
             createdAt: job.review.createdAt.toISOString(),
-          } satisfies WorkerJobReviewDto
+          } satisfies WorkerJobReviewDto)
         : null,
       inspectionReportSubmitted: job.inspectionReport != null,
       inspectionDecisionStatus: job.inspectionReport?.decisionStatus ?? null,
@@ -1035,10 +1055,23 @@ export class WorkersService {
   }
 
   /** Return aggregate rating stats for this worker. */
-  async getWorkerReviewSummary(userId: string): Promise<WorkerReviewSummaryDto> {
+  async getWorkerReviewSummary(
+    userId: string,
+  ): Promise<WorkerReviewSummaryDto> {
     const profile = await this.workersRepository.findByUserId(userId);
     if (!profile) throw new NotFoundException('Worker profile not found');
 
     return this.workersRepository.getWorkerReviewSummary(profile.id);
+  }
+
+  /**
+   * GET /workers/earnings/history — all-time completed-job earnings grouped
+   * by date, gross (pre-commission), newest first.
+   */
+  async getEarningsHistory(userId: string) {
+    const profile = await this.workersRepository.findByUserId(userId);
+    if (!profile) throw new NotFoundException('Worker profile not found');
+
+    return this.workersRepository.getEarningsHistory(profile.id);
   }
 }

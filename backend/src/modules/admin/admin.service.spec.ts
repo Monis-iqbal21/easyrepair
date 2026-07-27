@@ -49,6 +49,7 @@ describe('AdminService', () => {
       findById: jest.fn().mockResolvedValue({ id: 'worker-1' }),
       findWorkerByIdFull: jest.fn().mockResolvedValue(UPDATED_PROFILE),
       requestChanges: jest.fn().mockResolvedValue(UPDATED_PROFILE),
+      approve: jest.fn().mockResolvedValue(UPDATED_PROFILE),
     };
     agreementsService = {};
     notificationsService = {
@@ -114,6 +115,48 @@ describe('AdminService', () => {
       'worker-1',
       'CNIC photo is blurry',
     );
+    expect(result).toBeDefined();
+  });
+
+  // ── #5 Admin approves profile → stored notification + push ─────────────
+  it('notifies the worker with a Roman Urdu approval title/body on approve', async () => {
+    await service.approveWorker('worker-1');
+    await flushPromises();
+
+    expect(notificationsService.notify).toHaveBeenCalledTimes(1);
+    const call = notificationsService.notify.mock.calls[0][0];
+    expect(call.userId).toBe('worker-user-1');
+    expect(call.eventKey).toBe('worker.onboarding.approved');
+    expect(call.title).toBe('Apki Profile Approve hogai hy');
+    expect(call.route).toBe('/worker/home');
+    expect(call.entityType).toBe('worker_profile');
+    expect(call.entityId).toBe('worker-1');
+  });
+
+  // ── #6 Duplicate/retried admin approval does not create duplicate notif ──
+  it('does not send a second approval notification when already recently notified for this entity', async () => {
+    notificationsService.wasRecentlyNotifiedForEntity.mockResolvedValue(true);
+
+    await service.approveWorker('worker-1');
+    await flushPromises();
+
+    expect(notificationsService.wasRecentlyNotifiedForEntity).toHaveBeenCalledWith(
+      'worker-user-1',
+      'worker_profile',
+      'worker-1',
+      'worker.onboarding.approved',
+      10_000,
+    );
+    expect(notificationsService.notify).not.toHaveBeenCalled();
+  });
+
+  it('still persists the approval even when the notification is skipped', async () => {
+    notificationsService.wasRecentlyNotifiedForEntity.mockResolvedValue(true);
+
+    const result = await service.approveWorker('worker-1');
+    await flushPromises();
+
+    expect(adminRepository.approve).toHaveBeenCalledWith('worker-1');
     expect(result).toBeDefined();
   });
 });

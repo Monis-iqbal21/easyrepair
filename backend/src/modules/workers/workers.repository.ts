@@ -1,15 +1,16 @@
 import { Injectable } from '@nestjs/common';
-import { AvailabilityStatus, BookingStatus, Prisma } from '@prisma/client';
+import {
+  AvailabilityStatus,
+  BookingLane,
+  BookingStatus,
+  Prisma,
+} from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   computeCancellationRate,
   computeCompletedJobs,
 } from '../../common/utils/worker-stats.util';
-import {
-  calculateCommissionBase,
-  calculatePlatformFee,
-  calculateWorkerEarning,
-} from '../../common/utils/commission.util';
+import { calculateGrossWorkerEarning } from '../../common/utils/commission.util';
 
 // ---------------------------------------------------------------------------
 // Worker profile include
@@ -111,7 +112,10 @@ export class WorkersRepository {
   // ── Profile ──────────────────────────────────────────────────────────────
 
   /** Update the avatarUrl for a worker profile. */
-  async updateAvatarUrl(workerProfileId: string, avatarUrl: string): Promise<void> {
+  async updateAvatarUrl(
+    workerProfileId: string,
+    avatarUrl: string,
+  ): Promise<void> {
     await this.prisma.workerProfile.update({
       where: { id: workerProfileId },
       data: { avatarUrl },
@@ -162,9 +166,11 @@ export class WorkersRepository {
   }
 
   /** Fetch minimal worker profile fields needed by the auto-offline processor. */
-  async findById(
-    id: string,
-  ): Promise<{ id: string; userId: string; availabilityStatus: AvailabilityStatus } | null> {
+  async findById(id: string): Promise<{
+    id: string;
+    userId: string;
+    availabilityStatus: AvailabilityStatus;
+  } | null> {
     return this.prisma.workerProfile.findUnique({
       where: { id },
       select: { id: true, userId: true, availabilityStatus: true },
@@ -314,7 +320,9 @@ export class WorkersRepository {
   }
 
   /** Move a DRAFT/CHANGES_REQUIRED profile into the admin review queue. */
-  async submitForReview(workerProfileId: string): Promise<WorkerProfileWithSkills> {
+  async submitForReview(
+    workerProfileId: string,
+  ): Promise<WorkerProfileWithSkills> {
     return this.prisma.workerProfile.update({
       where: { id: workerProfileId },
       data: {
@@ -424,31 +432,30 @@ export class WorkersRepository {
       }),
     ]);
 
-    // Earnings = sum of (commission base - platformFee) for completed jobs
-    // today, using the same calculateCommissionBase/calculateWorkerEarning
-    // helpers as the rest of the commission engine — see commission.util.ts
-    // for exactly how parts are excluded per lane/decision.
+    // Earnings shown to the worker are GROSS — the full pre-commission
+    // amount, using the same calculateGrossWorkerEarning helper as the rest
+    // of the earnings-facing code (see commission.util.ts for exactly how
+    // parts are excluded per lane/decision). HandyGo's 18% commission is a
+    // company-accounting concern (Booking.platformFee) and must never be
+    // subtracted from what the Ustaad sees as their own earning.
     const workEarnings = todayCompleted.reduce((sum, b) => {
-      const commissionBase = calculateCommissionBase({
-        lane: b.lane,
-        finalPrice: b.finalPrice,
-        inspectionReport: b.inspectionReport,
-      });
-      if (commissionBase === null) return sum;
-      // Bookings completed before platformFee was persisted at
-      // assign/accept time — computed safely here rather than requiring a
-      // backfill/migration of historical rows.
-      const platformFee = b.platformFee ?? calculatePlatformFee(commissionBase);
-      return sum + calculateWorkerEarning(commissionBase, platformFee);
+      return (
+        sum +
+        calculateGrossWorkerEarning({
+          lane: b.lane,
+          finalPrice: b.finalPrice,
+          inspectionReport: b.inspectionReport,
+        })
+      );
     }, 0);
 
     // Inspection-fee-only earnings for jobs this worker inspected but a
-    // different Ustaad performed the repair on.
+    // different Ustaad performed the repair on — gross, same as above.
     const inspectionOnlyEarnings = todayInspectedForOtherUstaad.reduce(
       (sum, r) => {
         const fee = r.booking.inspectionFeeSnapshot;
         if (fee == null) return sum;
-        return sum + calculateWorkerEarning(fee, calculatePlatformFee(fee));
+        return sum + fee;
       },
       0,
     );
@@ -481,6 +488,124 @@ export class WorkersRepository {
       avgResponseMinutes,
       responseLabel,
     };
+  }
+
+  /**
+   * All-time completed-job earnings for this worker, grouped by calendar
+   * date (newest first). Gross amounts via calculateGrossWorkerEarning —
+   * the same source getJobStats' todayEarnings uses, so the home dashboard
+   * tile and this history never disagree on what a job actually earned.
+   */
+  async getEarningsHistory(workerProfileId: string): Promise<
+    {
+      date: string;
+      grossTotal: number;
+      jobsCount: number;
+      jobs: {
+        bookingId: string;
+        lane: BookingLane;
+        serviceCategory: string;
+        grossEarning: number;
+        completedAt: Date;
+        isInspectionOnly: boolean;
+      }[];
+    }[]
+  > {
+    const [assignedCompleted, inspectedForOtherUstaad] = await Promise.all([
+      this.prisma.booking.findMany({
+        where: {
+          workerProfileId,
+          status: BookingStatus.COMPLETED,
+          completedAt: { not: null },
+        },
+        select: {
+          id: true,
+          lane: true,
+          finalPrice: true,
+          completedAt: true,
+          category: { select: { name: true } },
+          inspectionReport: { select: { labourCost: true, decisionStatus: true } },
+        },
+      }),
+      // Same "inspected but a different Ustaad did the repair" case as
+      // getJobStats — decisionStatus stays FIND_OTHER_USTAAD forever then,
+      // so this worker's inspection-fee earning never surfaces via the
+      // query above (workerProfileId has moved to the other worker).
+      this.prisma.inspectionReport.findMany({
+        where: {
+          workerProfileId,
+          decisionStatus: 'FIND_OTHER_USTAAD',
+          booking: { status: BookingStatus.COMPLETED, completedAt: { not: null } },
+        },
+        select: {
+          booking: {
+            select: {
+              id: true,
+              completedAt: true,
+              inspectionFeeSnapshot: true,
+              category: { select: { name: true } },
+            },
+          },
+        },
+      }),
+    ]);
+
+    type Job = {
+      bookingId: string;
+      lane: BookingLane;
+      serviceCategory: string;
+      grossEarning: number;
+      completedAt: Date;
+      isInspectionOnly: boolean;
+    };
+
+    const jobs: Job[] = assignedCompleted.map((b) => ({
+      bookingId: b.id,
+      lane: b.lane,
+      serviceCategory: b.category.name,
+      grossEarning: calculateGrossWorkerEarning({
+        lane: b.lane,
+        finalPrice: b.finalPrice,
+        inspectionReport: b.inspectionReport,
+      }),
+      completedAt: b.completedAt!,
+      isInspectionOnly: false,
+    }));
+
+    for (const r of inspectedForOtherUstaad) {
+      const fee = r.booking.inspectionFeeSnapshot;
+      if (fee == null) continue;
+      jobs.push({
+        bookingId: r.booking.id,
+        lane: BookingLane.INSPECTION,
+        serviceCategory: r.booking.category.name,
+        grossEarning: fee,
+        completedAt: r.booking.completedAt!,
+        isInspectionOnly: true,
+      });
+    }
+
+    const byDate = new Map<string, Job[]>();
+    for (const job of jobs) {
+      const dateKey = job.completedAt.toISOString().slice(0, 10);
+      const list = byDate.get(dateKey);
+      if (list) list.push(job);
+      else byDate.set(dateKey, [job]);
+    }
+
+    return Array.from(byDate.entries())
+      .sort((a, b) => (a[0] < b[0] ? 1 : -1))
+      .map(([date, dayJobs]) => ({
+        date,
+        grossTotal:
+          Math.round(
+            dayJobs.reduce((sum, j) => sum + j.grossEarning, 0) * 100,
+          ) / 100,
+        jobsCount: dayJobs.length,
+        jobs: dayJobs.sort(
+          (a, b) => b.completedAt.getTime() - a.completedAt.getTime(),
+        ),
+      }));
   }
 
   /** Find the single ongoing job for this worker (if any). */
@@ -528,10 +653,15 @@ export class WorkersRepository {
   ): Promise<WorkerJobWithRelations[]> {
     const statusIn = (() => {
       if (statusFilter === 'active') {
-        return [BookingStatus.ACCEPTED, BookingStatus.EN_ROUTE, BookingStatus.IN_PROGRESS];
+        return [
+          BookingStatus.ACCEPTED,
+          BookingStatus.EN_ROUTE,
+          BookingStatus.IN_PROGRESS,
+        ];
       }
       if (statusFilter === 'completed') return [BookingStatus.COMPLETED];
-      if (statusFilter === 'cancelled') return [BookingStatus.REJECTED, BookingStatus.CANCELLED];
+      if (statusFilter === 'cancelled')
+        return [BookingStatus.REJECTED, BookingStatus.CANCELLED];
       return undefined;
     })();
 

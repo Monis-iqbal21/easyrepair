@@ -10,6 +10,7 @@ import '../models/worker_profile_model.dart';
 import '../models/category_model.dart';
 import '../models/worker_review_model.dart';
 import '../models/agreement_template_model.dart';
+import '../models/earning_history_model.dart';
 
 abstract class WorkerRemoteDatasource {
   Future<WorkerProfileModel> getProfile();
@@ -63,6 +64,9 @@ abstract class WorkerRemoteDatasource {
   Future<List<WorkerReviewModel>> getWorkerReviews({int? limit});
 
   Future<WorkerReviewSummaryModel> getWorkerReviewSummary();
+
+  /// All-time completed-job earnings grouped by date (gross, newest first).
+  Future<List<EarningHistoryDayModel>> getEarningsHistory();
 }
 
 class WorkerRemoteDatasourceImpl implements WorkerRemoteDatasource {
@@ -278,6 +282,17 @@ class WorkerRemoteDatasourceImpl implements WorkerRemoteDatasource {
     );
     final data = response.data!['data'] as Map<String, dynamic>;
     return WorkerReviewSummaryModel.fromJson(data);
+  }
+
+  @override
+  Future<List<EarningHistoryDayModel>> getEarningsHistory() async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      '/workers/earnings/history',
+    );
+    final list = response.data!['data'] as List<dynamic>;
+    return list
+        .map((e) => EarningHistoryDayModel.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 }
 
