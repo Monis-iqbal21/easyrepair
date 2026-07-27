@@ -84,14 +84,19 @@ export class AdminService {
       );
       if (alreadySent) return;
 
+      const trimmedReason = reason?.trim();
+      const body = trimmedReason
+        ? `Admin ne aapki profile mein kuch tabdeeliyan mangi hain. Profile khol kar details check karein.\n\nWajah: ${trimmedReason}`
+        : 'Admin ne aapki profile mein kuch tabdeeliyan mangi hain. Profile khol kar details check karein.';
       void this.notificationsService.notify({
         userId: updated.user.id,
         eventKey,
-        title: 'Profile mein changes required hain',
-        body: 'Apni application check karein aur required changes complete karein.',
+        title: 'Profile mein tabdeeli darkaar hai',
+        body,
         route: '/worker/profile-completion',
         entityType: 'worker_profile',
         entityId: workerProfileId,
+        payload: trimmedReason ? { reason: trimmedReason } : undefined,
       });
     })();
 

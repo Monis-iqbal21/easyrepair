@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { BullModule } from '@nestjs/bull';
 import { BookingsService } from './bookings.service';
 import { BookingsController } from './bookings.controller';
@@ -12,7 +12,9 @@ import { ChatModule } from '../chat/chat.module';
   imports: [
     StorageModule,
     NotificationsModule,
-    ChatModule,
+    // forwardRef: ChatService now also needs BookingsService's shared
+    // chat-eligibility check — forwardRef on both sides breaks that cycle.
+    forwardRef(() => ChatModule),
     BullModule.registerQueue({ name: BOOKINGS_QUEUE }),
   ],
   controllers: [BookingsController],

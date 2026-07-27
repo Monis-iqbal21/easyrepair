@@ -2396,19 +2396,9 @@ class _ActionButtons extends ConsumerWidget {
           const SizedBox(height: 10),
         ],
         if (showChat)
-          _FullBtn(
-            label: 'Chat with Worker',
-            icon: Icons.chat_bubble_outline_rounded,
-            color: _kGreen,
-            bgColor: const Color(0xFFFFF0EB),
-            // Client-facing endpoint (workerProfileId-based) — has no
-            // booking-status restriction, so this still works after the job
-            // is COMPLETED, unlike the worker-only "for-booking" endpoint.
-            onTap: () => openClientChatWithWorker(
-              context,
-              ref,
-              booking.assignedWorker!.id,
-            ),
+          _ChatWithWorkerButton(
+            bookingId: booking.id,
+            workerProfileId: booking.assignedWorker!.id,
           ),
         if (showChat && (canEdit || showCancel)) const SizedBox(height: 10),
         if (canEdit)
@@ -2560,6 +2550,88 @@ class _FullBtn extends StatelessWidget {
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
                 color: color,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// "Chat with Worker" action — same visual shape as [_FullBtn] but with its
+/// own in-flight guard so a rapid double-tap can't fire a second
+/// get-or-create request (mirrors _ChatButton in worker_discovery_map_page).
+/// Client-facing endpoint (workerProfileId-based) — has no booking-status
+/// restriction, so this still works after the job is COMPLETED, unlike the
+/// worker-only "for-booking" endpoint.
+class _ChatWithWorkerButton extends ConsumerStatefulWidget {
+  final String bookingId;
+  final String workerProfileId;
+
+  const _ChatWithWorkerButton({
+    required this.bookingId,
+    required this.workerProfileId,
+  });
+
+  @override
+  ConsumerState<_ChatWithWorkerButton> createState() =>
+      _ChatWithWorkerButtonState();
+}
+
+class _ChatWithWorkerButtonState extends ConsumerState<_ChatWithWorkerButton> {
+  bool _loading = false;
+
+  Future<void> _openChat() async {
+    if (_loading) return;
+    setState(() => _loading = true);
+    try {
+      await openClientChatWithWorker(
+        context,
+        ref,
+        widget.bookingId,
+        widget.workerProfileId,
+      );
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: _loading ? null : _openChat,
+      child: Container(
+        height: 48,
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFF0EB),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (_loading)
+              const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(_kGreen),
+                ),
+              )
+            else
+              const Icon(
+                Icons.chat_bubble_outline_rounded,
+                size: 16,
+                color: _kGreen,
+              ),
+            const SizedBox(width: 8),
+            const Text(
+              'Chat with Worker',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: _kGreen,
               ),
             ),
           ],

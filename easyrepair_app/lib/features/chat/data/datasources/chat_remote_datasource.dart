@@ -6,7 +6,10 @@ import '../../../../core/network/api_client.dart';
 import '../models/chat_models.dart';
 
 abstract class ChatRemoteDataSource {
-  Future<ConversationModel> getOrCreateConversation(String workerProfileId);
+  Future<ConversationModel> getOrCreateConversation(
+    String bookingId,
+    String workerProfileId,
+  );
   Future<ConversationModel> getOrCreateConversationForBooking(
     String bookingId,
   );
@@ -49,12 +52,13 @@ class ChatRemoteDataSourceImpl implements ChatRemoteDataSource {
 
   @override
   Future<ConversationModel> getOrCreateConversation(
+    String bookingId,
     String workerProfileId,
   ) async {
     try {
       final response = await _dio.post(
         '/chat/conversations',
-        data: {'workerProfileId': workerProfileId},
+        data: {'bookingId': bookingId, 'workerProfileId': workerProfileId},
       );
       final data = response.data['data'] as Map<String, dynamic>;
       return ConversationModel.fromJson(data);

@@ -256,11 +256,14 @@ class GetOrCreateConversationNotifier
   @override
   Future<ConversationEntity?> build() async => null;
 
-  Future<ConversationEntity> getOrCreate(String workerProfileId) async {
+  Future<ConversationEntity> getOrCreate(
+    String bookingId,
+    String workerProfileId,
+  ) async {
     state = const AsyncLoading();
     final result = await ref
         .read(chatRepositoryProvider)
-        .getOrCreateConversation(workerProfileId);
+        .getOrCreateConversation(bookingId, workerProfileId);
     return result.fold(
       (failure) {
         state = AsyncError(failure, StackTrace.current);

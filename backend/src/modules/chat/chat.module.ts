@@ -7,6 +7,7 @@ import { ChatService } from './chat.service';
 import { ChatRepository } from './chat.repository';
 import { StorageModule } from '../storage/storage.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { BookingsModule } from '../bookings/bookings.module';
 
 @Module({
   imports: [
@@ -14,6 +15,11 @@ import { NotificationsModule } from '../notifications/notifications.module';
     // forwardRef: NotificationsService emits in-app banners via ChatGateway,
     // so NotificationsModule imports ChatModule back — this breaks that cycle.
     forwardRef(() => NotificationsModule),
+    // forwardRef: BookingsModule already imports ChatModule (for
+    // ensureConversationForBooking) — ChatService now also needs
+    // BookingsService's shared chat-eligibility check, so this breaks that
+    // same cycle from the other side.
+    forwardRef(() => BookingsModule),
     // Register JwtModule so ChatGateway can verify socket auth tokens
     // using the same secret as the HTTP JwtStrategy.
     JwtModule.registerAsync({

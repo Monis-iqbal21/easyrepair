@@ -106,17 +106,22 @@ class LocationTrackerNotifier extends Notifier<LocationTrackingState> {
   // ── Public API ──────────────────────────────────────────────────────────────
 
   /// Called when worker goes online.
-  /// 1. Gets current location (with permission gate).
+  /// 1. Uses the fastest available location (cached last-known fix first, so
+  ///    the request never sits waiting on a fresh GPS reading; only falls
+  ///    back to a bounded fresh fetch when nothing is cached yet).
   /// 2. Sends immediate server update (ONLINE + lat/lng).
   /// 3. Records the sync in state.
   /// 4. Starts the periodic timer.
+  /// 5. Refines the location with a fresh GPS fix in the background,
+  ///    without blocking the user-visible "Go Online" action.
   ///
   /// Returns the actual [AvailabilityStatus] returned by the server,
   /// or throws if the server update failed.
   Future<AvailabilityStatus> startTracking() async {
     debugPrint('[LocationTracker] ── START TRACKING ──────────────────────');
 
-    final position = await _getLocation();
+    final hasPermission = await _ensureLocationPermission();
+    final position = hasPermission ? await _getLocationFastPath() : null;
     if (position != null) {
       debugPrint('[LocationTracker] Initial location: '
           'lat=${position.latitude.toStringAsFixed(6)}, '
@@ -146,7 +151,34 @@ class LocationTrackerNotifier extends Notifier<LocationTrackingState> {
     debugPrint('[LocationTracker] Periodic tracking started '
         '(every $_intervalSeconds s).');
 
+    // Fire-and-forget: refine with a fresh GPS fix shortly after going
+    // online. Never awaited here — must not delay the "Go Online" result.
+    if (hasPermission) {
+      _refineLocationInBackground();
+    }
+
     return newStatus;
+  }
+
+  /// Refines the just-synced location with a fresh GPS fix, in the
+  /// background. Never blocks/throws into the caller — best-effort only.
+  Future<void> _refineLocationInBackground() async {
+    final fresh = await _getFreshLocationBounded();
+    if (fresh == null || !state.isTracking) return;
+    try {
+      await _pushLocationOnly(
+        lat: fresh.latitude,
+        lng: fresh.longitude,
+        reason: 'post_online_refresh',
+      );
+      state = state.copyWith(
+        lastSyncedLat: fresh.latitude,
+        lastSyncedLng: fresh.longitude,
+        lastSyncedAt: DateTime.now(),
+      );
+    } catch (e) {
+      debugPrint('[LocationTracker] Background refresh FAILED: $e');
+    }
   }
 
   /// Called when worker goes offline.
@@ -160,8 +192,9 @@ class LocationTrackerNotifier extends Notifier<LocationTrackingState> {
     _timer?.cancel();
     _timer = null;
 
-    // Try to get a fresh location; fall back to last synced.
-    final position = await _getLocation();
+    // Try the fastest available fix; fall back to last synced. Bounded —
+    // going offline must never hang waiting on GPS.
+    final position = await _getLocationFastPath();
     final lat = position?.latitude ?? state.lastSyncedLat;
     final lng = position?.longitude ?? state.lastSyncedLng;
 
@@ -359,35 +392,73 @@ class LocationTrackerNotifier extends Notifier<LocationTrackingState> {
     );
   }
 
-  /// Permission-aware location fetch. Returns null (never throws) if
-  /// permission is denied or if the device returns an error.
-  Future<Position?> _getLocation() async {
+  /// Checks/requests location permission. `checkPermission` is a cheap read
+  /// (bounded defensively); `requestPermission` shows a native OS dialog and
+  /// is deliberately left unbounded — it resolves as soon as the user
+  /// responds and must not be raced against an arbitrary timer.
+  Future<bool> _ensureLocationPermission() async {
     try {
-      LocationPermission permission = await Geolocator.checkPermission();
+      LocationPermission permission =
+          await Geolocator.checkPermission().timeout(const Duration(seconds: 3));
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
       }
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
-        return null;
-      }
-      try {
-        return await Geolocator.getCurrentPosition(
-          locationSettings: const LocationSettings(
-            accuracy: LocationAccuracy.high,
-            timeLimit: Duration(seconds: 8),
-          ),
-        );
-      } catch (_) {
-        // getCurrentPosition timed out or failed (e.g. GPS cold start).
-        // Fall back to the last known fix so the worker can still go online.
-        debugPrint('[LocationTracker] getCurrentPosition failed — '
-            'falling back to last known position.');
-        return await Geolocator.getLastKnownPosition();
-      }
+      return permission != LocationPermission.denied &&
+          permission != LocationPermission.deniedForever;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Cached last-known fix — reads the device's location cache, which
+  /// should be near-instant. Bounded regardless, since some Android/OEM
+  /// location stacks are known to occasionally hang on this call; never
+  /// throws.
+  Future<Position?> _getCachedLocation() async {
+    try {
+      return await Geolocator.getLastKnownPosition()
+          .timeout(const Duration(seconds: 3));
     } catch (_) {
       return null;
     }
+  }
+
+  /// Fresh GPS fix, bounded on top of the plugin's own `timeLimit` as a
+  /// backstop in case the platform channel doesn't honor it. Never throws.
+  Future<Position?> _getFreshLocationBounded() async {
+    try {
+      return await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 6),
+        ),
+      ).timeout(const Duration(seconds: 7));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Used by "Go Online" / "Go Offline" — favors the cached last-known fix
+  /// so the action completes promptly; only attempts a bounded fresh GPS
+  /// fetch when nothing is cached yet (e.g. first launch this session).
+  /// Assumes permission has already been confirmed by the caller.
+  Future<Position?> _getLocationFastPath() async {
+    final cached = await _getCachedLocation();
+    if (cached != null) return cached;
+    return _getFreshLocationBounded();
+  }
+
+  /// Used by the periodic tracker tick — favors a fresh fix (to detect real
+  /// movement), falling back to the cached fix if the fresh attempt fails.
+  /// Both legs are bounded; never throws.
+  Future<Position?> _getLocation() async {
+    final hasPermission = await _ensureLocationPermission();
+    if (!hasPermission) return null;
+    final fresh = await _getFreshLocationBounded();
+    if (fresh != null) return fresh;
+    debugPrint(
+        '[LocationTracker] getCurrentPosition failed — falling back to last known position.');
+    return _getCachedLocation();
   }
 }
 

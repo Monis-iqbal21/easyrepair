@@ -12,10 +12,14 @@ class ChatRepositoryImpl implements ChatRepository {
 
   @override
   Future<Either<Failure, ConversationEntity>> getOrCreateConversation(
+    String bookingId,
     String workerProfileId,
   ) async {
     try {
-      final model = await _dataSource.getOrCreateConversation(workerProfileId);
+      final model = await _dataSource.getOrCreateConversation(
+        bookingId,
+        workerProfileId,
+      );
       return Right(model.toEntity());
     } on Failure catch (f) {
       return Left(f);

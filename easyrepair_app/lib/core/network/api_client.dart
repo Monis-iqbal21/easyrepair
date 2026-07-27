@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 
 import '../config/app_config.dart';
+import '../errors/dio_failure_mapper.dart' as failure_mapper;
 import '../errors/failures.dart';
 import '../storage/secure_storage_service.dart';
 
@@ -112,26 +113,14 @@ class ErrorInterceptor extends Interceptor {
   }
 }
 
-Failure dioExceptionToFailure(DioException e) {
-  if (e.type == DioExceptionType.connectionError ||
-      e.type == DioExceptionType.connectionTimeout ||
-      e.type == DioExceptionType.receiveTimeout ||
-      e.type == DioExceptionType.sendTimeout) {
-    return const NetworkFailure('No internet connection');
-  }
-
-  final statusCode = e.response?.statusCode;
-  final message = e.response?.data?['message'] as String? ??
-      e.response?.data?['error'] as String? ??
-      'An unexpected error occurred';
-
-  return switch (statusCode) {
-    401 => UnauthorizedFailure(message),
-    409 => ConflictFailure(message),
-    422 => ValidationFailure(message),
-    _ => ServerFailure(message),
-  };
-}
+/// Delegates to the canonical mapper in `core/errors/dio_failure_mapper.dart`
+/// — this file used to have its own separate, less complete implementation
+/// (missing 400/429 handling, and crashing on NestJS's class-validator array
+/// `message` responses via an unsafe `as String` cast). Kept as a thin
+/// re-export so the 5 datasources already importing `dioExceptionToFailure`
+/// from here don't need an import-path change.
+Failure dioExceptionToFailure(DioException e) =>
+    failure_mapper.dioExceptionToFailure(e);
 
 final dioProvider = Provider<Dio>((ref) {
   final storage = ref.watch(secureStorageServiceProvider);

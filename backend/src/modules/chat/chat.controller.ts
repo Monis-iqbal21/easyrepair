@@ -43,7 +43,7 @@ export class ChatController {
    * POST /chat/conversations
    * CLIENT only — create a new conversation with a worker, or return the
    * existing one if it already exists (idempotent).
-   * Body: { workerProfileId }
+   * Body: { workerProfileId, bookingId }
    */
   @Post('conversations')
   @Roles(AppRole.CLIENT)
@@ -52,7 +52,11 @@ export class ChatController {
     @CurrentUser() user: { id: string; role: string },
     @Body() dto: CreateConversationDto,
   ) {
-    return this.chatService.getOrCreateConversation(user.id, dto.workerProfileId);
+    return this.chatService.getOrCreateConversation(
+      user.id,
+      dto.bookingId,
+      dto.workerProfileId,
+    );
   }
 
   /**

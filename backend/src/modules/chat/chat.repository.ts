@@ -54,20 +54,41 @@ export class ChatRepository {
     });
   }
 
-  /** Create a new conversation. */
+  /**
+   * Idempotent create — Conversation has a DB-level @@unique([clientUserId,
+   * workerUserId]) constraint, so if a concurrent request already created
+   * this exact pair's conversation between the caller's own findConversation
+   * check and this call, Postgres rejects our insert (P2002). We catch that
+   * specific race and return the winning row instead of surfacing a raw 500
+   * — this is what makes get-or-create safe under concurrent duplicate taps.
+   */
   async createConversation(data: {
     clientUserId: string;
     workerUserId: string;
     createdByUserId: string;
   }): Promise<ConversationWithParticipants> {
-    return this.prisma.conversation.create({
-      data: {
-        clientUserId: data.clientUserId,
-        workerUserId: data.workerUserId,
-        createdByUserId: data.createdByUserId,
-      },
-      include: CONVERSATION_INCLUDE,
-    });
+    try {
+      return await this.prisma.conversation.create({
+        data: {
+          clientUserId: data.clientUserId,
+          workerUserId: data.workerUserId,
+          createdByUserId: data.createdByUserId,
+        },
+        include: CONVERSATION_INCLUDE,
+      });
+    } catch (err) {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2002'
+      ) {
+        const existing = await this.findConversation(
+          data.clientUserId,
+          data.workerUserId,
+        );
+        if (existing) return existing;
+      }
+      throw err;
+    }
   }
 
   /**

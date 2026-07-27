@@ -32,6 +32,10 @@ class ChooseUstaadPage extends ConsumerStatefulWidget {
 
 class _ChooseUstaadPageState extends ConsumerState<ChooseUstaadPage> {
   bool _assigning = false;
+  // Tracks which worker's chat request is currently in flight so a rapid
+  // double-tap can't fire a second get-or-create for the same worker, while
+  // still letting the client tap Chat on a different worker's card.
+  String? _chattingWorkerId;
 
   Future<void> _confirmAndSelectWorker(NearbyWorkerEntity worker) async {
     if (_assigning) return;
@@ -124,10 +128,22 @@ class _ChooseUstaadPageState extends ConsumerState<ChooseUstaadPage> {
   }
 
   Future<void> _chatWithWorker(NearbyWorkerEntity worker) async {
-    // Uses the client-facing endpoint (workerProfileId-based) — this is a
-    // candidate worker not yet assigned to the booking, so the worker-only
-    // "for-booking" endpoint would 403 here.
-    await openClientChatWithWorker(context, ref, worker.id);
+    if (_chattingWorkerId != null) return;
+    setState(() => _chattingWorkerId = worker.id);
+    try {
+      // Uses the client-facing endpoint (workerProfileId-based) — this is a
+      // candidate worker not yet assigned to the booking, so the worker-only
+      // "for-booking" endpoint would 403 here. bookingId lets the backend
+      // verify this worker is actually in this booking's eligible/nearby set.
+      await openClientChatWithWorker(
+        context,
+        ref,
+        widget.booking.id,
+        worker.id,
+      );
+    } finally {
+      if (mounted) setState(() => _chattingWorkerId = null);
+    }
   }
 
   Future<void> _refreshStandardSearch() async {
@@ -425,6 +441,7 @@ class _ChooseUstaadPageState extends ConsumerState<ChooseUstaadPage> {
           key: ValueKey(worker.id),
           worker: worker,
           busy: _assigning,
+          chatting: _chattingWorkerId == worker.id,
           onAvatarTap: () => _openProfileModal(worker),
           onSelect: () => _confirmAndSelectWorker(worker),
           onChat: () => _chatWithWorker(worker),
@@ -532,6 +549,7 @@ class _WorkerCardSkeletonState extends State<_WorkerCardSkeleton>
 class _WorkerCard extends StatelessWidget {
   final NearbyWorkerEntity worker;
   final bool busy;
+  final bool chatting;
   final VoidCallback onAvatarTap;
   final VoidCallback onSelect;
   final VoidCallback onChat;
@@ -540,6 +558,7 @@ class _WorkerCard extends StatelessWidget {
     super.key,
     required this.worker,
     required this.busy,
+    this.chatting = false,
     required this.onAvatarTap,
     required this.onSelect,
     required this.onChat,
@@ -647,7 +666,7 @@ class _WorkerCard extends StatelessWidget {
           Row(
             children: [
               GestureDetector(
-                onTap: busy ? null : onChat,
+                onTap: (busy || chatting) ? null : onChat,
                 child: Container(
                   width: 46,
                   height: 46,
@@ -656,11 +675,19 @@ class _WorkerCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: _kGreen.withValues(alpha: 0.3)),
                   ),
-                  child: const Icon(
-                    Icons.chat_bubble_outline_rounded,
-                    color: _kGreen,
-                    size: 20,
-                  ),
+                  child: chatting
+                      ? const Padding(
+                          padding: EdgeInsets.all(14),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(_kGreen),
+                          ),
+                        )
+                      : const Icon(
+                          Icons.chat_bubble_outline_rounded,
+                          color: _kGreen,
+                          size: 20,
+                        ),
                 ),
               ),
               const SizedBox(width: 10),

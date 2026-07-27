@@ -129,7 +129,7 @@ class _TrackBody extends StatelessWidget {
           _StatusCard(booking: booking),
           const SizedBox(height: 16),
           if (worker != null) ...[
-            _WorkerCard(worker: worker),
+            _WorkerCard(bookingId: booking.id, worker: worker),
             const SizedBox(height: 16),
           ],
           _DistanceEtaCard(distanceM: distanceM, etaMin: etaMin),
@@ -629,9 +629,10 @@ class _StatusCard extends StatelessWidget {
 // ── Worker card ───────────────────────────────────────────────────────────────
 
 class _WorkerCard extends ConsumerStatefulWidget {
+  final String bookingId;
   final AssignedWorkerEntity worker;
 
-  const _WorkerCard({required this.worker});
+  const _WorkerCard({required this.bookingId, required this.worker});
 
   @override
   ConsumerState<_WorkerCard> createState() => _WorkerCardState();
@@ -646,7 +647,7 @@ class _WorkerCardState extends ConsumerState<_WorkerCard> {
     try {
       final conversation = await ref
           .read(getOrCreateConversationProvider.notifier)
-          .getOrCreate(widget.worker.id);
+          .getOrCreate(widget.bookingId, widget.worker.id);
       if (mounted) {
         context.push('/client/chat/${conversation.id}');
       }

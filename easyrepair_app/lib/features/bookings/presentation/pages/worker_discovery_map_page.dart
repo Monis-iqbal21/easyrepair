@@ -574,7 +574,10 @@ class _BidOfferCard extends ConsumerWidget {
           Row(
             children: [
               Expanded(
-                child: _ChatButton(workerProfileId: bidWorker.workerProfileId),
+                child: _ChatButton(
+                  bookingId: bookingId,
+                  workerProfileId: bidWorker.workerProfileId,
+                ),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -812,7 +815,9 @@ class _InspectingWorkerOfferCard extends ConsumerWidget {
           const SizedBox(height: 12),
           Row(
             children: [
-              Expanded(child: _ChatButton(workerProfileId: worker.id)),
+              Expanded(
+                child: _ChatButton(bookingId: bookingId, workerProfileId: worker.id),
+              ),
               const SizedBox(width: 10),
               Expanded(
                 flex: 2,
@@ -952,8 +957,9 @@ class _InitialsLabel extends StatelessWidget {
 // ── Chat button ───────────────────────────────────────────────────────────────
 
 class _ChatButton extends ConsumerStatefulWidget {
+  final String bookingId;
   final String workerProfileId;
-  const _ChatButton({required this.workerProfileId});
+  const _ChatButton({required this.bookingId, required this.workerProfileId});
 
   @override
   ConsumerState<_ChatButton> createState() => _ChatButtonState();
@@ -968,7 +974,7 @@ class _ChatButtonState extends ConsumerState<_ChatButton> {
     try {
       final conversation = await ref
           .read(getOrCreateConversationProvider.notifier)
-          .getOrCreate(widget.workerProfileId);
+          .getOrCreate(widget.bookingId, widget.workerProfileId);
       if (mounted) {
         context.push('/client/chat/${conversation.id}');
       }

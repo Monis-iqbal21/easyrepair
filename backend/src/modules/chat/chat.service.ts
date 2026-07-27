@@ -1,5 +1,7 @@
 import {
   Injectable,
+  Inject,
+  forwardRef,
   Logger,
   NotFoundException,
   ForbiddenException,
@@ -11,6 +13,7 @@ import { ConversationResponseDto } from './dto/conversation-response.dto';
 import { MessageResponseDto } from './dto/message-response.dto';
 import { StorageService } from '../storage/storage.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { BookingsService } from '../bookings/bookings.service';
 
 @Injectable()
 export class ChatService {
@@ -20,17 +23,27 @@ export class ChatService {
     private readonly chatRepository: ChatRepository,
     private readonly storageService: StorageService,
     private readonly notificationsService: NotificationsService,
+    @Inject(forwardRef(() => BookingsService))
+    private readonly bookingsService: BookingsService,
   ) {}
 
   // ── Conversations ─────────────────────────────────────────────────────────
 
   /**
-   * CLIENT action: create or retrieve the conversation with the given worker.
-   * If a conversation already exists for this pair, it is returned as-is.
-   * Workers cannot call this to initiate with a new client.
+   * CLIENT action: create or retrieve the conversation with the given worker,
+   * in the context of a specific booking the client owns.
+   *
+   * An existing conversation for this client/worker pair is always reopened
+   * (preserving message history) regardless of the booking's current status
+   * — a completed or cancelled booking must never lock out a legitimate,
+   * already-established conversation. Creating a brand-new conversation,
+   * however, requires the shared eligibility check (BookingsService.
+   * assertClientCanChatWithWorker) so a client can't chat with an arbitrary
+   * worker by guessing a profile id.
    */
   async getOrCreateConversation(
     clientUserId: string,
+    bookingId: string,
     workerProfileId: string,
   ): Promise<ConversationResponseDto> {
     // Resolve workerProfileId → workerUserId
@@ -49,6 +62,14 @@ export class ChatService {
       const unreadCount = await this.chatRepository.countUnread(existing.id, clientUserId);
       return this._toConversationDto(existing, clientUserId, Role.CLIENT, unreadCount);
     }
+
+    // No existing conversation — enforce the full eligibility gate before
+    // creating a brand new one.
+    await this.bookingsService.assertClientCanChatWithWorker(
+      clientUserId,
+      bookingId,
+      workerProfileId,
+    );
 
     // Create new conversation — client is the creator
     const created = await this.chatRepository.createConversation({

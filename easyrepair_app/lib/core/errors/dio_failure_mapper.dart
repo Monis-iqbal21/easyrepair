@@ -41,8 +41,19 @@ Failure dioExceptionToFailure(DioException e) {
 
 String? _extractMessage(dynamic data) {
   if (data is Map<String, dynamic>) {
-    if (data['message'] != null) {
-      return data['message'].toString();
+    final message = data['message'];
+    // NestJS class-validator responses send `message` as a list of strings
+    // (one per failed validator) rather than a single string — join them
+    // into one readable line instead of showing Dart's raw "[a, b]" list
+    // formatting (or, worse, crashing a `message as String` cast).
+    if (message is List) {
+      final joined = message
+          .where((m) => m != null)
+          .map((m) => m.toString())
+          .join(', ');
+      if (joined.isNotEmpty) return joined;
+    } else if (message != null) {
+      return message.toString();
     }
     if (data['error'] != null) {
       return data['error'].toString();

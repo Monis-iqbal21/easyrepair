@@ -303,6 +303,25 @@ export class BookingsRepository {
   }
 
   /**
+   * Whether a worker has ever placed a bid on this booking — the eligible-
+   * worker signal for BIDDING lane (and reopened "Find Other Ustaad"
+   * INSPECTION jobs), where eligibility isn't a nearby-radius match but
+   * self-selection via bidding. Any status counts (PENDING/ACCEPTED/
+   * REJECTED) since chat eligibility shouldn't disappear just because a bid
+   * was later rejected in favour of someone else.
+   */
+  async hasBidFromWorker(
+    bookingId: string,
+    workerProfileId: string,
+  ): Promise<boolean> {
+    const bid = await this.prisma.bid.findUnique({
+      where: { bookingId_workerProfileId: { bookingId, workerProfileId } },
+      select: { id: true },
+    });
+    return bid !== null;
+  }
+
+  /**
    * Update editable fields on a PENDING booking that has no assigned worker.
    */
   async updateBooking(

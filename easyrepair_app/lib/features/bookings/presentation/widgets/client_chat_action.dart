@@ -41,19 +41,22 @@ Future<void> openClientChatForBooking(
 }
 
 /// Opens (or creates) the chat conversation between the current client and
-/// [workerProfileId], and navigates the client into it. Uses the CLIENT-role
-/// `POST /chat/conversations` endpoint, which has no booking-status
-/// restriction — safe to call both before a worker is assigned (e.g. picking
-/// an Ustaad in the inspection flow) and after a job is completed.
+/// [workerProfileId] for [bookingId], and navigates the client into it. Uses
+/// the CLIENT-role `POST /chat/conversations` endpoint — safe to call both
+/// before a worker is assigned (e.g. an eligible worker in the Standard/
+/// Inspection selection list) and after a job is completed, as long as the
+/// worker is actually eligible for/related to this booking (the backend
+/// enforces this; bookingId is required so it can check).
 Future<void> openClientChatWithWorker(
   BuildContext context,
   WidgetRef ref,
+  String bookingId,
   String workerProfileId,
 ) async {
   try {
     final conversation = await ref
         .read(getOrCreateConversationProvider.notifier)
-        .getOrCreate(workerProfileId);
+        .getOrCreate(bookingId, workerProfileId);
     if (context.mounted) {
       context.push('/client/chat/${conversation.id}');
     }

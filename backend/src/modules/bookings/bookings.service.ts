@@ -546,13 +546,20 @@ export class BookingsService {
       workerProfileId: booking.workerProfileId,
     });
 
-    // Notify worker of the new review
+    // Notify worker of the new review — Roman Urdu, all lanes. Uses the
+    // client's name when available, falling back to a generic term rather
+    // than ever showing a blank/undefined name.
     if (updated.workerProfile?.userId) {
+      const clientName = [profile.firstName, profile.lastName]
+        .filter((n) => n && n.trim().length > 0)
+        .join(' ')
+        .trim();
+      const clientLabel = clientName.length > 0 ? clientName : 'Client';
       void this.notificationsService.notify({
         userId: updated.workerProfile.userId,
         eventKey: 'booking.review.created',
-        title: 'Naya review mila hai',
-        body: `Customer ne aapko ${dto.rating}-star review diya hai. App mein check karein.`,
+        title: 'Aapko naya review mila hai',
+        body: `${clientLabel} ne aapke kaam ka review diya hai. App mein check karein.`,
         bookingId,
         route: `/worker/job/${bookingId}`,
         actorUserId: userId,
@@ -752,6 +759,71 @@ export class BookingsService {
       totalFound: workerDtos.length,
       searchCompleted,
     };
+  }
+
+  /**
+   * Single shared source of truth for "may this client open a chat with
+   * this worker, in the context of this booking" — reused by ChatService
+   * for both pre-assignment (available-worker list) and post-completion
+   * chat, replacing what used to be several inconsistent/absent checks.
+   *
+   * A client may chat with a worker for a booking they own when the worker
+   * is any of:
+   *   1. The currently (or formerly — cancellation/completion never clears
+   *      this field) assigned worker.
+   *   2. The original INSPECTION-lane inspector — preserved permanently even
+   *      after a different worker is later hired for the repair.
+   *   3. A genuinely eligible candidate for a still-open (PENDING) booking:
+   *      a bidder (BIDDING lane, or a reopened "Find Other Ustaad" job), or
+   *      a worker present in the nearby-worker result (STANDARD/ordinary
+   *      INSPECTION) — i.e. exactly the set already shown to the client,
+   *      never an arbitrary worker id.
+   *
+   * Throws NotFoundException / ForbiddenException when disallowed.
+   */
+  async assertClientCanChatWithWorker(
+    clientUserId: string,
+    bookingId: string,
+    workerProfileId: string,
+  ): Promise<void> {
+    const booking = await this.bookingsRepository.findBookingById(bookingId);
+    if (!booking) throw new NotFoundException('Booking not found');
+    if (booking.clientProfile?.userId !== clientUserId) {
+      throw new ForbiddenException('Not your booking');
+    }
+
+    if (booking.workerProfileId === workerProfileId) return;
+    if (booking.inspectionReport?.workerProfile?.id === workerProfileId) {
+      return;
+    }
+
+    if (booking.status === BookingStatus.PENDING) {
+      const isFindOtherUstaadOpen =
+        booking.inspectionReport?.decisionStatus === 'FIND_OTHER_USTAAD';
+      if (booking.lane === BookingLane.BIDDING || isFindOtherUstaadOpen) {
+        const hasBid = await this.bookingsRepository.hasBidFromWorker(
+          bookingId,
+          workerProfileId,
+        );
+        if (hasBid) return;
+      } else {
+        const excludedWorkerIds = booking.workerExclusions.map(
+          (e) => e.workerProfileId,
+        );
+        const { workers } = await this.bookingsRepository.findNearbyWorkers({
+          categoryId: booking.categoryId,
+          lat: booking.latitude,
+          lng: booking.longitude,
+          lane: booking.lane,
+          excludedWorkerIds,
+        });
+        if (workers.some((w) => w.id === workerProfileId)) return;
+      }
+    }
+
+    throw new ForbiddenException(
+      'You are not allowed to chat with this worker for this booking.',
+    );
   }
 
   /**
