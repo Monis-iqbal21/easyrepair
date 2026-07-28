@@ -1136,7 +1136,12 @@ export class BookingsService {
           'This booking was already closed after inspection.',
         );
       }
-      // ACCEPTED_REPAIR falls through to normal completion below.
+      // ACCEPTED_REPAIR (rehired inspector) and FIND_OTHER_USTAAD (a
+      // different repair worker hired via bidding — see acceptBid, which
+      // never touches decisionStatus, so it stays FIND_OTHER_USTAAD for the
+      // rest of this booking's lifecycle) both fall through to normal
+      // completion below — the assigned-worker check above already ensures
+      // only whoever is actually hired right now can complete it.
     }
 
     const completable: BookingStatus[] = [

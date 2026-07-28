@@ -6,6 +6,7 @@ import {
   TimeSlot,
   UrgentWindow,
 } from '@prisma/client';
+import { WorkerSummaryDto } from '../../bookings/dto/booking-response.dto';
 
 export class WorkerJobStandardServiceItemDto {
   id: string;
@@ -107,4 +108,14 @@ export class WorkerJobResponseDto {
    * work amount.
    */
   isInspectionOnlyForCaller: boolean;
+  /**
+   * The worker who submitted the inspection report, if any — same field
+   * name/shape as BookingResponseDto so BookingEntity.isDifferentWorkerPerformingWork
+   * (shared with the client app) works identically here: a repair worker
+   * hired via "Find Other Ustaad" has assignedWorker.id !== inspectingWorker.id,
+   * which is how the app tells them apart from the original inspector to
+   * show the correct lifecycle (On My Way → Arrived → In Progress →
+   * Completed, never Start Inspection).
+   */
+  inspectingWorker: WorkerSummaryDto | null;
 }

@@ -221,3 +221,170 @@ describe('WorkersService.cancelJob', () => {
     expect(call.eventKey).toBe('booking.cancelled.by_worker');
   });
 });
+
+describe('WorkersService.getWorkerJobById — inspection role detection', () => {
+  let workersRepository: any;
+  let notificationsService: any;
+  let service: WorkersService;
+
+  function makeInspectionJobFixture(overrides: Partial<any> = {}) {
+    return {
+      ...makeCancelJobFixture('IN_PROGRESS'),
+      lane: 'INSPECTION',
+      inspectionReport: null,
+      ...overrides,
+    };
+  }
+
+  beforeEach(() => {
+    workersRepository = {
+      findByUserId: jest
+        .fn()
+        .mockResolvedValue({ id: 'worker-1', skills: [], currentLat: null, currentLng: null }),
+      findJobByIdAndWorkerProfileId: jest.fn(),
+      findAvailablePendingJobById: jest.fn().mockResolvedValue(null),
+      findInspectionOnlyCompletedJobById: jest.fn().mockResolvedValue(null),
+    };
+    notificationsService = { notify: jest.fn().mockResolvedValue(undefined) };
+    service = new WorkersService(
+      workersRepository,
+      notificationsService,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+  });
+
+  // Root cause of "Start Inspection shown to the wrong worker": the
+  // worker-facing DTO never told the caller who actually inspected, so
+  // BookingEntity.isDifferentWorkerPerformingWork (which compares
+  // assignedWorker.id vs inspectingWorker.id) could never detect a repair
+  // worker hired after an existing report — it always fell back to the
+  // original-inspector branch.
+  it('the original inspector (no report submitted yet) gets no inspectingWorker — still resolves to Start Inspection client-side', async () => {
+    workersRepository.findByUserId.mockResolvedValue({
+      id: 'inspector-1',
+      skills: [],
+      currentLat: null,
+      currentLng: null,
+    });
+    workersRepository.findJobByIdAndWorkerProfileId.mockResolvedValue(
+      makeInspectionJobFixture({ workerProfileId: 'inspector-1' }),
+    );
+
+    const dto = await service.getWorkerJobById('inspector-user-1', 'booking-1');
+
+    expect(dto.inspectingWorker).toBeNull();
+  });
+
+  it('the original inspector, once their own report exists, sees themselves as the inspector (not a different worker)', async () => {
+    workersRepository.findByUserId.mockResolvedValue({
+      id: 'inspector-1',
+      skills: [],
+      currentLat: null,
+      currentLng: null,
+    });
+    workersRepository.findJobByIdAndWorkerProfileId.mockResolvedValue(
+      makeInspectionJobFixture({
+        workerProfileId: 'inspector-1',
+        inspectionReport: {
+          decisionStatus: 'ACCEPTED_REPAIR',
+          createdAt: new Date(),
+          workerProfileId: 'inspector-1',
+          workerProfile: {
+            id: 'inspector-1',
+            firstName: 'Ali',
+            lastName: 'Khan',
+            avatarUrl: null,
+            rating: 4.5,
+            currentLat: null,
+            currentLng: null,
+            user: { phone: '+923001234567' },
+          },
+        },
+      }),
+    );
+
+    const dto = await service.getWorkerJobById('inspector-user-1', 'booking-1');
+
+    expect(dto.inspectingWorker?.id).toBe('inspector-1');
+  });
+
+  // The actual fix: a different worker hired via "Find Other Ustaad" bidding
+  // now correctly receives the original inspector's id as inspectingWorker,
+  // which differs from their own — this is what lets
+  // BookingEntity.isDifferentWorkerPerformingWork resolve to true and show
+  // On My Way → Arrived → In Progress → Completed instead of Start
+  // Inspection / Submit Inspection Report.
+  it('a new repair worker hired after an existing report receives the original inspector as inspectingWorker (different from themselves)', async () => {
+    workersRepository.findByUserId.mockResolvedValue({
+      id: 'worker-2',
+      skills: [],
+      currentLat: null,
+      currentLng: null,
+    });
+    workersRepository.findJobByIdAndWorkerProfileId.mockResolvedValue(
+      makeInspectionJobFixture({
+        workerProfileId: 'worker-2', // repair worker now hired
+        status: 'ARRIVED',
+        inspectionReport: {
+          decisionStatus: 'FIND_OTHER_USTAAD',
+          createdAt: new Date(),
+          workerProfileId: 'inspector-1',
+          workerProfile: {
+            id: 'inspector-1',
+            firstName: 'Ali',
+            lastName: 'Khan',
+            avatarUrl: null,
+            rating: 4.5,
+            currentLat: null,
+            currentLng: null,
+            user: { phone: '+923001234567' },
+          },
+        },
+      }),
+    );
+
+    const dto = await service.getWorkerJobById('worker-2-user', 'booking-1');
+
+    expect(dto.inspectingWorker?.id).toBe('inspector-1');
+    expect(dto.inspectingWorker?.id).not.toBe('worker-2');
+  });
+
+  // Privacy: a not-yet-hired bidder browsing this job (New Job detail
+  // fallback) must never receive the inspector's phone/details.
+  it('does not expose the inspector to a not-yet-hired bidder browsing the reopened job', async () => {
+    workersRepository.findByUserId.mockResolvedValue({
+      id: 'bidder-1',
+      skills: [{ categoryId: 'cat-1' }],
+      currentLat: 24.86,
+      currentLng: 67.0,
+    });
+    workersRepository.findJobByIdAndWorkerProfileId.mockResolvedValue(null);
+    workersRepository.findAvailablePendingJobById.mockResolvedValue(
+      makeInspectionJobFixture({
+        workerProfileId: null,
+        status: 'PENDING',
+        inspectionReport: {
+          decisionStatus: 'FIND_OTHER_USTAAD',
+          createdAt: new Date(),
+          workerProfileId: 'inspector-1',
+          workerProfile: {
+            id: 'inspector-1',
+            firstName: 'Ali',
+            lastName: 'Khan',
+            avatarUrl: null,
+            rating: 4.5,
+            currentLat: null,
+            currentLng: null,
+            user: { phone: '+923001234567' },
+          },
+        },
+      }),
+    );
+
+    const dto = await service.getWorkerJobById('bidder-user-1', 'booking-1');
+
+    expect(dto.inspectingWorker).toBeNull();
+  });
+});

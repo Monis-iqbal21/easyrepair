@@ -41,6 +41,7 @@ import {
   WorkerReviewResponseDto,
   WorkerReviewSummaryDto,
 } from './dto/worker-review-response.dto';
+import { WorkerSummaryDto } from '../bookings/dto/booking-response.dto';
 
 /** 7 hours in milliseconds — delay before auto-offline job fires. */
 const AUTO_OFFLINE_DELAY_MS = 7 * 60 * 60 * 1000;
@@ -966,6 +967,25 @@ export class WorkersService {
           workerCoords?.lng,
         );
 
+    // Privacy: only the currently assigned/hired worker gets to see who
+    // inspected (needed so BookingEntity.isDifferentWorkerPerformingWork can
+    // tell them apart from the original inspector) — a not-yet-hired
+    // bidder browsing this job via the New Job detail fallback must never
+    // receive the inspector's phone number or other details.
+    const iwp = isAssignedToCaller ? job.inspectionReport?.workerProfile : null;
+    const inspectingWorker: WorkerSummaryDto | null = iwp
+      ? {
+          id: iwp.id,
+          firstName: iwp.firstName,
+          lastName: iwp.lastName,
+          rating: iwp.rating,
+          avatarUrl: iwp.avatarUrl,
+          currentLat: iwp.currentLat ?? null,
+          currentLng: iwp.currentLng ?? null,
+          phone: iwp.user.phone,
+        }
+      : null;
+
     return {
       id: job.id,
       serviceCategory: job.category.name,
@@ -1021,6 +1041,7 @@ export class WorkersService {
       inspectionReportSubmittedAt:
         job.inspectionReport?.createdAt.toISOString() ?? null,
       isInspectionOnlyForCaller,
+      inspectingWorker,
     };
   }
 

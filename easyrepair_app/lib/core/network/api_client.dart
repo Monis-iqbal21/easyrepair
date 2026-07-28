@@ -13,11 +13,17 @@ import '../storage/secure_storage_service.dart';
 class AuthInterceptor extends Interceptor {
   final SecureStorageService _storage;
   final Dio _dio;
+  final Dio _refreshDio;
 
   bool _isRefreshing = false;
   Completer<void>? _refreshCompleter;
 
-  AuthInterceptor(this._storage, this._dio);
+  /// [refreshDio] is injectable purely so tests can point the `/auth/refresh`
+  /// call at a fake adapter instead of the network; production always uses
+  /// the default (a plain client with no interceptors, same as before this
+  /// was hoisted out of `onError` into a field).
+  AuthInterceptor(this._storage, this._dio, {Dio? refreshDio})
+      : _refreshDio = refreshDio ?? Dio(BaseOptions(baseUrl: AppConfig.apiBaseUrl));
 
   @override
   Future<void> onRequest(
@@ -35,6 +41,26 @@ class AuthInterceptor extends Interceptor {
     handler.next(options);
   }
 
+  /// Retries [requestOptions] with a fresh access token. `FormData` bodies
+  /// (e.g. the inspection report multipart upload) are single-use — Dio
+  /// throws a `StateError` re-finalizing a body that was already streamed
+  /// during the original, now-401'd attempt — so a `FormData` body must be
+  /// cloned before the request can be resent.
+  Future<Response<dynamic>> _retryWithToken(
+    RequestOptions requestOptions,
+    String accessToken,
+  ) {
+    requestOptions.headers['Authorization'] = 'Bearer $accessToken';
+    if (requestOptions.data is FormData) {
+      requestOptions.data = (requestOptions.data as FormData).clone();
+    }
+    // Marks this request as already having gone through one auth-refresh
+    // retry, so a 401 on the retry itself is never retried again below —
+    // otherwise a persistently-401'ing endpoint would refresh forever.
+    requestOptions.extra['_authRetried'] = true;
+    return _dio.fetch(requestOptions);
+  }
+
   @override
   Future<void> onError(
     DioException err,
@@ -45,27 +71,46 @@ class AuthInterceptor extends Interceptor {
       return;
     }
 
-    if (_isRefreshing) {
-      await _refreshCompleter!.future;
-      final token = await _storage.getAccessToken();
-      if (token != null) {
-        err.requestOptions.headers['Authorization'] = 'Bearer $token';
-        try {
-          final retryResponse = await _dio.fetch(err.requestOptions);
-          handler.resolve(retryResponse);
-          return;
-        } catch (e) {
-          handler.next(err);
-          return;
-        }
-      }
+    if (err.requestOptions.extra['_authRetried'] == true) {
       handler.next(err);
+      return;
+    }
+
+    if (_isRefreshing) {
+      try {
+        await _refreshCompleter!.future;
+      } catch (_) {
+        // The in-flight refresh this request was waiting on failed — fall
+        // through to the original 401 rather than let that error escape
+        // uncaught from this handler (which would leave the request stuck
+        // instead of ever resolving/rejecting).
+        handler.next(err);
+        return;
+      }
+      final token = await _storage.getAccessToken();
+      if (token == null) {
+        handler.next(err);
+        return;
+      }
+      try {
+        final retryResponse = await _retryWithToken(err.requestOptions, token);
+        handler.resolve(retryResponse);
+      } catch (e) {
+        handler.next(err);
+      }
       return;
     }
 
     _isRefreshing = true;
     _refreshCompleter = Completer<void>();
+    // A completer that errors with nothing ever listening to its `.future`
+    // surfaces as an unhandled async error — harmless in production (Dio's
+    // own error still reaches the caller via `handler.next` below) but worth
+    // silencing at the source rather than relying on a follower always being
+    // there to observe it.
+    unawaited(_refreshCompleter!.future.catchError((_) {}));
 
+    String accessToken;
     try {
       final refreshToken = await _storage.getRefreshToken();
       if (refreshToken == null) {
@@ -75,42 +120,50 @@ class AuthInterceptor extends Interceptor {
         return;
       }
 
-      final refreshDio = Dio(
-        BaseOptions(baseUrl: AppConfig.apiBaseUrl),
-      );
-      final refreshResponse = await refreshDio.post(
+      final refreshResponse = await _refreshDio.post(
         '/auth/refresh',
         data: {'refreshToken': refreshToken},
       );
 
       final data = refreshResponse.data['data'] ?? refreshResponse.data;
+      accessToken = data['accessToken'] as String;
       await _storage.saveTokens(
-        accessToken: data['accessToken'] as String,
+        accessToken: accessToken,
         refreshToken: data['refreshToken'] as String,
       );
 
       _refreshCompleter!.complete();
-
-      err.requestOptions.headers['Authorization'] =
-          'Bearer ${data['accessToken']}';
-      final retryResponse = await _dio.fetch(err.requestOptions);
-      handler.resolve(retryResponse);
     } catch (e) {
-      // Only a definitive rejection from the server (the refresh token
-      // itself is invalid/expired/revoked) means the session is actually
-      // over. A transient network failure while refreshing — e.g. the app
-      // resuming from background mid-upload, before connectivity is fully
-      // re-established — must never clear a still-valid session; the next
-      // request simply gets to try the refresh again.
-      final isDefiniteAuthRejection = e is DioException && e.response != null;
+      // Only a definitive rejection from the refresh endpoint itself — it
+      // responds 401 specifically when the refresh token is invalid,
+      // expired, or revoked (see AuthService.refreshTokens) — means the
+      // session is actually over. Any other error (a transient network
+      // failure, a timeout, or the refresh endpoint returning a 5xx/429)
+      // must never clear a still-valid session; the next request simply
+      // gets to try the refresh again.
+      final isDefiniteAuthRejection =
+          e is DioException && e.response?.statusCode == 401;
       if (isDefiniteAuthRejection) {
         await _storage.clearTokens();
       }
       _refreshCompleter!.completeError('refresh_failed');
       handler.next(err);
+      return;
     } finally {
       _isRefreshing = false;
       _refreshCompleter = null;
+    }
+
+    // The refresh itself succeeded — retrying the original request from
+    // here on is a separate concern. Its failure (e.g. the backend still
+    // rejects it for an unrelated reason, or a stream-based body couldn't be
+    // resent) must only fail *this* request, never reach back into the
+    // refresh completer above, which has already settled successfully.
+    try {
+      final retryResponse = await _retryWithToken(err.requestOptions, accessToken);
+      handler.resolve(retryResponse);
+    } catch (_) {
+      handler.next(err);
     }
   }
 }

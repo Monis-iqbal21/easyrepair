@@ -77,7 +77,30 @@ const WORKER_JOB_INCLUDE = {
     select: { id: true, rating: true, comment: true, createdAt: true },
   },
   inspectionReport: {
-    select: { decisionStatus: true, createdAt: true, workerProfileId: true },
+    select: {
+      decisionStatus: true,
+      createdAt: true,
+      workerProfileId: true,
+      // Permanent record of who inspected — kept even after a different
+      // worker is hired for the repair (Booking.workerProfileId changes,
+      // this never does). Same shape as BookingsRepository.BOOKING_INCLUDE
+      // so the resulting inspectingWorker field lets
+      // BookingEntity.isDifferentWorkerPerformingWork tell the repair
+      // worker and the original inspector apart on the worker's own device
+      // too, not just the client's.
+      workerProfile: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          avatarUrl: true,
+          rating: true,
+          currentLat: true,
+          currentLng: true,
+          user: { select: { phone: true } },
+        },
+      },
+    },
   },
 } satisfies Prisma.BookingInclude;
 

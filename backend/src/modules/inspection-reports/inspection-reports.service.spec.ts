@@ -195,6 +195,123 @@ describe('InspectionReportsService', () => {
     expect(result.decisionStatus).toBe('CLOSED_AFTER_INSPECTION');
   });
 
+  // ── New repair worker (hired via Find Other Ustaad bidding, after the
+  // original inspector already submitted a report) must never be able to
+  // submit a second report through the API — regardless of role, a report
+  // already existing for this booking is an unconditional Conflict.
+  it('rejects a second inspection report submission by the new repair worker', async () => {
+    repository.findWorkerProfileByUserId.mockResolvedValue({ id: 'worker-2' });
+    repository.findBookingContext.mockResolvedValue({
+      ...BASE_BOOKING,
+      workerProfileId: 'worker-2', // repair worker now assigned/hired
+    });
+    repository.findByBookingId.mockResolvedValue(BASE_REPORT); // already exists (from inspector-1)
+    repository.createReport = jest.fn();
+
+    await expect(
+      service.submitReport('worker-2-user', 'booking-1', {} as any, []),
+    ).rejects.toThrow(
+      'An inspection report has already been submitted for this booking.',
+    );
+    expect(repository.createReport).not.toHaveBeenCalled();
+  });
+
+  // ── Optional fields (images, voice note, parts, note) must never block a
+  // submission — only issueFound+recommendedRepair (or a voice note),
+  // labourCost, and partsNeeded are genuinely required.
+  describe('submitReport with optional fields absent', () => {
+    const NO_EXISTING_REPORT_BOOKING = {
+      ...BASE_BOOKING,
+      workerProfileId: 'inspector-1',
+    };
+
+    beforeEach(() => {
+      repository.findWorkerProfileByUserId.mockResolvedValue({
+        id: 'inspector-1',
+      });
+      repository.findBookingContext.mockResolvedValue(
+        NO_EXISTING_REPORT_BOOKING,
+      );
+      repository.findByBookingId.mockResolvedValue(null); // no report yet
+      repository.createReport = jest.fn().mockResolvedValue(BASE_REPORT);
+    });
+
+    const baseDto = {
+      issueFound: 'Leaky pipe',
+      recommendedRepair: 'Replace pipe',
+      labourCost: 1000,
+      partsNeeded: false,
+    };
+
+    it('submits successfully with no photos and no voice note', async () => {
+      await expect(
+        service.submitReport('inspector-user-1', 'booking-1', {
+          ...baseDto,
+          parts: [],
+        } as any, [], undefined),
+      ).resolves.toBeDefined();
+      expect(repository.createReport).toHaveBeenCalledTimes(1);
+    });
+
+    it('submits successfully with parts omitted (partsNeeded false)', async () => {
+      await expect(
+        service.submitReport(
+          'inspector-user-1',
+          'booking-1',
+          { ...baseDto } as any, // dto.parts is undefined
+          [],
+          undefined,
+        ),
+      ).resolves.toBeDefined();
+      const created = repository.createReport.mock.calls[0][0];
+      expect(created.parts).toEqual([]);
+      expect(created.partsTotal).toBe(0);
+    });
+
+    it('submits successfully with no optional Ustaad note (notes omitted)', async () => {
+      await service.submitReport(
+        'inspector-user-1',
+        'booking-1',
+        { ...baseDto, parts: [] } as any,
+        [],
+        undefined,
+      );
+      const created = repository.createReport.mock.calls[0][0];
+      expect(created.notes).toBeUndefined();
+    });
+
+    it('submits successfully with every optional field absent together', async () => {
+      const result = await service.submitReport(
+        'inspector-user-1',
+        'booking-1',
+        { ...baseDto, parts: [] } as any,
+        [], // no photos
+        undefined, // no voice note
+      );
+      expect(repository.createReport).toHaveBeenCalledTimes(1);
+      const created = repository.createReport.mock.calls[0][0];
+      expect(created.photos).toEqual([]);
+      expect(created.voiceNoteUrl).toBeNull();
+      expect(created.voiceNoteDurationSeconds).toBeNull();
+      expect(created.parts).toEqual([]);
+      expect(created.notes).toBeUndefined();
+      expect(result).toBeDefined();
+    });
+
+    it('still requires at least one part when partsNeeded is true and parts is empty', async () => {
+      await expect(
+        service.submitReport(
+          'inspector-user-1',
+          'booking-1',
+          { ...baseDto, partsNeeded: true, parts: [] } as any,
+          [],
+          undefined,
+        ),
+      ).rejects.toThrow('Add at least one part when parts are needed.');
+      expect(repository.createReport).not.toHaveBeenCalled();
+    });
+  });
+
   // ── #6 Sanitized report hides all prices ────────────────────────────────
   describe('sanitized report for an eligible bidder', () => {
     const REOPENED_BOOKING = {
