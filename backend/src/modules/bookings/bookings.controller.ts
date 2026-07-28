@@ -216,8 +216,9 @@ export class BookingsController {
 
   /**
    * POST /bookings/:id/worker-cancel
-   * Worker cancels before arrival. Requires a reason. Excludes the worker
-   * from being re-offered this same booking and returns it to PENDING.
+   * Worker cancels before starting the job (ACCEPTED/EN_ROUTE/ARRIVED).
+   * Requires a reason. Terminally cancels the booking — the client
+   * separately calls reopen-after-cancellation to find another worker.
    */
   @Post(':id/worker-cancel')
   @Roles(Role.WORKER)
@@ -231,6 +232,24 @@ export class BookingsController {
       user.id,
       bookingId,
       dto.reason,
+    );
+  }
+
+  /**
+   * POST /bookings/:id/reopen-after-cancellation
+   * Client action after a worker cancellation — reopens the booking for
+   * hiring/bidding again, excluding the worker who cancelled.
+   */
+  @Post(':id/reopen-after-cancellation')
+  @Roles(Role.CLIENT)
+  @HttpCode(HttpStatus.OK)
+  reopenAfterWorkerCancellation(
+    @CurrentUser() user: { id: string },
+    @Param('id') bookingId: string,
+  ) {
+    return this.bookingsService.reopenAfterWorkerCancellation(
+      user.id,
+      bookingId,
     );
   }
 
@@ -266,10 +285,14 @@ export class BookingsController {
     @Body('durationSeconds') durationSecondsRaw?: string,
   ) {
     if (!file) throw new BadRequestException('No file provided.');
-    const durationSeconds = durationSecondsRaw != null
-      ? parseFloat(durationSecondsRaw)
-      : undefined;
-    return this.bookingsService.uploadAttachment(user.id, bookingId, file, durationSeconds);
+    const durationSeconds =
+      durationSecondsRaw != null ? parseFloat(durationSecondsRaw) : undefined;
+    return this.bookingsService.uploadAttachment(
+      user.id,
+      bookingId,
+      file,
+      durationSeconds,
+    );
   }
 
   /**

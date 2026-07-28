@@ -901,7 +901,7 @@ class _ActiveJobCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final statusLabel = _statusLabel(job.status);
+    final statusLabel = _statusLabel(job.status, job.lane);
     final statusColor = _statusColor(job.status);
 
     return GestureDetector(
@@ -1038,7 +1038,13 @@ class _ActiveJobCard extends StatelessWidget {
     );
   }
 
-  String _statusLabel(String status) {
+  String _statusLabel(String status, String lane) {
+    // Inspection jobs are only ever "assigned" for a look, not truly
+    // "accepted" work yet (the Ustaad still has to inspect before any repair
+    // is agreed) — Standard/Bidding keep their existing "Accepted" wording.
+    if (status.toUpperCase() == 'ACCEPTED' && lane.toUpperCase() == 'INSPECTION') {
+      return 'Assigned';
+    }
     switch (status.toUpperCase()) {
       case 'ACCEPTED':
         return 'Accepted';

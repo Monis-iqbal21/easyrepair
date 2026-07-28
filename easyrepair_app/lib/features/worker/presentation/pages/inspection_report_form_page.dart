@@ -13,6 +13,8 @@ import '../../../../core/utils/currency_utils.dart';
 import '../../../bookings/domain/entities/inspection_report_entity.dart';
 import '../../../bookings/presentation/providers/booking_providers.dart';
 import '../../../bookings/presentation/widgets/media_attachment_widgets.dart';
+import '../config/inspection_issue_hints.dart';
+import '../providers/worker_job_providers.dart';
 
 const _kPrimary = Color(0xFFDB6234);
 const _kDark = Color(0xFF1A1A1A);
@@ -92,7 +94,9 @@ class _InspectionReportFormPageState
   Future<void> _startVoiceRecording() async {
     final status = await Permission.microphone.request();
     if (status.isPermanentlyDenied) {
-      _showError('Microphone access is permanently denied. Enable it in Settings.');
+      _showError(
+        'Microphone access is permanently denied. Enable it in Settings.',
+      );
       openAppSettings();
       return;
     }
@@ -216,20 +220,36 @@ class _InspectionReportFormPageState
     if (file != null && mounted) setState(() => _photos.add(file));
   }
 
+  /// Belt-and-suspenders reentrancy guard — the button is already disabled
+  /// via the provider's `isLoading`, but that only takes effect on the next
+  /// rebuild; this blocks a second tap landing in the same frame before that
+  /// rebuild happens, so a fast double-tap can never fire two submissions.
+  bool _submitInFlight = false;
+
   Future<void> _submit() async {
-    if (!_isValid) return;
+    if (!_isValid || _submitInFlight) return;
+    _submitInFlight = true;
     try {
-      await ref.read(inspectionReportSubmitNotifierProvider.notifier).submit(
+      await ref
+          .read(inspectionReportSubmitNotifierProvider.notifier)
+          .submit(
             widget.bookingId,
-            issueFound: _issueCtrl.text.trim().isEmpty ? null : _issueCtrl.text.trim(),
-            recommendedRepair:
-                _repairCtrl.text.trim().isEmpty ? null : _repairCtrl.text.trim(),
+            issueFound: _issueCtrl.text.trim().isEmpty
+                ? null
+                : _issueCtrl.text.trim(),
+            recommendedRepair: _repairCtrl.text.trim().isEmpty
+                ? null
+                : _repairCtrl.text.trim(),
             labourCost: _labourCost,
             partsNeeded: _partsNeeded,
             parts: _parts,
-            notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
+            notes: _notesCtrl.text.trim().isEmpty
+                ? null
+                : _notesCtrl.text.trim(),
             photos: _photos.map((x) => File(x.path)).toList(),
-            voiceNoteFile: _voiceNotePath != null ? File(_voiceNotePath!) : null,
+            voiceNoteFile: _voiceNotePath != null
+                ? File(_voiceNotePath!)
+                : null,
             voiceNoteDurationSeconds: _voiceNoteDurationSeconds?.toDouble(),
           );
       if (mounted) {
@@ -246,19 +266,31 @@ class _InspectionReportFormPageState
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e is Failure ? e.message : 'Failed to submit report.'),
+            content: Text(
+              e is Failure ? e.message : 'Failed to submit report.',
+            ),
             backgroundColor: _kError,
             behavior: SnackBarBehavior.floating,
           ),
         );
       }
+    } finally {
+      // Always released — success, error, timeout, or the widget having
+      // been disposed in the meantime all reach this line.
+      _submitInFlight = false;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final isSubmitting =
-        ref.watch(inspectionReportSubmitNotifierProvider).isLoading;
+    final isSubmitting = ref
+        .watch(inspectionReportSubmitNotifierProvider)
+        .isLoading;
+    final categoryName = ref
+        .watch(workerJobDetailProvider(widget.bookingId))
+        .valueOrNull
+        ?.serviceCategory;
+    final issueHint = inspectionIssueHintFor(categoryName);
 
     return Scaffold(
       backgroundColor: _kBg,
@@ -284,14 +316,22 @@ class _InspectionReportFormPageState
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _FieldLabel(_hasVoiceNote ? 'Masla kya nikla?' : 'Masla kya nikla? *'),
+                          _FieldLabel(
+                            _hasVoiceNote
+                                ? 'Masla kya nikla?'
+                                : 'Masla kya nikla? *',
+                          ),
                           _TextInput(
                             controller: _issueCtrl,
-                            hint: 'e.g. Gas leak — refill zaroori',
+                            hint: issueHint,
                             onChanged: (_) => setState(() {}),
                           ),
                           const SizedBox(height: 16),
-                          _FieldLabel(_hasVoiceNote ? 'Recommended repair' : 'Recommended repair *'),
+                          _FieldLabel(
+                            _hasVoiceNote
+                                ? 'Recommended repair'
+                                : 'Recommended repair *',
+                          ),
                           _TextInput(
                             controller: _repairCtrl,
                             hint: 'Kya kaam karna hoga',
@@ -318,11 +358,21 @@ class _InspectionReportFormPageState
                       const SizedBox(height: 8),
                       const Text(
                         'Please write the report or record a voice note.',
-                        style: TextStyle(color: _kError, fontSize: 12.5, fontWeight: FontWeight.w600),
+                        style: TextStyle(
+                          color: _kError,
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ],
                     const SizedBox(height: 12),
-                    _Card(child: _PhotosSection(photos: _photos, onAdd: _pickPhoto, onRemove: (i) => setState(() => _photos.removeAt(i)))),
+                    _Card(
+                      child: _PhotosSection(
+                        photos: _photos,
+                        onAdd: _pickPhoto,
+                        onRemove: (i) => setState(() => _photos.removeAt(i)),
+                      ),
+                    ),
                     const SizedBox(height: 12),
                     _Card(
                       child: Column(
@@ -333,7 +383,11 @@ class _InspectionReportFormPageState
                             children: [
                               const Text(
                                 'Parts required?',
-                                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14.5, color: _kDark),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 14.5,
+                                  color: _kDark,
+                                ),
                               ),
                               Switch(
                                 value: _partsNeeded,
@@ -348,23 +402,29 @@ class _InspectionReportFormPageState
                           if (_partsNeeded) ...[
                             const SizedBox(height: 8),
                             ..._parts.asMap().entries.map(
-                                  (e) => _PartCard(
-                                    part: e.value,
-                                    onChanged: (p) => setState(() => _parts[e.key] = p),
-                                    onRemove: () => setState(() => _parts.removeAt(e.key)),
-                                  ),
-                                ),
+                              (e) => _PartCard(
+                                part: e.value,
+                                onChanged: (p) =>
+                                    setState(() => _parts[e.key] = p),
+                                onRemove: () =>
+                                    setState(() => _parts.removeAt(e.key)),
+                              ),
+                            ),
                             const SizedBox(height: 8),
                             OutlinedButton.icon(
                               onPressed: () => setState(
-                                () => _parts.add(const InspectionReportPartDraft()),
+                                () => _parts.add(
+                                  const InspectionReportPartDraft(),
+                                ),
                               ),
                               icon: const Icon(Icons.add_rounded, size: 18),
                               label: const Text('Add part'),
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: _kPrimary,
                                 side: const BorderSide(color: _kPrimary),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
                               ),
                             ),
                           ],
@@ -385,7 +445,11 @@ class _InspectionReportFormPageState
                           ),
                           const SizedBox(height: 16),
                           _FieldLabel('Notes (optional)'),
-                          _TextInput(controller: _notesCtrl, hint: 'Ustaad notes', maxLines: 2),
+                          _TextInput(
+                            controller: _notesCtrl,
+                            hint: 'Ustaad notes',
+                            maxLines: 2,
+                          ),
                         ],
                       ),
                     ),
@@ -413,17 +477,25 @@ class _InspectionReportFormPageState
                       disabledBackgroundColor: _kBorder,
                       elevation: 0,
                       padding: const EdgeInsets.symmetric(vertical: 15),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                     ),
                     child: isSubmitting
                         ? const SizedBox(
                             width: 18,
                             height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
                           )
                         : const Text(
                             'Report submit karain',
-                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
                   ),
                 ),
@@ -450,7 +522,11 @@ class _Card extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: _kBorder),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 8, offset: const Offset(0, 2)),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
         ],
       ),
       child: child,
@@ -468,7 +544,11 @@ class _FieldLabel extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 6),
       child: Text(
         text,
-        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _kDark),
+        style: const TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w700,
+          color: _kDark,
+        ),
       ),
     );
   }
@@ -525,7 +605,11 @@ class _PhotosSection extends StatelessWidget {
   final VoidCallback onAdd;
   final ValueChanged<int> onRemove;
 
-  const _PhotosSection({required this.photos, required this.onAdd, required this.onRemove});
+  const _PhotosSection({
+    required this.photos,
+    required this.onAdd,
+    required this.onRemove,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -535,7 +619,11 @@ class _PhotosSection extends StatelessWidget {
       children: [
         Text(
           'Issue photos — optional, max $_kMaxPhotos',
-          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _kDark),
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: _kDark,
+          ),
         ),
         const SizedBox(height: 10),
         GridView.builder(
@@ -556,10 +644,17 @@ class _PhotosSection extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: _kBg,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: _kBorder, style: BorderStyle.solid),
+                    border: Border.all(
+                      color: _kBorder,
+                      style: BorderStyle.solid,
+                    ),
                   ),
                   child: const Center(
-                    child: Icon(Icons.camera_alt_rounded, color: _kPrimary, size: 22),
+                    child: Icon(
+                      Icons.camera_alt_rounded,
+                      color: _kPrimary,
+                      size: 22,
+                    ),
                   ),
                 ),
               );
@@ -578,8 +673,15 @@ class _PhotosSection extends StatelessWidget {
                     onTap: () => onRemove(i),
                     child: Container(
                       padding: const EdgeInsets.all(3),
-                      decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
-                      child: const Icon(Icons.close_rounded, color: Colors.white, size: 14),
+                      decoration: const BoxDecoration(
+                        color: Colors.black54,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.close_rounded,
+                        color: Colors.white,
+                        size: 14,
+                      ),
                     ),
                   ),
                 ),
@@ -626,7 +728,11 @@ class _VoiceNoteSection extends StatelessWidget {
       children: [
         const Text(
           'Voice note',
-          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _kDark),
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: _kDark,
+          ),
         ),
         const SizedBox(height: 4),
         const Text(
@@ -640,12 +746,19 @@ class _VoiceNoteSection extends StatelessWidget {
               Container(
                 width: 10,
                 height: 10,
-                decoration: const BoxDecoration(color: _kError, shape: BoxShape.circle),
+                decoration: const BoxDecoration(
+                  color: _kError,
+                  shape: BoxShape.circle,
+                ),
               ),
               const SizedBox(width: 10),
               Text(
                 'Recording  ${_fmt(recordingDuration)}',
-                style: const TextStyle(fontSize: 14, color: _kDark, fontWeight: FontWeight.w500),
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: _kDark,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
               const Spacer(),
               IconButton(
@@ -655,7 +768,11 @@ class _VoiceNoteSection extends StatelessWidget {
               ),
               IconButton(
                 onPressed: onStopRecording,
-                icon: const Icon(Icons.stop_circle_rounded, color: _kPrimary, size: 32),
+                icon: const Icon(
+                  Icons.stop_circle_rounded,
+                  color: _kPrimary,
+                  size: 32,
+                ),
                 tooltip: 'Stop',
               ),
             ],
@@ -681,7 +798,9 @@ class _VoiceNoteSection extends StatelessWidget {
             style: OutlinedButton.styleFrom(
               foregroundColor: _kPrimary,
               side: const BorderSide(color: _kPrimary),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
             ),
           ),
@@ -695,19 +814,29 @@ class _PartCard extends StatefulWidget {
   final ValueChanged<InspectionReportPartDraft> onChanged;
   final VoidCallback onRemove;
 
-  const _PartCard({required this.part, required this.onChanged, required this.onRemove});
+  const _PartCard({
+    required this.part,
+    required this.onChanged,
+    required this.onRemove,
+  });
 
   @override
   State<_PartCard> createState() => _PartCardState();
 }
 
 class _PartCardState extends State<_PartCard> {
-  late final TextEditingController _name = TextEditingController(text: widget.part.name);
-  late final TextEditingController _qty = TextEditingController(text: widget.part.quantity.toString());
+  late final TextEditingController _name = TextEditingController(
+    text: widget.part.name,
+  );
+  late final TextEditingController _qty = TextEditingController(
+    text: widget.part.quantity.toString(),
+  );
   late final TextEditingController _price = TextEditingController(
     text: widget.part.unitPrice == 0 ? '' : widget.part.unitPrice.toString(),
   );
-  late final TextEditingController _warranty = TextEditingController(text: widget.part.warranty ?? '');
+  late final TextEditingController _warranty = TextEditingController(
+    text: widget.part.warranty ?? '',
+  );
 
   @override
   void dispose() {
@@ -743,7 +872,11 @@ class _PartCardState extends State<_PartCard> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _FieldLabel('Part name'),
-          _TextInput(controller: _name, hint: 'e.g. Gas refill', onChanged: (_) => _emit()),
+          _TextInput(
+            controller: _name,
+            hint: 'e.g. Gas refill',
+            onChanged: (_) => _emit(),
+          ),
           const SizedBox(height: 10),
           Row(
             children: [
@@ -780,7 +913,11 @@ class _PartCardState extends State<_PartCard> {
           ),
           const SizedBox(height: 10),
           _FieldLabel('Warranty / guarantee (optional)'),
-          _TextInput(controller: _warranty, hint: 'e.g. 7 days', onChanged: (_) => _emit()),
+          _TextInput(
+            controller: _warranty,
+            hint: 'e.g. 7 days',
+            onChanged: (_) => _emit(),
+          ),
           const SizedBox(height: 10),
           SizedBox(
             width: double.infinity,
@@ -789,7 +926,9 @@ class _PartCardState extends State<_PartCard> {
               style: OutlinedButton.styleFrom(
                 foregroundColor: _kError,
                 side: const BorderSide(color: _kError),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
               child: const Text('Remove part'),
             ),
@@ -832,17 +971,32 @@ class _SummaryCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Kam ki puri raqam', style: TextStyle(color: Colors.white, fontSize: 15.5, fontWeight: FontWeight.w800)),
+              const Text(
+                'Kam ki puri raqam',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 15.5,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
               Text(
                 formatPkr(finalQuote),
-                style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w900),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
             ],
           ),
           const SizedBox(height: 6),
           const Text(
-            'Agar customer repair continue karwata hai to inspection fee waive ho jayegi.',
-            style: TextStyle(color: Colors.white60, fontSize: 11.5, height: 1.4),
+            'Agar customer repair continue karwata hai to inspection fee nhi deni hogi.',
+            style: TextStyle(
+              color: Colors.white60,
+              fontSize: 11.5,
+              height: 1.4,
+            ),
           ),
         ],
       ),
@@ -855,8 +1009,18 @@ class _SummaryCard extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: Colors.white70, fontSize: 13.5)),
-          Text(value, style: TextStyle(color: valueColor, fontWeight: FontWeight.w700, fontSize: 13.5)),
+          Text(
+            label,
+            style: const TextStyle(color: Colors.white70, fontSize: 13.5),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              color: valueColor,
+              fontWeight: FontWeight.w700,
+              fontSize: 13.5,
+            ),
+          ),
         ],
       ),
     );

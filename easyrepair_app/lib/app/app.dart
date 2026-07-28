@@ -252,10 +252,16 @@ class _EasyRepairAppState extends ConsumerState<EasyRepairApp>
         ref.invalidate(newJobsProvider);
       } else if (_assignedJobEventKeys.contains(eventKey)) {
         // Worker was just hired/assigned (direct hire or accepted bid) —
-        // refresh My Jobs, New Jobs, and profile stats.
+        // refresh My Jobs, New Jobs, profile stats, and — if the worker
+        // already had this job's detail page cached from before the
+        // hire/bid-acceptance (e.g. viewed it while still just bidding) —
+        // its detail too, so a stale PENDING/"Bid Now" view doesn't linger.
         ref.invalidate(workerJobsProvider);
         ref.invalidate(newJobsProvider);
         ref.invalidate(workerProfileProvider);
+        if (bookingId != null && bookingId.isNotEmpty) {
+          ref.invalidate(workerJobDetailProvider(bookingId));
+        }
       } else if (_workerLiveSyncEventKeys.contains(eventKey)) {
         // Client-side action on a booking this worker is assigned to
         // (cancelled, quote accepted/closed, review left) — refresh the

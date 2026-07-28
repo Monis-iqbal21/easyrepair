@@ -5,6 +5,7 @@ class OngoingJobEntity {
   final String clientArea;
   final String addressLine;
   final String status;
+  final String lane;
 
   const OngoingJobEntity({
     required this.id,
@@ -13,6 +14,7 @@ class OngoingJobEntity {
     required this.clientArea,
     required this.addressLine,
     required this.status,
+    this.lane = 'STANDARD',
   });
 
   String get displayStatus {

@@ -289,4 +289,71 @@ describe('BidsService', () => {
       'worker-user-2',
     );
   });
+
+  // ── Hired-worker lifecycle: root cause of "hired worker still sees Bid
+  // Now" was the Flutter app never refreshing its cached job-detail state
+  // after acceptance — these tests pin down the exact notification the
+  // client (app.dart's _refreshForEventKey) relies on to do that refresh.
+  it('notifies the winning worker with a bid.accepted event routed to their job detail', async () => {
+    const repo = {
+      findClientProfileByUserId: jest
+        .fn()
+        .mockResolvedValue({ id: 'client-1' }),
+      findBidById: jest.fn().mockResolvedValue({
+        id: 'bid-3',
+        status: 'PENDING',
+        amount: 3000,
+        workerProfile: { id: 'worker-3', userId: 'worker-user-3' },
+        booking: {
+          id: 'booking-2',
+          status: BookingStatus.PENDING,
+          clientProfileId: 'client-1',
+        },
+      }),
+      acceptBid: jest.fn().mockResolvedValue({
+        id: 'booking-2',
+        status: BookingStatus.ACCEPTED,
+        workerProfileId: 'worker-3',
+        finalPrice: 3000,
+        clientProfile: { userId: 'client-user-1' },
+        workerProfile: { userId: 'worker-user-3' },
+      }),
+    };
+    const svc = new BidsService(repo as any, notificationsService, chatService);
+
+    await svc.acceptBid('client-user-1', 'bid-3');
+
+    expect(notificationsService.notify).toHaveBeenCalledTimes(1);
+    const call = notificationsService.notify.mock.calls[0][0];
+    expect(call.userId).toBe('worker-user-3');
+    expect(call.eventKey).toBe('bid.accepted');
+    expect(call.route).toBe('/worker/job/booking-2');
+    expect(call.bookingId).toBe('booking-2');
+  });
+
+  it('rejects accepting a bid on a booking that is no longer PENDING', async () => {
+    const repo = {
+      findClientProfileByUserId: jest
+        .fn()
+        .mockResolvedValue({ id: 'client-1' }),
+      findBidById: jest.fn().mockResolvedValue({
+        id: 'bid-4',
+        status: 'PENDING',
+        amount: 1800,
+        workerProfile: { id: 'worker-4', userId: 'worker-user-4' },
+        booking: {
+          id: 'booking-3',
+          status: BookingStatus.ACCEPTED,
+          clientProfileId: 'client-1',
+        },
+      }),
+      acceptBid: jest.fn(),
+    };
+    const svc = new BidsService(repo as any, notificationsService, chatService);
+
+    await expect(
+      svc.acceptBid('client-user-1', 'bid-4'),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(repo.acceptBid).not.toHaveBeenCalled();
+  });
 });

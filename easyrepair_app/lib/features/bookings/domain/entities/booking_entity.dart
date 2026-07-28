@@ -140,16 +140,15 @@ extension BookingCancellationX on BookingEntity {
   bool get canClientCancel =>
       status == BookingStatus.pending || status == BookingStatus.accepted;
 
-  /// Worker can cancel an assigned job any time up through IN_PROGRESS —
-  /// ACCEPTED, EN_ROUTE, ARRIVED, or IN_PROGRESS. Once a decision has been
-  /// made or the job is completed/cancelled, cancelling is no longer
-  /// possible. Applies to all lanes. Must match BookingsService
-  /// .workerCancelBooking's cancellable set on the backend exactly.
+  /// Worker can cancel an assigned job only before work actually starts —
+  /// ACCEPTED, EN_ROUTE, or ARRIVED. Once IN_PROGRESS (or completed/
+  /// cancelled), cancelling is no longer possible. Applies to all lanes.
+  /// Must match BookingsService.workerCancelBooking's cancellable set on the
+  /// backend exactly.
   bool get canWorkerCancel =>
       status == BookingStatus.accepted ||
       status == BookingStatus.enRoute ||
-      status == BookingStatus.arrived ||
-      status == BookingStatus.inProgress;
+      status == BookingStatus.arrived;
 
   /// INSPECTION-lane-specific alias for [canWorkerCancel] — identical rule,
   /// kept as a distinct getter for call sites that want to assert the lane
@@ -697,6 +696,35 @@ class BookingEntity {
       );
     }
     return standardServicePriceSnapshot;
+  }
+
+  /// The single primary "what service" label for detail-page display —
+  /// prefers the selected sub-service name(s) over the category, so the
+  /// Service Details card never shows category and sub-service as two
+  /// separate but overlapping rows. Falls back to [serviceCategory] when no
+  /// sub-service was selected (BIDDING/INSPECTION, or STANDARD with only the
+  /// legacy singular snapshot missing too).
+  String get primaryServiceLabel {
+    if (standardServiceItems.isNotEmpty) {
+      return standardServiceItems.map((i) => i.nameSnapshot).join(', ');
+    }
+    if (standardServiceNameSnapshot != null &&
+        standardServiceNameSnapshot!.isNotEmpty) {
+      return standardServiceNameSnapshot!;
+    }
+    return serviceCategory;
+  }
+
+  /// [title] to show as a separate "Issue" row — null when there is nothing
+  /// beyond [primaryServiceLabel] to show (e.g. INSPECTION bookings store
+  /// the category itself as `title` since the client never types one),
+  /// which would otherwise duplicate the primary service label verbatim.
+  String? get displayIssueTitle {
+    if (title == null || title!.trim().isEmpty) return null;
+    final t = title!.trim().toLowerCase();
+    if (t == serviceCategory.trim().toLowerCase()) return null;
+    if (t == primaryServiceLabel.trim().toLowerCase()) return null;
+    return title;
   }
 
   BookingEntity copyWith({

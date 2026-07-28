@@ -267,6 +267,7 @@ class OngoingJobModel {
   final String clientArea;
   final String addressLine;
   final String status;
+  final String lane;
 
   const OngoingJobModel({
     required this.id,
@@ -275,6 +276,7 @@ class OngoingJobModel {
     required this.clientArea,
     required this.addressLine,
     required this.status,
+    this.lane = 'STANDARD',
   });
 
   factory OngoingJobModel.fromJson(Map<String, dynamic> json) {
@@ -285,6 +287,7 @@ class OngoingJobModel {
       clientArea: json['clientArea'] as String,
       addressLine: json['addressLine'] as String? ?? '',
       status: json['status'] as String,
+      lane: json['lane'] as String? ?? 'STANDARD',
     );
   }
 
@@ -296,6 +299,7 @@ class OngoingJobModel {
       clientArea: clientArea,
       addressLine: addressLine,
       status: status,
+      lane: lane,
     );
   }
 }

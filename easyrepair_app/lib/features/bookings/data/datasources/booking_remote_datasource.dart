@@ -35,6 +35,7 @@ abstract class BookingRemoteDataSource {
 
   /// Client "Make Live Again" on an EXPIRED booking.
   Future<BookingModel> relistBooking(String bookingId);
+  Future<BookingModel> reopenAfterWorkerCancellation(String bookingId);
 
   // ── Worker lifecycle (assigned worker only) ─────────────────────────────
   Future<BookingModel> markOnMyWay(String bookingId);
@@ -272,6 +273,18 @@ class BookingRemoteDataSourceImpl implements BookingRemoteDataSource {
   }
 
   @override
+  Future<BookingModel> reopenAfterWorkerCancellation(String bookingId) async {
+    try {
+      final response =
+          await _dio.post('/bookings/$bookingId/reopen-after-cancellation');
+      final data = response.data['data'] as Map<String, dynamic>;
+      return BookingModel.fromJson(data);
+    } on DioException catch (e) {
+      throw dioExceptionToFailure(e);
+    }
+  }
+
+  @override
   Future<BookingModel> markOnMyWay(String bookingId) async {
     try {
       final response = await _dio.post('/bookings/$bookingId/on-my-way');
@@ -385,6 +398,12 @@ class BookingRemoteDataSourceImpl implements BookingRemoteDataSource {
       final response = await _dio.post(
         '/bookings/$bookingId/inspection-report',
         data: formData,
+        // Multipart upload (photos + voice note) needs more than the shared
+        // client's default 10s connect/receive timeouts, and — unlike those
+        // — there was no bound on the send phase at all, letting a stalled
+        // upload (e.g. poor network) hang indefinitely instead of failing
+        // and letting the submit button recover.
+        options: Options(sendTimeout: const Duration(seconds: 60)),
       );
       final data = response.data['data'] as Map<String, dynamic>;
       return InspectionReportModel.fromJson(data);

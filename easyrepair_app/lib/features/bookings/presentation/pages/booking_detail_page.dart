@@ -276,7 +276,7 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
   Timer? _pollTimer;
 
   // Guards the auto-popup so it fires at most once per booking per time it
-  // becomes eligible (STANDARD + COMPLETED + no review yet) — reset whenever
+  // becomes eligible (COMPLETED + no review yet, any lane) — reset whenever
   // the booking id changes so navigating between bookings re-arms it, but
   // never re-fires from an unrelated rebuild (polling, provider refresh...)
   // of the *same* booking.
@@ -315,14 +315,13 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
     super.dispose();
   }
 
-  /// Auto-shows the review modal once per booking when it's STANDARD lane,
-  /// COMPLETED, and has no review yet. Scheduled post-frame (safe to call
-  /// from initState/didUpdateWidget) and guarded by
-  /// [_reviewPromptedForBookingId] so it never re-fires from polling or
-  /// other rebuilds of the same booking.
+  /// Auto-shows the review modal once per booking when it's COMPLETED and
+  /// has no review yet — applies to STANDARD, INSPECTION, and BIDDING lanes
+  /// alike. Scheduled post-frame (safe to call from initState/
+  /// didUpdateWidget) and guarded by [_reviewPromptedForBookingId] so it
+  /// never re-fires from polling or other rebuilds of the same booking.
   void _maybePromptReview() {
-    final eligible = booking.lane == BookingLane.standard &&
-        booking.status == BookingStatus.completed &&
+    final eligible = booking.status == BookingStatus.completed &&
         booking.review == null;
     if (!eligible) return;
     if (_reviewPromptedForBookingId == booking.id) return;
@@ -404,6 +403,15 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
                   const SizedBox(height: 16),
                 ],
 
+                // Worker cancelled this booking outright (terminal CANCELLED,
+                // not the relist-to-PENDING case above) — show the reason and
+                // let the client find another Ustaad for the same booking.
+                if (booking.status == BookingStatus.cancelled &&
+                    booking.cancelledByRole == CancelledByRole.worker) ...[
+                  _WorkerCancelledBookingCard(booking: booking),
+                  const SizedBox(height: 16),
+                ],
+
                 // STANDARD lane: selected services + total
                 if (isStandard && booking.standardServiceItems.isNotEmpty) ...[
                   _StandardServicesCard(booking: booking),
@@ -417,13 +425,13 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
                     _InfoRow(
                       icon: Icons.build_circle_outlined,
                       label: 'Service',
-                      value: '${booking.serviceEmoji}  ${booking.serviceCategory}',
+                      value: '${booking.serviceEmoji}  ${booking.primaryServiceLabel}',
                     ),
-                    if (booking.title != null && booking.title!.isNotEmpty)
+                    if (booking.displayIssueTitle != null)
                       _InfoRow(
                         icon: Icons.title_rounded,
                         label: 'Issue',
-                        value: booking.title!,
+                        value: booking.displayIssueTitle!,
                       ),
                     if (booking.cleanDescription != null &&
                         booking.cleanDescription!.isNotEmpty)
@@ -1810,6 +1818,127 @@ class _WorkerCancelledStrip extends StatelessWidget {
   }
 }
 
+// ── Worker cancelled this booking outright (terminal CANCELLED) ─────────────
+
+class _WorkerCancelledBookingCard extends ConsumerWidget {
+  final BookingEntity booking;
+  const _WorkerCancelledBookingCard({required this.booking});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isLoading =
+        ref.watch(reopenAfterWorkerCancellationNotifierProvider).isLoading;
+    final reason = booking.cancellationReason;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF1F2),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFFECDD3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.info_outline_rounded, size: 18, color: Color(0xFFBE123C)),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Ustaad ne job cancel kar di',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFFBE123C),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (reason != null && reason.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              'Reason: $reason',
+              style: const TextStyle(fontSize: 12.5, color: _kGray, height: 1.4),
+            ),
+          ],
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: isLoading
+                  ? null
+                  : () async {
+                      try {
+                        final updated = await ref
+                            .read(
+                              reopenAfterWorkerCancellationNotifierProvider
+                                  .notifier,
+                            )
+                            .reopen(booking.id);
+                        if (context.mounted) {
+                          // Same lane/report-state routing rule used
+                          // elsewhere on this page (_ViewBidsButton vs.
+                          // _ChooseUstaadButton): BIDDING, or a reopened
+                          // INSPECTION with an existing report, goes to the
+                          // bids/find-workers flow; STANDARD (and
+                          // INSPECTION with no report yet) goes to the
+                          // normal nearby-worker hire flow.
+                          final useBiddingFlow = updated.lane ==
+                                  BookingLane.bidding ||
+                              updated.isOpenForFindOtherUstaadBidding;
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => useBiddingFlow
+                                  ? WorkerDiscoveryMapPage(booking: updated)
+                                  : ChooseUstaadPage(booking: updated),
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                e is Failure
+                                    ? e.message
+                                    : 'Failed to find another Ustaad.',
+                              ),
+                              backgroundColor: const Color(0xFFDC2626),
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10)),
+                            ),
+                          );
+                        }
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFBE123C),
+                foregroundColor: Colors.white,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(vertical: 13),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: isLoading
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Text(
+                      'Find Another Ustaad',
+                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                    ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 // ── Standard services card ────────────────────────────────────────────────────
 
 class _StandardServicesCard extends StatelessWidget {
@@ -2107,9 +2236,9 @@ class _SubmittedReviewCard extends StatelessWidget {
   }
 }
 
-// ── Review modal (auto-popup on STANDARD completion + manual "Review Worker") ─
+// ── Review modal (auto-popup on completion + manual "Review Worker") ─────────
 
-/// Popup shown automatically once a STANDARD booking completes with no
+/// Popup shown automatically once a booking (any lane) completes with no
 /// review yet, and reachable manually via the "Review Worker" button for
 /// any completed booking. Submits through the existing [reviewNotifierProvider]
 /// / review API — no new backend surface.

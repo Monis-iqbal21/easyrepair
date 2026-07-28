@@ -431,6 +431,7 @@ export class WorkersService {
             clientArea: ongoingJob.city,
             addressLine: ongoingJob.addressLine,
             status: ongoingJob.status,
+            lane: ongoingJob.lane,
           }
         : null,
     };

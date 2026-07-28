@@ -317,13 +317,13 @@ class _JobBody extends ConsumerWidget {
                       _InfoRow(
                         icon: Icons.category_outlined,
                         label: 'Category',
-                        value: job.serviceCategory,
+                        value: job.primaryServiceLabel,
                       ),
-                      if (job.title != null && job.title!.isNotEmpty)
+                      if (job.displayIssueTitle != null)
                         _InfoRow(
                           icon: Icons.title_rounded,
                           label: 'Title',
-                          value: job.title!,
+                          value: job.displayIssueTitle!,
                         ),
                       if (job.cleanDescription != null &&
                           job.cleanDescription!.isNotEmpty)
@@ -649,7 +649,8 @@ class _StandardLifecycleSection extends ConsumerWidget {
             child: OutlinedButton.icon(
               onPressed: isLoading
                   ? null
-                  : () => _showCancelDialog(context, ref, job.id, runAction),
+                  : () => _showWorkerCancelReasonDialog(
+                      context, ref, job.id, runAction),
               icon: const Icon(Icons.close_rounded, size: 16),
               label: const Text('Cancel Job'),
               style: OutlinedButton.styleFrom(
@@ -666,74 +667,6 @@ class _StandardLifecycleSection extends ConsumerWidget {
     );
   }
 
-  Future<void> _showCancelDialog(
-    BuildContext context,
-    WidgetRef ref,
-    String jobId,
-    Future<void> Function(Future<void> Function()) runAction,
-  ) async {
-    final reasonCtrl = TextEditingController();
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: const Text(
-          'Cancel this job?',
-          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Please tell the client why you are cancelling.',
-              style: TextStyle(color: _kGray, fontSize: 13.5),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: reasonCtrl,
-              maxLines: 3,
-              decoration: InputDecoration(
-                hintText: 'Reason (required)',
-                filled: true,
-                fillColor: _kBg,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: const BorderSide(color: _kBorder),
-                ),
-                contentPadding: const EdgeInsets.all(12),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Keep Job', style: TextStyle(color: _kGray)),
-          ),
-          TextButton(
-            onPressed: () {
-              if (reasonCtrl.text.trim().isEmpty) return;
-              Navigator.pop(ctx, true);
-            },
-            child: const Text(
-              'Yes, cancel',
-              style: TextStyle(color: _kRed, fontWeight: FontWeight.w600),
-            ),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed == true && reasonCtrl.text.trim().isNotEmpty) {
-      await runAction(
-        () => ref
-            .read(workerLifecycleNotifierProvider.notifier)
-            .cancel(jobId, reasonCtrl.text.trim()),
-      );
-      if (context.mounted) _goBackOrHome(context);
-    }
-  }
 }
 
 // ── Inspection-lane lifecycle actions ─────────────────────────────────────────
@@ -873,7 +806,8 @@ class _InspectionLifecycleSection extends ConsumerWidget {
             child: OutlinedButton.icon(
               onPressed: isLoading
                   ? null
-                  : () => _showInspectionCancelDialog(context, ref, job.id, runAction),
+                  : () => _showWorkerCancelReasonDialog(
+                      context, ref, job.id, runAction),
               icon: const Icon(Icons.close_rounded, size: 16),
               label: const Text('Cancel Job'),
               style: OutlinedButton.styleFrom(
@@ -890,35 +824,113 @@ class _InspectionLifecycleSection extends ConsumerWidget {
     );
   }
 
-  Future<void> _showInspectionCancelDialog(
-    BuildContext context,
-    WidgetRef ref,
-    String jobId,
-    Future<void> Function(Future<void> Function()) runAction,
-  ) async {
-    final reasonCtrl = TextEditingController();
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: const Text(
-          'Cancel this job?',
-          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Please tell the client why you are cancelling.',
-              style: TextStyle(color: _kGray, fontSize: 13.5),
+}
+
+// ── Shared worker-cancel reason dialog (Standard/Bidding + Inspection) ────────
+//
+// One consistent cancellation flow for every lane: a required dropdown of
+// preset reasons, with a required free-text field when "Other" is picked.
+
+const List<String> kWorkerCancelReasons = [
+  'Emergency aa gayi',
+  'Location bohat door hai',
+  'Required tools ya parts available nahi',
+  'Time ya schedule issue',
+  'Customer/site related issue',
+  'Other',
+];
+
+Future<void> _showWorkerCancelReasonDialog(
+  BuildContext context,
+  WidgetRef ref,
+  String jobId,
+  Future<void> Function(Future<void> Function()) runAction,
+) async {
+  final reason = await showDialog<String>(
+    context: context,
+    builder: (_) => const _CancelReasonDialog(),
+  );
+  if (reason == null || reason.trim().isEmpty) return;
+
+  await runAction(
+    () => ref
+        .read(workerLifecycleNotifierProvider.notifier)
+        .cancel(jobId, reason.trim()),
+  );
+  if (context.mounted) _goBackOrHome(context);
+}
+
+class _CancelReasonDialog extends StatefulWidget {
+  const _CancelReasonDialog();
+
+  @override
+  State<_CancelReasonDialog> createState() => _CancelReasonDialogState();
+}
+
+class _CancelReasonDialogState extends State<_CancelReasonDialog> {
+  String? _selectedReason;
+  final _customCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _customCtrl.dispose();
+    super.dispose();
+  }
+
+  bool get _isOther => _selectedReason == 'Other';
+  bool get _canConfirm =>
+      _selectedReason != null &&
+      (!_isOther || _customCtrl.text.trim().isNotEmpty);
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      title: const Text(
+        'Cancel this job?',
+        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Please tell the client why you are cancelling.',
+            style: TextStyle(color: _kGray, fontSize: 13.5),
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            initialValue: _selectedReason,
+            isExpanded: true,
+            decoration: InputDecoration(
+              hintText: 'Select a reason',
+              filled: true,
+              fillColor: _kBg,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: _kBorder),
+              ),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             ),
+            items: kWorkerCancelReasons
+                .map(
+                  (r) => DropdownMenuItem(
+                    value: r,
+                    child: Text(r, style: const TextStyle(fontSize: 13.5)),
+                  ),
+                )
+                .toList(),
+            onChanged: (v) => setState(() => _selectedReason = v),
+          ),
+          if (_isOther) ...[
             const SizedBox(height: 12),
             TextField(
-              controller: reasonCtrl,
+              controller: _customCtrl,
               maxLines: 3,
+              onChanged: (_) => setState(() {}),
               decoration: InputDecoration(
-                hintText: 'Reason (required)',
+                hintText: 'Apni wajah likhein (required)',
                 filled: true,
                 fillColor: _kBg,
                 border: OutlineInputBorder(
@@ -929,34 +941,27 @@ class _InspectionLifecycleSection extends ConsumerWidget {
               ),
             ),
           ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Keep Job', style: TextStyle(color: _kGray)),
-          ),
-          TextButton(
-            onPressed: () {
-              if (reasonCtrl.text.trim().isEmpty) return;
-              Navigator.pop(ctx, true);
-            },
-            child: const Text(
-              'Yes, cancel',
-              style: TextStyle(color: _kRed, fontWeight: FontWeight.w600),
-            ),
-          ),
         ],
       ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, null),
+          child: const Text('Keep Job', style: TextStyle(color: _kGray)),
+        ),
+        TextButton(
+          onPressed: _canConfirm
+              ? () => Navigator.pop(
+                    context,
+                    _isOther ? _customCtrl.text.trim() : _selectedReason,
+                  )
+              : null,
+          child: const Text(
+            'Yes, cancel',
+            style: TextStyle(color: _kRed, fontWeight: FontWeight.w600),
+          ),
+        ),
+      ],
     );
-
-    if (confirmed == true && reasonCtrl.text.trim().isNotEmpty) {
-      await runAction(
-        () => ref
-            .read(workerLifecycleNotifierProvider.notifier)
-            .cancel(jobId, reasonCtrl.text.trim()),
-      );
-      if (context.mounted) _goBackOrHome(context);
-    }
   }
 }
 

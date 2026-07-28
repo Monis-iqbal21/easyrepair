@@ -1374,11 +1374,12 @@ export class BookingsService {
 
   /**
    * POST /bookings/:id/worker-cancel — worker cancels an assigned job.
-   * Allowed while status is ACCEPTED, EN_ROUTE, ARRIVED, or IN_PROGRESS.
-   * Terminally cancels the booking (status CANCELLED) rather than returning
-   * it to PENDING — it must never silently reappear in New Jobs for another
-   * worker to pick up; the client has to post a new booking (or, for
-   * INSPECTION, use "Find Other Ustaad").
+   * Allowed only while status is ACCEPTED, EN_ROUTE, or ARRIVED — once
+   * IN_PROGRESS (work/inspection actually started), cancellation is no
+   * longer available for any lane. Terminally cancels the booking (status
+   * CANCELLED) rather than returning it to PENDING — it must never silently
+   * reappear in New Jobs for another worker to pick up; the client
+   * separately triggers reopening (see reopenAfterWorkerCancellation).
    */
   async workerCancelBooking(
     userId: string,
@@ -1391,7 +1392,6 @@ export class BookingsService {
       BookingStatus.ACCEPTED,
       BookingStatus.EN_ROUTE,
       BookingStatus.ARRIVED,
-      BookingStatus.IN_PROGRESS,
     ];
     if (!cancellable.includes(booking.status)) {
       throw new BadRequestException(
@@ -1421,6 +1421,90 @@ export class BookingsService {
         entityType: 'booking',
         entityId: bookingId,
       });
+    }
+
+    return this._toDto(updated);
+  }
+
+  /**
+   * POST /bookings/:id/reopen-after-cancellation — client action, taken
+   * after a worker-cancelled booking, to find/hire another worker for the
+   * same booking. Only valid while status is CANCELLED with
+   * cancelledByRole WORKER (guards against double-reopening and against
+   * reopening a booking the CLIENT cancelled). Excludes the cancelling
+   * worker; STANDARD/INSPECTION-without-report clients continue via the
+   * existing nearby-worker discovery screen, BIDDING/INSPECTION-with-report
+   * get a fresh nearby-worker notification push so other Ustaads can bid
+   * again — mirroring how each lane is notified on first creation.
+   */
+  async reopenAfterWorkerCancellation(
+    userId: string,
+    bookingId: string,
+  ): Promise<BookingResponseDto> {
+    const profile =
+      await this.bookingsRepository.findClientProfileByUserId(userId);
+    if (!profile) throw new ForbiddenException('Client profile not found');
+
+    const booking = await this.bookingsRepository.findBookingById(bookingId);
+    if (!booking) throw new NotFoundException('Booking not found');
+    if (booking.clientProfileId !== profile.id) {
+      throw new ForbiddenException('Not your booking');
+    }
+    if (
+      booking.status !== BookingStatus.CANCELLED ||
+      booking.cancelledByRole !== 'WORKER'
+    ) {
+      throw new BadRequestException(
+        'This booking is not eligible to be reopened.',
+      );
+    }
+    // workerProfileId is deliberately left set after a worker cancellation
+    // (so the cancelling worker still sees it in their own history) — that
+    // is exactly who must now be excluded from being rehired.
+    const cancelledWorkerProfileId = booking.workerProfileId;
+    if (!cancelledWorkerProfileId) {
+      throw new BadRequestException(
+        'No previously assigned worker found for this booking.',
+      );
+    }
+
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + BOOKING_EXPIRY_MS);
+    const updated = await this.bookingsRepository.reopenAfterWorkerCancellation(
+      bookingId,
+      cancelledWorkerProfileId,
+      booking.cancellationReason ?? 'Worker cancelled',
+      now,
+      expiresAt,
+    );
+
+    void this._scheduleExpiry(bookingId, expiresAt).catch((err) => {
+      this.logger.warn(
+        `[expiry] scheduleExpiry failed for bookingId=${bookingId}: ${(err as Error)?.message}`,
+      );
+    });
+
+    // BIDDING and reopened-INSPECTION are open-for-bidding states — push
+    // nearby eligible workers immediately, same as on first creation/first
+    // "Find Other Ustaad". STANDARD (and INSPECTION with no report yet)
+    // rely on the client re-entering the existing nearby-worker discovery
+    // screen, which already notifies listed STANDARD workers as a side
+    // effect (see getNearbyWorkers/_notifyWorkersListedForStandardJob).
+    if (updated.lane === BookingLane.BIDDING) {
+      void this._notifyNearbyWorkersForBidding(
+        bookingId,
+        updated.categoryId,
+        updated.latitude,
+        updated.longitude,
+      );
+    } else if (updated.lane === BookingLane.INSPECTION && updated.inspectionReport) {
+      void this._notifyNearbyWorkersForPostInspectionBidding(
+        bookingId,
+        updated.categoryId,
+        updated.latitude,
+        updated.longitude,
+        cancelledWorkerProfileId,
+      );
     }
 
     return this._toDto(updated);

@@ -95,8 +95,17 @@ class AuthInterceptor extends Interceptor {
           'Bearer ${data['accessToken']}';
       final retryResponse = await _dio.fetch(err.requestOptions);
       handler.resolve(retryResponse);
-    } catch (_) {
-      await _storage.clearTokens();
+    } catch (e) {
+      // Only a definitive rejection from the server (the refresh token
+      // itself is invalid/expired/revoked) means the session is actually
+      // over. A transient network failure while refreshing — e.g. the app
+      // resuming from background mid-upload, before connectivity is fully
+      // re-established — must never clear a still-valid session; the next
+      // request simply gets to try the refresh again.
+      final isDefiniteAuthRejection = e is DioException && e.response != null;
+      if (isDefiniteAuthRejection) {
+        await _storage.clearTokens();
+      }
       _refreshCompleter!.completeError('refresh_failed');
       handler.next(err);
     } finally {

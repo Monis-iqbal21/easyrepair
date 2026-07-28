@@ -1,3 +1,4 @@
+import { BadRequestException } from '@nestjs/common';
 import { BookingLane } from '@prisma/client';
 import { BookingsService } from './bookings.service';
 
@@ -256,8 +257,9 @@ describe('BookingsService.workerCancelBooking', () => {
     );
   });
 
-  // Must match BookingEntity.canWorkerCancel in the Flutter app exactly.
-  it.each(['ACCEPTED', 'EN_ROUTE', 'ARRIVED', 'IN_PROGRESS'])(
+  // Must match BookingEntity.canWorkerCancel in the Flutter app exactly —
+  // ACCEPTED/EN_ROUTE/ARRIVED only, never IN_PROGRESS, for any lane.
+  it.each(['ACCEPTED', 'EN_ROUTE', 'ARRIVED'])(
     'allows the worker to cancel a job with status %s',
     async (status) => {
       bookingsRepository.findBookingById.mockResolvedValue(
@@ -295,9 +297,20 @@ describe('BookingsService.workerCancelBooking', () => {
     expect(bookingsRepository.workerCancelBooking).not.toHaveBeenCalled();
   });
 
-  it('notifies the client in Roman Urdu when the worker cancels an IN_PROGRESS job', async () => {
+  it('rejects cancelling a job that is already IN_PROGRESS, for any lane', async () => {
     bookingsRepository.findBookingById.mockResolvedValue(
       makeAssignedBooking('IN_PROGRESS'),
+    );
+
+    await expect(
+      service.workerCancelBooking('worker-user-1', 'booking-1', 'too busy'),
+    ).rejects.toThrow('Cannot cancel a job with status IN_PROGRESS.');
+    expect(bookingsRepository.workerCancelBooking).not.toHaveBeenCalled();
+  });
+
+  it('notifies the client in Roman Urdu when the worker cancels an ARRIVED job', async () => {
+    bookingsRepository.findBookingById.mockResolvedValue(
+      makeAssignedBooking('ARRIVED'),
     );
     bookingsRepository.workerCancelBooking.mockResolvedValue(
       makeCancelledBooking('Vehicle broke down'),
@@ -427,5 +440,228 @@ describe('BookingsService.reopenInspectionForBidding', () => {
     await flushPromises();
 
     expect(notificationsService.notify).not.toHaveBeenCalled();
+  });
+});
+
+describe('BookingsService.reopenAfterWorkerCancellation', () => {
+  let bookingsRepository: any;
+  let storageService: any;
+  let notificationsService: any;
+  let chatService: any;
+  let bookingsQueue: any;
+  let service: BookingsService;
+
+  function makeCancelledBooking(overrides: Partial<any> = {}) {
+    return {
+      id: 'booking-1',
+      clientProfileId: 'client-1',
+      workerProfileId: 'worker-1',
+      status: 'CANCELLED',
+      cancelledByRole: 'WORKER',
+      cancellationReason: 'Vehicle broke down',
+      lane: 'STANDARD',
+      categoryId: 'cat-1',
+      latitude: 24.86,
+      longitude: 67.0,
+      inspectionReport: null,
+      ...overrides,
+    };
+  }
+
+  function makeReopenedBooking(overrides: Partial<any> = {}) {
+    return {
+      id: 'booking-1',
+      status: 'PENDING',
+      workerProfileId: null,
+      category: { name: 'Electrician' },
+      title: null,
+      description: 'Fix the wiring',
+      urgency: 'NORMAL',
+      timeSlot: null,
+      urgentWindow: null,
+      scheduledAt: null,
+      createdAt: new Date(),
+      inspection: false,
+      lane: 'STANDARD',
+      categoryId: 'cat-1',
+      standardServiceId: null,
+      standardServiceNameSnapshot: null,
+      standardServicePriceSnapshot: null,
+      standardServiceItems: [],
+      inspectionFeeSnapshot: null,
+      estimatedPrice: 1500,
+      finalPrice: null,
+      addressLine: '123 Street',
+      city: 'Karachi',
+      latitude: 24.86,
+      longitude: 67.0,
+      acceptedAt: null,
+      enRouteAt: null,
+      arrivedAt: null,
+      startedAt: null,
+      completedAt: null,
+      cancellationReason: null,
+      cancelledByRole: null,
+      expiresAt: new Date(),
+      liveStartedAt: new Date(),
+      relistedAt: null,
+      clientProfile: { id: 'client-1', userId: 'client-user-1' },
+      workerProfile: null,
+      inspectionReport: null,
+      review: null,
+      attachments: [],
+      bids: [],
+      workerExclusions: [
+        {
+          workerProfileId: 'worker-1',
+          reason: 'Vehicle broke down',
+          createdAt: new Date(),
+          workerProfile: { firstName: 'Ali', lastName: 'Khan' },
+        },
+      ],
+      ...overrides,
+    };
+  }
+
+  beforeEach(() => {
+    bookingsRepository = {
+      findClientProfileByUserId: jest
+        .fn()
+        .mockResolvedValue({ id: 'client-1' }),
+      findBookingById: jest.fn().mockResolvedValue(makeCancelledBooking()),
+      reopenAfterWorkerCancellation: jest
+        .fn()
+        .mockResolvedValue(makeReopenedBooking()),
+      findNearbyWorkers: jest.fn().mockResolvedValue({ workers: [] }),
+      findUserIdsByWorkerProfileIds: jest.fn().mockResolvedValue(new Map()),
+    };
+    storageService = {};
+    notificationsService = {
+      wasAlreadyNotified: jest.fn().mockResolvedValue(false),
+      notify: jest.fn().mockResolvedValue(undefined),
+    };
+    chatService = {};
+    bookingsQueue = { getJob: jest.fn(), add: jest.fn() };
+    service = new BookingsService(
+      bookingsRepository,
+      storageService,
+      notificationsService,
+      chatService,
+      bookingsQueue,
+    );
+  });
+
+  it('rejects reopening a booking that is not CANCELLED-by-worker', async () => {
+    bookingsRepository.findBookingById.mockResolvedValue(
+      makeCancelledBooking({ status: 'ACCEPTED' }),
+    );
+    await expect(
+      service.reopenAfterWorkerCancellation('client-user-1', 'booking-1'),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(bookingsRepository.reopenAfterWorkerCancellation).not.toHaveBeenCalled();
+  });
+
+  it('rejects reopening a booking the CLIENT (not the worker) cancelled', async () => {
+    bookingsRepository.findBookingById.mockResolvedValue(
+      makeCancelledBooking({ cancelledByRole: 'CLIENT' }),
+    );
+    await expect(
+      service.reopenAfterWorkerCancellation('client-user-1', 'booking-1'),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(bookingsRepository.reopenAfterWorkerCancellation).not.toHaveBeenCalled();
+  });
+
+  it('excludes the cancelling worker and reopens to PENDING', async () => {
+    await service.reopenAfterWorkerCancellation('client-user-1', 'booking-1');
+
+    expect(bookingsRepository.reopenAfterWorkerCancellation).toHaveBeenCalledWith(
+      'booking-1',
+      'worker-1',
+      'Vehicle broke down',
+      expect.any(Date),
+      expect.any(Date),
+    );
+  });
+
+  it('does not proactively notify for a STANDARD reopen (client re-enters the discovery screen instead)', async () => {
+    await service.reopenAfterWorkerCancellation('client-user-1', 'booking-1');
+    await flushPromises();
+
+    expect(bookingsRepository.findNearbyWorkers).not.toHaveBeenCalled();
+  });
+
+  it('proactively notifies nearby workers for a BIDDING reopen', async () => {
+    bookingsRepository.findBookingById.mockResolvedValue(
+      makeCancelledBooking({ lane: 'BIDDING' }),
+    );
+    bookingsRepository.reopenAfterWorkerCancellation.mockResolvedValue(
+      makeReopenedBooking({ lane: 'BIDDING' }),
+    );
+    bookingsRepository.findNearbyWorkers.mockResolvedValue({
+      workers: [{ id: 'worker-2' }],
+    });
+    bookingsRepository.findUserIdsByWorkerProfileIds.mockResolvedValue(
+      new Map([['worker-2', 'worker-2-user']]),
+    );
+
+    await service.reopenAfterWorkerCancellation('client-user-1', 'booking-1');
+    await flushPromises();
+
+    expect(bookingsRepository.findNearbyWorkers).toHaveBeenCalledWith(
+      expect.objectContaining({ lane: 'BIDDING' }),
+    );
+    expect(notificationsService.notify).toHaveBeenCalledTimes(1);
+    expect(notificationsService.notify.mock.calls[0][0].userId).toBe(
+      'worker-2-user',
+    );
+  });
+
+  it('proactively notifies nearby workers, excluding the cancelling worker, for a reopened INSPECTION with an existing report', async () => {
+    bookingsRepository.findBookingById.mockResolvedValue(
+      makeCancelledBooking({
+        lane: 'INSPECTION',
+        inspectionReport: { decisionStatus: 'ACCEPTED_REPAIR' },
+      }),
+    );
+    bookingsRepository.reopenAfterWorkerCancellation.mockResolvedValue(
+      makeReopenedBooking({
+        lane: 'INSPECTION',
+        inspectionReport: {
+          decisionStatus: 'FIND_OTHER_USTAAD',
+          createdAt: new Date(),
+        },
+      }),
+    );
+    bookingsRepository.findNearbyWorkers.mockResolvedValue({
+      workers: [{ id: 'worker-3' }],
+    });
+    bookingsRepository.findUserIdsByWorkerProfileIds.mockResolvedValue(
+      new Map([['worker-3', 'worker-3-user']]),
+    );
+
+    await service.reopenAfterWorkerCancellation('client-user-1', 'booking-1');
+    await flushPromises();
+
+    expect(bookingsRepository.findNearbyWorkers).toHaveBeenCalledWith(
+      expect.objectContaining({
+        lane: 'BIDDING',
+        excludedWorkerIds: ['worker-1'],
+      }),
+    );
+    expect(notificationsService.notify).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not proactively notify for a reopened INSPECTION with no report yet (client re-enters the discovery screen instead)', async () => {
+    bookingsRepository.findBookingById.mockResolvedValue(
+      makeCancelledBooking({ lane: 'INSPECTION', inspectionReport: null }),
+    );
+    bookingsRepository.reopenAfterWorkerCancellation.mockResolvedValue(
+      makeReopenedBooking({ lane: 'INSPECTION', inspectionReport: null }),
+    );
+
+    await service.reopenAfterWorkerCancellation('client-user-1', 'booking-1');
+    await flushPromises();
+
+    expect(bookingsRepository.findNearbyWorkers).not.toHaveBeenCalled();
   });
 });

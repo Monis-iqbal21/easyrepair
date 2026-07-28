@@ -66,6 +66,12 @@ abstract class BookingRepository {
   /// Client "Make Live Again" on an EXPIRED booking.
   Future<Either<Failure, BookingEntity>> relistBooking(String bookingId);
 
+  /// Client reopens a booking after the worker cancelled it, to find/hire
+  /// another worker — excludes the cancelling worker.
+  Future<Either<Failure, BookingEntity>> reopenAfterWorkerCancellation(
+    String bookingId,
+  );
+
   // ── Worker lifecycle (assigned worker only) ─────────────────────────────
 
   /// ACCEPTED → EN_ROUTE.

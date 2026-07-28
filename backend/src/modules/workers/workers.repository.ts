@@ -628,6 +628,7 @@ export class WorkersRepository {
         status: true,
         city: true,
         addressLine: true,
+        lane: true,
         category: { select: { name: true } },
       },
     });

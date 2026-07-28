@@ -853,6 +853,37 @@ final relistBookingNotifierProvider =
       RelistBookingNotifier.new,
     );
 
+// ── Reopen after worker cancellation notifier ────────────────────────────────
+
+class ReopenAfterWorkerCancellationNotifier extends AsyncNotifier<void> {
+  @override
+  Future<void> build() async {}
+
+  Future<BookingEntity> reopen(String bookingId) async {
+    state = const AsyncLoading();
+    final result = await ref
+        .read(bookingRepositoryProvider)
+        .reopenAfterWorkerCancellation(bookingId);
+    return result.fold(
+      (failure) {
+        state = AsyncError(failure, StackTrace.current);
+        throw failure;
+      },
+      (updated) {
+        state = const AsyncData(null);
+        ref.read(bookingsNotifierProvider.notifier).patchBooking(updated);
+        ref.read(bookingDetailProvider(bookingId).notifier).push(updated);
+        return updated;
+      },
+    );
+  }
+}
+
+final reopenAfterWorkerCancellationNotifierProvider = AsyncNotifierProvider<
+    ReopenAfterWorkerCancellationNotifier, void>(
+  ReopenAfterWorkerCancellationNotifier.new,
+);
+
 // ── Worker lifecycle notifier (on-my-way / arrived / start / complete / cancel) ─
 
 class WorkerLifecycleNotifier extends AsyncNotifier<void> {

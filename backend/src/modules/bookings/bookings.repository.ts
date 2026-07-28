@@ -1215,14 +1215,13 @@ export class BookingsRepository {
   }
 
   /**
-   * Worker cancels an assigned job (ACCEPTED/EN_ROUTE/ARRIVED/IN_PROGRESS):
-   * terminally CANCELS the booking — status CANCELLED, cancelledByRole
-   * WORKER, reason preserved, workerProfileId left untouched so the
-   * cancelling worker still sees it in their own My Jobs → Cancelled/history.
-   * Deliberately does NOT return the booking to PENDING/New Jobs — the
-   * client must post a new booking (or use "Find Other Ustaad" for
-   * INSPECTION) rather than have it silently reassigned to a different
-   * worker.
+   * Worker cancels an assigned job (ACCEPTED/EN_ROUTE/ARRIVED): terminally
+   * CANCELS the booking — status CANCELLED, cancelledByRole WORKER, reason
+   * preserved, workerProfileId left untouched so the cancelling worker still
+   * sees it in their own My Jobs → Cancelled/history. Deliberately does NOT
+   * return the booking to PENDING/New Jobs by itself — the client
+   * separately triggers reopening (see reopenAfterWorkerCancellation) once
+   * they're ready to find another worker.
    */
   async workerCancelBooking(
     bookingId: string,
@@ -1251,6 +1250,79 @@ export class BookingsRepository {
       await tx.workerProfile.update({
         where: { id: workerProfileId },
         data: { currentlyWorking: false },
+      });
+    });
+
+    return this.prisma.booking.findUniqueOrThrow({
+      where: { id: bookingId },
+      include: BOOKING_INCLUDE,
+    });
+  }
+
+  /**
+   * Client reopens a booking after the assigned worker cancelled it — takes
+   * it from CANCELLED back to PENDING/unassigned so the client can find/
+   * hire another worker via the existing worker-selection/bidding flows.
+   * Excludes the cancelling worker (bookingWorkerExclusion — already
+   * enforced by findNearbyWorkers, isEligibleForInspectionBidding, and
+   * findAvailableJobsForWorker, so this one write covers all three lanes).
+   * For BIDDING, previously-submitted bids that were auto-REJECTED when the
+   * now-cancelled worker's bid was accepted are reverted to PENDING so they
+   * can be considered again (never the cancelling worker's own bid). For
+   * INSPECTION with an existing report, flips decisionStatus to
+   * FIND_OTHER_USTAAD (idempotent) so the existing eligibility gate/sanitized
+   * report view apply — without this, a report left at ACCEPTED_REPAIR would
+   * cause getNewJobsForWorker to skip the eligibility gate entirely.
+   */
+  async reopenAfterWorkerCancellation(
+    bookingId: string,
+    cancelledWorkerProfileId: string,
+    reason: string,
+    now: Date,
+    expiresAt: Date,
+  ): Promise<BookingWithRelations> {
+    await this.prisma.$transaction(async (tx) => {
+      await tx.booking.update({
+        where: { id: bookingId },
+        data: {
+          workerProfileId: null,
+          status: BookingStatus.PENDING,
+          liveStartedAt: now,
+          expiresAt,
+        },
+      });
+
+      await tx.bookingWorkerExclusion.upsert({
+        where: {
+          bookingId_workerProfileId: {
+            bookingId,
+            workerProfileId: cancelledWorkerProfileId,
+          },
+        },
+        create: { bookingId, workerProfileId: cancelledWorkerProfileId, reason },
+        update: { reason },
+      });
+
+      await tx.bid.updateMany({
+        where: {
+          bookingId,
+          status: BidStatus.REJECTED,
+          workerProfileId: { not: cancelledWorkerProfileId },
+        },
+        data: { status: BidStatus.PENDING },
+      });
+
+      await tx.inspectionReport.updateMany({
+        where: { bookingId },
+        data: { decisionStatus: 'FIND_OTHER_USTAAD' },
+      });
+
+      await tx.bookingStatusHistory.create({
+        data: {
+          bookingId,
+          status: BookingStatus.PENDING,
+          note: 'Reopened after worker cancellation',
+        },
       });
     });
 

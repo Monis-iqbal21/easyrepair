@@ -181,6 +181,21 @@ class BookingRepositoryImpl implements BookingRepository {
   }
 
   @override
+  Future<Either<Failure, BookingEntity>> reopenAfterWorkerCancellation(
+    String bookingId,
+  ) async {
+    try {
+      final model =
+          await _dataSource.reopenAfterWorkerCancellation(bookingId);
+      return Right(model.toEntity());
+    } on Failure catch (f) {
+      return Left(f);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
   Future<Either<Failure, BookingEntity>> markOnMyWay(String bookingId) async {
     try {
       final model = await _dataSource.markOnMyWay(bookingId);
