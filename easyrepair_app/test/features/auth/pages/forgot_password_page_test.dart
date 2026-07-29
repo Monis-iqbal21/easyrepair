@@ -88,6 +88,36 @@ class _FakeAuthRepository implements AuthRepository {
 
   @override
   Future<Either<Failure, void>> deleteAccount() => throw UnimplementedError();
+
+  @override
+  Future<Either<Failure, ClientPhoneStatus>> checkClientPhoneStatus(
+    String phone,
+  ) => throw UnimplementedError();
+
+  @override
+  Future<Either<Failure, AuthTokensEntity>> clientPasswordLogin({
+    required String phone,
+    required String password,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<Either<Failure, AuthTokensEntity>> clientPasswordRegister({
+    required String fullName,
+    required String phone,
+    required String password,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<Either<Failure, DateTime>> clientForgotPasswordRequest(
+    String phone,
+  ) => throw UnimplementedError();
+
+  @override
+  Future<Either<Failure, void>> clientForgotPasswordReset({
+    required String phone,
+    required String otp,
+    required String newPassword,
+  }) => throw UnimplementedError();
 }
 
 Widget _wrap(_FakeAuthRepository repo) {

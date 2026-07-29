@@ -8,6 +8,7 @@ import '../../features/auth/presentation/pages/worker_type_selection_page.dart';
 import '../../features/auth/presentation/pages/worker_otp_register_page.dart';
 import '../../features/auth/presentation/pages/worker_login_page.dart';
 import '../../features/auth/presentation/pages/forgot_password_page.dart';
+import '../../features/auth/presentation/pages/client_forgot_password_page.dart';
 import '../../features/auth/presentation/providers/auth_providers.dart';
 import '../../features/client/presentation/pages/client_home_page.dart';
 import '../../features/bookings/presentation/pages/my_bookings_page.dart';
@@ -97,6 +98,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/forgot-password',
         builder: (_, __) => const ForgotPasswordPage(),
+      ),
+      GoRoute(
+        path: '/auth/client/forgot-password',
+        builder: (_, __) => const ClientForgotPasswordPage(),
       ),
       GoRoute(
         path: '/client/home',

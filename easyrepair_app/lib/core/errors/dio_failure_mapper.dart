@@ -15,6 +15,13 @@ Failure dioExceptionToFailure(DioException e) {
       final message = _extractMessage(data);
       final errorCode = _extractErrorCode(data);
 
+      if (errorCode == 'SMS_SEND_FAILED') {
+        // A genuine VeevoTech provider failure (e.g. LOW_BALANCE) — never
+        // show the raw provider/API details, just the code as a signal for
+        // pages to render their own specific fallback message.
+        return SmsSendFailure(message ?? 'SMS bhejne mein masla hua.');
+      }
+
       if (statusCode == 400) {
         return ValidationFailure(message ?? 'Invalid request');
       } else if (statusCode == 401) {

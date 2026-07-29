@@ -38,3 +38,11 @@ class WorkerPhoneConflictFailure extends Failure {
 class ClientPhoneConflictFailure extends Failure {
   const ClientPhoneConflictFailure(super.message);
 }
+
+/// The backend's SMS provider (VeevoTech) genuinely failed to send an OTP
+/// (e.g. LOW_BALANCE) — pages must show a specific "try password instead"
+/// message rather than a generic error, and must never expose the
+/// provider's own response/details.
+class SmsSendFailure extends Failure {
+  const SmsSendFailure(super.message);
+}

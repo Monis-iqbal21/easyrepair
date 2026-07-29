@@ -154,6 +154,13 @@ model User {
   role         Role
   isActive     Boolean   @default(true)
   fcmToken     String?
+  /// Whether this phone number has ever completed a real OTP verification.
+  /// Defaults to false for every row (including pre-existing accounts) —
+  /// deliberately not backfilled for historical OTP-verified accounts (see
+  /// migration notes); set true going forward by a successful OTP
+  /// login/registration (Client or Worker), never by a password login or
+  /// password-based registration.
+  phoneVerified Boolean  @default(false)
   deletedAt    DateTime?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt

@@ -138,6 +138,59 @@ class AuthRemoteDatasource {
   Future<void> deleteAccount() async {
     await _dio.delete('/auth/account');
   }
+
+  Future<String> checkClientPhoneStatus(String phone) async {
+    final response = await _dio.post(
+      '/auth/client/phone-check',
+      data: {'phone': phone},
+    );
+    final data = response.data['data'] ?? response.data;
+    return data['status'] as String;
+  }
+
+  Future<AuthResponseModel> clientPasswordLogin({
+    required String phone,
+    required String password,
+  }) async {
+    final response = await _dio.post(
+      '/auth/client/password-login',
+      data: {'phone': phone, 'password': password},
+    );
+    return AuthResponseModel.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<AuthResponseModel> clientPasswordRegister({
+    required String fullName,
+    required String phone,
+    required String password,
+  }) async {
+    final response = await _dio.post(
+      '/auth/client/password-register',
+      data: {'fullName': fullName, 'phone': phone, 'password': password},
+    );
+    return AuthResponseModel.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<DateTime> clientForgotPasswordRequest(String phone) async {
+    final response = await _dio.post(
+      '/auth/client/forgot-password/request',
+      data: {'phone': phone},
+    );
+    final data = response.data['data'] ?? response.data;
+    return DateTime.parse(data['expiresAt'] as String);
+  }
+
+  Future<void> clientForgotPasswordReset({
+    required String phone,
+    required String otp,
+    required String newPassword,
+  }) async {
+    await _dio.post('/auth/client/forgot-password/reset', data: {
+      'phone': phone,
+      'otp': otp,
+      'newPassword': newPassword,
+    });
+  }
 }
 
 final authRemoteDatasourceProvider = Provider<AuthRemoteDatasource>((ref) {

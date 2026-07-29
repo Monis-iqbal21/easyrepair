@@ -261,7 +261,50 @@ export class AuthService {
   async forgotPasswordRequest(
     dto: ForgotPasswordRequestDto,
   ): Promise<{ message: string; expiresAt: string }> {
-    const normalized = this._normalizePhone(dto.phone);
+    return this._passwordResetRequestForRole(dto.phone, Role.WORKER, {
+      surfaceSmsFailure: false,
+    });
+  }
+
+  /**
+   * POST /auth/client/forgot-password/request — same PasswordResetOtp model
+   * and rate-limit/cooldown rules as the Worker flow above (a phone can only
+   * ever belong to one role, so sharing the model has no cross-contamination
+   * risk), gated to CLIENT instead of WORKER. Unlike the Worker flow, a
+   * genuine VeevoTech send failure is surfaced (not swallowed) — see
+   * `_passwordResetRequestForRole` for why this doesn't weaken
+   * enumeration-safety.
+   */
+  async clientForgotPasswordRequest(
+    dto: ForgotPasswordRequestDto,
+  ): Promise<{ message: string; expiresAt: string }> {
+    return this._passwordResetRequestForRole(dto.phone, Role.CLIENT, {
+      surfaceSmsFailure: true,
+    });
+  }
+
+  /**
+   * Shared body for the Worker and Client "forgot password" OTP request —
+   * the response shape (including `expiresAt`) is always identical
+   * regardless of whether the number is registered, belongs to [role], is
+   * rate-limited, or hit the resend cooldown, so this must never become a
+   * way to probe which phone numbers exist or what role they are.
+   *
+   * [options.surfaceSmsFailure] is the one behavioral difference between
+   * callers: when true, a *genuine* VeevoTech send failure (checked only
+   * after the number is confirmed eligible — i.e. only for a real [role]
+   * account that isn't rate-limited/on cooldown) throws a distinguishable
+   * error instead of being swallowed. This is safe for enumeration purposes
+   * because a provider outage is phone-independent information — it would
+   * fail identically for any eligible number — so surfacing it never leaks
+   * whether *this specific* phone has an account.
+   */
+  private async _passwordResetRequestForRole(
+    rawPhone: string,
+    role: Role,
+    options: { surfaceSmsFailure: boolean },
+  ): Promise<{ message: string; expiresAt: string }> {
+    const normalized = this._normalizePhone(rawPhone);
     const fallbackExpiresAt = new Date(Date.now() + OTP_EXPIRY_MS);
     const safeResponse = {
       message: 'If this number is registered, a reset code will be sent.',
@@ -270,7 +313,7 @@ export class AuthService {
 
     const user =
       await this.authRepository.findUserByNormalizedPhone(normalized);
-    if (!user || user.role !== Role.WORKER) return safeResponse;
+    if (!user || user.role !== role) return safeResponse;
 
     // Rate limit: max 3 requests per phone in last 30 minutes
     const since = new Date(Date.now() - 30 * 60 * 1000);
@@ -308,13 +351,16 @@ export class AuthService {
       expiresAt,
     });
 
+    const sendFailureError = new ServiceUnavailableException({
+      message: 'SMS bhejne mein masla hua. Dobara koshish karein.',
+      error: 'SMS_SEND_FAILED',
+    });
+
     if (this.smsOtp.isConfigured) {
-      try {
-        await this.smsOtp.sendOtp(normalized, otp);
-      } catch (err) {
-        this.logger.warn(
-          `Password-reset SMS OTP send failed for ${normalized}: ${(err as Error).message}`,
-        );
+      const sent = await this.smsOtp.sendOtp(normalized, otp);
+      if (!sent) {
+        this.logger.warn(`Password-reset SMS OTP send failed for ${normalized}`);
+        if (options.surfaceSmsFailure) throw sendFailureError;
       }
     } else if (process.env.NODE_ENV !== 'production') {
       this.logger.log(`[DEV OTP] phone=${normalized} code=${otp}`);
@@ -322,6 +368,7 @@ export class AuthService {
       this.logger.warn(
         'SMS OTP not configured — forgot password OTP not sent',
       );
+      if (options.surfaceSmsFailure) throw sendFailureError;
     }
 
     return safeResponse;
@@ -560,6 +607,9 @@ export class AuthService {
           error: 'PHONE_IS_WORKER',
         });
       }
+      // A successful OTP verification just proved control of this phone
+      // right now, regardless of how the account was originally created.
+      await this.authRepository.markPhoneVerified(existing.id);
       const profile = await this._getProfileName(existing.id, existing.role);
       return this._buildAuthResponse(
         existing.id,
@@ -580,12 +630,164 @@ export class AuthService {
         firstName,
         lastName,
         role: Role.CLIENT,
+        phoneVerified: true,
       });
     } catch (err) {
       // Two concurrent OTP verifications for the same brand-new number both
       // reaching this point — the `phone` unique constraint lets exactly one
       // insert win; the loser just logs into the account the winner created,
       // instead of failing, so no duplicate account and no user-facing error.
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2002'
+      ) {
+        const winner = await this.authRepository.findUserByPhoneVariants(variants);
+        if (winner) {
+          await this.authRepository.markPhoneVerified(winner.id);
+          const profile = await this._getProfileName(winner.id, winner.role);
+          return this._buildAuthResponse(
+            winner.id,
+            winner.phone,
+            winner.role,
+            profile.firstName,
+            profile.lastName,
+            profile.verificationStatus,
+          );
+        }
+      }
+      throw err;
+    }
+
+    return this._buildAuthResponse(user.id, user.phone, user.role, firstName, lastName);
+  }
+
+  // ── Client password fallback (alongside the OTP flow above) ────────────
+
+  /**
+   * POST /auth/client/phone-check — drives which sub-form the Client auth
+   * page shows (login / register / Ustaad-redirect) before any password is
+   * typed. Deliberately not enumeration-safe: telling the UI "this number
+   * already has an account" is the entire point, exactly like the OTP flow
+   * already reveals the same classification after verification — this just
+   * does it a step earlier, without requiring OTP possession first.
+   */
+  async checkClientPhoneStatus(
+    rawPhone: string,
+  ): Promise<{ status: 'CLIENT' | 'WORKER' | 'NEW' }> {
+    const normalized = normalizePakistaniPhone(rawPhone);
+    if (!normalized) {
+      throw new BadRequestException({
+        message: 'Sahi Pakistani mobile number likhein.',
+        error: 'INVALID_PHONE',
+      });
+    }
+    const user = await this.authRepository.findUserByPhoneVariants(
+      phoneLookupVariants(normalized),
+    );
+    if (!user) return { status: 'NEW' };
+    return { status: user.role === Role.WORKER ? 'WORKER' : 'CLIENT' };
+  }
+
+  /** POST /auth/client/password-login — existing CLIENT only. */
+  async clientPasswordLogin(
+    rawPhone: string,
+    password: string,
+  ): Promise<AuthResponseDto> {
+    const normalized = normalizePakistaniPhone(rawPhone);
+    if (!normalized) {
+      throw new BadRequestException({
+        message: 'Sahi Pakistani mobile number likhein.',
+        error: 'INVALID_PHONE',
+      });
+    }
+
+    const user = await this.authRepository.findUserByPhoneVariants(
+      phoneLookupVariants(normalized),
+    );
+    if (!user || user.deletedAt !== null) {
+      throw new UnauthorizedException('Invalid phone number or password');
+    }
+    if (user.role === Role.WORKER) {
+      throw new ConflictException({
+        message:
+          'Ye mobile number Ustaad account ke saath registered hai. Ustaad Login use karein.',
+        error: 'PHONE_IS_WORKER',
+      });
+    }
+    if (!user.isActive) {
+      throw new ForbiddenException('Account is deactivated');
+    }
+
+    const passwordMatch = await bcrypt.compare(
+      password,
+      user.passwordHash ?? '',
+    );
+    if (!passwordMatch) {
+      throw new UnauthorizedException('Invalid phone number or password');
+    }
+
+    const profile = await this._getProfileName(user.id, user.role);
+    return this._buildAuthResponse(
+      user.id,
+      user.phone,
+      user.role,
+      profile.firstName,
+      profile.lastName,
+      profile.verificationStatus,
+    );
+  }
+
+  /**
+   * POST /auth/client/password-register — new CLIENT only. The account is
+   * created `phoneVerified: false` (schema default, not passed explicitly)
+   * since no OTP was ever verified for this phone — never claim otherwise.
+   */
+  async clientPasswordRegister(
+    fullName: string,
+    rawPhone: string,
+    password: string,
+  ): Promise<AuthResponseDto> {
+    const normalized = normalizePakistaniPhone(rawPhone);
+    if (!normalized) {
+      throw new BadRequestException({
+        message: 'Sahi Pakistani mobile number likhein.',
+        error: 'INVALID_PHONE',
+      });
+    }
+
+    const variants = phoneLookupVariants(normalized);
+    const existing = await this.authRepository.findUserByPhoneVariants(variants);
+    if (existing) {
+      if (existing.role === Role.WORKER) {
+        throw new ConflictException({
+          message:
+            'Ye mobile number Ustaad account ke saath registered hai. Ustaad Login use karein.',
+          error: 'PHONE_IS_WORKER',
+        });
+      }
+      throw new ConflictException({
+        message: 'Ye number pehle se Client account ke saath registered hai. Login karein.',
+        error: 'PHONE_IS_CLIENT',
+      });
+    }
+
+    const { firstName, lastName } = this._splitFullName(fullName);
+    const passwordHash = await bcrypt.hash(password, 12);
+
+    let user;
+    try {
+      user = await this.authRepository.createUserWithProfile({
+        phone: normalized,
+        passwordHash,
+        firstName,
+        lastName,
+        role: Role.CLIENT,
+      });
+    } catch (err) {
+      // Same concurrent-registration race as clientOtpLoginOrRegister: the
+      // loser logs into whichever account won the insert instead of
+      // failing, so two near-simultaneous registrations never produce a
+      // duplicate account or a user-facing error.
       if (
         err instanceof Prisma.PrismaClientKnownRequestError &&
         err.code === 'P2002'
@@ -654,6 +856,7 @@ export class AuthService {
         lastName,
         role: Role.WORKER,
         categoryId,
+        phoneVerified: true,
       });
     } catch (err) {
       if (
@@ -702,6 +905,7 @@ export class AuthService {
       throw new ForbiddenException('Account is deactivated');
     }
 
+    await this.authRepository.markPhoneVerified(user.id);
     const profile = await this._getProfileName(user.id, user.role);
     return this._buildAuthResponse(
       user.id,

@@ -17,6 +17,77 @@ class _FakeAuthRepository implements AuthRepository {
   Failure? clientOtpLoginFailure;
   DateTime? lastExpiresAt;
 
+  int phoneCheckCalls = 0;
+  ClientPhoneStatus phoneCheckResult = ClientPhoneStatus.newAccount;
+  Failure? phoneCheckFailure;
+
+  int passwordLoginCalls = 0;
+  Failure? passwordLoginFailure;
+
+  int passwordRegisterCalls = 0;
+  Failure? passwordRegisterFailure;
+
+  AuthTokensEntity _tokens() => AuthTokensEntity(
+        accessToken: 'a',
+        refreshToken: 'r',
+        user: const UserEntity(
+          id: 'u1',
+          phone: '+923378372427',
+          role: 'CLIENT',
+          firstName: 'Ali',
+          lastName: 'Khan',
+        ),
+      );
+
+  @override
+  Future<Either<Failure, ClientPhoneStatus>> checkClientPhoneStatus(
+    String phone,
+  ) async {
+    phoneCheckCalls++;
+    await Future<void>.delayed(const Duration(milliseconds: 30));
+    if (phoneCheckFailure != null) return Left(phoneCheckFailure!);
+    return Right(phoneCheckResult);
+  }
+
+  @override
+  Future<Either<Failure, AuthTokensEntity>> clientPasswordLogin({
+    required String phone,
+    required String password,
+  }) async {
+    passwordLoginCalls++;
+    await Future<void>.delayed(const Duration(milliseconds: 30));
+    if (passwordLoginFailure != null) return Left(passwordLoginFailure!);
+    return Right(_tokens());
+  }
+
+  @override
+  Future<Either<Failure, AuthTokensEntity>> clientPasswordRegister({
+    required String fullName,
+    required String phone,
+    required String password,
+  }) async {
+    passwordRegisterCalls++;
+    await Future<void>.delayed(const Duration(milliseconds: 30));
+    if (passwordRegisterFailure != null) return Left(passwordRegisterFailure!);
+    return Right(_tokens());
+  }
+
+  @override
+  Future<Either<Failure, DateTime>> clientForgotPasswordRequest(
+    String phone,
+  ) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Either<Failure, void>> clientForgotPasswordReset({
+    required String phone,
+    required String otp,
+    required String newPassword,
+  }) {
+    throw UnimplementedError();
+  }
+
   @override
   Future<Either<Failure, DateTime>> requestOtp({
     required String phone,
@@ -136,6 +207,11 @@ Widget _wrap(_FakeAuthRepository repo) {
       GoRoute(
         path: '/auth/worker/login',
         builder: (_, _) => const Scaffold(body: Text('WORKER_LOGIN_PAGE')),
+      ),
+      GoRoute(
+        path: '/auth/client/forgot-password',
+        builder: (_, _) =>
+            const Scaffold(body: Text('CLIENT_FORGOT_PASSWORD_PAGE')),
       ),
     ],
   );
@@ -266,5 +342,160 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('WORKER_LOGIN_PAGE'), findsOneWidget);
     });
+  });
+
+  group('Client password fallback', () {
+    testWidgets('switching to Password se Continue hides the OTP fields', (
+      tester,
+    ) async {
+      final repo = _FakeAuthRepository();
+      await tester.pumpWidget(_wrap(repo));
+
+      expect(find.text('Aap ka poora naam'), findsOneWidget);
+      await tester.tap(find.text('Password se Continue'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Aap ka poora naam'), findsNothing);
+      expect(find.text('Aage Barhein'), findsOneWidget);
+    });
+
+    testWidgets('existing Client: phone check reveals the login sub-form', (
+      tester,
+    ) async {
+      final repo = _FakeAuthRepository()
+        ..phoneCheckResult = ClientPhoneStatus.client;
+      await tester.pumpWidget(_wrap(repo));
+
+      await tester.tap(find.text('Password se Continue'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextFormField).first, '03378372427');
+      await tester.tap(find.text('Aage Barhein'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      expect(repo.phoneCheckCalls, 1);
+      expect(find.text('Login Karein'), findsOneWidget);
+      expect(find.text('Password Bhool Gaye?'), findsOneWidget);
+
+      await tester.enterText(find.byType(TextFormField).at(1), 'password123');
+      await tester.tap(find.text('Login Karein'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      expect(repo.passwordLoginCalls, 1);
+    });
+
+    testWidgets('new phone: phone check reveals the registration sub-form', (
+      tester,
+    ) async {
+      final repo = _FakeAuthRepository()
+        ..phoneCheckResult = ClientPhoneStatus.newAccount;
+      await tester.pumpWidget(_wrap(repo));
+
+      await tester.tap(find.text('Password se Continue'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextFormField).first, '03378372427');
+      await tester.tap(find.text('Aage Barhein'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      expect(find.text('Pura Naam'), findsOneWidget);
+      expect(find.text('Password Dobara Likhein'), findsOneWidget);
+      expect(find.text('Account Banayein'), findsOneWidget);
+    });
+
+    testWidgets('registration is rejected when confirm-password does not match', (
+      tester,
+    ) async {
+      final repo = _FakeAuthRepository()
+        ..phoneCheckResult = ClientPhoneStatus.newAccount;
+      await tester.pumpWidget(_wrap(repo));
+
+      await tester.tap(find.text('Password se Continue'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextFormField).first, '03378372427');
+      await tester.tap(find.text('Aage Barhein'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      final fields = find.byType(TextFormField);
+      await tester.enterText(fields.at(1), 'Ali Khan'); // Pura Naam
+      await tester.enterText(fields.at(2), 'password123'); // Password
+      await tester.enterText(fields.at(3), 'different-password'); // Confirm
+      await tester.ensureVisible(find.text('Account Banayein'));
+      await tester.tap(find.text('Account Banayein'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Passwords match nahi karte.'), findsOneWidget);
+      expect(repo.passwordRegisterCalls, 0);
+    });
+
+    testWidgets('a Worker phone shows the Ustaad Login redirect in password mode too', (
+      tester,
+    ) async {
+      final repo = _FakeAuthRepository()
+        ..phoneCheckResult = ClientPhoneStatus.worker
+        ..phoneCheckFailure = const WorkerPhoneConflictFailure(
+          'Ye mobile number Ustaad account ke saath registered hai. Ustaad Login use karein.',
+        );
+      await tester.pumpWidget(_wrap(repo));
+
+      await tester.tap(find.text('Password se Continue'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextFormField).first, '03378372427');
+      await tester.tap(find.text('Aage Barhein'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      expect(find.text('Ustaad Login'), findsOneWidget);
+      await tester.ensureVisible(find.text('Ustaad Login'));
+      await tester.tap(find.text('Ustaad Login'));
+      await tester.pumpAndSettle();
+      expect(find.text('WORKER_LOGIN_PAGE'), findsOneWidget);
+    });
+
+    testWidgets(
+      'the phone-check button disables itself while in flight (no duplicate submission)',
+      (tester) async {
+        final repo = _FakeAuthRepository();
+        await tester.pumpWidget(_wrap(repo));
+
+        await tester.tap(find.text('Password se Continue'));
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byType(TextFormField).first, '03378372427');
+        await tester.tap(find.text('Aage Barhein'));
+        await tester.pump();
+
+        final button = tester.widget<ElevatedButton>(
+          find.byType(ElevatedButton),
+        );
+        expect(button.onPressed, isNull);
+        expect(repo.phoneCheckCalls, 1);
+
+        await tester.pump(const Duration(milliseconds: 60));
+      },
+    );
+
+    testWidgets(
+      'a genuine SMS provider failure on the OTP send shows the required fallback message',
+      (tester) async {
+        final repo = _FakeAuthRepository()
+          ..requestOtpFailure = const SmsSendFailure('SMS bhejne mein masla hua.');
+        await tester.pumpWidget(_wrap(repo));
+
+        await tester.enterText(find.byType(TextFormField).at(0), 'Ali Khan');
+        await tester.enterText(find.byType(TextFormField).at(1), '03378372427');
+        await tester.tap(find.text('Code Bhejein'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        expect(
+          find.text(
+            'OTP filhal send nahi ho saka. Password se continue karein ya thori dair baad dobara koshish karein.',
+          ),
+          findsOneWidget,
+        );
+      },
+    );
   });
 }

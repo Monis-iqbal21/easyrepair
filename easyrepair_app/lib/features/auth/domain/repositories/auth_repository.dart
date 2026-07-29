@@ -17,7 +17,43 @@ extension OtpPurposeApiValue on OtpPurpose {
       };
 }
 
+/// Result of `/auth/client/phone-check` — drives which sub-form the Client
+/// password mode shows.
+enum ClientPhoneStatus { client, worker, newAccount }
+
 abstract class AuthRepository {
+  /// Classifies [phone] before any password is entered — existing Client
+  /// (show login), Worker (show the Ustaad-login redirect), or unregistered
+  /// (show registration). Deliberately not enumeration-safe by design (see
+  /// backend `AuthService.checkClientPhoneStatus`).
+  Future<Either<Failure, ClientPhoneStatus>> checkClientPhoneStatus(
+    String phone,
+  );
+
+  /// Client password fallback — existing account only.
+  Future<Either<Failure, AuthTokensEntity>> clientPasswordLogin({
+    required String phone,
+    required String password,
+  });
+
+  /// Client password fallback — new account only; created `phoneVerified:
+  /// false` on the backend since no OTP was ever verified for this phone.
+  Future<Either<Failure, AuthTokensEntity>> clientPasswordRegister({
+    required String fullName,
+    required String phone,
+    required String password,
+  });
+
+  /// Client-only password reset OTP request — same authoritative-`expiresAt`
+  /// contract as the Worker `forgotPasswordRequest` below.
+  Future<Either<Failure, DateTime>> clientForgotPasswordRequest(String phone);
+
+  Future<Either<Failure, void>> clientForgotPasswordReset({
+    required String phone,
+    required String otp,
+    required String newPassword,
+  });
+
   /// Requests an OTP for [phone] scoped to [purpose]. Returns the backend's
   /// authoritative expiry — the countdown UI must always derive from this,
   /// never from a locally-assumed 5-minute duration.

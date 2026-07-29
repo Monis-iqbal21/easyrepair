@@ -74,6 +74,7 @@ describe('AuthService — SMS OTP login/registration', () => {
       consumeOtp: jest.fn().mockResolvedValue(undefined),
       consumeAllActiveOtps: jest.fn().mockResolvedValue(undefined),
       updatePassword: jest.fn().mockResolvedValue(undefined),
+      markPhoneVerified: jest.fn().mockResolvedValue(undefined),
     };
     jwtService = { sign: jest.fn().mockReturnValue('signed.jwt.token') };
     config = {
@@ -265,9 +266,10 @@ describe('AuthService — SMS OTP login/registration', () => {
       expect(repository.createUserWithProfile).not.toHaveBeenCalled();
       expect(result.user.firstName).toBe('Existing');
       expect(result.user.lastName).toBe('Client');
+      expect(repository.markPhoneVerified).toHaveBeenCalledWith(CLIENT_USER.id);
     });
 
-    it('creates a new CLIENT (passwordless, normalized phone) when no account exists', async () => {
+    it('creates a new CLIENT (passwordless, normalized phone, phoneVerified true) when no account exists', async () => {
       repository.findUserByPhoneVariants.mockResolvedValue(null);
       repository.createUserWithProfile.mockResolvedValue({
         id: 'new-client',
@@ -282,6 +284,7 @@ describe('AuthService — SMS OTP login/registration', () => {
           firstName: 'Ali',
           lastName: 'Khan',
           role: Role.CLIENT,
+          phoneVerified: true,
         }),
       );
     });
@@ -360,6 +363,7 @@ describe('AuthService — SMS OTP login/registration', () => {
           categoryId: 'cat-1',
           firstName: 'Muhammad',
           lastName: 'Ali Khan',
+          phoneVerified: true,
         }),
       );
       expect(result.user.verificationStatus).toBe('PENDING');
@@ -402,10 +406,11 @@ describe('AuthService — SMS OTP login/registration', () => {
       );
     });
 
-    it('logs in an existing WORKER', async () => {
+    it('logs in an existing WORKER and marks the phone verified', async () => {
       repository.findUserByPhoneVariants.mockResolvedValue(WORKER_USER);
       const result = await service.workerOtpLogin(PHONE_RAW, '123456');
       expect(result.user.role).toBe(Role.WORKER);
+      expect(repository.markPhoneVerified).toHaveBeenCalledWith(WORKER_USER.id);
     });
 
     it('rejects when the phone has no account at all', async () => {
@@ -621,6 +626,200 @@ describe('AuthService — SMS OTP login/registration', () => {
       ).rejects.toThrow('Invalid or expired reset code.');
       expect(repository.incrementOtpAttempts).toHaveBeenCalledWith('reset-otp-1');
       expect(repository.updatePassword).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── Client password fallback ─────────────────────────────────────────────
+
+  describe('checkClientPhoneStatus', () => {
+    it('returns NEW for an unregistered phone', async () => {
+      repository.findUserByPhoneVariants.mockResolvedValue(null);
+      const result = await service.checkClientPhoneStatus(PHONE_RAW);
+      expect(result).toEqual({ status: 'NEW' });
+    });
+
+    it('returns CLIENT for an existing Client phone', async () => {
+      repository.findUserByPhoneVariants.mockResolvedValue(CLIENT_USER);
+      const result = await service.checkClientPhoneStatus(PHONE_RAW);
+      expect(result).toEqual({ status: 'CLIENT' });
+    });
+
+    it('returns WORKER for an existing Worker phone', async () => {
+      repository.findUserByPhoneVariants.mockResolvedValue(WORKER_USER);
+      const result = await service.checkClientPhoneStatus(PHONE_RAW);
+      expect(result).toEqual({ status: 'WORKER' });
+    });
+  });
+
+  describe('clientPasswordLogin', () => {
+    it('logs in an existing Client with the correct password, profile untouched', async () => {
+      const passwordHash = await bcrypt.hash('password123', 12);
+      repository.findUserByPhoneVariants.mockResolvedValue({
+        ...CLIENT_USER,
+        passwordHash,
+      });
+      const result = await service.clientPasswordLogin(PHONE_RAW, 'password123');
+      expect(result.user.role).toBe(Role.CLIENT);
+      expect(result.user.firstName).toBe('Existing');
+    });
+
+    it('rejects a wrong password', async () => {
+      const passwordHash = await bcrypt.hash('password123', 12);
+      repository.findUserByPhoneVariants.mockResolvedValue({
+        ...CLIENT_USER,
+        passwordHash,
+      });
+      await expect(
+        service.clientPasswordLogin(PHONE_RAW, 'wrong-password'),
+      ).rejects.toThrow('Invalid phone number or password');
+    });
+
+    it('rejects an unregistered phone with a generic message (no enumeration)', async () => {
+      repository.findUserByPhoneVariants.mockResolvedValue(null);
+      await expect(
+        service.clientPasswordLogin(PHONE_RAW, 'password123'),
+      ).rejects.toThrow('Invalid phone number or password');
+    });
+
+    it('rejects a Worker phone with the Ustaad-login redirect', async () => {
+      repository.findUserByPhoneVariants.mockResolvedValue(WORKER_USER);
+      await expect(
+        service.clientPasswordLogin(PHONE_RAW, 'password123'),
+      ).rejects.toMatchObject({ response: { error: 'PHONE_IS_WORKER' } });
+    });
+  });
+
+  describe('clientPasswordRegister', () => {
+    it('creates a Client (hashed password, phoneVerified false) and returns tokens', async () => {
+      repository.findUserByPhoneVariants.mockResolvedValue(null);
+      repository.createUserWithProfile.mockResolvedValue({
+        id: 'new-client',
+        phone: PHONE_NORMALIZED,
+        role: Role.CLIENT,
+      });
+
+      const result = await service.clientPasswordRegister(
+        'Ali Khan',
+        PHONE_RAW,
+        'password123',
+      );
+
+      const createCall = repository.createUserWithProfile.mock.calls[0][0];
+      expect(createCall.role).toBe(Role.CLIENT);
+      expect(createCall.phoneVerified).toBeUndefined(); // omitted -> schema default false
+      expect(createCall.passwordHash).not.toBe('password123'); // never plaintext
+      expect(createCall.passwordHash).toEqual(expect.any(String));
+      expect(await bcrypt.compare('password123', createCall.passwordHash)).toBe(
+        true,
+      );
+      expect(result.accessToken).toBe('signed.jwt.token');
+    });
+
+    it('creates the ClientProfile via the same transaction-backed repository call used by OTP registration', async () => {
+      repository.findUserByPhoneVariants.mockResolvedValue(null);
+      repository.createUserWithProfile.mockResolvedValue({
+        id: 'new-client',
+        phone: PHONE_NORMALIZED,
+        role: Role.CLIENT,
+      });
+      await service.clientPasswordRegister('Ali Khan', PHONE_RAW, 'password123');
+      expect(repository.createUserWithProfile).toHaveBeenCalledWith(
+        expect.objectContaining({
+          firstName: 'Ali',
+          lastName: 'Khan',
+          role: Role.CLIENT,
+        }),
+      );
+    });
+
+    it('rejects with PHONE_IS_WORKER when a Worker already owns the number', async () => {
+      repository.findUserByPhoneVariants.mockResolvedValue(WORKER_USER);
+      await expect(
+        service.clientPasswordRegister('Ali Khan', PHONE_RAW, 'password123'),
+      ).rejects.toMatchObject({ response: { error: 'PHONE_IS_WORKER' } });
+      expect(repository.createUserWithProfile).not.toHaveBeenCalled();
+    });
+
+    it('rejects with PHONE_IS_CLIENT when a Client already owns the number', async () => {
+      repository.findUserByPhoneVariants.mockResolvedValue(CLIENT_USER);
+      await expect(
+        service.clientPasswordRegister('Ali Khan', PHONE_RAW, 'password123'),
+      ).rejects.toMatchObject({ response: { error: 'PHONE_IS_CLIENT' } });
+      expect(repository.createUserWithProfile).not.toHaveBeenCalled();
+    });
+
+    it('gracefully logs in instead of erroring when two concurrent registrations race (P2002)', async () => {
+      repository.findUserByPhoneVariants
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(CLIENT_USER);
+      const p2002 = Object.assign(new Error('Unique constraint failed'), {
+        code: 'P2002',
+        name: 'PrismaClientKnownRequestError',
+      });
+      Object.setPrototypeOf(
+        p2002,
+        require('@prisma/client').Prisma.PrismaClientKnownRequestError.prototype,
+      );
+      repository.createUserWithProfile.mockRejectedValue(p2002);
+
+      const result = await service.clientPasswordRegister(
+        'Ali Khan',
+        PHONE_RAW,
+        'password123',
+      );
+      expect(result.user.firstName).toBe('Existing');
+    });
+  });
+
+  describe('clientForgotPasswordRequest', () => {
+    it('creates an OTP for an existing Client', async () => {
+      repository.findUserByNormalizedPhone.mockResolvedValue(CLIENT_USER);
+      const result = await service.clientForgotPasswordRequest({
+        phone: PHONE_RAW,
+      } as any);
+      expect(repository.createPasswordResetOtp).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: CLIENT_USER.id, phone: PHONE_NORMALIZED }),
+      );
+      expect(result).toHaveProperty('expiresAt');
+    });
+
+    it('never processes a Worker phone through the Client reset flow', async () => {
+      repository.findUserByNormalizedPhone.mockResolvedValue(WORKER_USER);
+      const result = await service.clientForgotPasswordRequest({
+        phone: PHONE_RAW,
+      } as any);
+      expect(repository.createPasswordResetOtp).not.toHaveBeenCalled();
+      expect(result).toHaveProperty('expiresAt'); // same safe response shape
+    });
+
+    it('surfaces a genuine SMS provider failure for an eligible Client', async () => {
+      repository.findUserByNormalizedPhone.mockResolvedValue(CLIENT_USER);
+      smsOtp.isConfigured = true;
+      smsOtp.sendOtp.mockResolvedValue(false); // e.g. VeevoTech LOW_BALANCE
+      await expect(
+        service.clientForgotPasswordRequest({ phone: PHONE_RAW } as any),
+      ).rejects.toMatchObject({ response: { error: 'SMS_SEND_FAILED' } });
+    });
+
+    it('does not surface an SMS failure for an ineligible (Worker) phone', async () => {
+      repository.findUserByNormalizedPhone.mockResolvedValue(WORKER_USER);
+      smsOtp.isConfigured = true;
+      smsOtp.sendOtp.mockResolvedValue(false);
+      await expect(
+        service.clientForgotPasswordRequest({ phone: PHONE_RAW } as any),
+      ).resolves.toHaveProperty('expiresAt');
+      expect(smsOtp.sendOtp).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('forgotPasswordRequest (Worker) — SMS failure regression', () => {
+    it('still swallows a genuine SMS provider failure (unchanged behavior)', async () => {
+      repository.findUserByNormalizedPhone.mockResolvedValue(WORKER_USER);
+      smsOtp.isConfigured = true;
+      smsOtp.sendOtp.mockResolvedValue(false);
+      await expect(
+        service.forgotPasswordRequest({ phone: PHONE_RAW } as any),
+      ).resolves.toHaveProperty('expiresAt'); // never throws
     });
   });
 });

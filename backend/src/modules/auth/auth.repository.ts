@@ -30,6 +30,12 @@ export class AuthRepository {
     role: Role;
     /** WORKER only — the single main skill picked at registration. */
     categoryId?: string;
+    /**
+     * Omit for password-based registration (schema default `false` applies
+     * — "must be marked as phone-unverified"); pass `true` only from an
+     * OTP-verified registration flow.
+     */
+    phoneVerified?: boolean;
   }): Promise<User> {
     return this.prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
@@ -37,6 +43,9 @@ export class AuthRepository {
           phone: data.phone,
           passwordHash: data.passwordHash,
           role: data.role,
+          ...(data.phoneVerified !== undefined && {
+            phoneVerified: data.phoneVerified,
+          }),
         },
       });
 
@@ -204,6 +213,14 @@ export class AuthRepository {
     await this.prisma.user.update({
       where: { id: userId },
       data: { passwordHash },
+    });
+  }
+
+  /** Called after a successful OTP verification for an existing account. */
+  async markPhoneVerified(userId: string): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { phoneVerified: true },
     });
   }
 

@@ -226,6 +226,104 @@ class AuthRepositoryImpl implements AuthRepository {
       return Left(ServerFailure(e.toString()));
     }
   }
+
+  @override
+  Future<Either<Failure, ClientPhoneStatus>> checkClientPhoneStatus(
+    String phone,
+  ) async {
+    try {
+      final status = await _datasource.checkClientPhoneStatus(phone);
+      return Right(switch (status) {
+        'CLIENT' => ClientPhoneStatus.client,
+        'WORKER' => ClientPhoneStatus.worker,
+        _ => ClientPhoneStatus.newAccount,
+      });
+    } on DioException catch (e) {
+      return Left(dioExceptionToFailure(e));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, AuthTokensEntity>> clientPasswordLogin({
+    required String phone,
+    required String password,
+  }) async {
+    try {
+      final model = await _datasource.clientPasswordLogin(
+        phone: phone,
+        password: password,
+      );
+      await _storage.saveTokens(
+        accessToken: model.accessToken,
+        refreshToken: model.refreshToken,
+      );
+      return Right(model.toEntity());
+    } on DioException catch (e) {
+      return Left(dioExceptionToFailure(e));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, AuthTokensEntity>> clientPasswordRegister({
+    required String fullName,
+    required String phone,
+    required String password,
+  }) async {
+    try {
+      final model = await _datasource.clientPasswordRegister(
+        fullName: fullName,
+        phone: phone,
+        password: password,
+      );
+      await _storage.saveTokens(
+        accessToken: model.accessToken,
+        refreshToken: model.refreshToken,
+      );
+      return Right(model.toEntity());
+    } on DioException catch (e) {
+      return Left(dioExceptionToFailure(e));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, DateTime>> clientForgotPasswordRequest(
+    String phone,
+  ) async {
+    try {
+      final expiresAt = await _datasource.clientForgotPasswordRequest(phone);
+      return Right(expiresAt);
+    } on DioException catch (e) {
+      return Left(dioExceptionToFailure(e));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> clientForgotPasswordReset({
+    required String phone,
+    required String otp,
+    required String newPassword,
+  }) async {
+    try {
+      await _datasource.clientForgotPasswordReset(
+        phone: phone,
+        otp: otp,
+        newPassword: newPassword,
+      );
+      return const Right(null);
+    } on DioException catch (e) {
+      return Left(dioExceptionToFailure(e));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
 }
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {

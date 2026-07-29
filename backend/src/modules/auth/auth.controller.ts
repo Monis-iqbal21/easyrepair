@@ -24,6 +24,9 @@ import { RequestOtpDto } from './dto/request-otp.dto';
 import { ClientOtpLoginDto } from './dto/client-otp-login.dto';
 import { WorkerOtpRegisterDto } from './dto/worker-otp-register.dto';
 import { WorkerOtpLoginDto } from './dto/worker-otp-login.dto';
+import { ClientPhoneCheckDto } from './dto/client-phone-check.dto';
+import { ClientPasswordLoginDto } from './dto/client-password-login.dto';
+import { ClientPasswordRegisterDto } from './dto/client-password-register.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
@@ -126,6 +129,53 @@ export class AuthController {
   @Post('forgot-password/reset')
   @HttpCode(HttpStatus.OK)
   forgotPasswordReset(@Body() dto: ForgotPasswordResetDto) {
+    return this.authService.forgotPasswordReset(dto);
+  }
+
+  /**
+   * POST /auth/client/phone-check — tells the Client auth page's password
+   * mode which sub-form to show before any password is entered.
+   */
+  @Post('client/phone-check')
+  @HttpCode(HttpStatus.OK)
+  checkClientPhoneStatus(@Body() dto: ClientPhoneCheckDto) {
+    return this.authService.checkClientPhoneStatus(dto.phone);
+  }
+
+  /** POST /auth/client/password-login — existing Client, password fallback. */
+  @Post('client/password-login')
+  @HttpCode(HttpStatus.OK)
+  clientPasswordLogin(@Body() dto: ClientPasswordLoginDto) {
+    return this.authService.clientPasswordLogin(dto.phone, dto.password);
+  }
+
+  /** POST /auth/client/password-register — new Client, password fallback. */
+  @Post('client/password-register')
+  @HttpCode(HttpStatus.CREATED)
+  clientPasswordRegister(@Body() dto: ClientPasswordRegisterDto) {
+    return this.authService.clientPasswordRegister(
+      dto.fullName,
+      dto.phone,
+      dto.password,
+    );
+  }
+
+  /** POST /auth/client/forgot-password/request — Client-only password reset OTP. */
+  @Post('client/forgot-password/request')
+  @HttpCode(HttpStatus.OK)
+  clientForgotPasswordRequest(@Body() dto: ForgotPasswordRequestDto) {
+    return this.authService.clientForgotPasswordRequest(dto);
+  }
+
+  /**
+   * POST /auth/client/forgot-password/reset — reuses the same
+   * `forgotPasswordReset` as the Worker flow: it's already scoped purely by
+   * the OTP row's `userId` (established at request time), so no role
+   * parameter is needed here.
+   */
+  @Post('client/forgot-password/reset')
+  @HttpCode(HttpStatus.OK)
+  clientForgotPasswordReset(@Body() dto: ForgotPasswordResetDto) {
     return this.authService.forgotPasswordReset(dto);
   }
 
