@@ -1,6 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { PasswordResetOtp, Role, User } from '@prisma/client';
+import {
+  AuthOtp,
+  AuthOtpPurpose,
+  PasswordResetOtp,
+  Role,
+  User,
+} from '@prisma/client';
+import { phoneLookupVariants } from '../../common/utils/phone.util';
 
 @Injectable()
 export class AuthRepository {
@@ -16,7 +23,8 @@ export class AuthRepository {
 
   async createUserWithProfile(data: {
     phone: string;
-    passwordHash: string;
+    /** null for passwordless CLIENT OTP registration. */
+    passwordHash: string | null;
     firstName: string;
     lastName: string;
     role: Role;
@@ -105,35 +113,52 @@ export class AuthRepository {
     });
   }
 
-  async updateClientAvatarUrl(userId: string, avatarUrl: string): Promise<void> {
+  async updateClientAvatarUrl(
+    userId: string,
+    avatarUrl: string,
+  ): Promise<void> {
     await this.prisma.clientProfile.update({
       where: { userId },
       data: { avatarUrl },
     });
   }
 
-  async updateWorkerAvatarUrl(userId: string, avatarUrl: string): Promise<void> {
+  async updateWorkerAvatarUrl(
+    userId: string,
+    avatarUrl: string,
+  ): Promise<void> {
     await this.prisma.workerProfile.update({
       where: { userId },
       data: { avatarUrl },
     });
   }
 
-  async updateClientAvatar(userId: string, avatarUrl: string, avatarStorageKey: string): Promise<void> {
+  async updateClientAvatar(
+    userId: string,
+    avatarUrl: string,
+    avatarStorageKey: string,
+  ): Promise<void> {
     await this.prisma.clientProfile.update({
       where: { userId },
       data: { avatarUrl, avatarStorageKey },
     });
   }
 
-  async updateWorkerAvatar(userId: string, avatarUrl: string, avatarStorageKey: string): Promise<void> {
+  async updateWorkerAvatar(
+    userId: string,
+    avatarUrl: string,
+    avatarStorageKey: string,
+  ): Promise<void> {
     await this.prisma.workerProfile.update({
       where: { userId },
       data: { avatarUrl, avatarStorageKey },
     });
   }
 
-  async getAvatarUrls(userId: string, role: Role): Promise<{ avatarUrl: string | null }> {
+  async getAvatarUrls(
+    userId: string,
+    role: Role,
+  ): Promise<{ avatarUrl: string | null }> {
     if (role === Role.CLIENT) {
       const p = await this.prisma.clientProfile.findUnique({
         where: { userId },
@@ -155,16 +180,24 @@ export class AuthRepository {
     });
   }
 
-  async findUserByNormalizedPhone(normalizedPhone: string): Promise<User | null> {
-    // Try exact match first (e.g. stored as +923001234567)
-    const byExact = await this.prisma.user.findUnique({
-      where: { phone: normalizedPhone },
-    });
-    if (byExact) return byExact;
+  async findUserByNormalizedPhone(
+    normalizedPhone: string,
+  ): Promise<User | null> {
+    return this.findUserByPhoneVariants(phoneLookupVariants(normalizedPhone));
+  }
 
-    // Fallback: stored without country code (e.g. 03001234567)
-    const local = normalizedPhone.replace(/^\+92/, '0');
-    return this.prisma.user.findUnique({ where: { phone: local } });
+  /**
+   * Finds a user regardless of which historical raw-phone format they were
+   * stored under (03..., 92..., +92..., 0092...) — pass the full variant
+   * list from `phoneLookupVariants` so a number is never treated as two
+   * different users just because of formatting.
+   */
+  async findUserByPhoneVariants(variants: string[]): Promise<User | null> {
+    const matches = await this.prisma.user.findMany({
+      where: { phone: { in: variants } },
+      take: 1,
+    });
+    return matches[0] ?? null;
   }
 
   async updatePassword(userId: string, passwordHash: string): Promise<void> {
@@ -196,9 +229,24 @@ export class AuthRepository {
     await this.prisma.passwordResetOtp.create({ data });
   }
 
-  async findActiveOtp(userId: string, phone: string): Promise<PasswordResetOtp | null> {
+  async findActiveOtp(
+    userId: string,
+    phone: string,
+  ): Promise<PasswordResetOtp | null> {
     return this.prisma.passwordResetOtp.findFirst({
       where: { userId, phone, consumedAt: null, expiresAt: { gt: new Date() } },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  /** Most recent request regardless of consumed/expired state — used only
+   * for the 60-second resend cooldown check. */
+  async findMostRecentPasswordResetOtp(
+    userId: string,
+    phone: string,
+  ): Promise<PasswordResetOtp | null> {
+    return this.prisma.passwordResetOtp.findFirst({
+      where: { userId, phone },
       orderBy: { createdAt: 'desc' },
     });
   }
@@ -221,6 +269,79 @@ export class AuthRepository {
     await this.prisma.passwordResetOtp.updateMany({
       where: { userId, phone, consumedAt: null },
       data: { consumedAt: new Date() },
+    });
+  }
+
+  // ── AuthOtp (SMS login/registration OTP — purpose-scoped, separate from
+  // PasswordResetOtp) ─────────────────────────────────────────────────────
+
+  async createAuthOtp(data: {
+    phone: string;
+    purpose: AuthOtpPurpose;
+    otpHash: string;
+    expiresAt: Date;
+    requestIp: string | null;
+  }): Promise<void> {
+    await this.prisma.authOtp.create({ data });
+  }
+
+  async findActiveAuthOtp(
+    phone: string,
+    purpose: AuthOtpPurpose,
+  ): Promise<AuthOtp | null> {
+    return this.prisma.authOtp.findFirst({
+      where: { phone, purpose, consumedAt: null, expiresAt: { gt: new Date() } },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async mostRecentAuthOtp(
+    phone: string,
+    purpose: AuthOtpPurpose,
+  ): Promise<AuthOtp | null> {
+    return this.prisma.authOtp.findFirst({
+      where: { phone, purpose },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async invalidatePreviousAuthOtps(
+    phone: string,
+    purpose: AuthOtpPurpose,
+  ): Promise<void> {
+    await this.prisma.authOtp.updateMany({
+      where: { phone, purpose, consumedAt: null },
+      data: { consumedAt: new Date() },
+    });
+  }
+
+  async incrementAuthOtpAttempts(id: string): Promise<void> {
+    await this.prisma.authOtp.update({
+      where: { id },
+      data: { attempts: { increment: 1 } },
+    });
+  }
+
+  async consumeAuthOtp(id: string): Promise<void> {
+    await this.prisma.authOtp.update({
+      where: { id },
+      data: { consumedAt: new Date() },
+    });
+  }
+
+  async countRecentAuthOtpByPhone(
+    phone: string,
+    purpose: AuthOtpPurpose,
+    since: Date,
+  ): Promise<number> {
+    return this.prisma.authOtp.count({
+      where: { phone, purpose, createdAt: { gte: since } },
+    });
+  }
+
+  async countRecentAuthOtpByIp(ip: string, since: Date): Promise<number> {
+    return this.prisma.authOtp.count({
+      where: { requestIp: ip, createdAt: { gte: since } },
     });
   }
 

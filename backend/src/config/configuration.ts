@@ -18,6 +18,8 @@ export default () => ({
   },
   sms: {
     apiKey: process.env.SMS_API_KEY,
+    apiUrl: process.env.SMS_API_URL,
+    sender: process.env.SMS_SENDER || 'Default',
   },
   storage: {
     bucket: process.env.R2_BUCKET,

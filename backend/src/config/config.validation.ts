@@ -7,7 +7,6 @@ import {
   validateSync,
 } from 'class-validator';
 
-
 class EnvironmentVariables {
   @IsNumber()
   @IsOptional()
@@ -48,6 +47,14 @@ class EnvironmentVariables {
   @IsString()
   @IsOptional()
   SMS_API_KEY: string;
+
+  @IsString()
+  @IsOptional()
+  SMS_API_URL: string;
+
+  @IsString()
+  @IsOptional()
+  SMS_SENDER: string;
 
   @IsString()
   @IsOptional()

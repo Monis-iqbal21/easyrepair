@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../features/auth/presentation/pages/login_page.dart';
-import '../../features/auth/presentation/pages/register_page.dart';
+import '../../features/auth/presentation/pages/role_selection_page.dart';
+import '../../features/auth/presentation/pages/client_otp_auth_page.dart';
+import '../../features/auth/presentation/pages/worker_type_selection_page.dart';
+import '../../features/auth/presentation/pages/worker_otp_register_page.dart';
+import '../../features/auth/presentation/pages/worker_login_page.dart';
 import '../../features/auth/presentation/pages/forgot_password_page.dart';
 import '../../features/auth/presentation/providers/auth_providers.dart';
 import '../../features/client/presentation/pages/client_home_page.dart';
@@ -57,12 +60,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Online, bid, apply) handle the "not approved yet" case there, rather
       // than hard-blocking the whole app on a dead-end page.
       if (isSplash || (isLoggedIn && isAuthRoute)) {
-        if (!isLoggedIn) return '/auth/login';
+        if (!isLoggedIn) return '/auth/role-select';
         if (user!.isWorker) return '/worker/home';
         return '/client/home';
       }
 
-      if (!isLoggedIn && !isAuthRoute) return '/auth/login';
+      if (!isLoggedIn && !isAuthRoute) return '/auth/role-select';
 
       return null;
     },
@@ -72,12 +75,24 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, __) => const SplashPage(),
       ),
       GoRoute(
-        path: '/auth/login',
-        builder: (_, __) => const LoginPage(),
+        path: '/auth/role-select',
+        builder: (_, __) => const RoleSelectionPage(),
       ),
       GoRoute(
-        path: '/auth/register',
-        builder: (_, __) => const RegisterPage(),
+        path: '/auth/client',
+        builder: (_, __) => const ClientOtpAuthPage(),
+      ),
+      GoRoute(
+        path: '/auth/worker/choice',
+        builder: (_, __) => const WorkerTypeSelectionPage(),
+      ),
+      GoRoute(
+        path: '/auth/worker/register',
+        builder: (_, __) => const WorkerOtpRegisterPage(),
+      ),
+      GoRoute(
+        path: '/auth/worker/login',
+        builder: (_, __) => const WorkerLoginPage(),
       ),
       GoRoute(
         path: '/forgot-password',

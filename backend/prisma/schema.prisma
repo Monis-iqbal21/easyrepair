@@ -158,11 +158,11 @@ model User {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  clientProfile     ClientProfile?
-  workerProfile     WorkerProfile?
-  refreshTokens     RefreshToken[]
-  notifications     Notification[]
-  passwordResetOtps PasswordResetOtp[]
+  clientProfile        ClientProfile?
+  workerProfile        WorkerProfile?
+  refreshTokens        RefreshToken[]
+  notifications        Notification[]
+  passwordResetOtps    PasswordResetOtp[]
   agreementAcceptances AgreementAcceptance[]
 
   conversationsAsClient Conversation[] @relation("ClientConversations")
@@ -189,6 +189,34 @@ model PasswordResetOtp {
   @@index([expiresAt])
   @@index([consumedAt])
   @@map("password_reset_otps")
+}
+
+enum AuthOtpPurpose {
+  CLIENT_LOGIN_REGISTER
+  WORKER_REGISTER
+  WORKER_LOGIN
+}
+
+/// Purpose-scoped OTP for the SMS login/registration flows — deliberately
+/// separate from PasswordResetOtp (different lifecycle/callers) and not
+/// FK'd to User, since CLIENT_LOGIN_REGISTER/WORKER_REGISTER OTPs are
+/// requested before any account exists for that phone.
+model AuthOtp {
+  id         String         @id @default(cuid())
+  phone      String
+  purpose    AuthOtpPurpose
+  otpHash    String
+  expiresAt  DateTime
+  consumedAt DateTime?
+  attempts   Int            @default(0)
+  requestIp  String?
+  createdAt  DateTime       @default(now())
+
+  @@index([phone, purpose])
+  @@index([expiresAt])
+  @@index([consumedAt])
+  @@index([requestIp, createdAt])
+  @@map("auth_otps")
 }
 
 model RefreshToken {
@@ -265,7 +293,7 @@ model WorkerProfile {
   fullLegalName        String?
   /// CNIC number (e.g. 12345-1234567-1) — unique across workers. Nullable
   /// column with a unique index is safe: Postgres allows multiple NULLs.
-  cnicNumber           String?           @unique
+  cnicNumber           String? @unique
   residentialAddress   String?
   cnicFrontUrl         String?
   cnicFrontStorageKey  String?
@@ -543,31 +571,31 @@ model Review {
 /// decisionStatus whether to continue repair with the same worker or close
 /// the job at the inspection fee (see BookingsService.completeAfterInspectionClose).
 model InspectionReport {
-  id                String                   @id @default(uuid())
-  bookingId         String                   @unique
-  booking           Booking                  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  workerProfileId   String
-  workerProfile     WorkerProfile            @relation(fields: [workerProfileId], references: [id])
+  id                       String                   @id @default(uuid())
+  bookingId                String                   @unique
+  booking                  Booking                  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  workerProfileId          String
+  workerProfile            WorkerProfile            @relation(fields: [workerProfileId], references: [id])
   /// Either (issueFound & recommendedRepair) or a voice note must be present —
   /// enforced in InspectionReportsService, not at the DB level.
-  issueFound        String?
-  recommendedRepair String?
-  labourCost        Float
-  partsNeeded       Boolean                  @default(false)
-  partsTotal        Float                    @default(0)
+  issueFound               String?
+  recommendedRepair        String?
+  labourCost               Float
+  partsNeeded              Boolean                  @default(false)
+  partsTotal               Float                    @default(0)
   /// labourCost + partsTotal. Deliberately NOT reduced by the inspection fee
   /// already paid — the fee is shown separately in the UI as an informational line.
-  repairQuoteTotal  Float
-  notes             String?
-  voiceNoteUrl              String?
-  voiceNoteStorageKey       String?
-  voiceNoteMimeType         String?
-  voiceNoteDurationSeconds  Float?
-  decisionStatus    InspectionDecisionStatus @default(PENDING_CLIENT_DECISION)
-  acceptedAt        DateTime?
-  closedAt          DateTime?
-  createdAt         DateTime                 @default(now())
-  updatedAt         DateTime                 @updatedAt
+  repairQuoteTotal         Float
+  notes                    String?
+  voiceNoteUrl             String?
+  voiceNoteStorageKey      String?
+  voiceNoteMimeType        String?
+  voiceNoteDurationSeconds Float?
+  decisionStatus           InspectionDecisionStatus @default(PENDING_CLIENT_DECISION)
+  acceptedAt               DateTime?
+  closedAt                 DateTime?
+  createdAt                DateTime                 @default(now())
+  updatedAt                DateTime                 @updatedAt
 
   parts  InspectionReportPart[]
   photos InspectionReportPhoto[]
@@ -708,7 +736,7 @@ model Bid {
 /// new version means creating a NEW row with isActive=true while the old row
 /// (and every acceptance that references it) is left untouched forever.
 model AgreementTemplate {
-  id             String        @id @default(uuid())
+  id             String           @id @default(uuid())
   type           AgreementType
   categoryId     String?
   category       ServiceCategory? @relation(fields: [categoryId], references: [id], onDelete: Cascade)
@@ -721,8 +749,8 @@ model AgreementTemplate {
   /// prove exactly which text was agreed to even if this row were ever
   /// (accidentally) edited in place.
   contentHash    String
-  isActive       Boolean       @default(true)
-  createdAt      DateTime      @default(now())
+  isActive       Boolean          @default(true)
+  createdAt      DateTime         @default(now())
 
   acceptances AgreementAcceptance[]
 
@@ -746,13 +774,13 @@ model AgreementAcceptance {
   agreementTemplate   AgreementTemplate @relation(fields: [agreementTemplateId], references: [id], onDelete: Restrict)
 
   // Snapshot of the template at acceptance time (survives template changes).
-  agreementType             AgreementType
-  agreementTitle            String
-  agreementVersion          String
-  agreementContentSnapshot  String
+  agreementType                   AgreementType
+  agreementTitle                  String
+  agreementVersion                String
+  agreementContentSnapshot        String
   agreementFileSnapshotUrl        String?
   agreementFileSnapshotStorageKey String?
-  agreementHash             String
+  agreementHash                   String
 
   // Snapshot of the worker's identity/profile at acceptance time.
   fullLegalNameSnapshot String

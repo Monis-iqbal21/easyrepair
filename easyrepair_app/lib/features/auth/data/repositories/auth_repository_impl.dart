@@ -17,6 +17,95 @@ class AuthRepositoryImpl implements AuthRepository {
   const AuthRepositoryImpl(this._datasource, this._storage);
 
   @override
+  Future<Either<Failure, DateTime>> requestOtp({
+    required String phone,
+    required OtpPurpose purpose,
+  }) async {
+    try {
+      final expiresAt = await _datasource.requestOtp(
+        phone: phone,
+        purpose: purpose.apiValue,
+      );
+      return Right(expiresAt);
+    } on DioException catch (e) {
+      return Left(dioExceptionToFailure(e));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, AuthTokensEntity>> clientOtpLogin({
+    required String fullName,
+    required String phone,
+    required String otp,
+  }) async {
+    try {
+      final model = await _datasource.clientOtpLogin(
+        fullName: fullName,
+        phone: phone,
+        otp: otp,
+      );
+      await _storage.saveTokens(
+        accessToken: model.accessToken,
+        refreshToken: model.refreshToken,
+      );
+      return Right(model.toEntity());
+    } on DioException catch (e) {
+      return Left(dioExceptionToFailure(e));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, AuthTokensEntity>> workerOtpRegister({
+    required String fullName,
+    required String phone,
+    required String otp,
+    required String password,
+    required String categoryId,
+  }) async {
+    try {
+      final model = await _datasource.workerOtpRegister(
+        fullName: fullName,
+        phone: phone,
+        otp: otp,
+        password: password,
+        categoryId: categoryId,
+      );
+      await _storage.saveTokens(
+        accessToken: model.accessToken,
+        refreshToken: model.refreshToken,
+      );
+      return Right(model.toEntity());
+    } on DioException catch (e) {
+      return Left(dioExceptionToFailure(e));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, AuthTokensEntity>> workerOtpLogin({
+    required String phone,
+    required String otp,
+  }) async {
+    try {
+      final model = await _datasource.workerOtpLogin(phone: phone, otp: otp);
+      await _storage.saveTokens(
+        accessToken: model.accessToken,
+        refreshToken: model.refreshToken,
+      );
+      return Right(model.toEntity());
+    } on DioException catch (e) {
+      return Left(dioExceptionToFailure(e));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
   Future<Either<Failure, AuthTokensEntity>> register({
     required String phone,
     required String password,
@@ -94,10 +183,10 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<Either<Failure, void>> forgotPasswordRequest(String phone) async {
+  Future<Either<Failure, DateTime>> forgotPasswordRequest(String phone) async {
     try {
-      await _datasource.forgotPasswordRequest(phone);
-      return const Right(null);
+      final expiresAt = await _datasource.forgotPasswordRequest(phone);
+      return Right(expiresAt);
     } on DioException catch (e) {
       return Left(dioExceptionToFailure(e));
     } catch (e) {

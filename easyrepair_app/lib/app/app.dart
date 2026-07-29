@@ -356,7 +356,7 @@ class _EasyRepairAppState extends ConsumerState<EasyRepairApp>
         if (pending != null) {
           _pendingNotificationData = null;
           // addPostFrameCallback ensures the router has completed its initial
-          // redirect (e.g. from /auth/login to the home page) before we
+          // redirect (e.g. from /auth/role-select to the home page) before we
           // attempt to push a booking-detail route on top of it.
           WidgetsBinding.instance.addPostFrameCallback((_) {
             _navigateFromData(pending, isWorker: user.isWorker);

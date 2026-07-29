@@ -46,6 +46,61 @@ class AuthRemoteDatasource {
     return AuthResponseModel.fromJson(response.data as Map<String, dynamic>);
   }
 
+  Future<DateTime> requestOtp({
+    required String phone,
+    required String purpose,
+  }) async {
+    final response = await _dio.post(
+      '/auth/otp/request',
+      data: {'phone': phone, 'purpose': purpose},
+    );
+    final data = response.data['data'] ?? response.data;
+    return DateTime.parse(data['expiresAt'] as String);
+  }
+
+  Future<AuthResponseModel> clientOtpLogin({
+    required String fullName,
+    required String phone,
+    required String otp,
+  }) async {
+    final response = await _dio.post(
+      '/auth/client/otp-login',
+      data: {'fullName': fullName, 'phone': phone, 'otp': otp},
+    );
+    return AuthResponseModel.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<AuthResponseModel> workerOtpRegister({
+    required String fullName,
+    required String phone,
+    required String otp,
+    required String password,
+    required String categoryId,
+  }) async {
+    final response = await _dio.post(
+      '/auth/worker/otp-register',
+      data: {
+        'fullName': fullName,
+        'phone': phone,
+        'otp': otp,
+        'password': password,
+        'categoryId': categoryId,
+      },
+    );
+    return AuthResponseModel.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<AuthResponseModel> workerOtpLogin({
+    required String phone,
+    required String otp,
+  }) async {
+    final response = await _dio.post(
+      '/auth/worker/otp-login',
+      data: {'phone': phone, 'otp': otp},
+    );
+    return AuthResponseModel.fromJson(response.data as Map<String, dynamic>);
+  }
+
   Future<void> logout({String? refreshToken}) async {
     await _dio.post(
       '/auth/logout',
@@ -59,8 +114,13 @@ class AuthRemoteDatasource {
     return UserModel.fromJson(data as Map<String, dynamic>);
   }
 
-  Future<void> forgotPasswordRequest(String phone) async {
-    await _dio.post('/auth/forgot-password/request', data: {'phone': phone});
+  Future<DateTime> forgotPasswordRequest(String phone) async {
+    final response = await _dio.post(
+      '/auth/forgot-password/request',
+      data: {'phone': phone},
+    );
+    final data = response.data['data'] ?? response.data;
+    return DateTime.parse(data['expiresAt'] as String);
   }
 
   Future<void> forgotPasswordReset({
