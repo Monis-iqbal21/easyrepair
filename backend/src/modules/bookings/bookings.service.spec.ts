@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ConflictException } from '@nestjs/common';
 import { BookingLane } from '@prisma/client';
 import { BookingsService } from './bookings.service';
 
@@ -331,7 +331,7 @@ describe('BookingsService.workerCancelBooking', () => {
   });
 });
 
-describe('BookingsService.reopenInspectionForBidding', () => {
+describe('BookingsService.closeInspectionAndOpenRepairBidding', () => {
   let bookingsRepository: any;
   let storageService: any;
   let notificationsService: any;
@@ -339,9 +339,26 @@ describe('BookingsService.reopenInspectionForBidding', () => {
   let bookingsQueue: any;
   let service: BookingsService;
 
+  const PARAMS = {
+    reportId: 'report-1',
+    originalBookingId: 'booking-1',
+    inspectingWorkerProfileId: 'worker-1',
+    clientProfileId: 'client-1',
+    categoryId: 'cat-1',
+    title: 'AC repair',
+    description: 'Compressor kharab hai',
+    addressLine: '123 Street',
+    city: 'Karachi',
+    latitude: 24.86,
+    longitude: 67.0,
+  };
+
   beforeEach(() => {
     bookingsRepository = {
-      reopenForFindOtherUstaad: jest.fn().mockResolvedValue({}),
+      closeInspectionAndOpenRepairBidding: jest.fn().mockResolvedValue({
+        outcome: 'CREATED',
+        childBooking: { id: 'child-1' },
+      }),
       findNearbyWorkers: jest.fn().mockResolvedValue({ workers: [] }),
       findUserIdsByWorkerProfileIds: jest.fn().mockResolvedValue(new Map()),
     };
@@ -361,20 +378,40 @@ describe('BookingsService.reopenInspectionForBidding', () => {
     );
   });
 
-  // Root cause of "Find Other Ustaad" notifications/listing not reaching
-  // workers: this nearby-worker search was passing lane: INSPECTION, which
-  // makes findNearbyWorkers use the tight 5→7km direct-assign radius ladder
-  // instead of the wide legacy ladder (up to 20km) that
-  // MAX_INSPECTION_BID_RADIUS_KM (used by New Jobs listing/bid eligibility)
-  // actually matches — silently under-reaching eligible workers beyond 7km.
-  it('searches for nearby workers using the wide BIDDING radius ladder, not the tight direct-assign ladder', async () => {
-    await service.reopenInspectionForBidding(
-      'booking-1',
-      'worker-1',
-      'cat-1',
-      24.86,
-      67.0,
+  // #1/#5 — one atomic repository call closes the inspection and creates the
+  // linked child; the service returns the child's id.
+  it('delegates to the single atomic repository transaction and returns the linked repair booking id', async () => {
+    const childId = await service.closeInspectionAndOpenRepairBidding(PARAMS);
+
+    expect(childId).toBe('child-1');
+    expect(
+      bookingsRepository.closeInspectionAndOpenRepairBidding,
+    ).toHaveBeenCalledTimes(1);
+    expect(
+      bookingsRepository.closeInspectionAndOpenRepairBidding,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ...PARAMS,
+        now: expect.any(Date),
+        expiresAt: expect.any(Date),
+      }),
     );
+  });
+
+  // #8/#10 — nearby-worker push targets the CHILD booking, uses the wide
+  // BIDDING radius ladder, and always excludes the original inspector.
+  it('notifies eligible nearby workers about the CHILD booking, wide BIDDING ladder, inspector excluded', async () => {
+    bookingsRepository.findNearbyWorkers.mockResolvedValue({
+      workers: [{ id: 'worker-2' }, { id: 'worker-3' }],
+    });
+    bookingsRepository.findUserIdsByWorkerProfileIds.mockResolvedValue(
+      new Map([
+        ['worker-2', 'worker-2-user'],
+        ['worker-3', 'worker-3-user'],
+      ]),
+    );
+
+    await service.closeInspectionAndOpenRepairBidding(PARAMS);
     await flushPromises();
 
     expect(bookingsRepository.findNearbyWorkers).toHaveBeenCalledWith(
@@ -386,60 +423,264 @@ describe('BookingsService.reopenInspectionForBidding', () => {
         excludedWorkerIds: ['worker-1'],
       }),
     );
-  });
-
-  it('notifies each eligible nearby worker with the find-other-ustaad event, excluding the inspector', async () => {
-    bookingsRepository.findNearbyWorkers.mockResolvedValue({
-      workers: [{ id: 'worker-2' }, { id: 'worker-3' }],
-    });
-    bookingsRepository.findUserIdsByWorkerProfileIds.mockResolvedValue(
-      new Map([
-        ['worker-2', 'worker-2-user'],
-        ['worker-3', 'worker-3-user'],
-      ]),
-    );
-
-    await service.reopenInspectionForBidding(
-      'booking-1',
-      'worker-1',
-      'cat-1',
-      24.86,
-      67.0,
-    );
-    await flushPromises();
-
-    expect(bookingsRepository.findNearbyWorkers).toHaveBeenCalledWith(
-      expect.objectContaining({ excludedWorkerIds: ['worker-1'] }),
-    );
     expect(notificationsService.notify).toHaveBeenCalledTimes(2);
-    const userIds = notificationsService.notify.mock.calls.map(
-      (c: any[]) => c[0].userId,
-    );
-    expect(userIds).toEqual(['worker-2-user', 'worker-3-user']);
-    expect(notificationsService.notify.mock.calls[0][0].eventKey).toBe(
-      'booking.inspection.find_other_ustaad_available',
-    );
+    for (const call of notificationsService.notify.mock.calls) {
+      expect(call[0].bookingId).toBe('child-1');
+      expect(call[0].route).toBe('/worker/job/child-1');
+      expect(call[0].eventKey).toBe(
+        'booking.inspection.find_other_ustaad_available',
+      );
+    }
   });
 
-  it('does not re-notify a worker already notified for this booking/event', async () => {
+  // #6 — idempotent replay: same id returned as a success, notification
+  // delivery re-attempted, per-worker dedup prevents duplicates.
+  it('ALREADY_DONE replay returns the same child id as a success and re-attempts dedup-guarded notification', async () => {
+    bookingsRepository.closeInspectionAndOpenRepairBidding.mockResolvedValue({
+      outcome: 'ALREADY_DONE',
+      childBooking: { id: 'child-1' },
+    });
     bookingsRepository.findNearbyWorkers.mockResolvedValue({
       workers: [{ id: 'worker-2' }],
     });
     bookingsRepository.findUserIdsByWorkerProfileIds.mockResolvedValue(
       new Map([['worker-2', 'worker-2-user']]),
     );
-    notificationsService.wasAlreadyNotified.mockResolvedValue(true);
 
-    await service.reopenInspectionForBidding(
-      'booking-1',
-      'worker-1',
-      'cat-1',
-      24.86,
-      67.0,
-    );
+    const childId = await service.closeInspectionAndOpenRepairBidding(PARAMS);
     await flushPromises();
 
+    expect(childId).toBe('child-1');
+    // Delivery is re-attempted (covers a first request that died before
+    // pushing)...
+    expect(bookingsRepository.findNearbyWorkers).toHaveBeenCalledTimes(1);
+    expect(notificationsService.notify).toHaveBeenCalledTimes(1);
+
+    // ...but a worker already notified for this booking/event is skipped.
+    notificationsService.notify.mockClear();
+    notificationsService.wasAlreadyNotified.mockResolvedValue(true);
+    await service.closeInspectionAndOpenRepairBidding(PARAMS);
+    await flushPromises();
     expect(notificationsService.notify).not.toHaveBeenCalled();
+  });
+
+  it('rejects a genuinely different decision (CONFLICTING_DECISION) with the standard already-decided error', async () => {
+    bookingsRepository.closeInspectionAndOpenRepairBidding.mockResolvedValue({
+      outcome: 'CONFLICTING_DECISION',
+      decisionStatus: 'ACCEPTED_REPAIR',
+    });
+
+    await expect(
+      service.closeInspectionAndOpenRepairBidding(PARAMS),
+    ).rejects.toThrow('This report has already been decided (ACCEPTED_REPAIR).');
+    expect(notificationsService.notify).not.toHaveBeenCalled();
+  });
+
+  it('surfaces a controlled INSPECTION_LINK_MISSING integrity error instead of creating duplicate data', async () => {
+    bookingsRepository.closeInspectionAndOpenRepairBidding.mockResolvedValue({
+      outcome: 'LINK_MISSING',
+    });
+
+    await expect(
+      service.closeInspectionAndOpenRepairBidding(PARAMS),
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({ error: 'INSPECTION_LINK_MISSING' }),
+    });
+  });
+
+  it('maps a rolled-back close (booking no longer IN_PROGRESS) to a conflict, with nothing notified', async () => {
+    bookingsRepository.closeInspectionAndOpenRepairBidding.mockResolvedValue({
+      outcome: 'BOOKING_STATE_CHANGED',
+    });
+
+    await expect(
+      service.closeInspectionAndOpenRepairBidding(PARAMS),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(notificationsService.notify).not.toHaveBeenCalled();
+  });
+});
+
+describe('BookingsService.rehireInspectingWorker (INSPECTOR_BUSY)', () => {
+  let bookingsRepository: any;
+  let storageService: any;
+  let notificationsService: any;
+  let chatService: any;
+  let bookingsQueue: any;
+  let service: BookingsService;
+
+  function makeAssignedChildBooking() {
+    return {
+      id: 'child-1',
+      clientProfileId: 'client-1',
+      workerProfileId: 'worker-1',
+      status: 'ACCEPTED',
+      category: { name: 'AC Repair' },
+      title: null,
+      description: 'Compressor kharab hai',
+      urgency: 'NORMAL',
+      timeSlot: null,
+      urgentWindow: null,
+      scheduledAt: null,
+      createdAt: new Date(),
+      inspection: false,
+      lane: 'BIDDING',
+      standardServiceId: null,
+      standardServiceNameSnapshot: null,
+      standardServicePriceSnapshot: null,
+      standardServiceItems: [],
+      inspectionFeeSnapshot: null,
+      estimatedPrice: null,
+      finalPrice: 5000,
+      addressLine: '123 Street',
+      city: 'Karachi',
+      latitude: 24.86,
+      longitude: 67.0,
+      acceptedAt: new Date(),
+      enRouteAt: null,
+      arrivedAt: null,
+      startedAt: null,
+      completedAt: null,
+      cancellationReason: null,
+      cancelledByRole: null,
+      expiresAt: null,
+      liveStartedAt: new Date(),
+      relistedAt: null,
+      sourceInspectionBookingId: 'booking-1',
+      repairBooking: null,
+      sourceInspectionBooking: null,
+      clientProfile: { userId: 'client-user-1' },
+      workerProfile: {
+        id: 'worker-1',
+        userId: 'worker-user-1',
+        firstName: 'Ali',
+        lastName: 'Khan',
+        avatarUrl: null,
+        rating: 4.5,
+        currentLat: null,
+        currentLng: null,
+        user: { phone: '+923001234567' },
+      },
+      inspectionReport: null,
+      review: null,
+      attachments: [],
+      bids: [],
+      workerExclusions: [],
+    };
+  }
+
+  beforeEach(() => {
+    bookingsRepository = {
+      findWorkerProfileById: jest.fn().mockResolvedValue({
+        id: 'worker-1',
+        userId: 'worker-user-1',
+        availabilityStatus: 'ONLINE',
+        profileCompleted: true,
+        currentlyWorking: false,
+        status: 'ACTIVE',
+        onboardingStatus: 'APPROVED',
+      }),
+      rehireInspectingWorker: jest
+        .fn()
+        .mockResolvedValue(makeAssignedChildBooking()),
+    };
+    storageService = {};
+    notificationsService = { notify: jest.fn().mockResolvedValue(undefined) };
+    chatService = {
+      ensureConversationForBooking: jest.fn().mockResolvedValue(undefined),
+    };
+    bookingsQueue = { getJob: jest.fn(), add: jest.fn() };
+    service = new BookingsService(
+      bookingsRepository,
+      storageService,
+      notificationsService,
+      chatService,
+      bookingsQueue,
+    );
+  });
+
+  // #11/#12 — busy inspector: controlled INSPECTOR_BUSY error, Roman Urdu
+  // message, and NO write of any kind (booking stays open, nobody hired).
+  it('returns INSPECTOR_BUSY with the Roman Urdu message and performs no hire when the inspector is currently working', async () => {
+    bookingsRepository.findWorkerProfileById.mockResolvedValue({
+      id: 'worker-1',
+      currentlyWorking: true,
+      status: 'ACTIVE',
+      onboardingStatus: 'APPROVED',
+      availabilityStatus: 'ONLINE',
+      profileCompleted: true,
+    });
+
+    await expect(
+      service.rehireInspectingWorker(
+        'client-user-1',
+        'child-1',
+        'worker-1',
+        5000,
+        3000,
+      ),
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({
+        error: 'INSPECTOR_BUSY',
+        message:
+          'Inspection karne wala Ustaad abhi doosre kaam mein masroof hai. Neeche se koi aur Ustaad choose karein.',
+      }),
+    });
+
+    // Nothing was hired/closed — the bidding job and its bids are untouched,
+    // so another Ustaad can still be hired afterwards (#13).
+    expect(bookingsRepository.rehireInspectingWorker).not.toHaveBeenCalled();
+    expect(notificationsService.notify).not.toHaveBeenCalled();
+  });
+
+  it('maps a lost atomic-guard race to the existing generic unavailable conflict (not INSPECTOR_BUSY)', async () => {
+    const { WorkerUnavailableError } = jest.requireActual(
+      '../../common/errors/worker-unavailable.error',
+    );
+    bookingsRepository.rehireInspectingWorker.mockRejectedValue(
+      new WorkerUnavailableError(),
+    );
+
+    await expect(
+      service.rehireInspectingWorker(
+        'client-user-1',
+        'child-1',
+        'worker-1',
+        5000,
+        3000,
+      ),
+    ).rejects.toThrow(
+      'This Ustaad is no longer available. Please choose another option.',
+    );
+  });
+
+  it('rehires the available inspector onto the target booking with labour-only commission', async () => {
+    const result = await service.rehireInspectingWorker(
+      'client-user-1',
+      'child-1',
+      'worker-1',
+      5000,
+      3000,
+    );
+
+    // platformFee = 18% of labour (3000), never of the parts-inclusive total.
+    expect(bookingsRepository.rehireInspectingWorker).toHaveBeenCalledWith(
+      'child-1',
+      'worker-1',
+      5000,
+      540,
+    );
+    expect(result.id).toBe('child-1');
+    expect(notificationsService.notify).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'worker-user-1',
+        eventKey: 'booking.assigned',
+        route: '/worker/job/child-1',
+      }),
+    );
+    expect(chatService.ensureConversationForBooking).toHaveBeenCalledWith(
+      'client-user-1',
+      'worker-user-1',
+    );
   });
 });
 

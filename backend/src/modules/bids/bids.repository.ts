@@ -47,6 +47,17 @@ export class BidsRepository {
         inspectionReport: {
           select: { decisionStatus: true, workerProfileId: true },
         },
+        // Linked repair booking spawned by "Find Other Ustaad" — the source
+        // inspection's report identifies the original inspector, who must
+        // never bid on their own repair job.
+        sourceInspectionBookingId: true,
+        sourceInspectionBooking: {
+          select: {
+            inspectionReport: {
+              select: { decisionStatus: true, workerProfileId: true },
+            },
+          },
+        },
         workerExclusions: { select: { workerProfileId: true } },
       },
     });
@@ -203,7 +214,10 @@ export class BidsRepository {
   }
 
   /** Find a specific bid by id + bookingId (for my-bid lookup). */
-  async findMyBidOnBooking(bookingId: string, workerProfileId: string): Promise<BidWithRelations | null> {
+  async findMyBidOnBooking(
+    bookingId: string,
+    workerProfileId: string,
+  ): Promise<BidWithRelations | null> {
     return this.prisma.bid.findUnique({
       where: { bookingId_workerProfileId: { bookingId, workerProfileId } },
       include: BID_INCLUDE,
@@ -273,7 +287,11 @@ export class BidsRepository {
 
       // Record status history
       await tx.bookingStatusHistory.create({
-        data: { bookingId, status: BookingStatus.ACCEPTED, note: 'Bid accepted by client' },
+        data: {
+          bookingId,
+          status: BookingStatus.ACCEPTED,
+          note: 'Bid accepted by client',
+        },
       });
 
       // Mark worker as busy so they don't appear in new searches or new-jobs
@@ -304,7 +322,10 @@ export class BidsRepository {
    * Includes all jobs regardless of whether the worker already bid.
    * Returns `myBid` so callers can compute `hasMyBid`.
    */
-  async findAvailableJobsForWorker(workerProfileId: string, categoryIds: string[]) {
+  async findAvailableJobsForWorker(
+    workerProfileId: string,
+    categoryIds: string[],
+  ) {
     return this.prisma.booking.findMany({
       where: {
         status: BookingStatus.PENDING,
@@ -342,11 +363,22 @@ export class BidsRepository {
         inspectionReport: {
           select: { decisionStatus: true, workerProfileId: true },
         },
+        // See findBookingById — identifies linked post-inspection repair
+        // jobs and their original inspector for feed-level eligibility.
+        sourceInspectionBooking: {
+          select: {
+            inspectionReport: {
+              select: { decisionStatus: true, workerProfileId: true },
+            },
+          },
+        },
       },
     });
   }
 
-  async countCompletedJobsByWorkerProfileId(workerProfileId: string): Promise<number> {
+  async countCompletedJobsByWorkerProfileId(
+    workerProfileId: string,
+  ): Promise<number> {
     // Shared helper — single source of truth, see worker-stats.util.ts
     return computeCompletedJobs(this.prisma, workerProfileId);
   }

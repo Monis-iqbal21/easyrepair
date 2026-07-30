@@ -950,12 +950,13 @@ export class WorkersService {
     }));
 
     const isAssignedToCaller = job.workerProfileId === workerProfileId;
-    // This job appears in the caller's history solely because they were the
-    // ORIGINAL inspector, not the worker who performed (or is performing)
-    // the work — never show the other worker's earned finalPrice here, only
-    // the inspection fee this caller actually earned.
+    // The caller's work on this job was the inspection only — the client
+    // chose "Find Other Ustaad" for the repair. Covers both shapes: the
+    // pre-fix same-row reassignment (caller no longer assigned) and the
+    // new-style completed inspection booking (caller still assigned, repair
+    // living on a separate linked booking). Either way, only the inspection
+    // fee this caller actually earned is shown — never the repair price.
     const isInspectionOnlyForCaller =
-      !isAssignedToCaller &&
       job.inspectionReport?.workerProfileId === workerProfileId &&
       job.inspectionReport?.decisionStatus === 'FIND_OTHER_USTAAD';
     const distanceKm = isAssignedToCaller
@@ -1042,6 +1043,9 @@ export class WorkersService {
         job.inspectionReport?.createdAt.toISOString() ?? null,
       isInspectionOnlyForCaller,
       inspectingWorker,
+      // Linked repair booking spawned by "Find Other Ustaad" — lets the
+      // worker app resolve the source inspection's (price-sanitized) report.
+      sourceInspectionBookingId: job.sourceInspectionBookingId ?? null,
     };
   }
 

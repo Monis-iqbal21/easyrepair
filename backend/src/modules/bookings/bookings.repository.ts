@@ -140,6 +140,34 @@ export const BOOKING_INCLUDE = {
       },
     },
   },
+  // Linked repair booking spawned by "Find Other Ustaad" (if any) — lets the
+  // original completed inspection's DTO point the client at the open repair.
+  repairBooking: { select: { id: true } },
+  // For a linked repair booking, the completed inspection it came from — the
+  // report (and therefore the inspecting worker) always lives there.
+  sourceInspectionBooking: {
+    select: {
+      id: true,
+      inspectionReport: {
+        select: {
+          decisionStatus: true,
+          createdAt: true,
+          workerProfile: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              avatarUrl: true,
+              rating: true,
+              currentLat: true,
+              currentLng: true,
+              user: { select: { phone: true } },
+            },
+          },
+        },
+      },
+    },
+  },
 } satisfies Prisma.BookingInclude;
 
 // Derive the exact return type from the include so every caller is
@@ -147,6 +175,27 @@ export const BOOKING_INCLUDE = {
 export type BookingWithRelations = Prisma.BookingGetPayload<{
   include: typeof BOOKING_INCLUDE;
 }>;
+
+/**
+ * Outcome of the atomic "Find Other Ustaad" close-and-spawn transaction.
+ * Non-CREATED outcomes are returned (not thrown) so the service layer maps
+ * each one to the correct HTTP error / idempotent success response.
+ */
+export type CloseInspectionOutcome =
+  | { outcome: 'CREATED'; childBooking: BookingWithRelations }
+  /** A prior request already completed the transition — same child returned. */
+  | { outcome: 'ALREADY_DONE'; childBooking: BookingWithRelations }
+  /** Report was decided differently (ACCEPTED_REPAIR / CLOSED_AFTER_INSPECTION). */
+  | { outcome: 'CONFLICTING_DECISION'; decisionStatus: string }
+  /** decisionStatus is FIND_OTHER_USTAAD but no linked child exists (pre-fix
+   *  historical record) — must never silently create a duplicate. */
+  | { outcome: 'LINK_MISSING' }
+  /** The original booking was not IN_PROGRESS/assigned-to-inspector/INSPECTION
+   *  at commit time (e.g. concurrently cancelled) — everything rolled back. */
+  | { outcome: 'BOOKING_STATE_CHANGED' };
+
+/** Internal sentinel — rolls back closeInspectionAndOpenRepairBidding. */
+class InspectionCloseStateError extends Error {}
 
 // ---------------------------------------------------------------------------
 
@@ -991,45 +1040,138 @@ export class BookingsRepository {
 
   /**
    * Customer paid the inspection fee and chose to find a different Ustaad.
-   * Releases the inspecting worker (currentlyWorking=false) and reopens the
-   * booking as PENDING/unassigned — exactly like a fresh biddable booking —
-   * while InspectionReport (including workerProfileId and the original
-   * quote) is left completely untouched by the caller.
+   * Fully atomic: marks the report FIND_OTHER_USTAAD, completes the original
+   * inspection booking (the inspector keeps it forever — stats/earnings/
+   * My-Jobs derivation picks it up like any other completed job), releases
+   * the inspector, and spawns a new linked BIDDING-lane child booking for
+   * the repair — all in one transaction, so no partial state is possible.
+   *
+   * Idempotent: the report's conditional decisionStatus transition is the
+   * authoritative guard. A retry/double-tap/concurrent duplicate resolves to
+   * ALREADY_DONE with the same child booking instead of duplicating writes.
    */
-  async reopenForFindOtherUstaad(
-    bookingId: string,
-    inspectingWorkerProfileId: string,
-    now: Date,
-    expiresAt: Date,
-  ): Promise<BookingWithRelations> {
-    await this.prisma.$transaction(async (tx) => {
-      await tx.booking.update({
-        where: { id: bookingId },
-        data: {
-          workerProfileId: null,
-          status: BookingStatus.PENDING,
-          liveStartedAt: now,
-          expiresAt,
-        },
-      });
-      await tx.bookingStatusHistory.create({
-        data: {
-          bookingId,
-          status: BookingStatus.PENDING,
-          note: 'Client opted to find a different Ustaad after inspection',
-        },
-      });
-      // Release the inspecting worker so they're matchable/available again.
-      await tx.workerProfile.update({
-        where: { id: inspectingWorkerProfileId },
-        data: { currentlyWorking: false },
-      });
-    });
+  async closeInspectionAndOpenRepairBidding(params: {
+    reportId: string;
+    originalBookingId: string;
+    inspectingWorkerProfileId: string;
+    clientProfileId: string;
+    categoryId: string;
+    title: string | null;
+    description: string;
+    addressLine: string;
+    city: string;
+    latitude: number;
+    longitude: number;
+    now: Date;
+    expiresAt: Date;
+  }): Promise<CloseInspectionOutcome> {
+    let childBookingId: string | null = null;
+    try {
+      childBookingId = await this.prisma.$transaction(async (tx) => {
+        // Authoritative idempotency guard — only one request can ever move
+        // the report out of PENDING_CLIENT_DECISION into FIND_OTHER_USTAAD.
+        const guard = await tx.inspectionReport.updateMany({
+          where: {
+            id: params.reportId,
+            decisionStatus: 'PENDING_CLIENT_DECISION',
+          },
+          data: { decisionStatus: 'FIND_OTHER_USTAAD' },
+        });
+        if (guard.count === 0) return null; // resolved outside the transaction
 
-    return this.prisma.booking.findUniqueOrThrow({
-      where: { id: bookingId },
+        // Guarded close — never blindly COMPLETE a booking that was
+        // concurrently cancelled/reassigned/otherwise moved on.
+        const closed = await tx.booking.updateMany({
+          where: {
+            id: params.originalBookingId,
+            status: BookingStatus.IN_PROGRESS,
+            workerProfileId: params.inspectingWorkerProfileId,
+            lane: BookingLane.INSPECTION,
+          },
+          data: {
+            status: BookingStatus.COMPLETED,
+            completedAt: params.now,
+          },
+        });
+        if (closed.count !== 1) throw new InspectionCloseStateError();
+
+        await tx.bookingStatusHistory.create({
+          data: {
+            bookingId: params.originalBookingId,
+            status: BookingStatus.COMPLETED,
+            note: 'Inspection completed — client chose to find another Ustaad for the repair',
+          },
+        });
+
+        // Release the inspecting worker so they're matchable/available again.
+        await tx.workerProfile.update({
+          where: { id: params.inspectingWorkerProfileId },
+          data: { currentlyWorking: false },
+        });
+
+        // Spawn the linked repair job as a fresh biddable child booking.
+        // Deliberately no finalPrice/inspectionFeeSnapshot — those stay on
+        // the original so the inspection fee accounting is untouched.
+        const child = await tx.booking.create({
+          data: {
+            clientProfileId: params.clientProfileId,
+            categoryId: params.categoryId,
+            lane: BookingLane.BIDDING,
+            status: BookingStatus.PENDING,
+            inspection: false,
+            title: params.title,
+            description: params.description,
+            addressLine: params.addressLine,
+            city: params.city,
+            latitude: params.latitude,
+            longitude: params.longitude,
+            sourceInspectionBookingId: params.originalBookingId,
+            liveStartedAt: params.now,
+            expiresAt: params.expiresAt,
+          },
+        });
+        await tx.bookingStatusHistory.create({
+          data: {
+            bookingId: child.id,
+            status: BookingStatus.PENDING,
+            note: 'Repair job opened for bidding after completed inspection',
+          },
+        });
+        return child.id;
+      });
+    } catch (err) {
+      if (err instanceof InspectionCloseStateError) {
+        return { outcome: 'BOOKING_STATE_CHANGED' };
+      }
+      throw err;
+    }
+
+    if (childBookingId !== null) {
+      const childBooking = await this.prisma.booking.findUniqueOrThrow({
+        where: { id: childBookingId },
+        include: BOOKING_INCLUDE,
+      });
+      return { outcome: 'CREATED', childBooking };
+    }
+
+    // Guard lost — re-read the actual decision instead of assuming a retry.
+    const report = await this.prisma.inspectionReport.findUnique({
+      where: { id: params.reportId },
+      select: { decisionStatus: true },
+    });
+    if (!report) return { outcome: 'LINK_MISSING' };
+    if (report.decisionStatus !== 'FIND_OTHER_USTAAD') {
+      return {
+        outcome: 'CONFLICTING_DECISION',
+        decisionStatus: report.decisionStatus,
+      };
+    }
+    const existingChild = await this.prisma.booking.findUnique({
+      where: { sourceInspectionBookingId: params.originalBookingId },
       include: BOOKING_INCLUDE,
     });
+    if (!existingChild) return { outcome: 'LINK_MISSING' };
+    return { outcome: 'ALREADY_DONE', childBooking: existingChild };
   }
 
   /**

@@ -270,6 +270,18 @@ class BookingImageGrid extends StatelessWidget {
   }
 }
 
+/// Opens the shared full-screen image viewer (aspect-fit, pinch zoom/pan,
+/// ✕ close button, Android back dismissal) for any image URL — reused by
+/// pages that render images outside the [BookingImageGrid] layout, e.g. the
+/// inspection report's photo strip.
+Future<void> showFullScreenImage(BuildContext context, String url) {
+  return showDialog<void>(
+    context: context,
+    barrierColor: Colors.black87,
+    builder: (_) => _FullImageDialog(url: url),
+  );
+}
+
 class _ImageTile extends StatelessWidget {
   final String url;
   final double w;
@@ -279,11 +291,7 @@ class _ImageTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => showDialog<void>(
-        context: context,
-        barrierColor: Colors.black87,
-        builder: (_) => _FullImageDialog(url: url),
-      ),
+      onTap: () => showFullScreenImage(context, url),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
         child: SizedBox(

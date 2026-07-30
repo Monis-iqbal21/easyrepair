@@ -466,6 +466,15 @@ model Booking {
   finalPrice     Float?
   platformFee    Float?
 
+  /// Set only on a new BIDDING-lane booking spawned when "Find Other Ustaad"
+  /// closes an inspection — points back to the now-COMPLETED inspection
+  /// booking this repair job was created from. Null for every other booking,
+  /// including all pre-existing rows (nothing populates it retroactively).
+  sourceInspectionBookingId String?  @unique
+  sourceInspectionBooking   Booking? @relation("InspectionRepairLink", fields: [sourceInspectionBookingId], references: [id], onDelete: SetNull)
+  /// Back-relation: the repair booking spawned from this inspection, if any.
+  repairBooking             Booking? @relation("InspectionRepairLink")
+
   paymentStatus PaymentStatus @default(PENDING)
 
   createdAt DateTime @default(now())

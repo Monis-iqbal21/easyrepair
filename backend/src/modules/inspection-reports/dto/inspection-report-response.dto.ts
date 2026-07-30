@@ -40,6 +40,12 @@ export class InspectionReportResponseDto {
   createdAt: string;
   acceptedAt: string | null;
   closedAt: string | null;
+  /**
+   * Set once "Find Other Ustaad" has spawned the linked BIDDING-lane repair
+   * booking — where the client's bidding list for this repair now lives.
+   * Null before the decision and for pre-fix historical records.
+   */
+  linkedRepairBookingId: string | null;
 }
 
 /** Parts view for a bidder who hasn't been hired yet — name/qty/warranty only, no prices. */

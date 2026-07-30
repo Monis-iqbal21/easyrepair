@@ -41,7 +41,8 @@ export class InspectionReportsService {
   ): Promise<InspectionReportResponseDto> {
     const workerProfile =
       await this.repository.findWorkerProfileByUserId(userId);
-    if (!workerProfile) throw new ForbiddenException('Worker profile not found');
+    if (!workerProfile)
+      throw new ForbiddenException('Worker profile not found');
 
     const booking = await this.repository.findBookingContext(bookingId);
     if (!booking) throw new NotFoundException('Booking not found');
@@ -122,7 +123,7 @@ export class InspectionReportsService {
       voiceNoteStorageKey: uploadedVoiceNote?.key ?? null,
       voiceNoteMimeType: uploadedVoiceNote?.mimeType ?? null,
       voiceNoteDurationSeconds: uploadedVoiceNote
-        ? dto.voiceNoteDurationSeconds ?? null
+        ? (dto.voiceNoteDurationSeconds ?? null)
         : null,
     });
 
@@ -160,8 +161,18 @@ export class InspectionReportsService {
   ): Promise<
     InspectionReportResponseDto | SanitizedInspectionReportResponseDto
   > {
-    const booking = await this.repository.findBookingContext(bookingId);
+    let booking = await this.repository.findBookingContext(bookingId);
     if (!booking) throw new NotFoundException('Booking not found');
+
+    // A linked repair booking has no report of its own — the report always
+    // lives on the source inspection booking, so "Inspection Report Dekhein"
+    // works with either id.
+    if (booking.sourceInspectionBookingId) {
+      const source = await this.repository.findBookingContext(
+        booking.sourceInspectionBookingId,
+      );
+      if (source) booking = source;
+    }
 
     if (role === 'CLIENT' && booking.clientProfile?.userId !== userId) {
       throw new ForbiddenException('Not your booking');
@@ -170,7 +181,7 @@ export class InspectionReportsService {
     if (role === 'WORKER') {
       const workerProfile =
         await this.repository.findWorkerProfileByUserId(userId);
-      const report = await this.repository.findByBookingId(bookingId);
+      const report = await this.repository.findByBookingId(booking.id);
 
       // The original inspector always sees their own full report — even
       // long after Booking.workerProfileId has moved to a different Ustaad
@@ -182,9 +193,14 @@ export class InspectionReportsService {
         return this._toDto(report, booking);
       }
 
-      if (booking.workerProfile?.userId !== userId) {
-        // Not currently assigned and not the inspector — may still be an
-        // eligible bidder while this booking is open via "Find Other Ustaad".
+      // "Assigned" means assigned to this inspection booking (old-style
+      // same-row reassignment) or to its linked repair booking (new flow).
+      const isAssignedHere = booking.workerProfile?.userId === userId;
+      const isAssignedOnLinkedRepair =
+        booking.repairBooking?.workerProfile?.userId === userId;
+      if (!isAssignedHere && !isAssignedOnLinkedRepair) {
+        // Not assigned and not the inspector — may still be an eligible
+        // bidder while the repair job is open via "Find Other Ustaad".
         return this._getSanitizedReportForBidder(userId, booking);
       }
 
@@ -199,7 +215,7 @@ export class InspectionReportsService {
     }
 
     // CLIENT / ADMIN
-    const report = await this.repository.findByBookingId(bookingId);
+    const report = await this.repository.findByBookingId(booking.id);
     if (!report) {
       throw new NotFoundException('No inspection report for this booking yet.');
     }
@@ -262,29 +278,63 @@ export class InspectionReportsService {
 
   /**
    * POST /bookings/:id/inspection-report/find-other-ustaad — client only.
-   * Third inspection outcome: pays the inspection fee (already collected at
-   * assignment), preserves the report/quote/inspecting worker untouched, and
-   * reopens the booking for bidding from other eligible nearby Ustaads.
-   * Repeated taps are naturally rejected by _authorizeClientDecision once
-   * decisionStatus is no longer PENDING_CLIENT_DECISION.
+   * Third inspection outcome: atomically completes the inspector's work unit
+   * (the original booking stays COMPLETED on the inspector forever, earning
+   * the inspection fee exactly once) and spawns a linked BIDDING-lane child
+   * booking for the repair, pre-filled from the report.
+   *
+   * Idempotent: a retry/double-tap with the report already in
+   * FIND_OTHER_USTAAD returns the same linkedRepairBookingId as a success
+   * (no duplicate booking/history/earnings/notifications) — only a genuinely
+   * different decision (ACCEPTED_REPAIR / CLOSED_AFTER_INSPECTION) rejects.
    */
   async findOtherUstaad(
     userId: string,
     bookingId: string,
   ): Promise<InspectionReportResponseDto> {
-    const { booking, report } = await this._authorizeClientDecision(
-      userId,
-      bookingId,
-    );
+    const booking = await this.repository.findBookingContext(bookingId);
+    if (!booking) throw new NotFoundException('Booking not found');
+    if (booking.clientProfile?.userId !== userId) {
+      throw new ForbiddenException('Not your booking');
+    }
+    const report = await this.repository.findByBookingId(bookingId);
+    if (!report) {
+      throw new NotFoundException('No inspection report for this booking yet.');
+    }
+    if (
+      report.decisionStatus === 'ACCEPTED_REPAIR' ||
+      report.decisionStatus === 'CLOSED_AFTER_INSPECTION'
+    ) {
+      throw new BadRequestException(
+        `This report has already been decided (${report.decisionStatus}).`,
+      );
+    }
 
-    await this.repository.markFindOtherUstaad(report.id);
-    await this.bookingsService.reopenInspectionForBidding(
-      bookingId,
-      report.workerProfileId,
-      booking.categoryId,
-      booking.latitude,
-      booking.longitude,
-    );
+    // The child booking's problem description comes straight from the
+    // report's findings — the client never re-enters anything.
+    const composedDescription = [report.issueFound, report.recommendedRepair]
+      .filter((s): s is string => !!s && s.trim().length > 0)
+      .join('\n\n');
+
+    // PENDING_CLIENT_DECISION and FIND_OTHER_USTAAD (retry) both go through
+    // the same atomic method — its transactional guard is the authoritative
+    // arbiter, even under a concurrent duplicate request.
+    await this.bookingsService.closeInspectionAndOpenRepairBidding({
+      reportId: report.id,
+      originalBookingId: bookingId,
+      inspectingWorkerProfileId: report.workerProfileId,
+      clientProfileId: booking.clientProfileId,
+      categoryId: booking.categoryId,
+      title: booking.title,
+      description:
+        composedDescription.length > 0
+          ? composedDescription
+          : booking.description,
+      addressLine: booking.addressLine,
+      city: booking.city,
+      latitude: booking.latitude,
+      longitude: booking.longitude,
+    });
 
     const freshBooking = await this.repository.findBookingContext(bookingId);
     const freshReport = await this.repository.findByBookingId(bookingId);
@@ -306,12 +356,19 @@ export class InspectionReportsService {
     userId: string,
     bookingId: string,
   ): Promise<InspectionReportResponseDto> {
-    const booking = await this.repository.findBookingContext(bookingId);
+    const ctx = await this.repository.findBookingContext(bookingId);
+    if (!ctx) throw new NotFoundException('Booking not found');
+    // Accept either the linked repair booking's id (new flow) or the
+    // original inspection booking's id (old-style rows) — the report always
+    // lives on the inspection booking.
+    const booking = ctx.sourceInspectionBookingId
+      ? await this.repository.findBookingContext(ctx.sourceInspectionBookingId)
+      : ctx;
     if (!booking) throw new NotFoundException('Booking not found');
     if (booking.clientProfile?.userId !== userId) {
       throw new ForbiddenException('Not your booking');
     }
-    const report = await this.repository.findByBookingId(bookingId);
+    const report = await this.repository.findByBookingId(booking.id);
     if (!report) {
       throw new NotFoundException('No inspection report for this booking yet.');
     }
@@ -321,18 +378,32 @@ export class InspectionReportsService {
       );
     }
 
-    // Atomic re-assignment (double-hire safe) lives in BookingsService,
-    // reusing the exact same commission math as a normal accepted quote.
+    // New model: the open repair job is the linked child booking; old-style
+    // rows are themselves the open booking.
+    const targetBookingId = booking.repairBooking?.id ?? booking.id;
+
+    // Atomic re-assignment (double-hire safe, with a fresh INSPECTOR_BUSY
+    // availability check) lives in BookingsService, reusing the exact same
+    // labour-only commission math as a normal accepted quote.
     await this.bookingsService.rehireInspectingWorker(
       userId,
-      bookingId,
+      targetBookingId,
       report.workerProfileId,
       report.repairQuoteTotal,
       report.labourCost,
     );
-    const updated = await this.repository.markAccepted(report.id);
 
-    const freshBooking = await this.repository.findBookingContext(bookingId);
+    let updated = report;
+    if (!booking.repairBooking) {
+      // Old-style same-row flow only: collapses back into ACCEPTED_REPAIR.
+      // The new linked flow must NOT do this — the completed inspection's
+      // earning derives from decisionStatus staying FIND_OTHER_USTAAD
+      // (inspection-fee base, see commission.util.ts); the rehired repair
+      // is tracked entirely by the child booking.
+      updated = await this.repository.markAccepted(report.id);
+    }
+
+    const freshBooking = await this.repository.findBookingContext(booking.id);
     if (!freshBooking) throw new NotFoundException('Booking not found');
     return this._toDto(updated, freshBooking);
   }
@@ -357,10 +428,14 @@ export class InspectionReportsService {
     // Full approved/active/profile-completed/online/category/radius/fresh-GPS
     // gate, plus exclusion of the original inspecting worker — same standard
     // enforced at bid-creation time, so viewing the report can't be used to
-    // sidestep the eligibility rules that gate bidding itself.
+    // sidestep the eligibility rules that gate bidding itself. When a linked
+    // repair booking exists (new flow), the bidder is bidding on THAT
+    // booking, so eligibility is checked against its category/location/
+    // exclusions; old-style rows are themselves the open job.
+    const biddingBooking = booking.repairBooking ?? booking;
     assertEligibleForInspectionBidding(
       workerProfile,
-      booking,
+      biddingBooking,
       report.workerProfileId,
     );
 
@@ -425,6 +500,7 @@ export class InspectionReportsService {
       createdAt: report.createdAt.toISOString(),
       acceptedAt: report.acceptedAt?.toISOString() ?? null,
       closedAt: report.closedAt?.toISOString() ?? null,
+      linkedRepairBookingId: booking.repairBooking?.id ?? null,
     };
   }
 

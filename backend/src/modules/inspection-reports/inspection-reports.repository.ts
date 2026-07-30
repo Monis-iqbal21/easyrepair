@@ -17,13 +17,32 @@ export type InspectionBookingContext = {
   lane: string;
   status: string;
   workerProfileId: string | null;
+  clientProfileId: string;
   categoryId: string;
+  title: string | null;
+  description: string;
+  addressLine: string;
+  city: string;
   latitude: number;
   longitude: number;
   inspectionFeeSnapshot: number | null;
   clientProfile: { userId: string } | null;
   workerProfile: { userId: string } | null;
   workerExclusions: { workerProfileId: string }[];
+  /** For a linked repair booking: the completed inspection it came from. */
+  sourceInspectionBookingId: string | null;
+  /** For a completed inspection: the linked repair booking spawned by
+   *  "Find Other Ustaad", if any — bidder eligibility is checked against
+   *  this booking's own category/location/exclusions. */
+  repairBooking: {
+    id: string;
+    status: string;
+    categoryId: string;
+    latitude: number;
+    longitude: number;
+    workerExclusions: { workerProfileId: string }[];
+    workerProfile: { userId: string } | null;
+  } | null;
 };
 
 @Injectable()
@@ -52,13 +71,30 @@ export class InspectionReportsRepository {
         lane: true,
         status: true,
         workerProfileId: true,
+        clientProfileId: true,
         categoryId: true,
+        title: true,
+        description: true,
+        addressLine: true,
+        city: true,
         latitude: true,
         longitude: true,
         inspectionFeeSnapshot: true,
         clientProfile: { select: { userId: true } },
         workerProfile: { select: { userId: true } },
         workerExclusions: { select: { workerProfileId: true } },
+        sourceInspectionBookingId: true,
+        repairBooking: {
+          select: {
+            id: true,
+            status: true,
+            categoryId: true,
+            latitude: true,
+            longitude: true,
+            workerExclusions: { select: { workerProfileId: true } },
+            workerProfile: { select: { userId: true } },
+          },
+        },
       },
     });
   }
@@ -146,19 +182,9 @@ export class InspectionReportsRepository {
     });
   }
 
-  /**
-   * Customer opted to find a different Ustaad — the report itself (quote,
-   * findings, photos, workerProfileId) is left completely untouched; only
-   * the decision marker changes. Reverts to ACCEPTED_REPAIR via markAccepted
-   * if the customer ends up re-hiring the same inspecting worker anyway.
-   */
-  async markFindOtherUstaad(
-    reportId: string,
-  ): Promise<InspectionReportWithRelations> {
-    return this.prisma.inspectionReport.update({
-      where: { id: reportId },
-      data: { decisionStatus: 'FIND_OTHER_USTAAD' },
-      include: INSPECTION_REPORT_INCLUDE,
-    });
-  }
+  // NOTE: the FIND_OTHER_USTAAD decision transition deliberately has no
+  // repository method here — it happens exclusively inside
+  // BookingsRepository.closeInspectionAndOpenRepairBidding's transaction so
+  // the report flip, booking completion, worker release, and linked child
+  // creation can never be observed in a partial state.
 }

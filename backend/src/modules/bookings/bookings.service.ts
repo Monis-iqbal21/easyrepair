@@ -1283,42 +1283,86 @@ export class BookingsService {
   }
 
   /**
-   * INSPECTION lane, third outcome: called by InspectionReportsService after
-   * the report's decisionStatus is marked FIND_OTHER_USTAAD. Releases the
-   * inspecting worker and reopens the booking as PENDING/unassigned — same
-   * shape as a fresh biddable booking — then fires the nearby-worker push.
-   * The InspectionReport itself is never touched here.
+   * INSPECTION lane, third outcome ("Find Other Ustaad"): atomically marks
+   * the report FIND_OTHER_USTAAD, completes the original inspection booking
+   * (kept forever on the inspector for stats/earnings/My Jobs), releases the
+   * inspector, and spawns a new linked BIDDING-lane child booking for the
+   * repair. Idempotent: a retry/double-tap resolves to the already-created
+   * child booking and returns the same id as a success — notification
+   * delivery is re-attempted on that path too (the per-worker
+   * wasAlreadyNotified dedup guard prevents duplicates).
+   *
+   * Returns the linked repair booking's id.
    */
-  async reopenInspectionForBidding(
-    bookingId: string,
-    inspectingWorkerProfileId: string,
-    categoryId: string,
-    lat: number,
-    lng: number,
-  ): Promise<void> {
+  async closeInspectionAndOpenRepairBidding(params: {
+    reportId: string;
+    originalBookingId: string;
+    inspectingWorkerProfileId: string;
+    clientProfileId: string;
+    categoryId: string;
+    title: string | null;
+    description: string;
+    addressLine: string;
+    city: string;
+    latitude: number;
+    longitude: number;
+  }): Promise<string> {
     const now = new Date();
     const expiresAt = new Date(now.getTime() + BOOKING_EXPIRY_MS);
 
-    await this.bookingsRepository.reopenForFindOtherUstaad(
-      bookingId,
-      inspectingWorkerProfileId,
-      now,
-      expiresAt,
-    );
+    const result =
+      await this.bookingsRepository.closeInspectionAndOpenRepairBidding({
+        ...params,
+        now,
+        expiresAt,
+      });
 
-    void this._scheduleExpiry(bookingId, expiresAt).catch((err) => {
-      this.logger.warn(
-        `[expiry] scheduleExpiry failed for bookingId=${bookingId}: ${(err as Error)?.message}`,
-      );
-    });
-
-    void this._notifyNearbyWorkersForPostInspectionBidding(
-      bookingId,
-      categoryId,
-      lat,
-      lng,
-      inspectingWorkerProfileId,
-    );
+    switch (result.outcome) {
+      case 'CREATED': {
+        const childId = result.childBooking.id;
+        void this._scheduleExpiry(childId, expiresAt).catch((err) => {
+          this.logger.warn(
+            `[expiry] scheduleExpiry failed for bookingId=${childId}: ${(err as Error)?.message}`,
+          );
+        });
+        void this._notifyNearbyWorkersForPostInspectionBidding(
+          childId,
+          params.categoryId,
+          params.latitude,
+          params.longitude,
+          params.inspectingWorkerProfileId,
+        );
+        return childId;
+      }
+      case 'ALREADY_DONE': {
+        // Idempotent replay — re-attempt notification delivery in case the
+        // first request failed after commit; wasAlreadyNotified guarantees
+        // no worker is ever pushed twice for the same job.
+        const childId = result.childBooking.id;
+        void this._notifyNearbyWorkersForPostInspectionBidding(
+          childId,
+          params.categoryId,
+          params.latitude,
+          params.longitude,
+          params.inspectingWorkerProfileId,
+        );
+        return childId;
+      }
+      case 'CONFLICTING_DECISION':
+        throw new BadRequestException(
+          `This report has already been decided (${result.decisionStatus}).`,
+        );
+      case 'LINK_MISSING':
+        throw new ConflictException({
+          message:
+            'This inspection was already closed but its repair job could not be found. Please contact support.',
+          error: 'INSPECTION_LINK_MISSING',
+        });
+      case 'BOOKING_STATE_CHANGED':
+        throw new ConflictException(
+          'This inspection booking is no longer in progress, so it cannot be closed for bidding.',
+        );
+    }
   }
 
   /**
@@ -1336,6 +1380,20 @@ export class BookingsService {
     repairQuoteTotal: number,
     labourCost: number,
   ): Promise<BookingResponseDto> {
+    // Re-check availability at this exact moment. "Busy on another job" gets
+    // its own controlled error code so the client app can show the specific
+    // Roman Urdu message and keep the bidding list open; every other
+    // unavailability reason keeps the existing generic conflict below.
+    const inspector =
+      await this.bookingsRepository.findWorkerProfileById(workerProfileId);
+    if (inspector?.currentlyWorking) {
+      throw new ConflictException({
+        message:
+          'Inspection karne wala Ustaad abhi doosre kaam mein masroof hai. Neeche se koi aur Ustaad choose karein.',
+        error: 'INSPECTOR_BUSY',
+      });
+    }
+
     const platformFee = calculatePlatformFee(labourCost);
 
     let updated: BookingWithRelations;
@@ -1859,7 +1917,12 @@ export class BookingsService {
         }
       : null;
 
-    const iwp = booking.inspectionReport?.workerProfile;
+    // The inspecting worker lives on this booking's own report, or — for a
+    // linked repair booking spawned by "Find Other Ustaad" — on the source
+    // inspection booking's report.
+    const iwp =
+      booking.inspectionReport?.workerProfile ??
+      booking.sourceInspectionBooking?.inspectionReport?.workerProfile;
     const inspectingWorker: WorkerSummaryDto | null = iwp
       ? {
           id: iwp.id,
@@ -1976,6 +2039,8 @@ export class BookingsService {
         booking.inspectionReport?.decisionStatus ?? null,
       inspectionReportSubmittedAt:
         booking.inspectionReport?.createdAt.toISOString() ?? null,
+      sourceInspectionBookingId: booking.sourceInspectionBookingId ?? null,
+      linkedRepairBookingId: booking.repairBooking?.id ?? null,
     };
   }
 }

@@ -58,6 +58,11 @@ class InspectionReportEntity {
   final DateTime? acceptedAt;
   final DateTime? closedAt;
 
+  /// Set once "Find Other Ustaad" has spawned the linked repair booking —
+  /// where the client's bidding list for this repair now lives. Null before
+  /// the decision, in the sanitized view, and for pre-fix historical records.
+  final String? linkedRepairBookingId;
+
   /// True when this is the sanitized bidder/hired-different-worker view —
   /// no pricing fields present. Widgets should hide the whole pricing
   /// summary card rather than show misleading zeros.
@@ -84,6 +89,7 @@ class InspectionReportEntity {
     required this.createdAt,
     this.acceptedAt,
     this.closedAt,
+    this.linkedRepairBookingId,
   });
 }
 

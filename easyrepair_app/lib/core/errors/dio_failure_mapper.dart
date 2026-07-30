@@ -29,6 +29,18 @@ Failure dioExceptionToFailure(DioException e) {
           'Session expired. Please login again.',
         );
       } else if (statusCode == 409) {
+        if (errorCode == 'INSPECTOR_BUSY') {
+          // Rehire attempt while the original inspector is on another job —
+          // the bidding page shows this exact Roman Urdu message and keeps
+          // the bid list open (see InspectorBusyFailure). `message` falls
+          // back to the `error` field when the body has no message, so an
+          // echo of the code itself must not be shown to the user.
+          return InspectorBusyFailure(
+            (message == null || message == errorCode)
+                ? 'Inspection karne wala Ustaad abhi doosre kaam mein masroof hai. Neeche se koi aur Ustaad choose karein.'
+                : message,
+          );
+        }
         if (errorCode == 'PHONE_IS_WORKER') {
           return WorkerPhoneConflictFailure(
             message ?? 'Ye mobile number Ustaad account ke saath registered hai.',

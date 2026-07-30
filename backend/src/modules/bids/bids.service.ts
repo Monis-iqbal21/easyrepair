@@ -47,9 +47,12 @@ export class BidsService {
     amount: number,
     message?: string,
   ): Promise<BidWithRelations> {
-    this.logger.log(`[createBid] userId=${userId} bookingId=${bookingId} amount=${amount}`);
+    this.logger.log(
+      `[createBid] userId=${userId} bookingId=${bookingId} amount=${amount}`,
+    );
 
-    const workerProfile = await this.bidsRepository.findWorkerProfileByUserId(userId);
+    const workerProfile =
+      await this.bidsRepository.findWorkerProfileByUserId(userId);
     if (!workerProfile) {
       throw new ForbiddenException('Worker profile not found');
     }
@@ -70,25 +73,24 @@ export class BidsService {
     // BIDDING is always biddable. INSPECTION is biddable only once the
     // customer has explicitly opted to "Find Other Ustaad" — ordinary
     // Inspection/Standard bookings must never accept bids.
-    const isFindOtherUstaadOpen =
-      booking.lane === BookingLane.INSPECTION &&
-      booking.inspectionReport?.decisionStatus === 'FIND_OTHER_USTAAD';
-    if (booking.lane !== BookingLane.BIDDING && !isFindOtherUstaadOpen) {
+    const postInspection = this._postInspectionBiddingContext(booking);
+    if (booking.lane !== BookingLane.BIDDING && !postInspection.isOpen) {
       throw new BadRequestException(
         'Bidding is not available for this booking.',
       );
     }
-    if (isFindOtherUstaadOpen) {
-      // Reopened inspection jobs enforce the full approved/active/profile-
-      // completed/online/category/radius/fresh-GPS gate (same standard as
-      // the nearby-worker notification pipeline), plus exclusion of the
-      // original inspecting worker. Normal BIDDING lane deliberately stays
-      // more permissive (workers may browse/bid while offline/distant) —
-      // this gate is scoped to isFindOtherUstaadOpen only.
+    if (postInspection.isOpen) {
+      // Post-inspection repair jobs (old-style reopened inspections AND
+      // new-style linked BIDDING children) enforce the full approved/active/
+      // profile-completed/online/category/radius/fresh-GPS gate (same
+      // standard as the nearby-worker notification pipeline), plus exclusion
+      // of the original inspecting worker. Normal BIDDING lane deliberately
+      // stays more permissive (workers may browse/bid while offline/distant)
+      // — this gate is scoped to post-inspection jobs only.
       assertEligibleForInspectionBidding(
         workerProfile,
         booking,
-        booking.inspectionReport?.workerProfileId ?? null,
+        postInspection.inspectorWorkerProfileId,
       );
     }
 
@@ -128,9 +130,10 @@ export class BidsService {
     // booking.clientProfile is already loaded by findBookingById.
     const clientUserId = booking.clientProfile?.userId;
     if (clientUserId) {
-      const workerName = [workerProfile.firstName, workerProfile.lastName]
-        .filter(Boolean)
-        .join(' ') || 'A worker';
+      const workerName =
+        [workerProfile.firstName, workerProfile.lastName]
+          .filter(Boolean)
+          .join(' ') || 'A worker';
       void this.notificationsService.notify({
         userId: clientUserId,
         eventKey: 'bid.received',
@@ -156,9 +159,12 @@ export class BidsService {
     amount: number,
     message?: string,
   ): Promise<BidWithRelations> {
-    this.logger.log(`[editBid] userId=${userId} bidId=${bidId} amount=${amount}`);
+    this.logger.log(
+      `[editBid] userId=${userId} bidId=${bidId} amount=${amount}`,
+    );
 
-    const workerProfile = await this.bidsRepository.findWorkerProfileByUserId(userId);
+    const workerProfile =
+      await this.bidsRepository.findWorkerProfileByUserId(userId);
     if (!workerProfile) {
       throw new ForbiddenException('Worker profile not found');
     }
@@ -197,14 +203,12 @@ export class BidsService {
       bid.booking.id,
     );
     if (fullBooking) {
-      const isFindOtherUstaadOpen =
-        fullBooking.lane === BookingLane.INSPECTION &&
-        fullBooking.inspectionReport?.decisionStatus === 'FIND_OTHER_USTAAD';
-      if (isFindOtherUstaadOpen) {
+      const postInspection = this._postInspectionBiddingContext(fullBooking);
+      if (postInspection.isOpen) {
         assertEligibleForInspectionBidding(
           workerProfile,
           fullBooking,
-          fullBooking.inspectionReport?.workerProfileId ?? null,
+          postInspection.inspectorWorkerProfileId,
         );
       }
     }
@@ -324,7 +328,8 @@ export class BidsService {
     userId: string,
     bookingId: string,
   ): Promise<BidResponseDto[]> {
-    const workerProfile = await this.bidsRepository.findWorkerProfileByUserId(userId);
+    const workerProfile =
+      await this.bidsRepository.findWorkerProfileByUserId(userId);
     if (!workerProfile) {
       throw new ForbiddenException('Worker profile not found');
     }
@@ -342,10 +347,13 @@ export class BidsService {
     // Worker must have a skill matching this booking's category.
     const categoryIds = workerProfile.skills.map((s) => s.categoryId);
     if (!categoryIds.includes(booking.categoryId)) {
-      throw new ForbiddenException('You are not allowed to view bids for this job');
+      throw new ForbiddenException(
+        'You are not allowed to view bids for this job',
+      );
     }
 
-    const bids = await this.bidsRepository.findBidsByBookingIdNewestFirst(bookingId);
+    const bids =
+      await this.bidsRepository.findBidsByBookingIdNewestFirst(bookingId);
 
     return bids.map((bid) => {
       const wp = bid.workerProfile;
@@ -389,7 +397,8 @@ export class BidsService {
   async acceptBid(userId: string, bidId: string) {
     this.logger.log(`[acceptBid] userId=${userId} bidId=${bidId}`);
 
-    const clientProfile = await this.bidsRepository.findClientProfileByUserId(userId);
+    const clientProfile =
+      await this.bidsRepository.findClientProfileByUserId(userId);
     if (!clientProfile) {
       throw new ForbiddenException('Client profile not found');
     }
@@ -450,7 +459,9 @@ export class BidsService {
         entityType: 'booking',
         entityId: bid.booking.id,
       })
-      .catch((err) => this.logger.warn(`[acceptBid] notify failed: ${err.message}`));
+      .catch((err) =>
+        this.logger.warn(`[acceptBid] notify failed: ${err.message}`),
+      );
 
     // Ensure a chat thread exists for this client-worker pair.
     // Uses the userId fields returned by the acceptBid transaction.
@@ -461,14 +472,21 @@ export class BidsService {
       );
     }
 
-    this.logger.log(`[acceptBid] accepted bidId=${bidId} bookingId=${bid.booking.id}`);
-    return { success: true, message: 'Bid accepted', bookingId: bid.booking.id };
+    this.logger.log(
+      `[acceptBid] accepted bidId=${bidId} bookingId=${bid.booking.id}`,
+    );
+    return {
+      success: true,
+      message: 'Bid accepted',
+      bookingId: bid.booking.id,
+    };
   }
 
   // ── Worker: available jobs (new jobs feed) ───────────────────────────────
 
   async getNewJobsForWorker(userId: string) {
-    const workerProfile = await this.bidsRepository.findWorkerProfileByUserId(userId);
+    const workerProfile =
+      await this.bidsRepository.findWorkerProfileByUserId(userId);
     if (!workerProfile) {
       throw new ForbiddenException('Worker profile not found');
     }
@@ -486,21 +504,23 @@ export class BidsService {
       categoryIds,
     );
 
-    // Reopened (FIND_OTHER_USTAAD) inspection jobs are hidden from a worker's
-    // New Jobs feed if they wouldn't pass the same eligibility gate enforced
-    // at report-view/bid-create time (offline, out of radius, stale GPS, or
-    // the original inspector themselves) — avoids showing an actionable-
-    // looking tile the worker can't actually open or bid on. Normal BIDDING
-    // and ordinary Standard/Inspection jobs are untouched.
+    // Post-inspection repair jobs — old-style reopened (FIND_OTHER_USTAAD)
+    // inspections AND new-style linked BIDDING children — are hidden from a
+    // worker's New Jobs feed if they wouldn't pass the same eligibility gate
+    // enforced at report-view/bid-create time (offline, out of radius, stale
+    // GPS, or the original inspector themselves). Because this check runs
+    // fresh on every call against the worker's live location/online state, a
+    // worker who enters the radius (or comes online) later sees the still-
+    // open job on their next refresh — visibility is never limited to the
+    // one-time creation push. Normal BIDDING and ordinary Standard/
+    // Inspection jobs are untouched.
     const bookings = allBookings.filter((b) => {
-      const isReopenedInspection =
-        b.lane === 'INSPECTION' &&
-        b.inspectionReport?.decisionStatus === 'FIND_OTHER_USTAAD';
-      if (!isReopenedInspection) return true;
+      const postInspection = this._postInspectionBiddingContext(b);
+      if (!postInspection.isOpen) return true;
       return isEligibleForInspectionBidding(
         workerProfile,
         b,
-        b.inspectionReport?.workerProfileId ?? null,
+        postInspection.inspectorWorkerProfileId,
       );
     });
 
@@ -552,6 +572,9 @@ export class BidsService {
         inspection: b.inspection,
         lane: b.lane,
         inspectionDecisionStatus: b.inspectionReport?.decisionStatus ?? null,
+        // Linked post-inspection repair job marker — the worker app shows
+        // the optional "Inspection Report Dekhein" entry point off this.
+        sourceInspectionBookingId: b.sourceInspectionBookingId ?? null,
         isOpenForBidding,
         standardServiceItems: b.standardServiceItems.map((item) => ({
           id: item.id,
@@ -575,6 +598,53 @@ export class BidsService {
   }
 
   // ── Helpers ──────────────────────────────────────────────────────────────
+
+  /**
+   * Identifies a booking as a post-inspection repair job open for bidding,
+   * and who the original inspecting worker is (must be excluded from
+   * bidding on it). Two shapes exist:
+   *  - old-style: the INSPECTION booking itself reopened in place
+   *    (decisionStatus FIND_OTHER_USTAAD on its own report);
+   *  - new-style: a BIDDING-lane child booking linked back to the completed
+   *    inspection via sourceInspectionBookingId — the inspector is on the
+   *    source booking's report.
+   */
+  private _postInspectionBiddingContext(booking: {
+    lane: BookingLane | string;
+    sourceInspectionBookingId?: string | null;
+    inspectionReport?: {
+      decisionStatus: string;
+      workerProfileId: string;
+    } | null;
+    sourceInspectionBooking?: {
+      inspectionReport: {
+        decisionStatus: string;
+        workerProfileId: string;
+      } | null;
+    } | null;
+  }): { isOpen: boolean; inspectorWorkerProfileId: string | null } {
+    if (
+      booking.lane === BookingLane.INSPECTION &&
+      booking.inspectionReport?.decisionStatus === 'FIND_OTHER_USTAAD'
+    ) {
+      return {
+        isOpen: true,
+        inspectorWorkerProfileId: booking.inspectionReport.workerProfileId,
+      };
+    }
+    if (
+      booking.lane === BookingLane.BIDDING &&
+      booking.sourceInspectionBookingId != null
+    ) {
+      return {
+        isOpen: true,
+        inspectorWorkerProfileId:
+          booking.sourceInspectionBooking?.inspectionReport?.workerProfileId ??
+          null,
+      };
+    }
+    return { isOpen: false, inspectorWorkerProfileId: null };
+  }
 
   /**
    * Single cooldown gate shared by every bid-amount-changing route (POST

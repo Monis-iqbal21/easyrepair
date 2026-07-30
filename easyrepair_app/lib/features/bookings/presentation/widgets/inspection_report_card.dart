@@ -92,11 +92,16 @@ class InspectionStatusStrip extends StatelessWidget {
 class ViewInspectionReportButton extends ConsumerWidget {
   final String bookingId;
   final String route;
+  /// Defaults to the English label used across the inspection lane. Pass the
+  /// Roman Urdu 'Inspection Report Dekhein' for the post-inspection bidding
+  /// context, where the report is optional extra context for bidders.
+  final String label;
 
   const ViewInspectionReportButton({
     super.key,
     required this.bookingId,
     required this.route,
+    this.label = 'View Inspection Report',
   });
 
   @override
@@ -111,7 +116,7 @@ class ViewInspectionReportButton extends ConsumerWidget {
           child: OutlinedButton.icon(
             onPressed: () => context.push(route),
             icon: const Icon(Icons.description_outlined, size: 17),
-            label: const Text('View Inspection Report'),
+            label: Text(label),
             style: OutlinedButton.styleFrom(
               foregroundColor: _kPrimary,
               side: const BorderSide(color: _kPrimary),

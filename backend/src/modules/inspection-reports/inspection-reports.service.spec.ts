@@ -35,13 +35,35 @@ describe('InspectionReportsService', () => {
     lane: 'INSPECTION',
     status: 'IN_PROGRESS',
     workerProfileId: 'inspector-1',
+    clientProfileId: 'client-1',
     categoryId: 'cat-1',
+    title: null,
+    description: 'AC thanda nahi kar raha',
+    addressLine: '123 Street',
+    city: 'Karachi',
     latitude: 24.86,
     longitude: 67.0,
     inspectionFeeSnapshot: 500,
     clientProfile: { userId: 'client-user-1' },
     workerProfile: { userId: 'inspector-user-1' },
     workerExclusions: [],
+    sourceInspectionBookingId: null,
+    repairBooking: null,
+  };
+
+  /** The completed inspection booking once the linked child repair exists. */
+  const CLOSED_BOOKING_WITH_CHILD = {
+    ...BASE_BOOKING,
+    status: 'COMPLETED',
+    repairBooking: {
+      id: 'child-1',
+      status: 'PENDING',
+      categoryId: 'cat-1',
+      latitude: 24.86,
+      longitude: 67.0,
+      workerExclusions: [],
+      workerProfile: null,
+    },
   };
 
   beforeEach(() => {
@@ -50,7 +72,6 @@ describe('InspectionReportsService', () => {
       findByBookingId: jest.fn().mockResolvedValue(BASE_REPORT),
       findWorkerProfileByUserId: jest.fn(),
       findWorkerProfileWithSkillsByUserId: jest.fn(),
-      markFindOtherUstaad: jest.fn().mockResolvedValue(undefined),
       markAccepted: jest.fn().mockResolvedValue({
         ...BASE_REPORT,
         decisionStatus: 'ACCEPTED_REPAIR',
@@ -63,7 +84,9 @@ describe('InspectionReportsService', () => {
     storageService = {};
     notificationsService = { notify: jest.fn().mockResolvedValue(undefined) };
     bookingsService = {
-      reopenInspectionForBidding: jest.fn().mockResolvedValue(undefined),
+      closeInspectionAndOpenRepairBidding: jest
+        .fn()
+        .mockResolvedValue('child-1'),
       rehireInspectingWorker: jest.fn().mockResolvedValue(undefined),
       setInspectionRepairPrice: jest.fn().mockResolvedValue(undefined),
       completeAfterInspectionClose: jest.fn().mockResolvedValue(undefined),
@@ -76,13 +99,13 @@ describe('InspectionReportsService', () => {
     );
   });
 
-  // ── #1 Find Other Ustaad transition ─────────────────────────────────────
-  it('transitions decisionStatus to FIND_OTHER_USTAAD and reopens the booking for bidding', async () => {
+  // ── #1 Find Other Ustaad closes the inspection + spawns the linked child ──
+  it('delegates to the atomic close-and-spawn with the report-derived description and returns linkedRepairBookingId', async () => {
     repository.findBookingContext
-      .mockResolvedValueOnce(BASE_BOOKING) // _authorizeClientDecision
-      .mockResolvedValueOnce(BASE_BOOKING); // fresh re-fetch after mutation
+      .mockResolvedValueOnce(BASE_BOOKING) // pre-check
+      .mockResolvedValueOnce(CLOSED_BOOKING_WITH_CHILD); // fresh re-fetch
     repository.findByBookingId
-      .mockResolvedValueOnce(BASE_REPORT) // _authorizeClientDecision
+      .mockResolvedValueOnce(BASE_REPORT) // pre-check
       .mockResolvedValueOnce({
         ...BASE_REPORT,
         decisionStatus: 'FIND_OTHER_USTAAD',
@@ -90,35 +113,93 @@ describe('InspectionReportsService', () => {
 
     const result = await service.findOtherUstaad('client-user-1', 'booking-1');
 
-    expect(repository.markFindOtherUstaad).toHaveBeenCalledWith('report-1');
-    expect(bookingsService.reopenInspectionForBidding).toHaveBeenCalledWith(
-      'booking-1',
-      'inspector-1',
-      'cat-1',
-      24.86,
-      67.0,
-    );
+    expect(
+      bookingsService.closeInspectionAndOpenRepairBidding,
+    ).toHaveBeenCalledTimes(1);
+    expect(
+      bookingsService.closeInspectionAndOpenRepairBidding,
+    ).toHaveBeenCalledWith({
+      reportId: 'report-1',
+      originalBookingId: 'booking-1',
+      inspectingWorkerProfileId: 'inspector-1',
+      clientProfileId: 'client-1',
+      categoryId: 'cat-1',
+      title: null,
+      // #7 — problem description auto-built from the report's findings, the
+      // client never re-enters it.
+      description: 'Leaky pipe\n\nReplace pipe',
+      addressLine: '123 Street',
+      city: 'Karachi',
+      latitude: 24.86,
+      longitude: 67.0,
+    });
     expect(result.decisionStatus).toBe('FIND_OTHER_USTAAD');
+    expect(result.linkedRepairBookingId).toBe('child-1');
+  });
+
+  it('falls back to the original booking description when the report has no findings text', async () => {
+    repository.findByBookingId
+      .mockResolvedValueOnce({
+        ...BASE_REPORT,
+        issueFound: null,
+        recommendedRepair: '   ',
+      })
+      .mockResolvedValueOnce({
+        ...BASE_REPORT,
+        decisionStatus: 'FIND_OTHER_USTAAD',
+      });
+    repository.findBookingContext
+      .mockResolvedValueOnce(BASE_BOOKING)
+      .mockResolvedValueOnce(CLOSED_BOOKING_WITH_CHILD);
+
+    await service.findOtherUstaad('client-user-1', 'booking-1');
+
+    expect(
+      bookingsService.closeInspectionAndOpenRepairBidding,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({ description: 'AC thanda nahi kar raha' }),
+    );
   });
 
   it('rejects find-other-ustaad from a non-owning client', async () => {
     await expect(
       service.findOtherUstaad('someone-else-user-id', 'booking-1'),
     ).rejects.toThrow(ForbiddenException);
-    expect(repository.markFindOtherUstaad).not.toHaveBeenCalled();
+    expect(
+      bookingsService.closeInspectionAndOpenRepairBidding,
+    ).not.toHaveBeenCalled();
   });
 
-  // ── #2 Duplicate transition request ─────────────────────────────────────
-  it('rejects a second Find Other Ustaad request once the decision is no longer pending', async () => {
+  // ── #6 Retry / double-tap is an idempotent success, not an error ────────
+  it('treats a repeat Find Other Ustaad as an idempotent replay returning the same linkedRepairBookingId', async () => {
+    repository.findBookingContext.mockResolvedValue(CLOSED_BOOKING_WITH_CHILD);
     repository.findByBookingId.mockResolvedValue({
       ...BASE_REPORT,
       decisionStatus: 'FIND_OTHER_USTAAD',
     });
+
+    const result = await service.findOtherUstaad('client-user-1', 'booking-1');
+
+    // Still routed through the same atomic method — its transactional guard
+    // (not this pre-check) is the authoritative idempotency arbiter.
+    expect(
+      bookingsService.closeInspectionAndOpenRepairBidding,
+    ).toHaveBeenCalledTimes(1);
+    expect(result.linkedRepairBookingId).toBe('child-1');
+    expect(result.decisionStatus).toBe('FIND_OTHER_USTAAD');
+  });
+
+  it('still rejects Find Other Ustaad when the report was decided differently (ACCEPTED_REPAIR)', async () => {
+    repository.findByBookingId.mockResolvedValue({
+      ...BASE_REPORT,
+      decisionStatus: 'ACCEPTED_REPAIR',
+    });
     await expect(
       service.findOtherUstaad('client-user-1', 'booking-1'),
     ).rejects.toThrow(BadRequestException);
-    expect(repository.markFindOtherUstaad).not.toHaveBeenCalled();
-    expect(bookingsService.reopenInspectionForBidding).not.toHaveBeenCalled();
+    expect(
+      bookingsService.closeInspectionAndOpenRepairBidding,
+    ).not.toHaveBeenCalled();
   });
 
   it('rejects a repeat "Accept Quote" request the same way (decision already made)', async () => {
@@ -131,8 +212,8 @@ describe('InspectionReportsService', () => {
     ).rejects.toThrow(BadRequestException);
   });
 
-  // ── #10 Inspector rehired ────────────────────────────────────────────────
-  it('rehiring the original inspector reverts decisionStatus to ACCEPTED_REPAIR and uses the original quote as the work price', async () => {
+  // ── #10 Inspector rehired (old-style same-row records) ──────────────────
+  it('old-style rehire (no linked child) reverts decisionStatus to ACCEPTED_REPAIR and targets the same booking', async () => {
     const reopenedBooking = {
       ...BASE_BOOKING,
       workerProfileId: null,
@@ -158,6 +239,46 @@ describe('InspectionReportsService', () => {
     );
     expect(repository.markAccepted).toHaveBeenCalledWith('report-1');
     expect(result.decisionStatus).toBe('ACCEPTED_REPAIR');
+  });
+
+  // ── #10 Inspector rehired (new linked-child flow) ───────────────────────
+  it('new-style rehire targets the linked CHILD booking and never flips the report off FIND_OTHER_USTAAD', async () => {
+    // Called with the child id — the page the client is actually on.
+    const childCtx = {
+      ...BASE_BOOKING,
+      id: 'child-1',
+      lane: 'BIDDING',
+      status: 'PENDING',
+      workerProfileId: null,
+      workerProfile: null,
+      sourceInspectionBookingId: 'booking-1',
+      repairBooking: null,
+    };
+    repository.findBookingContext.mockImplementation((id: string) =>
+      Promise.resolve(id === 'child-1' ? childCtx : CLOSED_BOOKING_WITH_CHILD),
+    );
+    repository.findByBookingId.mockResolvedValue({
+      ...BASE_REPORT,
+      decisionStatus: 'FIND_OTHER_USTAAD',
+    });
+
+    const result = await service.hireInspectingWorker(
+      'client-user-1',
+      'child-1',
+    );
+
+    expect(bookingsService.rehireInspectingWorker).toHaveBeenCalledWith(
+      'client-user-1',
+      'child-1', // the linked repair booking, not the completed inspection
+      'inspector-1',
+      1000,
+      1000,
+    );
+    // #7 — the completed inspection's fee-based earning derives from the
+    // report staying FIND_OTHER_USTAAD; rehire must never rewrite it.
+    expect(repository.markAccepted).not.toHaveBeenCalled();
+    expect(result.decisionStatus).toBe('FIND_OTHER_USTAAD');
+    expect(result.linkedRepairBookingId).toBe('child-1');
   });
 
   it('rejects hiring the inspector when the booking is not in the FIND_OTHER_USTAAD state', async () => {
@@ -377,6 +498,112 @@ describe('InspectionReportsService', () => {
       await expect(
         service.getReport('bidder-user-1', 'WORKER', 'booking-1'),
       ).rejects.toThrow(ForbiddenException);
+    });
+  });
+
+  // ── New linked-child flow: report access via the CHILD booking id ────────
+  describe('sanitized report for a bidder on the linked repair booking', () => {
+    const CHILD_CTX = {
+      id: 'child-1',
+      lane: 'BIDDING',
+      status: 'PENDING',
+      workerProfileId: null,
+      clientProfileId: 'client-1',
+      categoryId: 'cat-1',
+      title: null,
+      description: 'Leaky pipe\n\nReplace pipe',
+      addressLine: '123 Street',
+      city: 'Karachi',
+      latitude: 24.86,
+      longitude: 67.0,
+      inspectionFeeSnapshot: null,
+      clientProfile: { userId: 'client-user-1' },
+      workerProfile: null,
+      workerExclusions: [],
+      sourceInspectionBookingId: 'booking-1',
+      repairBooking: null,
+    };
+    const ELIGIBLE_BIDDER_PROFILE = {
+      id: 'bidder-1',
+      status: 'ACTIVE',
+      onboardingStatus: 'APPROVED',
+      profileCompleted: true,
+      availabilityStatus: 'ONLINE',
+      currentLat: 24.86,
+      currentLng: 67.0,
+      locationUpdatedAt: new Date(),
+      skills: [{ categoryId: 'cat-1' }],
+    };
+
+    beforeEach(() => {
+      repository.findBookingContext.mockImplementation((id: string) =>
+        Promise.resolve(
+          id === 'child-1'
+            ? CHILD_CTX
+            : { ...CLOSED_BOOKING_WITH_CHILD, workerProfile: null },
+        ),
+      );
+      repository.findByBookingId.mockResolvedValue({
+        ...BASE_REPORT,
+        decisionStatus: 'FIND_OTHER_USTAAD',
+      });
+      repository.findWorkerProfileWithSkillsByUserId.mockResolvedValue(
+        ELIGIBLE_BIDDER_PROFILE,
+      );
+    });
+
+    // #8 — same price stripping when the report is opened via the child id.
+    it('re-anchors to the source inspection booking and omits every price field', async () => {
+      const dto: any = await service.getReport(
+        'bidder-user-1',
+        'WORKER',
+        'child-1',
+      );
+      expect(repository.findByBookingId).toHaveBeenCalledWith('booking-1');
+      expect(dto).not.toHaveProperty('labourCost');
+      expect(dto).not.toHaveProperty('partsTotal');
+      expect(dto).not.toHaveProperty('repairQuoteTotal');
+      expect(dto).not.toHaveProperty('inspectionFeeSnapshot');
+      expect(dto.issueFound).toBe('Leaky pipe');
+    });
+
+    // #10 — the original inspector cannot use the bidder path on their own
+    // linked repair job (IS_INSPECTOR exclusion).
+    it('rejects the original inspector trying to view/bid via the bidder path', async () => {
+      repository.findWorkerProfileWithSkillsByUserId.mockResolvedValue({
+        ...ELIGIBLE_BIDDER_PROFILE,
+        id: 'inspector-1',
+      });
+      // Not matched as the inspector's own-report path (different userId
+      // lookup), so it falls through to the bidder eligibility gate.
+      repository.findWorkerProfileByUserId.mockResolvedValue(null);
+      await expect(
+        service.getReport('inspector-user-1', 'WORKER', 'child-1'),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    // #15 — a worker outside the 20km radius may not read the report either.
+    it('rejects a worker with a fresh location outside the bidding radius', async () => {
+      repository.findWorkerProfileWithSkillsByUserId.mockResolvedValue({
+        ...ELIGIBLE_BIDDER_PROFILE,
+        currentLat: 31.5204, // Lahore vs Karachi job — far out of radius
+        currentLng: 74.3587,
+      });
+      await expect(
+        service.getReport('bidder-user-1', 'WORKER', 'child-1'),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    // The client sees the full report (with prices) through the child id too.
+    it('returns the full report with prices and linkedRepairBookingId for the owning client via the child id', async () => {
+      const dto: any = await service.getReport(
+        'client-user-1',
+        'CLIENT',
+        'child-1',
+      );
+      expect(dto.labourCost).toBe(1000);
+      expect(dto.repairQuoteTotal).toBe(1000);
+      expect(dto.linkedRepairBookingId).toBe('child-1');
     });
   });
 });

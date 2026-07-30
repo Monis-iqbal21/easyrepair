@@ -118,4 +118,11 @@ export class WorkerJobResponseDto {
    * Completed, never Start Inspection).
    */
   inspectingWorker: WorkerSummaryDto | null;
+  /**
+   * Set only on a BIDDING-lane repair booking spawned by "Find Other
+   * Ustaad" — the completed inspection booking it was created from. The
+   * worker app uses it to know an (always price-sanitized for non-
+   * inspectors) inspection report exists for this job.
+   */
+  sourceInspectionBookingId: string | null;
 }

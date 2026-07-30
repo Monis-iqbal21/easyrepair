@@ -163,9 +163,35 @@ class _ReportBody extends ConsumerWidget {
                       scrollDirection: Axis.horizontal,
                       itemCount: report.photos.length,
                       separatorBuilder: (_, _) => const SizedBox(width: 8),
-                      itemBuilder: (_, i) => ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.network(report.photos[i].url, width: 88, height: 88, fit: BoxFit.cover),
+                      // Tap opens the shared full-screen viewer (zoom/pan,
+                      // ✕ / Android-back close) — same one Job Details uses.
+                      itemBuilder: (ctx, i) => GestureDetector(
+                        onTap: () => showFullScreenImage(ctx, report.photos[i].url),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.network(
+                            report.photos[i].url,
+                            width: 88,
+                            height: 88,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, _, _) => Container(
+                              width: 88,
+                              height: 88,
+                              color: const Color(0xFFF1F5F9),
+                              child: const Icon(Icons.broken_image_outlined, color: _kGray),
+                            ),
+                            loadingBuilder: (_, child, prog) => prog == null
+                                ? child
+                                : Container(
+                                    width: 88,
+                                    height: 88,
+                                    color: const Color(0xFFF1F5F9),
+                                    child: const Center(
+                                      child: CircularProgressIndicator(strokeWidth: 2, color: _kPrimary),
+                                    ),
+                                  ),
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -407,6 +433,10 @@ class _ReportBody extends ConsumerWidget {
       ),
     );
     if (confirmed != true || !context.mounted) return;
+    // Re-entry guard: a second tap that raced past the disabled button (or a
+    // second confirm dialog) must never fire a duplicate request. The
+    // backend is idempotent regardless, but there's no reason to send it.
+    if (ref.read(inspectionDecisionNotifierProvider).isLoading) return;
 
     try {
       await ref.read(inspectionDecisionNotifierProvider.notifier).findOtherUstaad(bookingId);
@@ -418,15 +448,20 @@ class _ReportBody extends ConsumerWidget {
             behavior: SnackBarBehavior.floating,
           ),
         );
-        // findOtherUstaad's _run already pushed the reopened booking into
-        // bookingDetailProvider, so this resolves immediately without a
-        // network round-trip. Go straight to the existing bidding/find-
-        // workers page instead of just popping back to booking details.
+        // findOtherUstaad's _run already pushed the (now completed)
+        // inspection booking into bookingDetailProvider. The open repair is
+        // the LINKED child booking — fetch it and take the client straight
+        // to its bidding page (old-style records without a link fall back
+        // to the same booking, which is itself still the open job there).
         final booking = await ref.read(bookingDetailProvider(bookingId).future);
+        final repairBookingId = booking.linkedRepairBookingId;
+        final biddingBooking = repairBookingId != null
+            ? await ref.read(bookingDetailProvider(repairBookingId).future)
+            : booking;
         if (context.mounted) {
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(
-              builder: (_) => WorkerDiscoveryMapPage(booking: booking),
+              builder: (_) => WorkerDiscoveryMapPage(booking: biddingBooking),
             ),
           );
         }

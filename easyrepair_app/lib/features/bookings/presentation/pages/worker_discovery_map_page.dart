@@ -7,6 +7,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../../../core/errors/failures.dart';
 import '../../../../core/utils/currency_utils.dart';
+import 'inspection_report_page.dart';
 import 'track_worker_page.dart';
 import '../../../bids/domain/entities/bid_entity.dart';
 import '../../../bids/domain/repositories/bid_repository.dart';
@@ -488,12 +489,18 @@ class _BidOfferCard extends ConsumerWidget {
                       children: [
                         const Icon(Icons.star_rounded, size: 13, color: Color(0xFFF59E0B)),
                         const SizedBox(width: 3),
-                        Text(
-                          bidWorker.ratingLabel,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: _kGray,
+                        // Flexible so a long rating/jobs label can never
+                        // overflow the card on a narrow screen.
+                        Flexible(
+                          child: Text(
+                            bidWorker.ratingLabel,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: _kGray,
+                            ),
                           ),
                         ),
                       ],
@@ -841,6 +848,39 @@ class _InspectingWorkerOfferCard extends ConsumerWidget {
             'Inspection completed by this Ustaad.',
             style: TextStyle(fontSize: 11.5, color: _kGray),
           ),
+          const SizedBox(height: 10),
+          // Optional full technical report — never required before deciding.
+          GestureDetector(
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => InspectionReportPage(
+                  bookingId: bookingId,
+                  showDecisionButtons: false,
+                ),
+              ),
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.description_outlined, size: 15, color: _kAmber),
+                SizedBox(width: 5),
+                // Flexible so the label can never overflow this card on a
+                // narrow screen.
+                Flexible(
+                  child: Text(
+                    'Inspection Report Dekhein',
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w700,
+                      color: _kAmber,
+                      decoration: TextDecoration.underline,
+                      decorationColor: _kAmber,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
           const SizedBox(height: 12),
           Row(
             children: [
@@ -859,7 +899,7 @@ class _InspectingWorkerOfferCard extends ConsumerWidget {
                           child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                         )
                       : const Icon(Icons.check_circle_outline_rounded, size: 16),
-                  label: Text(isHiring ? 'Hiring…' : 'Hire Again'),
+                  label: Text(isHiring ? 'Hiring…' : 'Dobara Hire Karein'),
                   style: FilledButton.styleFrom(
                     backgroundColor: _kAmber,
                     padding: const EdgeInsets.symmetric(vertical: 10),
@@ -903,6 +943,9 @@ class _InspectingWorkerOfferCard extends ConsumerWidget {
     );
 
     if (confirm != true || !context.mounted) return;
+    // Re-entry guard — a tap that raced past the disabled button must not
+    // fire a second hire request.
+    if (ref.read(inspectionDecisionNotifierProvider).isLoading) return;
 
     try {
       await ref.read(inspectionDecisionNotifierProvider.notifier).hireInspectingWorker(bookingId);
@@ -922,6 +965,25 @@ class _InspectingWorkerOfferCard extends ConsumerWidget {
             builder: (_) => TrackWorkerPage(bookingId: bookingId),
           ),
         );
+      }
+    } on InspectorBusyFailure catch (e) {
+      // The inspecting Ustaad took another job in the meantime. Nothing was
+      // hired and the job is still open — deliberately stay on this bidding
+      // list, keep every loaded bid usable, and do NOT invalidate the bids
+      // provider or navigate anywhere, so the client can simply pick someone
+      // else from the list below.
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              content: Text(e.message),
+              backgroundColor: _kAmber,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              duration: const Duration(seconds: 5),
+            ),
+          );
       }
     } catch (e) {
       if (context.mounted) {

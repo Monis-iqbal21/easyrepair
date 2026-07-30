@@ -96,6 +96,7 @@ class InspectionReportModel {
   final DateTime createdAt;
   final DateTime? acceptedAt;
   final DateTime? closedAt;
+  final String? linkedRepairBookingId;
 
   const InspectionReportModel({
     required this.id,
@@ -118,6 +119,7 @@ class InspectionReportModel {
     required this.createdAt,
     this.acceptedAt,
     this.closedAt,
+    this.linkedRepairBookingId,
   });
 
   factory InspectionReportModel.fromJson(Map<String, dynamic> json) {
@@ -160,6 +162,7 @@ class InspectionReportModel {
       closedAt: json['closedAt'] != null
           ? DateTime.tryParse(json['closedAt'] as String)
           : null,
+      linkedRepairBookingId: json['linkedRepairBookingId'] as String?,
     );
   }
 
@@ -186,5 +189,6 @@ class InspectionReportModel {
         createdAt: createdAt,
         acceptedAt: acceptedAt,
         closedAt: closedAt,
+        linkedRepairBookingId: linkedRepairBookingId,
       );
 }

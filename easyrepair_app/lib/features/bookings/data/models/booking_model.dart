@@ -261,6 +261,8 @@ class BookingModel {
   final String? inspectionDecisionStatus;
   final DateTime? inspectionReportSubmittedAt;
   final bool isInspectionOnlyForCaller;
+  final String? sourceInspectionBookingId;
+  final String? linkedRepairBookingId;
 
   const BookingModel({
     required this.id,
@@ -313,6 +315,8 @@ class BookingModel {
     this.inspectionDecisionStatus,
     this.inspectionReportSubmittedAt,
     this.isInspectionOnlyForCaller = false,
+    this.sourceInspectionBookingId,
+    this.linkedRepairBookingId,
   });
 
   factory BookingModel.fromJson(Map<String, dynamic> json) {
@@ -418,6 +422,8 @@ class BookingModel {
           : null,
       isInspectionOnlyForCaller:
           json['isInspectionOnlyForCaller'] as bool? ?? false,
+      sourceInspectionBookingId: json['sourceInspectionBookingId'] as String?,
+      linkedRepairBookingId: json['linkedRepairBookingId'] as String?,
     );
   }
 
@@ -496,6 +502,8 @@ class BookingModel {
           InspectionDecisionStatusX.fromRaw(inspectionDecisionStatus),
       inspectionReportSubmittedAt: inspectionReportSubmittedAt,
       isInspectionOnlyForCaller: isInspectionOnlyForCaller,
+      sourceInspectionBookingId: sourceInspectionBookingId,
+      linkedRepairBookingId: linkedRepairBookingId,
     );
   }
 }

@@ -46,3 +46,12 @@ class ClientPhoneConflictFailure extends Failure {
 class SmsSendFailure extends Failure {
   const SmsSendFailure(super.message);
 }
+
+/// "Dobara Hire Karein" was tapped but the original inspecting Ustaad is
+/// currently busy on another active job (backend error code INSPECTOR_BUSY).
+/// The bidding page shows the specific Roman Urdu message and MUST stay on
+/// the bidding list with all other bids intact — never navigate away or
+/// clear loaded state for this failure.
+class InspectorBusyFailure extends Failure {
+  const InspectorBusyFailure(super.message);
+}

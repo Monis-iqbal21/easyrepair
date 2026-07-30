@@ -356,4 +356,187 @@ describe('BidsService', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(repo.acceptBid).not.toHaveBeenCalled();
   });
+
+  // ── Linked repair booking (new "Find Other Ustaad" child) ────────────────
+  describe('linked post-inspection repair booking (BIDDING child)', () => {
+    const LINKED_CHILD_BOOKING = {
+      ...BIDDING_BOOKING,
+      id: 'child-1',
+      sourceInspectionBookingId: 'booking-1',
+      sourceInspectionBooking: {
+        inspectionReport: {
+          decisionStatus: 'FIND_OTHER_USTAAD',
+          workerProfileId: 'inspector-1',
+        },
+      },
+      workerExclusions: [],
+    };
+
+    // #10 — the original inspector may not bid on their own linked repair job.
+    it('rejects the original inspector bidding on the linked child booking', async () => {
+      bidsRepository.findWorkerProfileByUserId.mockResolvedValue({
+        ...APPROVED_WORKER,
+        id: 'inspector-1',
+      });
+      bidsRepository.findBookingById.mockResolvedValue(LINKED_CHILD_BOOKING);
+      await expect(
+        service.createBid('inspector-user-1', 'child-1', 1500),
+      ).rejects.toThrow(ForbiddenException);
+      expect(bidsRepository.createBid).not.toHaveBeenCalled();
+    });
+
+    it('rejects an offline worker bidding on the linked child booking', async () => {
+      bidsRepository.findWorkerProfileByUserId.mockResolvedValue({
+        ...APPROVED_WORKER,
+        availabilityStatus: AvailabilityStatus.OFFLINE,
+      });
+      bidsRepository.findBookingById.mockResolvedValue(LINKED_CHILD_BOOKING);
+      await expect(
+        service.createBid('user-1', 'child-1', 1500),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('rejects a worker outside the radius bidding on the linked child booking', async () => {
+      bidsRepository.findWorkerProfileByUserId.mockResolvedValue({
+        ...APPROVED_WORKER,
+        currentLat: 31.5204, // Lahore vs Karachi job
+        currentLng: 74.3587,
+      });
+      bidsRepository.findBookingById.mockResolvedValue(LINKED_CHILD_BOOKING);
+      await expect(
+        service.createBid('user-1', 'child-1', 1500),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('allows an eligible nearby online worker to bid on the linked child booking', async () => {
+      bidsRepository.findBookingById.mockResolvedValue(LINKED_CHILD_BOOKING);
+      await expect(
+        service.createBid('user-1', 'child-1', 1500),
+      ).resolves.toEqual({ id: 'bid-1' });
+    });
+
+    // #16 — once hired/closed, the child stops accepting bids entirely.
+    it('rejects a bid once the linked child booking is no longer PENDING', async () => {
+      bidsRepository.findBookingById.mockResolvedValue({
+        ...LINKED_CHILD_BOOKING,
+        status: BookingStatus.ACCEPTED,
+      });
+      await expect(
+        service.createBid('user-1', 'child-1', 1500),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  // ── New Jobs feed: dynamic (re-evaluated) visibility of the linked child ─
+  describe('getNewJobsForWorker with a linked repair booking in the feed', () => {
+    const FEED_CHILD_ROW = {
+      id: 'child-1',
+      title: null,
+      description: 'Compressor kharab hai',
+      status: BookingStatus.PENDING,
+      urgency: 'NORMAL',
+      timeSlot: null,
+      city: 'Karachi',
+      scheduledAt: null,
+      createdAt: new Date(),
+      inspection: false,
+      lane: 'BIDDING',
+      categoryId: 'cat-1',
+      latitude: 24.86,
+      longitude: 67.0,
+      workerProfileId: null,
+      workerExclusions: [],
+      sourceInspectionBookingId: 'booking-1',
+      sourceInspectionBooking: {
+        inspectionReport: {
+          decisionStatus: 'FIND_OTHER_USTAAD',
+          workerProfileId: 'inspector-1',
+        },
+      },
+      inspectionReport: null,
+      standardServiceItems: [],
+      category: { id: 'cat-1', name: 'AC Repair', iconUrl: null },
+      clientProfile: {
+        id: 'client-1',
+        firstName: 'Sara',
+        lastName: 'Ahmed',
+        avatarUrl: null,
+      },
+      _count: { bids: 0 },
+      bids: [],
+    };
+
+    beforeEach(() => {
+      bidsRepository.findAvailableJobsForWorker = jest
+        .fn()
+        .mockResolvedValue([FEED_CHILD_ROW]);
+    });
+
+    // #14 — the check is live: a worker who was far away at creation time
+    // sees the already-open job as soon as their fresh location is in radius.
+    it('shows the open linked child to a worker whose CURRENT fresh location is inside the radius (late entry)', async () => {
+      const jobs = await service.getNewJobsForWorker('user-1');
+      expect(jobs).toHaveLength(1);
+      expect(jobs[0].id).toBe('child-1');
+      expect(jobs[0].isOpenForBidding).toBe(true);
+    });
+
+    // #15 — and hides it while the worker is outside the radius.
+    it('hides the linked child from a worker outside the discovery radius', async () => {
+      bidsRepository.findWorkerProfileByUserId.mockResolvedValue({
+        ...APPROVED_WORKER,
+        currentLat: 31.5204,
+        currentLng: 74.3587,
+      });
+      const jobs = await service.getNewJobsForWorker('user-1');
+      expect(jobs).toHaveLength(0);
+    });
+
+    it('hides the linked child from an offline worker and from one with a stale location', async () => {
+      bidsRepository.findWorkerProfileByUserId.mockResolvedValue({
+        ...APPROVED_WORKER,
+        availabilityStatus: AvailabilityStatus.OFFLINE,
+      });
+      expect(await service.getNewJobsForWorker('user-1')).toHaveLength(0);
+
+      bidsRepository.findWorkerProfileByUserId.mockResolvedValue({
+        ...APPROVED_WORKER,
+        locationUpdatedAt: new Date(Date.now() - 31 * 60 * 1000), // 31 min old
+      });
+      expect(await service.getNewJobsForWorker('user-1')).toHaveLength(0);
+    });
+
+    // #10 — the original inspector never sees their own linked repair job.
+    it('hides the linked child from the original inspector', async () => {
+      bidsRepository.findWorkerProfileByUserId.mockResolvedValue({
+        ...APPROVED_WORKER,
+        id: 'inspector-1',
+      });
+      const jobs = await service.getNewJobsForWorker('user-1');
+      expect(jobs).toHaveLength(0);
+    });
+
+    // Normal BIDDING jobs stay visible regardless of radius/online state —
+    // the gate is scoped to post-inspection jobs only (do not break Normal
+    // Bidding Lane).
+    it('still shows a normal BIDDING job to a distant/offline worker (regression)', async () => {
+      bidsRepository.findAvailableJobsForWorker.mockResolvedValue([
+        {
+          ...FEED_CHILD_ROW,
+          id: 'normal-1',
+          sourceInspectionBookingId: null,
+          sourceInspectionBooking: null,
+        },
+      ]);
+      bidsRepository.findWorkerProfileByUserId.mockResolvedValue({
+        ...APPROVED_WORKER,
+        availabilityStatus: AvailabilityStatus.OFFLINE,
+        currentLat: 31.5204,
+        currentLng: 74.3587,
+      });
+      const jobs = await service.getNewJobsForWorker('user-1');
+      expect(jobs).toHaveLength(1);
+      expect(jobs[0].id).toBe('normal-1');
+    });
+  });
 });

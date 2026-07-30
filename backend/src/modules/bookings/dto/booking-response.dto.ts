@@ -139,4 +139,15 @@ export class BookingResponseDto {
     | 'FIND_OTHER_USTAAD'
     | null;
   inspectionReportSubmittedAt: string | null;
+  /**
+   * Set only on a BIDDING-lane repair booking spawned by "Find Other
+   * Ustaad" — the completed inspection booking it was created from. The
+   * inspection report (and the pinned inspecting worker) live there.
+   */
+  sourceInspectionBookingId: string | null;
+  /**
+   * Set only on a completed inspection booking whose client chose "Find
+   * Other Ustaad" — the linked repair booking opened for bidding.
+   */
+  linkedRepairBookingId: string | null;
 }

@@ -382,15 +382,25 @@ export class WorkersRepository {
     ] = await Promise.all([
       // Shared helper — single source of truth, see worker-stats.util.ts
       computeCompletedJobs(this.prisma, workerProfileId),
-      // Lifetime count of jobs this worker only inspected where a
-      // different Ustaad ended up hired for the repair — without this,
-      // completedJobs would silently undercount the inspector's real
-      // track record once Booking.workerProfileId moves away from them.
+      // Lifetime count of PRE-FIX jobs this worker only inspected where the
+      // same booking row was reassigned away (or left unassigned) — without
+      // this, historical completedJobs would undercount the inspector's
+      // track record. New-style "Find Other Ustaad" bookings keep
+      // workerProfileId on the inspector, so the primary count above already
+      // includes them — the null-safe OR below (NULL never matches a bare
+      // `not`) restricts this workaround to the historical shape only,
+      // preventing double-counting.
       this.prisma.inspectionReport.count({
         where: {
           workerProfileId,
           decisionStatus: 'FIND_OTHER_USTAAD',
-          booking: { status: BookingStatus.COMPLETED },
+          booking: {
+            status: BookingStatus.COMPLETED,
+            OR: [
+              { workerProfileId: null },
+              { workerProfileId: { not: workerProfileId } },
+            ],
+          },
         },
       }),
       this.prisma.booking.count({
@@ -427,14 +437,23 @@ export class WorkersRepository {
           inspectionReport: {
             select: { labourCost: true, decisionStatus: true },
           },
+          // Rehired-inspector repair (linked BIDDING child): finalPrice is
+          // the full repair quote incl. parts — earnings must use the
+          // source report's labour only (parts are pass-through).
+          sourceInspectionBooking: {
+            select: {
+              inspectionReport: {
+                select: { labourCost: true, workerProfileId: true },
+              },
+            },
+          },
         },
       }),
-      // Bookings this worker inspected where the customer chose "Find
-      // Other Ustaad" and a DIFFERENT worker ended up hired for the repair
-      // (decisionStatus stays FIND_OTHER_USTAAD forever in that case — it
-      // only reverts to ACCEPTED_REPAIR if this same worker is re-hired,
-      // which is already covered by the query above). This worker still
-      // earns the inspection-fee portion regardless of who did the repair.
+      // PRE-FIX bookings this worker inspected where the same row was
+      // reassigned away (or left unassigned) after "Find Other Ustaad" —
+      // this worker still earns the inspection-fee portion. New-style rows
+      // keep workerProfileId on the inspector and are covered by the query
+      // above; the null-safe OR restricts this to the historical shape.
       this.prisma.inspectionReport.findMany({
         where: {
           workerProfileId,
@@ -442,6 +461,10 @@ export class WorkersRepository {
           booking: {
             status: BookingStatus.COMPLETED,
             completedAt: { gte: todayStart },
+            OR: [
+              { workerProfileId: null },
+              { workerProfileId: { not: workerProfileId } },
+            ],
           },
         },
         select: { booking: { select: { inspectionFeeSnapshot: true } } },
@@ -462,6 +485,16 @@ export class WorkersRepository {
     // company-accounting concern (Booking.platformFee) and must never be
     // subtracted from what the Ustaad sees as their own earning.
     const workEarnings = todayCompleted.reduce((sum, b) => {
+      // Rehired-inspector repair (linked child, finalPrice = full quote
+      // incl. parts): gross earning is the source report's labour only —
+      // same labour-only rule the old same-row ACCEPTED_REPAIR path used.
+      const sourceReport = b.sourceInspectionBooking?.inspectionReport;
+      if (
+        b.lane === BookingLane.BIDDING &&
+        sourceReport?.workerProfileId === workerProfileId
+      ) {
+        return sum + sourceReport.labourCost;
+      }
       return (
         sum +
         calculateGrossWorkerEarning({
@@ -548,17 +581,33 @@ export class WorkersRepository {
           completedAt: true,
           category: { select: { name: true } },
           inspectionReport: { select: { labourCost: true, decisionStatus: true } },
+          // See getJobStats — labour-only earning for a rehired-inspector
+          // repair on a linked BIDDING child booking.
+          sourceInspectionBooking: {
+            select: {
+              inspectionReport: {
+                select: { labourCost: true, workerProfileId: true },
+              },
+            },
+          },
         },
       }),
-      // Same "inspected but a different Ustaad did the repair" case as
-      // getJobStats — decisionStatus stays FIND_OTHER_USTAAD forever then,
-      // so this worker's inspection-fee earning never surfaces via the
-      // query above (workerProfileId has moved to the other worker).
+      // Same PRE-FIX "inspected but the same row was reassigned away (or
+      // left unassigned)" case as getJobStats — null-safe narrowed so
+      // new-style rows (workerProfileId still the inspector, covered by the
+      // query above) are never double-counted.
       this.prisma.inspectionReport.findMany({
         where: {
           workerProfileId,
           decisionStatus: 'FIND_OTHER_USTAAD',
-          booking: { status: BookingStatus.COMPLETED, completedAt: { not: null } },
+          booking: {
+            status: BookingStatus.COMPLETED,
+            completedAt: { not: null },
+            OR: [
+              { workerProfileId: null },
+              { workerProfileId: { not: workerProfileId } },
+            ],
+          },
         },
         select: {
           booking: {
@@ -582,18 +631,26 @@ export class WorkersRepository {
       isInspectionOnly: boolean;
     };
 
-    const jobs: Job[] = assignedCompleted.map((b) => ({
-      bookingId: b.id,
-      lane: b.lane,
-      serviceCategory: b.category.name,
-      grossEarning: calculateGrossWorkerEarning({
+    const jobs: Job[] = assignedCompleted.map((b) => {
+      const sourceReport = b.sourceInspectionBooking?.inspectionReport;
+      const isRehiredInspectorRepair =
+        b.lane === BookingLane.BIDDING &&
+        sourceReport?.workerProfileId === workerProfileId;
+      return {
+        bookingId: b.id,
         lane: b.lane,
-        finalPrice: b.finalPrice,
-        inspectionReport: b.inspectionReport,
-      }),
-      completedAt: b.completedAt!,
-      isInspectionOnly: false,
-    }));
+        serviceCategory: b.category.name,
+        grossEarning: isRehiredInspectorRepair
+          ? sourceReport.labourCost
+          : calculateGrossWorkerEarning({
+              lane: b.lane,
+              finalPrice: b.finalPrice,
+              inspectionReport: b.inspectionReport,
+            }),
+        completedAt: b.completedAt!,
+        isInspectionOnly: false,
+      };
+    });
 
     for (const r of inspectedForOtherUstaad) {
       const fee = r.booking.inspectionFeeSnapshot;

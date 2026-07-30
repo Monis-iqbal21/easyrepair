@@ -341,12 +341,18 @@ class _JobCard extends ConsumerWidget {
                           const SizedBox(height: 3),
                           Row(
                             children: [
-                              Text(
-                                job.referenceId,
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  color: _kLight,
-                                  fontWeight: FontWeight.w500,
+                              // Flexible so a long reference id can never
+                              // overflow this row on a narrow screen.
+                              Flexible(
+                                child: Text(
+                                  job.referenceId,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: _kLight,
+                                    fontWeight: FontWeight.w500,
+                                  ),
                                 ),
                               ),
                               if (job.clientName != null &&
@@ -462,6 +468,17 @@ class _JobCard extends ConsumerWidget {
                   ),
                 ],
 
+                // ── Inspection-only completion strip ─────────────────────
+                // The client chose "Find Other Ustaad", so this Ustaad's work
+                // here was the inspection alone. Full-width (not a chip in
+                // the meta Wrap) so the wording always fits unabbreviated on
+                // any screen width, and so the card can never be misread as
+                // a completed repair.
+                if (job.isCompletedInspectionOnly) ...[
+                  const SizedBox(height: 10),
+                  const _InspectionOnlyCompletedBadge(),
+                ],
+
                 if (standardAction != null) ...[
                   const SizedBox(height: 12),
                   _StandardActionBtn(jobId: job.id, action: standardAction),
@@ -487,6 +504,46 @@ class _JobCard extends ConsumerWidget {
       return 'Today, ${DateFormat('h:mm a').format(dt)}';
     }
     return DateFormat('MMM d, yyyy').format(dt);
+  }
+}
+
+// ── "Inspection only" completed badge ────────────────────────────────────────
+
+/// Shown on a completed job whose client chose "Find Other Ustaad" — this
+/// Ustaad earned and completed the inspection, and someone else was (or will
+/// be) hired for the repair. Deliberately worded so the card can never be
+/// mistaken for a completed repair.
+class _InspectionOnlyCompletedBadge extends StatelessWidget {
+  const _InspectionOnlyCompletedBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFBEB),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFFDE9BC)),
+      ),
+      child: const Row(
+        children: [
+          Icon(Icons.fact_check_outlined, size: 13, color: Color(0xFFB45309)),
+          SizedBox(width: 6),
+          // Flexible so the label can never overflow, however narrow the card.
+          Flexible(
+            child: Text(
+              'Sirf Inspection Mukammal Hui',
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFFB45309),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

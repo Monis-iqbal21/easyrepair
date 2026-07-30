@@ -264,13 +264,22 @@ extension BookingInspectionLifecycleX on BookingEntity {
     };
   }
 
-  /// True once the customer has pressed "Find Other Ustaad" and this
-  /// INSPECTION-lane booking has reopened for bidding from other Ustaads —
-  /// drives the client's bids-page routing and the worker's New Jobs
-  /// bid-actionable state, same as a normal BIDDING-lane job.
+  /// True once the customer has pressed "Find Other Ustaad" and this booking
+  /// is the resulting open repair job — either the legacy shape (the same
+  /// INSPECTION-lane booking reopened in place) or the new shape (a separate
+  /// BIDDING-lane child booking linked back to the completed inspection).
+  /// Drives the client's bids-page routing (pinned inspector card) and the
+  /// worker's New Jobs bid-actionable state, same as a normal BIDDING job.
   bool get isOpenForFindOtherUstaadBidding =>
-      lane == BookingLane.inspection &&
-      inspectionDecisionStatus == InspectionDecisionStatus.findOtherUstaad;
+      (lane == BookingLane.inspection &&
+          inspectionDecisionStatus == InspectionDecisionStatus.findOtherUstaad) ||
+      (lane == BookingLane.bidding && sourceInspectionBookingId != null);
+
+  /// Worker "My Jobs" card: this completed entry represents inspection work
+  /// only — the repair was opened to other Ustaads — so it must be labelled
+  /// "Sirf Inspection Mukammal Hui" and never look like a completed repair.
+  bool get isCompletedInspectionOnly =>
+      status == BookingStatus.completed && isInspectionOnlyForCaller;
 }
 
 extension BookingStatusX on BookingStatus {
@@ -625,11 +634,21 @@ class BookingEntity {
   /// INSPECTION lane: null until a report exists, then tracks the client's decision.
   final InspectionDecisionStatus? inspectionDecisionStatus;
   final DateTime? inspectionReportSubmittedAt;
-  /// Worker-job-detail only: true when this entry appears in the caller's
-  /// own history solely because they were the ORIGINAL inspector on a
-  /// booking a different Ustaad ended up performing — finalPrice above is
-  /// the inspection fee they earned, not the other worker's work amount.
+  /// Worker-job-detail only: true when the caller's work on this booking was
+  /// the inspection only ("Find Other Ustaad" chosen for the repair) —
+  /// finalPrice above is the inspection fee they earned, never a repair
+  /// amount. Covers both the legacy same-row shape and the new completed
+  /// inspection booking with a separate linked repair.
   final bool isInspectionOnlyForCaller;
+
+  /// Set only on a BIDDING-lane repair booking spawned by "Find Other
+  /// Ustaad" — the completed inspection booking it was created from (where
+  /// the report and the pinned inspecting worker live).
+  final String? sourceInspectionBookingId;
+
+  /// Set only on a completed inspection booking whose client chose "Find
+  /// Other Ustaad" — the linked repair booking now open for bidding.
+  final String? linkedRepairBookingId;
 
   const BookingEntity({
     required this.id,
@@ -684,6 +703,8 @@ class BookingEntity {
     this.inspectionDecisionStatus,
     this.inspectionReportSubmittedAt,
     this.isInspectionOnlyForCaller = false,
+    this.sourceInspectionBookingId,
+    this.linkedRepairBookingId,
   });
 
   /// Sum of all selected STANDARD-lane sub-service prices (× quantity).
@@ -793,6 +814,9 @@ class BookingEntity {
       inspectionReportSubmitted: inspectionReportSubmitted,
       inspectionDecisionStatus: inspectionDecisionStatus,
       inspectionReportSubmittedAt: inspectionReportSubmittedAt,
+      isInspectionOnlyForCaller: isInspectionOnlyForCaller,
+      sourceInspectionBookingId: sourceInspectionBookingId,
+      linkedRepairBookingId: linkedRepairBookingId,
     );
   }
 }

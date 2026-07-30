@@ -294,6 +294,18 @@ class _JobBody extends ConsumerWidget {
                   ViewInspectionReportButton(
                     bookingId: job.id,
                     route: '/worker/job/${job.id}/inspection-report/view',
+                  )
+                // ── Linked post-inspection repair job: the report lives on
+                // the source inspection booking. Purely OPTIONAL extra
+                // context for bidders — never required before bidding, and
+                // always price-sanitized by the backend (the button itself
+                // self-hides if this worker isn't an eligible viewer, since
+                // the provider errors out). ────────────────────────────────
+                else if (job.sourceInspectionBookingId != null)
+                  ViewInspectionReportButton(
+                    bookingId: job.id,
+                    route: '/worker/job/${job.id}/inspection-report/view',
+                    label: 'Inspection Report Dekhein',
                   ),
 
                 // ── Client info ──────────────────────────────────────────
