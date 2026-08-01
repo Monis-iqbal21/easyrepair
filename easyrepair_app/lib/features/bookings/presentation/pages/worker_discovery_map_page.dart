@@ -15,6 +15,9 @@ import '../../../bids/presentation/providers/bid_providers.dart';
 import '../../../bookings/domain/entities/booking_entity.dart';
 import '../../../bookings/presentation/providers/booking_providers.dart';
 import '../../../chat/presentation/providers/chat_providers.dart';
+import '../../../bookings/presentation/utils/worker_labels.dart';
+import '../../../../core/l10n/l10n_extensions.dart';
+import '../../../../core/errors/failure_messages.dart';
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 const _kGreen  = Color(0xFFDB6234);
@@ -99,7 +102,7 @@ class _WorkerDiscoveryMapPageState extends ConsumerState<WorkerDiscoveryMapPage>
         markerId: const MarkerId('job'),
         position: jobPos,
         infoWindow: InfoWindow(
-          title: 'Job Location',
+          title: context.l10n.discoveryJobLocation,
           snippet: widget.booking.address ?? widget.booking.city,
         ),
       ));
@@ -202,8 +205,8 @@ class _WorkerDiscoveryMapPageState extends ConsumerState<WorkerDiscoveryMapPage>
                     ),
                   ],
                 ),
-                child: const Text(
-                  'Job location not available',
+                child: Text(
+                  context.l10n.discoveryJobLocationUnavailable,
                   style: TextStyle(fontSize: 12, color: _kGray),
                 ),
               ),
@@ -302,15 +305,15 @@ class _BidsSheet extends ConsumerWidget {
               ),
               // Header row
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 2, 12, 10),
+                padding: const EdgeInsetsDirectional.fromSTEB(20, 2, 12, 10),
                 child: Row(
                   children: [
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'Live Worker Offers',
+                          Text(
+                            context.l10n.discoveryLiveWorkerOffers,
                             style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w700,
@@ -326,7 +329,7 @@ class _BidsSheet extends ConsumerWidget {
                     IconButton(
                       icon: const Icon(Icons.refresh_rounded,
                           size: 18, color: _kLight),
-                      tooltip: 'Refresh',
+                      tooltip: context.l10n.discoveryRefresh,
                       onPressed: () =>
                           ref.invalidate(bookingBidsProvider(booking.id)),
                     ),
@@ -361,7 +364,7 @@ class _BidsSheet extends ConsumerWidget {
           error: (err, _) => SliverToBoxAdapter(
             child: _ErrorState(
               message:
-                  err is Failure ? err.message : 'Could not load bids.',
+                  failureMessage(context.l10n, err, fallback: context.l10n.discoveryBidsLoadFailed),
               onRetry: () =>
                   ref.invalidate(bookingBidsProvider(booking.id)),
             ),
@@ -413,12 +416,12 @@ class _SheetSubtitle extends StatelessWidget {
   Widget build(BuildContext context) {
     final text = bidsAsync.when(
       skipError: true,
-      loading: () => 'Loading bids...',
-      error: (e, st) => 'Could not load bids',
+      loading: () => context.l10n.discoveryLoadingBids,
+      error: (e, st) => context.l10n.discoveryBidsLoadFailedShort,
       data: (bids) {
         final count = bids.where((b) => b.bid.status == BidStatus.pending).length;
-        if (count == 0) return 'No bids yet';
-        return '$count pending ${count == 1 ? 'bid' : 'bids'} · sorted by price';
+        if (count == 0) return context.l10n.discoveryNoBidsYet;
+        return context.l10n.discoveryPendingBidsSorted(count);
       },
     );
     return Text(text, style: const TextStyle(fontSize: 12, color: _kLight));
@@ -493,7 +496,7 @@ class _BidOfferCard extends ConsumerWidget {
                         // overflow the card on a narrow screen.
                         Flexible(
                           child: Text(
-                            bidWorker.ratingLabel,
+                            workerRatingLabel(context.l10n, bidWorker.rating, bidWorker.completedJobs),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
@@ -545,7 +548,7 @@ class _BidOfferCard extends ConsumerWidget {
               const Icon(Icons.near_me_rounded, size: 12, color: _kLight),
               const SizedBox(width: 4),
               Text(
-                bidWorker.distanceLabel,
+                workerDistanceLabel(context.l10n, bidWorker.distanceKm),
                 style: const TextStyle(fontSize: 11.5, color: _kLight),
               ),
             ],
@@ -611,7 +614,7 @@ class _BidOfferCard extends ConsumerWidget {
                           ),
                         )
                       : const Icon(Icons.check_circle_outline_rounded, size: 16),
-                  label: Text(isHiring ? 'Hiring…' : 'Hire'),
+                  label: Text(isHiring ? context.l10n.discoveryHiring : context.l10n.discoveryHire),
                   style: FilledButton.styleFrom(
                     backgroundColor: _kGreen,
                     padding: const EdgeInsets.symmetric(vertical: 10),
@@ -638,7 +641,7 @@ class _BidOfferCard extends ConsumerWidget {
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
-          'Hire ${bidWorker.firstName}?',
+          context.l10n.discoveryHireNamed(bidWorker.firstName),
           style: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w700,
@@ -650,16 +653,16 @@ class _BidOfferCard extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Accept ${bidWorker.fullName}\'s bid of ${formatPkr(bidWorker.bid.amount)}?',
+              context.l10n.discoveryAcceptBid(
+            bidWorker.fullName,
+            formatPkr(bidWorker.bid.amount),
+          ),
               style: const TextStyle(fontSize: 13, color: _kGray),
             ),
             if (isPostInspectionReopen) ...[
               const SizedBox(height: 10),
-              const Text(
-                'Inspection karne wale Ustaad ko inspection fee alag deni '
-                'hogi. Naya Ustaad apne offer ke mutabiq kaam ki puri raqam '
-                'charge karega. Inspection fee uske offer mein adjust nahi '
-                'hogi.',
+              Text(
+                context.l10n.discoveryInspectionFeeSeparate,
                 style: TextStyle(
                   fontSize: 12.5,
                   color: _kAmber,
@@ -673,12 +676,12 @@ class _BidOfferCard extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel', style: TextStyle(color: _kGray)),
+            child: Text(context.l10n.commonCancel, style: TextStyle(color: _kGray)),
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
             style: FilledButton.styleFrom(backgroundColor: _kGreen),
-            child: const Text('Hire'),
+            child: Text(context.l10n.discoveryHire),
           ),
         ],
       ),
@@ -695,7 +698,7 @@ class _BidOfferCard extends ConsumerWidget {
         ref.invalidate(bookingDetailProvider(bookingId));
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Worker hired successfully'),
+            content: Text(context.l10n.discoveryWorkerHired),
             backgroundColor: _kGreen,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -712,7 +715,7 @@ class _BidOfferCard extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e is Failure ? e.message : 'Failed to hire worker.'),
+            content: Text(failureMessage(context.l10n, e, fallback: context.l10n.discoveryHireFailed)),
             backgroundColor: const Color(0xFFEF4444),
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -760,8 +763,8 @@ class _InspectingWorkerOfferCard extends ConsumerWidget {
               color: _kAmber,
               borderRadius: BorderRadius.circular(6),
             ),
-            child: const Text(
-              'INSPECTED THIS JOB',
+            child: Text(
+              context.l10n.discoveryInspectedThisJob,
               style: TextStyle(
                 fontSize: 9.5,
                 fontWeight: FontWeight.w800,
@@ -834,7 +837,7 @@ class _InspectingWorkerOfferCard extends ConsumerWidget {
                               formatPkr(r.repairQuoteTotal!),
                               style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _kAmber),
                             ),
-                            const Text('their quote', style: TextStyle(fontSize: 10, color: _kAmber)),
+                            Text(context.l10n.discoveryTheirQuote, style: TextStyle(fontSize: 10, color: _kAmber)),
                           ],
                         ),
                       )
@@ -844,8 +847,8 @@ class _InspectingWorkerOfferCard extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Inspection completed by this Ustaad.',
+          Text(
+            context.l10n.discoveryInspectionCompletedByThis,
             style: TextStyle(fontSize: 11.5, color: _kGray),
           ),
           const SizedBox(height: 10),
@@ -859,7 +862,7 @@ class _InspectingWorkerOfferCard extends ConsumerWidget {
                 ),
               ),
             ),
-            child: const Row(
+            child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(Icons.description_outlined, size: 15, color: _kAmber),
@@ -868,7 +871,7 @@ class _InspectingWorkerOfferCard extends ConsumerWidget {
                 // narrow screen.
                 Flexible(
                   child: Text(
-                    'Inspection Report Dekhein',
+                    context.l10n.discoveryViewInspectionReport,
                     style: TextStyle(
                       fontSize: 12.5,
                       fontWeight: FontWeight.w700,
@@ -899,7 +902,7 @@ class _InspectingWorkerOfferCard extends ConsumerWidget {
                           child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                         )
                       : const Icon(Icons.check_circle_outline_rounded, size: 16),
-                  label: Text(isHiring ? 'Hiring…' : 'Dobara Hire Karein'),
+                  label: Text(isHiring ? context.l10n.discoveryHiring : context.l10n.discoveryHireAgain),
                   style: FilledButton.styleFrom(
                     backgroundColor: _kAmber,
                     padding: const EdgeInsets.symmetric(vertical: 10),
@@ -921,22 +924,22 @@ class _InspectingWorkerOfferCard extends ConsumerWidget {
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
-          'Hire ${worker.firstName} again?',
+          context.l10n.discoveryHireAgainNamed(worker.firstName),
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: _kDark),
         ),
-        content: const Text(
-          'They\'ll continue using their original inspection quote.',
+        content: Text(
+          context.l10n.discoveryOriginalQuoteContinues,
           style: TextStyle(fontSize: 13, color: _kGray),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel', style: TextStyle(color: _kGray)),
+            child: Text(context.l10n.commonCancel, style: TextStyle(color: _kGray)),
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
             style: FilledButton.styleFrom(backgroundColor: _kAmber),
-            child: const Text('Hire'),
+            child: Text(context.l10n.discoveryHire),
           ),
         ],
       ),
@@ -953,7 +956,7 @@ class _InspectingWorkerOfferCard extends ConsumerWidget {
         ref.invalidate(bookingDetailProvider(bookingId));
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Worker hired successfully'),
+            content: Text(context.l10n.discoveryWorkerHired),
             backgroundColor: _kAmber,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -989,7 +992,7 @@ class _InspectingWorkerOfferCard extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e is Failure ? e.message : 'Failed to hire worker.'),
+            content: Text(failureMessage(context.l10n, e, fallback: context.l10n.discoveryHireFailed)),
             backgroundColor: const Color(0xFFEF4444),
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -1097,7 +1100,7 @@ class _ChatButtonState extends ConsumerState<_ChatButton> {
               ),
             )
           : const Icon(Icons.chat_bubble_outline_rounded, size: 15),
-      label: const Text('Chat'),
+      label: Text(context.l10n.chatTitleFallback),
       style: OutlinedButton.styleFrom(
         foregroundColor: _kGray,
         side: const BorderSide(color: _kBorder),
@@ -1156,8 +1159,8 @@ class _EmptyState extends StatelessWidget {
               child: const Icon(Icons.gavel_rounded, size: 28, color: _kGreen),
             ),
             const SizedBox(height: 14),
-            const Text(
-              'No bids yet',
+            Text(
+              context.l10n.discoveryNoBidsYet,
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
@@ -1165,8 +1168,8 @@ class _EmptyState extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 6),
-            const Text(
-              'Workers who apply will appear here.\nCheck back shortly.',
+            Text(
+              context.l10n.discoveryWorkersWillAppear,
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 12, color: _kLight, height: 1.5),
             ),
@@ -1199,7 +1202,7 @@ class _ErrorState extends StatelessWidget {
             FilledButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh_rounded, size: 16),
-              label: const Text('Try again'),
+              label: Text(context.l10n.discoveryTryAgain),
               style: FilledButton.styleFrom(
                 backgroundColor: _kGreen,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),

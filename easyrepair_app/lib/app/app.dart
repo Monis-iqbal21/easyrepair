@@ -5,6 +5,8 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/l10n/l10n_config.dart';
+import '../core/l10n/locale_provider.dart';
 import '../core/notifications/local_notification_service.dart';
 import '../core/permissions/app_permission_service.dart';
 import '../core/notifications/notification_navigator.dart';
@@ -15,6 +17,7 @@ import '../core/theme/app_theme.dart';
 import '../core/widgets/app_banner_overlay.dart';
 import '../features/auth/presentation/providers/auth_providers.dart';
 import '../features/bookings/presentation/providers/booking_providers.dart';
+import '../features/bookings/presentation/providers/review_prompt_controller.dart';
 import '../features/chat/presentation/providers/chat_providers.dart';
 import '../features/notifications/data/datasources/notification_remote_datasource.dart';
 import '../features/notifications/data/repositories/notification_repository_impl.dart';
@@ -123,11 +126,30 @@ class _EasyRepairAppState extends ConsumerState<EasyRepairApp>
             ref.invalidate(workerProfileProvider);
           } else {
             ref.invalidate(bookingsNotifierProvider);
+            // A review dismissed or failed earlier is still pending — clear
+            // this session's deferrals and re-offer it. This is also what
+            // recovers a completion push the client never saw, so a missed
+            // notification can never permanently lose the review prompt.
+            _promptPendingReviews(clearDeferrals: true);
           }
         }
       default:
         break;
     }
+  }
+
+  /// Asks the shared [ReviewPromptController] to re-check backend truth and
+  /// prompt for anything still outstanding.
+  ///
+  /// Every review prompt in the app goes through that controller, so this can
+  /// never stack a second modal on top of one already showing (including the
+  /// mandatory Find-Other-Ustaad prompt).
+  void _promptPendingReviews({bool clearDeferrals = false}) {
+    final controller = ref.read(reviewPromptControllerProvider);
+    if (clearDeferrals) controller.clearSessionDeferrals();
+    final context = ref.read(routerProvider).routerDelegate.navigatorKey.currentContext;
+    if (context == null) return;
+    unawaited(controller.refreshAndPrompt(context));
   }
 
   void _setupFcmListeners() {
@@ -214,6 +236,18 @@ class _EasyRepairAppState extends ConsumerState<EasyRepairApp>
     final router = ref.read(routerProvider);
     NotificationNavigator.navigateByRouter(router, data, isWorker: isWorker);
 
+    // A tapped completion notification is an explicit request to deal with
+    // THAT booking, so it jumps the queue ahead of unrelated older pending
+    // reviews (and overrides an earlier dismissal of it).
+    if (!isWorker &&
+        eventKey == 'booking.completed' &&
+        bookingId != null &&
+        bookingId.isNotEmpty) {
+      final controller = ref.read(reviewPromptControllerProvider);
+      final ctx = router.routerDelegate.navigatorKey.currentContext;
+      if (ctx != null) controller.enqueueFront(ctx, bookingId);
+    }
+
     // Mark the tapped notification as read and refresh unread count.
     final notificationId = data['notificationId'] as String?;
     if (notificationId != null && notificationId.isNotEmpty) {
@@ -285,6 +319,13 @@ class _EasyRepairAppState extends ConsumerState<EasyRepairApp>
         if (eventKey == 'booking.inspection.report_submitted') {
           ref.invalidate(inspectionReportProvider(bookingId));
         }
+      }
+      // A work unit just completed — prompt for its review. Backend truth is
+      // re-fetched rather than trusting this callback, and the shared
+      // controller collapses the request if a modal (e.g. the mandatory
+      // Find-Other-Ustaad one) is already showing for that booking.
+      if (eventKey == 'booking.completed') {
+        _promptPendingReviews();
       }
     }
   }
@@ -378,11 +419,19 @@ class _EasyRepairAppState extends ConsumerState<EasyRepairApp>
     });
 
     final router = ref.watch(routerProvider);
+    final appLocale = ref.watch(localeProvider);
     return MaterialApp.router(
       title: 'EasyRepair',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       routerConfig: router,
+      locale: appLocale.locale,
+      supportedLocales: appSupportedLocales,
+      localizationsDelegates: appLocalizationsDelegates,
+      // The language is always an explicit user choice, never negotiated from
+      // the device. Returning it verbatim also stops ur_Latn from collapsing
+      // into plain ur during locale resolution.
+      localeResolutionCallback: (_, _) => appLocale.locale,
       builder: (context, child) =>
           AppBannerOverlay(child: child ?? const SizedBox.shrink()),
     );

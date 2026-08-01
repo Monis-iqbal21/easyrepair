@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:handygo_app/core/l10n/l10n_config.dart';
+import 'package:handygo_app/core/l10n/app_locale.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:go_router/go_router.dart';
 import 'package:handygo_app/core/errors/failures.dart';
@@ -136,7 +138,13 @@ Widget _wrap(_FakeAuthRepository repo) {
   );
   return ProviderScope(
     overrides: [authRepositoryProvider.overrideWithValue(repo)],
-    child: MaterialApp.router(routerConfig: router),
+    child: MaterialApp.router(
+      routerConfig: router,
+      locale: AppLocale.romanUrdu.locale,
+      supportedLocales: appSupportedLocales,
+      localizationsDelegates: appLocalizationsDelegates,
+      localeResolutionCallback: (_, _) => AppLocale.romanUrdu.locale,
+    ),
   );
 }
 
@@ -204,14 +212,20 @@ void main() {
         await tester.pump(const Duration(milliseconds: 50));
 
         // Pinput renders its input capture via a raw EditableText (not a
-        // Material TextField), so it must be targeted specifically —
-        // find.byType(TextField) would only match the password fields.
-        await tester.enterText(find.byType(EditableText).first, '123456');
+        // Material TextField), so it must be targeted specifically. The phone
+        // field now stays mounted through the OTP step and precedes it, so
+        // `.first` would type into the phone (which deliberately cancels the
+        // pending OTP) — target the Pinput by position instead.
+        await tester.enterText(find.byType(EditableText).at(1), '123456');
         await tester.pump();
 
-        final passwordFields = find.byType(TextFormField);
-        await tester.enterText(passwordFields.at(0), 'newSecurePassword1');
-        await tester.enterText(passwordFields.at(1), 'newSecurePassword1');
+        // The phone field now stays mounted through the OTP step (so a
+        // mistyped number can still be corrected), and is therefore field 0 —
+        // the two password fields follow it.
+        final fields = find.byType(TextFormField);
+        expect(fields, findsNWidgets(3));
+        await tester.enterText(fields.at(1), 'newSecurePassword1');
+        await tester.enterText(fields.at(2), 'newSecurePassword1');
 
         await tester.ensureVisible(
           find.text('Naya Password Confirm Karein'),

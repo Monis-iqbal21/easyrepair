@@ -47,6 +47,7 @@ class ConversationModel {
   final String updatedAt;
   final ConversationParticipantModel otherParticipant;
   final int unreadCount;
+  final bool isSupport;
 
   const ConversationModel({
     required this.id,
@@ -59,6 +60,7 @@ class ConversationModel {
     required this.updatedAt,
     required this.otherParticipant,
     this.unreadCount = 0,
+    this.isSupport = false,
   });
 
   factory ConversationModel.fromJson(Map<String, dynamic> json) {
@@ -75,6 +77,9 @@ class ConversationModel {
         json['otherParticipant'] as Map<String, dynamic>,
       ),
       unreadCount: (json['unreadCount'] as num?)?.toInt() ?? 0,
+      // Absent on an older backend build — degrade to an ordinary chat rather
+      // than throwing.
+      isSupport: json['isSupport'] == true,
     );
   }
 
@@ -90,6 +95,7 @@ class ConversationModel {
       updatedAt: updatedAt,
       otherParticipant: otherParticipant.toEntity(),
       unreadCount: unreadCount,
+      isSupport: isSupport,
     );
   }
 }

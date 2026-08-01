@@ -8,6 +8,9 @@ import '../../domain/entities/booking_entity.dart';
 import '../../domain/entities/nearby_worker_entity.dart';
 import '../providers/booking_providers.dart';
 import '../widgets/client_chat_action.dart';
+import '../../../bookings/presentation/utils/worker_labels.dart';
+import '../../../../core/l10n/l10n_extensions.dart';
+import '../utils/booking_labels.dart';
 
 // ── Palette (matches post_job_page.dart / Handygo design system) ─────────────
 const _kGreen = Color(0xFFDB6234);
@@ -43,19 +46,18 @@ class _ChooseUstaadPageState extends ConsumerState<ChooseUstaadPage> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: const Text(
-          'Hire this Ustaad?',
+        title: Text(
+          context.l10n.chooseHireConfirmTitle,
           style: TextStyle(fontWeight: FontWeight.w700, color: _kDark),
         ),
         content: Text(
-          'Hire ${worker.fullName} for this job? You won\'t be able to '
-          'choose another Ustaad while they are assigned.',
+          context.l10n.chooseHireConfirmBodyFull(worker.fullName),
           style: const TextStyle(color: _kGray, fontSize: 14),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel', style: TextStyle(color: _kGray)),
+            child: Text(context.l10n.commonCancel, style: TextStyle(color: _kGray)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -65,7 +67,7 @@ class _ChooseUstaadPageState extends ConsumerState<ChooseUstaadPage> {
               elevation: 0,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
-            child: const Text('Hire'),
+            child: Text(context.l10n.discoveryHire),
           ),
         ],
       ),
@@ -101,7 +103,7 @@ class _ChooseUstaadPageState extends ConsumerState<ChooseUstaadPage> {
           content: Text(
             isConflict
                 ? e.message
-                : 'Unable to assign this Ustaad. Please try again.',
+                : context.l10n.chooseAssignFailed,
           ),
           behavior: SnackBarBehavior.floating,
           backgroundColor: _kRed,
@@ -194,10 +196,11 @@ class _ChooseUstaadPageState extends ConsumerState<ChooseUstaadPage> {
 
     final String? priceLabel = isStandard
         ? (standardTotal != null
-              ? 'Service Total ${formatPkr(standardTotal)}'
+              ? context.l10n.chooseServiceTotal(formatPkr(standardTotal))
               : null)
         : (booking.inspectionFeeSnapshot != null
-              ? 'Inspection fee ${formatPkr(booking.inspectionFeeSnapshot)}'
+              ? context.l10n.chooseInspectionFeeAmount(
+                    formatPkr(booking.inspectionFeeSnapshot))
               : null);
 
     return Scaffold(
@@ -206,8 +209,8 @@ class _ChooseUstaadPageState extends ConsumerState<ChooseUstaadPage> {
         backgroundColor: Colors.white,
         elevation: 0,
         foregroundColor: _kDark,
-        title: const Text(
-          'Choose Ustaad',
+        title: Text(
+          context.l10n.bookingChooseUstaad,
           style: TextStyle(fontWeight: FontWeight.w700, color: _kDark),
         ),
       ),
@@ -276,7 +279,7 @@ class _ChooseUstaadPageState extends ConsumerState<ChooseUstaadPage> {
                                 Expanded(
                                   child: Text(
                                     item.quantity > 1
-                                        ? '${item.nameSnapshot} x${item.quantity}'
+                                        ? context.l10n.bookingServiceQuantity(item.nameSnapshot, item.quantity)
                                         : item.nameSnapshot,
                                     style: const TextStyle(
                                       fontSize: 13,
@@ -302,8 +305,8 @@ class _ChooseUstaadPageState extends ConsumerState<ChooseUstaadPage> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
-                              'Total',
+                            Text(
+                              context.l10n.postJobTotal,
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w700,
@@ -339,10 +342,10 @@ class _ChooseUstaadPageState extends ConsumerState<ChooseUstaadPage> {
     if (state.isExpanding && state.workers.isEmpty && !state.hasError) {
       return Column(
         children: [
-          const Padding(
+          Padding(
             padding: EdgeInsets.fromLTRB(20, 16, 20, 4),
             child: Text(
-              'Finding verified Ustaads near you…',
+              context.l10n.chooseFindingUstaads,
               style: TextStyle(fontSize: 13.5, color: _kGray, fontWeight: FontWeight.w500),
             ),
           ),
@@ -371,8 +374,8 @@ class _ChooseUstaadPageState extends ConsumerState<ChooseUstaadPage> {
                 color: Color(0xFFCBD5E1),
               ),
               const SizedBox(height: 12),
-              const Text(
-                'Unable to load available Ustaads right now.',
+              Text(
+                context.l10n.chooseLoadFailed,
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 14, color: _kGray),
               ),
@@ -397,17 +400,16 @@ class _ChooseUstaadPageState extends ConsumerState<ChooseUstaadPage> {
                 color: Color(0xFFCBD5E1),
               ),
               const SizedBox(height: 12),
-              const Text(
-                'No verified Ustaad available right now.',
+              Text(
+                context.l10n.chooseNoUstaadAvailable,
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 14, color: _kDark, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 4),
               Text(
                 isStandard
-                    ? 'List har 45 seconds mein khud-ba-khud refresh hoti hai. '
-                        'Aap bhi refresh kar sakte hain ya thora wait karein.'
-                    : 'You can refresh or wait a little — checking available Ustaads…',
+                    ? context.l10n.chooseAutoRefreshNote
+                    : context.l10n.chooseRefreshOrWait,
                 textAlign: TextAlign.center,
                 style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8), height: 1.4),
               ),
@@ -468,8 +470,8 @@ class _RefreshButton extends StatelessWidget {
         ),
       ),
       icon: const Icon(Icons.refresh_rounded, size: 16),
-      label: const Text(
-        'Refresh',
+      label: Text(
+        context.l10n.discoveryRefresh,
         style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
       ),
     );
@@ -621,7 +623,9 @@ class _WorkerCard extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 6),
-                        _LevelBadge(label: worker.levelBadge),
+                        _LevelBadge(
+                          label: workerLevelBadge(
+                            context.l10n, worker.completedJobs)),
                       ],
                     ),
                     if (worker.recommended) ...[
@@ -637,7 +641,7 @@ class _WorkerCard extends StatelessWidget {
                           Icons.star_rounded,
                           worker.rating > 0
                               ? worker.rating.toStringAsFixed(1)
-                              : 'New',
+                              : context.l10n.chooseNewBadge,
                         ),
                         _statChip(
                           Icons.task_alt_rounded,
@@ -653,7 +657,7 @@ class _WorkerCard extends StatelessWidget {
                         ),
                         _statChip(
                           Icons.location_on_rounded,
-                          worker.distanceLabel,
+                          workerDistanceLabel(context.l10n, worker.distanceKm),
                         ),
                       ],
                     ),
@@ -713,8 +717,8 @@ class _WorkerCard extends StatelessWidget {
                             color: Colors.white,
                           ),
                         )
-                      : const Text(
-                          'Select',
+                      : Text(
+                          context.l10n.chooseSelect,
                           style: TextStyle(fontWeight: FontWeight.w700),
                         ),
                 ),
@@ -739,13 +743,13 @@ class _RecommendedBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0xFFFDBA74)),
       ),
-      child: const Row(
+      child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.thumb_up_alt_rounded, size: 11, color: Color(0xFFEA580C)),
           SizedBox(width: 4),
           Text(
-            'Recommended',
+            context.l10n.chooseRecommended,
             style: TextStyle(
               fontSize: 10.5,
               fontWeight: FontWeight.w700,
@@ -874,7 +878,9 @@ class _WorkerProfileModalContent extends StatelessWidget {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 6),
-                _LevelBadge(label: worker.levelBadge),
+                _LevelBadge(
+                          label: workerLevelBadge(
+                            context.l10n, worker.completedJobs)),
                 const SizedBox(height: 18),
                 Wrap(
                   alignment: WrapAlignment.center,
@@ -892,10 +898,10 @@ class _WorkerProfileModalContent extends StatelessWidget {
                 ),
                 if (worker.skills.isNotEmpty) ...[
                   const SizedBox(height: 20),
-                  const Align(
-                    alignment: Alignment.centerLeft,
+                  Align(
+                    alignment: AlignmentDirectional.centerStart,
                     child: Text(
-                      'Skills',
+                      context.l10n.chooseSkills,
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,

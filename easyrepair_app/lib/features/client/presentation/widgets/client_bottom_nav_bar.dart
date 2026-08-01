@@ -36,7 +36,12 @@ class ClientBottomNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).padding.bottom;
-    return Container(
+    // Excluded from localization by design: labels stay English in every
+    // language, and forcing LTR here stops Urdu RTL from reversing tab order.
+    // Verified by test/core/l10n/bottom_nav_protection_test.dart.
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: Container(
       decoration: const BoxDecoration(
         color: Colors.white,
         boxShadow: [
@@ -103,6 +108,7 @@ class ClientBottomNavBar extends StatelessWidget {
             );
           },
         ),
+      ),
       ),
     );
   }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/errors/failures.dart';
+import '../../../../core/errors/failure_messages.dart';
 import '../../../worker/presentation/providers/worker_providers.dart'
     show categoriesProvider;
 import '../../domain/repositories/auth_repository.dart';
@@ -10,6 +10,7 @@ import '../widgets/auth_header.dart';
 import '../widgets/auth_primary_button.dart';
 import '../widgets/auth_text_field.dart';
 import '../widgets/otp_input_section.dart';
+import '../../../../core/l10n/l10n_extensions.dart';
 
 /// Redesigned Ustaad registration — full CNIC name, OTP-verified phone,
 /// password (kept for fallback login), and a dynamically-loaded skill
@@ -35,6 +36,19 @@ class _WorkerOtpRegisterPageState
   bool _registerInFlight = false;
 
   @override
+  void initState() {
+    super.initState();
+    // otpRequestNotifierProvider is a global, non-autoDispose provider shared
+    // with the other OTP pages and never reset by any of them. Without this,
+    // an OTP requested earlier in the session leaves `expiresAt` non-null
+    // forever, so this page opens already in its "OTP sent" state and the
+    // number cannot be corrected. Clears state only — sends nothing.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) ref.read(otpRequestNotifierProvider.notifier).reset();
+    });
+  }
+
+  @override
   void dispose() {
     _nameCtrl.dispose();
     _phoneCtrl.dispose();
@@ -42,23 +56,31 @@ class _WorkerOtpRegisterPageState
     super.dispose();
   }
 
+  /// Editing the number invalidates the OTP requested for the previous one.
+  /// State-only: it must never re-request a code.
+  void _onPhoneChanged(String _) {
+    if (ref.read(otpRequestNotifierProvider).valueOrNull != null) {
+      ref.read(otpRequestNotifierProvider.notifier).reset();
+    }
+  }
+
   String? _validateName(String? value) {
-    if (value == null || value.trim().isEmpty) return 'Poora naam likhein.';
+    if (value == null || value.trim().isEmpty) return context.l10n.authValidationNameRequired;
     return null;
   }
 
   String? _validatePhone(String? value) {
-    if (value == null || value.isEmpty) return 'Mobile number likhein.';
+    if (value == null || value.isEmpty) return context.l10n.authValidationPhoneRequired;
     if (!RegExp(r'^(\+92|0092|92|0)?[3][0-9]{9}$').hasMatch(value.trim())) {
-      return 'Sahi Pakistani mobile number likhein.';
+      return context.l10n.authValidationPhoneInvalid;
     }
     return null;
   }
 
   String? _validatePassword(String? value) {
-    if (value == null || value.isEmpty) return 'Password likhein.';
+    if (value == null || value.isEmpty) return context.l10n.authValidationPasswordRequired;
     if (value.length < 8) {
-      return 'Password kam az kam 8 characters ka hona chahiye.';
+      return context.l10n.authValidationPasswordTooShort;
     }
     return null;
   }
@@ -86,7 +108,8 @@ class _WorkerOtpRegisterPageState
   Future<void> _register() async {
     final formValid = _formKey.currentState!.validate();
     setState(() {
-      _skillError = _selectedCategoryId == null ? 'Skill select karein.' : null;
+      _skillError =
+          _selectedCategoryId == null ? context.l10n.authSkillRequired : null;
     });
     if (!formValid || _skillError != null || _otp.length != 6 || _registerInFlight) {
       return;
@@ -109,8 +132,11 @@ class _WorkerOtpRegisterPageState
   Widget build(BuildContext context) {
     ref.listen(workerOtpRegisterNotifierProvider, (_, state) {
       if (state is AsyncError) {
-        final failure = state.error;
-        final message = failure is Failure ? failure.message : 'Account nahi ban saka.';
+        final message = failureMessage(
+          context.l10n,
+          state.error,
+          fallback: context.l10n.authErrorRegisterFailed,
+        );
         ScaffoldMessenger.of(context)
           ..hideCurrentSnackBar()
           ..showSnackBar(SnackBar(content: Text(message)));
@@ -119,8 +145,11 @@ class _WorkerOtpRegisterPageState
 
     ref.listen(otpRequestNotifierProvider, (_, state) {
       if (state is AsyncError) {
-        final failure = state.error;
-        final message = failure is Failure ? failure.message : 'Code bhejne mein masla hua.';
+        final message = failureMessage(
+          context.l10n,
+          state.error,
+          fallback: context.l10n.authErrorCodeSendFailed,
+        );
         ScaffoldMessenger.of(context)
           ..hideCurrentSnackBar()
           ..showSnackBar(SnackBar(content: Text(message)));
@@ -159,14 +188,14 @@ class _WorkerOtpRegisterPageState
                           children: [
                             SizedBox(height: isSmall ? 16 : 28),
                             AuthHeader(
-                              title: 'Naya Ustaad account\nbanayein',
-                              subtitle: 'HandyGo par apna naya account banayein.',
+                              title: context.l10n.authWorkerRegisterTitle,
+                              subtitle: context.l10n.authWorkerTypeNewSubtitle,
                               isSmall: isSmall,
                               showBackButton: true,
                             ),
                             SizedBox(height: isSmall ? 20 : 32),
-                            const Text(
-                              'Apne CNIC wala poora naam dalain',
+                            Text(
+                              context.l10n.authCnicNameHint,
                               style: TextStyle(
                                 fontSize: 12.5,
                                 color: kAuthGray,
@@ -176,33 +205,36 @@ class _WorkerOtpRegisterPageState
                             const SizedBox(height: 6),
                             AuthTextField(
                               controller: _nameCtrl,
-                              label: 'Poora naam',
-                              hint: 'Muhammad Ali Khan',
+                              label: context.l10n.authFieldFullNameShort,
+                              hint: context.l10n.authHintExampleFullName,
                               prefixIcon: Icons.badge_outlined,
                               validator: _validateName,
                               enabled: !showOtp,
                             ),
                             const SizedBox(height: 14),
+                            // Stays editable after the code is sent — editing
+                            // clears the previous request's countdown rather
+                            // than locking the field (see _onPhoneChanged).
                             AuthTextField(
                               controller: _phoneCtrl,
-                              label: 'Mobile number',
+                              label: context.l10n.authFieldMobileNumber,
                               hint: '03XXXXXXXXX',
                               keyboardType: TextInputType.phone,
                               prefixIcon: Icons.phone_outlined,
                               validator: _validatePhone,
-                              enabled: !showOtp,
+                              onChanged: _onPhoneChanged,
                             ),
                             const SizedBox(height: 14),
                             AuthTextField(
                               controller: _passwordCtrl,
-                              label: 'Password banayein',
+                              label: context.l10n.authCreatePasswordLabel,
                               prefixIcon: Icons.lock_outline_rounded,
                               obscureText: true,
                               validator: _validatePassword,
                             ),
                             const SizedBox(height: 16),
-                            const Text(
-                              'Apni skill select karein',
+                            Text(
+                              context.l10n.authSelectSkill,
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
@@ -224,8 +256,8 @@ class _WorkerOtpRegisterPageState
                                   ),
                                 ),
                               ),
-                              error: (e, _) => const Text(
-                                'Skills load nahi ho sakin. Dobara koshish karein.',
+                              error: (e, _) => Text(
+                                context.l10n.authSkillsLoadFailed,
                                 style: TextStyle(
                                   color: Color(0xFFDC2626),
                                   fontSize: 12.5,
@@ -242,8 +274,8 @@ class _WorkerOtpRegisterPageState
                                   child: DropdownButton<String>(
                                     value: _selectedCategoryId,
                                     isExpanded: true,
-                                    hint: const Text(
-                                      'Skill select karein',
+                                    hint: Text(
+                                      context.l10n.authSkillRequired,
                                       style: TextStyle(
                                         color: kAuthGray,
                                         fontSize: 14,
@@ -291,7 +323,9 @@ class _WorkerOtpRegisterPageState
                             ],
                             SizedBox(height: isSmall ? 20 : 28),
                             AuthPrimaryButton(
-                              label: showOtp ? 'Account Banayein' : 'Code Bhejein',
+                              label: showOtp
+                                  ? context.l10n.authButtonCreateAccount
+                                  : context.l10n.authButtonSendCode,
                               isLoading: showOtp ? _registerInFlight : _sendInFlight,
                               onPressed: showOtp
                                   ? (_otp.length == 6 ? _register : null)

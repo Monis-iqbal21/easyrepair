@@ -1,0 +1,1477 @@
+{
+  "@@locale": "en",
+  "languageSectionTitle": "Preferences",
+  "@languageSectionTitle": {
+    "description": "Settings section heading above the language row"
+  },
+  "languageRowLabel": "Language",
+  "@languageRowLabel": {
+    "description": "Settings row that opens the language selector"
+  },
+  "languageSheetTitle": "Choose your language",
+  "@languageSheetTitle": {
+    "description": "Title of the language selector bottom sheet"
+  },
+  "authRoleQuestion": "What would you like to do on HandyGo?",
+  "@authRoleQuestion": {
+    "description": "Role selection screen heading"
+  },
+  "authRoleClientTitle": "I need an Ustaad for work at home",
+  "authRoleClientSubtitle": "Book verified Ustaads and get your work done easily.",
+  "authRoleWorkerTitle": "I am an Ustaad and want to find work",
+  "authRoleWorkerSubtitle": "Join HandyGo and find work that matches your skills.",
+  "authWorkerTypeQuestion": "Are you already a HandyGo\nUstaad?",
+  "@authWorkerTypeQuestion": {
+    "description": "Ustaad new-or-existing screen heading. The line break is deliberate."
+  },
+  "authWorkerTypeNewTitle": "I am a new Ustaad",
+  "authWorkerTypeNewSubtitle": "Create your new account on HandyGo.",
+  "authWorkerTypeExistingTitle": "I already have an account",
+  "authWorkerTypeExistingSubtitle": "Log in to your account with OTP or password.",
+  "authWelcomeToastTitle": "Welcome, {name}!",
+  "@authWelcomeToastTitle": {
+    "description": "Toast after sign-in. {name} is the user's own name and is never translated.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "authWelcomeToastSubtitle": "Your account is ready to go.",
+  "authOtpExpired": "The code has expired. Request a new one.",
+  "authOtpExpiresIn": "Code expires in {time}",
+  "@authOtpExpiresIn": {
+    "description": "Countdown until the OTP stops working",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "authOtpResendCooldown": "Resend code ({seconds}s)",
+  "@authOtpResendCooldown": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "authOtpResend": "Resend code",
+  "authFieldFullName": "Your full name",
+  "authFieldFullNameShort": "Full name",
+  "authHintFullName": "Enter your full name",
+  "authFieldMobileNumber": "Mobile number",
+  "authFieldMobileNumberTitle": "Mobile Number",
+  "authFieldPassword": "Password",
+  "authFieldConfirmPassword": "Re-enter password",
+  "authValidationNameRequired": "Please enter your name.",
+  "authValidationPhoneRequired": "Please enter a mobile number.",
+  "authValidationPhoneInvalid": "Please enter a valid Pakistani mobile number.",
+  "authValidationPasswordRequired": "Please enter a password.",
+  "authValidationPasswordTooShort": "Password must be at least 8 characters.",
+  "authValidationConfirmPasswordRequired": "Please re-enter your password.",
+  "authValidationPasswordsDoNotMatch": "Passwords do not match.",
+  "authClientLoginTitle": "Log in to book\nan Ustaad",
+  "@authClientLoginTitle": {
+    "description": "Client sign-in heading. The line break is deliberate."
+  },
+  "authClientOtpSubtitle": "Enter your name and mobile number. We will send a verification code.",
+  "authClientPasswordSubtitle": "Continue with your mobile number and password.",
+  "authOtpWillBeSentNotice": "A verification code will be sent to this number.",
+  "authButtonSendCode": "Send Code",
+  "authButtonVerifyAndContinue": "Verify and Continue",
+  "authButtonLogIn": "Log In",
+  "authButtonCreateAccount": "Create Account",
+  "authButtonForgotPassword": "Forgot password?",
+  "authButtonContinueWithOtp": "Continue with OTP",
+  "authButtonContinueWithPassword": "Continue with password",
+  "authButtonUstaadLogin": "Ustaad Login",
+  "authErrorGeneric": "Something went wrong.",
+  "authErrorOtpSendFailed": "The OTP could not be sent right now. Continue with your password, or try again shortly.",
+  "commonCancel": "Cancel",
+  "commonSave": "Save",
+  "commonDelete": "Delete",
+  "commonRetry": "Retry",
+  "commonUser": "User",
+  "commonYesterday": "Yesterday",
+  "commonUploading": "Uploading...",
+  "chatTitleFallback": "Chat",
+  "chatListTitle": "Messages",
+  "chatSearchHint": "Search chats or type “support”",
+  "chatEmptyTitle": "No conversations yet",
+  "chatEmptySubtitle": "Messages will appear here",
+  "chatNoResultsTitle": "No chats found",
+  "chatNoResultsSubtitle": "Try a different name, or search “support”",
+  "chatNoMessagesYet": "No messages yet. Say hello!",
+  "chatSupportBanner": "Write your problem or question here. HandyGo Support will help you.",
+  "chatEditMessage": "Edit message",
+  "chatEditHint": "Edit your message...",
+  "chatDeleteMessage": "Delete message",
+  "chatDeleteConfirm": "This message will be deleted for everyone in the chat.",
+  "chatMicPermissionRequired": "Microphone permission is needed to send a voice message.",
+  "chatLocationPermissionDenied": "Location permission denied",
+  "chatLocationPermissionPermanentlyDenied": "Location permission permanently denied — enable it in Settings",
+  "chatLocationFailed": "Could not get your location: {error}",
+  "@chatLocationFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "weekdayMon": "Mon",
+  "weekdayTue": "Tue",
+  "weekdayWed": "Wed",
+  "weekdayThu": "Thu",
+  "weekdayFri": "Fri",
+  "weekdaySat": "Sat",
+  "weekdaySun": "Sun",
+  "commonContinue": "Continue",
+  "commonNotNow": "Not now",
+  "commonToday": "Today",
+  "commonOpenSettings": "Open Settings",
+  "permissionsTitle": "Allow permissions",
+  "permissionsRationale": "HandyGo needs camera, microphone, and location permissions so you can upload photos and videos, send voice notes, and share or track job location.",
+  "permissionsBlockedTitle": "Permissions blocked",
+  "permissionsBlockedBody": "Some permissions were permanently denied. Open Settings to enable them manually.",
+  "generalInfoTitle": "General",
+  "generalAccountSection": "Account Info",
+  "generalFirstName": "First Name",
+  "generalLastName": "Last Name",
+  "generalPhoneNumber": "Phone Number",
+  "generalNamePhoneLocked": "Name and phone are managed by your account and cannot be changed here.",
+  "generalSecuritySection": "Security",
+  "generalChangePassword": "Change Password",
+  "generalCurrentPassword": "Current Password",
+  "generalNewPassword": "New Password",
+  "generalConfirmNewPassword": "Re-enter new password",
+  "generalChangePasswordComingSoon": "Changing your password in the app is coming soon. Contact support if you need help right away.",
+  "generalUpdatePassword": "Update Password",
+  "distanceAtYourLocation": "Right at your location",
+  "distanceMetersAway": "{meters} m away",
+  "@distanceMetersAway": {
+    "placeholders": {
+      "meters": {
+        "type": "int"
+      }
+    }
+  },
+  "distanceKmAway": "{km} km away",
+  "@distanceKmAway": {
+    "placeholders": {
+      "km": {
+        "type": "String"
+      }
+    }
+  },
+  "distanceUnderOneKm": "< 1 km away",
+  "notificationsTitle": "Notifications",
+  "notificationsMarkAllRead": "Mark all read",
+  "notificationsEmptyTitle": "No notifications yet",
+  "notificationsEmptySubtitle": "You will be notified about job updates,\nreviews, and more.",
+  "timeJustNow": "Just now",
+  "timeMinutesAgo": "{minutes}m ago",
+  "@timeMinutesAgo": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "timeHoursAgo": "{hours}h ago",
+  "@timeHoursAgo": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "workerRatingNew": "New worker",
+  "workerRatingNone": "No rating",
+  "workerRatingWithJobs": "{rating} ({count, plural, =1{{count} job} other{{count} jobs}})",
+  "@workerRatingWithJobs": {
+    "placeholders": {
+      "rating": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatSeen": "Seen",
+  "chatMessageDeleted": "This message was deleted",
+  "chatEdited": "edited",
+  "chatCouldNotOpenMaps": "Could not open maps",
+  "chatSharedLocation": "Shared location",
+  "chatComposerHint": "Type a message...",
+  "chatAttachPhoto": "Photo",
+  "chatAttachVideo": "Video",
+  "chatAttachVoice": "Voice",
+  "chatAttachLocation": "Location",
+  "chatTakePhoto": "Take Photo",
+  "chatRecordVideo": "Record Video",
+  "monthJan": "Jan",
+  "monthFeb": "Feb",
+  "monthMar": "Mar",
+  "monthApr": "Apr",
+  "monthMay": "May",
+  "monthJun": "Jun",
+  "monthJul": "Jul",
+  "monthAug": "Aug",
+  "monthSep": "Sep",
+  "monthOct": "Oct",
+  "monthNov": "Nov",
+  "monthDec": "Dec",
+  "dateDayMonthYear": "{day} {month} {year}",
+  "@dateDayMonthYear": {
+    "placeholders": {
+      "day": {
+        "type": "int"
+      },
+      "month": {
+        "type": "String"
+      },
+      "year": {
+        "type": "int"
+      }
+    }
+  },
+  "authPasswordResetSuccess": "Your password has been changed successfully.",
+  "authForgotPasswordPrompt": "Enter your registered mobile number",
+  "authSendOtp": "Send OTP",
+  "authNewPasswordRequired": "Please enter a new password.",
+  "authOr": "Or",
+  "authLoginWithPassword": "Log In With Password",
+  "authWorkerRegisterTitle": "Create a new Ustaad\naccount",
+  "authCnicNameHint": "Enter your full name exactly as on your CNIC",
+  "authCreatePasswordLabel": "Create a password",
+  "authSelectSkill": "Select your skill",
+  "authSkillsLoadFailed": "Skills could not load. Please try again.",
+  "authSkillRequired": "Please select a skill.",
+  "authConfirmNewPasswordButton": "Confirm New Password",
+  "postJobOffersSoon": "You will start getting Ustaad offers within minutes.",
+  "postJobSelectDateTimeFirst": "Select date and time to continue.",
+  "postJobGoesLiveAt": "Job goes live at {time} on {date} — 1 hour before the Ustaad arrival time.",
+  "@postJobGoesLiveAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "postJobAddPhotoVideo": "Add Photo/Video",
+  "postJobChoosePhoto": "Choose Photo",
+  "postJobChooseVideo": "Choose Video - 30 sec",
+  "postJobCamera": "Camera",
+  "postJobRecordVideo30": "Record Video - 30 sec",
+  "errorNoInternet": "No internet connection. Please check your network.",
+  "postJobSaveFailed": "Unable to save booking. Please try again.",
+  "postJobBookingUpdatedTitle": "Booking Updated!",
+  "postJobBookingUpdatedBody": "Your booking details have been updated successfully.",
+  "postJobViewBooking": "View Booking",
+  "postJobSelectService": "Select Service",
+  "postJobServicesLoadFailed": "Failed to load services. Please restart the app.",
+  "postJobBookingType": "Booking Type",
+  "postJobNormal": "Normal",
+  "postJobUrgent": "Urgent",
+  "postJobDateTime": "Date & Time",
+  "postJobArrivalTime": "Arrival time",
+  "postJobWhatNeedsFixing": "What needs fixing?",
+  "postJobIssueHint": "e.g. AC not cooling, water leaking, switch not working",
+  "postJobDescription": "Description",
+  "postJobDescriptionHint": "Describe the issue (optional)",
+  "postJobServiceAddress": "Service Address",
+  "postJobAddressHint": "e.g. House 12, Street 5, DHA Phase 6, Karachi",
+  "postJobAddLocationFirst": "Add your location to continue.",
+  "postJobVoiceAndPhotos": "Voice note & photos",
+  "postJobVoiceAttached": "Voice note attached",
+  "postJobAttachmentCount": "{count} of 4 · Photos or 30-sec video",
+  "@postJobAttachmentCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "postJobAttachmentsWillBeRemoved": "{count, plural, =1{{count} existing attachment will be removed on save.} other{{count} existing attachments will be removed on save.}}",
+  "@postJobAttachmentsWillBeRemoved": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "postJobTapToRecord": "Tap to record — describe the problem in your own words",
+  "postJobService": "Service",
+  "postJobWhatDoYouNeed": "What do you need?",
+  "postJobChooseOneOption": "Choose one option",
+  "postJobUnderstandingIsOurJob": "Understanding the problem is our job — not yours.",
+  "postJobStandardWork": "Standard work",
+  "postJobStandardWorkSubtitle": "Work and price are clear upfront.",
+  "postJobOr": "OR",
+  "postJobIKnowThePart": "I know the exact part",
+  "postJobIKnowThePartSubtitle": "Ustaads send their rate, you choose",
+  "postJobIKnowThePartWarning": "Only choose this if you are completely sure about the part. If it turns out wrong, the Ustaad visit is wasted and a new rate will apply.",
+  "postJobSomethingIsBroken": "Something is broken",
+  "postJobDontKnowIssue": "I do not know what the problem is",
+  "postJobInspectionFeeTitle": "Inspection Fee",
+  "postJobNothingOpensBeforeRate": "Nothing is opened before the rate is given — what is quoted is what is charged.",
+  "postJobChooseStandardService": "Choose a standard service",
+  "postJobServicesUnavailable": "Unable to load services. Please go back and try again.",
+  "postJobSelectCategoryFirst": "Select a service category first.",
+  "postJobStandardServicesUnavailable": "Unable to load standard services.",
+  "postJobNoStandardServices": "No standard services are available for this service yet. Please choose another option above.",
+  "postJobMultiSelectHint": "You can choose more than one service.",
+  "postJobTotal": "Total",
+  "postJobInspectionFeeLower": "Inspection fee",
+  "postJobInspectionFeeLoadFailed": "Unable to load the inspection fee.",
+  "postJobHowInspectionWorks": "How inspection works",
+  "postJobWhatDoYouSee": "What do you see? (optional)",
+  "postJobWhatDoYouSeeHint": "e.g. AC turns on but room stays hot…",
+  "postJobBack": "Back",
+  "postJobNext": "Next",
+  "postJobStepAddress": "Address",
+  "postJobStepDetails": "Details",
+  "postJobStepTimeSelection": "Time Selection",
+  "postJobStepIndicator": "Step {current} of {total}  ·  {title}",
+  "@postJobStepIndicator": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      },
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "clientHomeYourArea": "Your Area",
+  "clientHomeSectionRepairs": "Repairs",
+  "clientHomeSectionCleaning": "Cleaning",
+  "clientHomeSectionPainting": "Painting",
+  "clientHomeSectionOutdoorVehicle": "Outdoor & Vehicle",
+  "serviceAcTechnician": "AC Technician",
+  "serviceElectrician": "Electrician",
+  "servicePlumber": "Plumber",
+  "serviceCarpenter": "Carpenter",
+  "serviceDeepCleaning": "Deep Cleaning",
+  "servicePestControl": "Pest Control",
+  "servicePainter": "Painter",
+  "serviceGardening": "Gardening",
+  "serviceCarWash": "Car Wash",
+  "serviceMoversPackers": "Movers & Packers",
+  "clientHomeNoServicesFound": "No services found",
+  "clientHomeSearchResults": "Search Results",
+  "clientHomeBookUrgently": "Book Urgently",
+  "clientHomeChooseServiceHelp": "Choose a service to get help right away.",
+  "clientHomeGreeting": "Hi {name} 👋",
+  "@clientHomeGreeting": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "clientHomeBeatTheHeat": "Beat the Karachi Heat ☀️",
+  "clientHomeAcServiceBanner": "Get your AC serviced\nbefore it gets worse.",
+  "clientHomeBookAcTechnician": "Book AC Technician",
+  "clientHomeNeedHelpNow": "Need help now?",
+  "clientHomeUrgentSubtitle": "For urgent issues, book instantly.",
+  "clientHome247Service": "24/7 Service",
+  "clientHomeRecent": "Recent",
+  "clientHomeSeeAll": "See all",
+  "timeNow": "Now",
+  "timeMinutesShort": "{minutes}m",
+  "@timeMinutesShort": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "timeHoursShort": "{hours}h",
+  "@timeHoursShort": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "clientProfileTitle": "Profile",
+  "clientProfileAvatarLocalOnly": "Profile image saved on this device. Cloud sync is not available yet.",
+  "settingsSectionAccount": "Account",
+  "settingsSectionLegal": "Legal",
+  "settingsSectionDangerZone": "Danger Zone",
+  "settingsPrivacyPolicy": "Privacy Policy",
+  "settingsTermsConditions": "Terms & Conditions",
+  "profilePhotoTitle": "Profile Photo",
+  "commonGallery": "Gallery",
+  "commonRemove": "Remove",
+  "deleteAccountConfirmTitle": "Delete account?",
+  "deleteAccountConfirmBody": "This will delete your HandyGo account and sign you out. This action may not be reversible.",
+  "deleteAccountTitle": "Delete Account",
+  "deleteAccountRequestByEmail": "Request deletion by email",
+  "commonLogout": "Logout",
+  "clientJobsTitle": "My Jobs",
+  "clientJobsEmpty": "📋  No jobs yet",
+  "locationSelected": "Selected location",
+  "locationSearchHint": "Search for an area or landmark…",
+  "locationGettingAddress": "Getting address…",
+  "locationUseThis": "Use This Location",
+  "serviceComingSoon": "Coming Soon",
+  "clientHomeSearchHint": "Search services...",
+  "profileDeleteFailed": "Failed to delete account.",
+  "serviceBookNow": "Book Now",
+  "serviceSelectedTick": "Selected ✓",
+  "locationMoveMapHint": "Move the map or tap to pick a location",
+  "slotMorning": "Morning",
+  "slotAfternoon": "Afternoon",
+  "slotEvening": "Evening",
+  "slotNight": "Night",
+  "slotMorningRange": "9 AM – 12 PM",
+  "slotAfternoonRange": "12 PM – 4 PM",
+  "slotEveningRange": "4 PM – 8 PM",
+  "slotNightRange": "8 PM – 11 PM",
+  "postJobSelectDate": "Select date",
+  "postJobLocationAdded": "Location added",
+  "postJobCurrentLocation": "Current Location",
+  "postJobMapLocationAdded": "Map location added",
+  "postJobPickOnMap": "Pick on Map",
+  "postJobMapPrefix": "Map: {address}",
+  "@postJobMapPrefix": {
+    "placeholders": {
+      "address": {
+        "type": "String"
+      }
+    }
+  },
+  "postJobGpsPrefix": "GPS: {coordinates}",
+  "@postJobGpsPrefix": {
+    "placeholders": {
+      "coordinates": {
+        "type": "String"
+      }
+    }
+  },
+  "postJobBookService": "Book Service",
+  "postJobSaveChanges": "Save Changes",
+  "postJobBookAService": "Book a Service",
+  "postJobEditBooking": "Edit Booking",
+  "postJobNotAvailable": "Not available",
+  "bookingLoadFailed": "Failed to load booking.",
+  "bookingServiceDetails": "Service Details",
+  "bookingIssue": "Issue",
+  "bookingUrgency": "Urgency",
+  "bookingTiming": "Timing",
+  "bookingNotScheduledYet": "Not scheduled yet",
+  "bookingTimeWindow": "Time Window",
+  "bookingScheduledDate": "Scheduled Date",
+  "bookingCreated": "Created",
+  "bookingCancellationReason": "Cancellation Reason",
+  "bookingInspectionCompletedBy": "Inspection completed by",
+  "bookingWorkBeingCompletedBy": "Work being completed by",
+  "bookingInspectionAndRepairBy": "Inspection & repair by",
+  "bookingAssignedWorker": "Assigned Worker",
+  "bookingDetailsTitle": "Booking Details",
+  "bookingNoAddressProvided": "No address provided",
+  "bookingAttachments": "Attachments",
+  "bookingPhotosCount": "Photos ({count})",
+  "@bookingPhotosCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "bookingVideosCount": "Videos ({count})",
+  "@bookingVideosCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "bookingVoiceNote": "Voice Note",
+  "bookingPricing": "Pricing",
+  "bookingEstimatedPrice": "Estimated Price",
+  "bookingInspectionCharges": "Inspection Charges",
+  "bookingWorkCharges": "Work Charges",
+  "bookingFinalPrice": "Final Price",
+  "bookingJobLocation": "Job location",
+  "bookingLiveLocation": "Live Location",
+  "bookingTrackingWorker": "Tracking {name}",
+  "@bookingTrackingWorker": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "bookingWaitingForWorkerLocation": "Waiting for worker to share location",
+  "bookingLiveLocationNotAvailable": "Live location not available yet",
+  "bookingLocationPending": "Location pending",
+  "bookingMapPreviewUnavailable": "Map preview unavailable",
+  "bookingMapImageLoadFailed": "Could not load the map image",
+  "bookingAppearsWhenEnRoute": "Will appear once the worker is en route",
+  "bookingWorkerNearlyThere": "Worker is nearly there",
+  "bookingWorkerOnTheWay": "Worker is on the way",
+  "bookingLiveUpdatedNow": "Live · Updated now",
+  "bookingStatusTimeline": "Job Status Timeline",
+  "bookingJobExpired": "This job expired",
+  "bookingExpiredExplanation": "No worker was hired within 72 hours. Make it live again to keep looking.",
+  "bookingMakeLiveFailed": "Failed to make job live again.",
+  "bookingMakeLiveAgain": "Make Live Again",
+  "bookingPreviousUstaadCancelledNamed": "Previous Ustaad cancelled: {name}",
+  "@bookingPreviousUstaadCancelledNamed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "bookingPreviousUstaadCancelled": "Previous Ustaad cancelled",
+  "bookingUstaadCancelledJob": "The Ustaad cancelled this job",
+  "bookingReasonPrefix": "Reason: {reason}",
+  "@bookingReasonPrefix": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "bookingFindAnotherUstaadFailed": "Failed to find another Ustaad.",
+  "bookingFindAnotherUstaad": "Find Another Ustaad",
+  "bookingSelectedServices": "Selected Services",
+  "bookingServiceQuantity": "{name} x{quantity}",
+  "@bookingServiceQuantity": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "quantity": {
+        "type": "int"
+      }
+    }
+  },
+  "bookingChooseUstaad": "Choose Ustaad",
+  "bookingSeeWorkerBids": "See Worker Bids",
+  "bookingTrackWorker": "Track Worker",
+  "bookingReviewWorker": "Review Worker",
+  "bookingYourReview": "Your Review",
+  "bookingCallWorker": "Call Worker",
+  "bookingCancelBooking": "Cancel Booking",
+  "bookingCancelFailed": "The booking could not be cancelled.",
+  "bookingChatWithWorker": "Chat with Worker",
+  "bookingLoadFailedShort": "Failed to load booking",
+  "workerLevelMaster": "Master",
+  "workerLevelElite": "Elite",
+  "workerLevelProUstaad": "Pro Ustaad",
+  "workerLevelPro": "Pro",
+  "workerLevelStandard": "Standard",
+  "trackLoadFailed": "Failed to load tracking data.",
+  "trackTitleUstaad": "Track Ustaad",
+  "trackNoLocationForBooking": "Location not available for this booking.",
+  "trackUstaadLocationUnavailable": "The Ustaad's location is not available yet.",
+  "trackJobCompleted": "Job Completed ✓",
+  "trackQuoteAcceptedRepairInProgress": "Quote Accepted — Repair In Progress",
+  "trackReportSubmitted": "Report Submitted",
+  "trackInspectionInProgress": "Inspection In Progress",
+  "trackReviewReportAndDecide": "Review the report below and decide how to proceed",
+  "trackWorkerLabel": "Worker",
+  "trackHiredAt": "Hired at {price}",
+  "@trackHiredAt": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "trackPhoneUnavailable": "Phone number unavailable",
+  "trackDialerFailed": "Could not open phone dialer",
+  "trackAssignedWorkerCaps": "ASSIGNED WORKER",
+  "trackCall": "Call",
+  "trackLocationUnavailable": "Location unavailable",
+  "trackArrivingIn": "{count, plural, =1{Arriving in ~{count} minute} other{Arriving in ~{count} minutes}}",
+  "@trackArrivingIn": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "trackEtaUnavailable": "ETA unavailable",
+  "trackStepHired": "Hired",
+  "trackStepUstaadOnTheWay": "Ustaad on the way",
+  "trackStepInspectionInProgress": "Inspection in progress",
+  "trackStepReportSubmitted": "Report submitted",
+  "trackStepClosedAfterInspection": "Closed after inspection",
+  "trackStepQuoteAccepted": "Quote accepted",
+  "trackStepReviewed": "Reviewed",
+  "trackStepWorkInProgress": "Work in progress",
+  "trackStepReviewPending": "Review pending",
+  "trackJobProgress": "Job Progress",
+  "trackLoadFailedShort": "Failed to load tracking",
+  "discoveryJobLocation": "Job Location",
+  "discoveryJobLocationUnavailable": "Job location not available",
+  "discoveryLiveWorkerOffers": "Live Worker Offers",
+  "discoveryRefresh": "Refresh",
+  "discoveryBidsLoadFailed": "Could not load bids.",
+  "discoveryNoBidsYet": "No bids yet",
+  "discoveryPendingCount": "{count, plural, =1{{count} pending} other{{count} pending}}",
+  "@discoveryPendingCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "discoveryHire": "Hire",
+  "discoveryHiring": "Hiring…",
+  "discoveryHireNamed": "Hire {name}?",
+  "@discoveryHireNamed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "discoveryAcceptBid": "Accept {name}'s bid of {price}?",
+  "@discoveryAcceptBid": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "discoveryInspectionFeeSeparate": "The inspecting Ustaad's inspection fee is paid separately. The new Ustaad will charge the full amount of their own offer, and the inspection fee is not adjusted into it.",
+  "discoveryWorkerHired": "Worker hired successfully",
+  "discoveryHireFailed": "Failed to hire worker.",
+  "discoveryInspectedThisJob": "INSPECTED THIS JOB",
+  "discoveryTheirQuote": "their quote",
+  "discoveryInspectionCompletedByThis": "Inspection completed by this Ustaad.",
+  "discoveryViewInspectionReport": "View Inspection Report",
+  "discoveryHireAgain": "Hire Again",
+  "discoveryHireAgainNamed": "Hire {name} again?",
+  "@discoveryHireAgainNamed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "discoveryOriginalQuoteContinues": "They'll continue using their original inspection quote.",
+  "discoveryWorkersWillAppear": "Workers who apply will appear here.\nCheck back shortly.",
+  "discoveryTryAgain": "Try again",
+  "inspectionReportTitle": "Inspection Report",
+  "inspectionReportNotAvailable": "Report not available yet.",
+  "inspectionUstaadVoiceNote": "Ustaad Voice Note",
+  "inspectionPhotos": "Photos",
+  "inspectionParts": "Parts",
+  "inspectionRepairQuoteTotal": "Repair quote total",
+  "inspectionAcceptQuoteContinue": "Accept Quote & Continue Repair",
+  "inspectionFindOtherUstaad": "Find Other Ustaad",
+  "inspectionCloseAfterInspection": "Close After Inspection",
+  "inspectionAcceptQuoteConfirmTitle": "Accept quote & continue repair?",
+  "inspectionCloseConfirmTitle": "Close after inspection?",
+  "inspectionAcceptQuoteConfirmBody": "The same Ustaad will continue the repair. The inspection fee is waived — you will only pay the repair quote.",
+  "inspectionCloseConfirmBody": "You will only be charged the inspection fee. The job will be marked completed.",
+  "inspectionClosedAfterInspection": "Closed after inspection.",
+  "inspectionQuoteAcceptedRepairInProgress": "Quote accepted — repair in progress.",
+  "inspectionActionFailed": "Action failed. Try again.",
+  "inspectionFindAnotherConfirmTitle": "Find another Ustaad?",
+  "inspectionFindAnotherConfirmBody": "Confirming completes the inspection and charges the inspection fee. Your job goes live again so other Ustaads can send their rates.",
+  "inspectionBadge": "Inspection",
+  "chooseHireConfirmTitle": "Hire this Ustaad?",
+  "chooseHireConfirmBody": "Hire {name} for this job? You won't be able to choose a different Ustaad afterwards.",
+  "@chooseHireConfirmBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "chooseAssignFailed": "Unable to assign this Ustaad. Please try again.",
+  "chooseServiceTotal": "Service Total {price}",
+  "@chooseServiceTotal": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "chooseInspectionFeeAmount": "Inspection fee {price}",
+  "@chooseInspectionFeeAmount": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "chooseFindingUstaads": "Finding verified Ustaads near you…",
+  "chooseLoadFailed": "Unable to load available Ustaads right now.",
+  "chooseNoUstaadAvailable": "No verified Ustaad available right now.",
+  "chooseAutoRefreshNote": "The list refreshes automatically every 45 seconds.",
+  "chooseRefreshOrWait": "You can refresh or wait a little — checking available Ustaads…",
+  "chooseNewBadge": "New",
+  "chooseSelect": "Select",
+  "chooseRecommended": "Recommended",
+  "chooseSkills": "Skills",
+  "myBookingsLoadFailed": "Unable to load your bookings. Please try again.",
+  "myBookingsTitle": "My Bookings",
+  "myBookingsEmptyTitle": "No bookings yet",
+  "myBookingsNoResults": "No results found",
+  "myBookingsAdjustFilters": "Try adjusting your filters or search term",
+  "myBookingsBookFirst": "Book your first service to get started",
+  "myBookingsRefreshFailed": "Could not refresh. Pull to retry.",
+  "myBookingsSomethingWrong": "Something went wrong",
+  "cardTodayAt": "Today, {time}",
+  "@cardTodayAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "cardGoesLiveBefore": "Goes live 1h before window",
+  "cardWorkersNotified": "Workers are notified immediately",
+  "cardSearchingWorkers": "Searching for workers...",
+  "cardNoWorkerYet": "No worker yet",
+  "cardEstimatePrefix": "est.",
+  "cardFindWorkers": "Find Workers",
+  "cardEdit": "Edit",
+  "filterTitle": "Filter Bookings",
+  "filterReset": "Reset",
+  "filterAll": "All",
+  "filterUrgentOption": "⚡ Urgent",
+  "filterNormalOption": "🗓 Normal",
+  "filterSortByDate": "Sort by date",
+  "filterNewestFirst": "Newest first",
+  "filterOldestFirst": "Oldest first",
+  "filterApply": "Apply Filters",
+  "searchBookingsHint": "Search bookings, services...",
+  "cancelReasonTitle": "Reason for cancelling the booking",
+  "cancelReasonRequired": "Please give a reason.",
+  "cancelReasonSelect": "Select a reason",
+  "cancelReasonWriteOwn": "Write your own reason",
+  "reviewSubmitFailed": "The review could not be submitted.",
+  "reviewPromptBeforeContinuing": "Please review your Ustaad before continuing.",
+  "reviewHowWasWork": "How was the work?",
+  "reviewCommentHint": "Write a comment (optional)...",
+  "reviewSubmit": "Submit Review",
+  "reviewLater": "Later",
+  "chatOpenFailed": "Could not open chat.",
+  "mediaTapToPlay": "Tap to play",
+  "inspectionConfirm": "Confirm",
+  "trackSubtextCompleted": "{name} has completed the job",
+  "@trackSubtextCompleted": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "trackSubtextContinuingRepair": "{name} is continuing the repair",
+  "@trackSubtextContinuingRepair": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "trackSubtextOnTheWay": "{name} is on the way to your location",
+  "@trackSubtextOnTheWay": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "trackSubtextArrived": "{name} has arrived at your location",
+  "@trackSubtextArrived": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "trackSubtextInspecting": "{name} is inspecting the issue",
+  "@trackSubtextInspecting": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "trackSubtextHiredForInspection": "{name} has been hired for this inspection",
+  "@trackSubtextHiredForInspection": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "trackSubtextWorking": "{name} is working on your job",
+  "@trackSubtextWorking": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "trackSubtextHiredForJob": "{name} has been hired for this job",
+  "@trackSubtextHiredForJob": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "urgentWithin1Hour": "Within 1 hour",
+  "urgentWithin2Hours": "Within 2 hours",
+  "urgentWithin4Hours": "Within 4 hours",
+  "inspectionFeePaid": "Inspection fee paid",
+  "inspectionFeeNotPaid": "Inspection fee not paid",
+  "chooseWithinRadius": "within {km} km",
+  "@chooseWithinRadius": {
+    "placeholders": {
+      "km": {
+        "type": "String"
+      }
+    }
+  },
+  "chooseHireConfirmBodyFull": "Hire {name} for this job? You will not be able to choose a different Ustaad afterwards.",
+  "@chooseHireConfirmBodyFull": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "trackHeadlineUstaadOnTheWay": "Ustaad On The Way",
+  "trackHeadlineUstaadArrived": "Ustaad Arrived",
+  "trackHeadlineWorkInProgress": "Work In Progress",
+  "trackHeadlineHired": "Hired ✓",
+  "trackRatingOutOfFive": "{rating} / 5.0",
+  "@trackRatingOutOfFive": {
+    "placeholders": {
+      "rating": {
+        "type": "String"
+      }
+    }
+  },
+  "discoveryLoadingBids": "Loading bids...",
+  "discoveryBidsLoadFailedShort": "Could not load bids",
+  "bookingWorkersAvailableNearby": "{count, plural, =1{{count} worker available nearby} other{{count} workers available nearby}}",
+  "@bookingWorkersAvailableNearby": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "bookingIdShort": "#ER-{code}",
+  "@bookingIdShort": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "inspectionPartWithWarranty": "{name} x{quantity} · {warranty}",
+  "@inspectionPartWithWarranty": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "quantity": {
+        "type": "int"
+      },
+      "warranty": {
+        "type": "String"
+      }
+    }
+  },
+  "discoveryPendingBidsSorted": "{count, plural, =1{{count} pending bid · sorted by price} other{{count} pending bids · sorted by price}}",
+  "@discoveryPendingBidsSorted": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "workerOffline": "Offline",
+  "workerOnline": "Online",
+  "workerBusy": "Busy",
+  "workerOfflineHelper": "You are hidden from clients",
+  "workerOnlineHelper": "Clients near your location can see you",
+  "workerBusyHelper": "You are currently working on a job",
+  "workerStatusOnTheWay": "On the Way",
+  "workerActionOnMyWay": "On My Way",
+  "workerActionArrived": "Arrived",
+  "workerActionStartJob": "Start Job",
+  "workerActionCompleteJob": "Complete Job",
+  "workerActionStartInspection": "Start Inspection",
+  "workerActionStartWork": "Start Work",
+  "workerActionFillReport": "Fill Inspection Report",
+  "workerActionWaitingForClient": "Waiting for Client Decision",
+  "workerSuccessOnTheWay": "On the way — client notified.",
+  "workerSuccessArrived": "Marked as arrived.",
+  "workerSuccessJobStarted": "Job started.",
+  "workerSuccessJobCompleted": "Job marked as completed.",
+  "workerSuccessInspectionStarted": "Inspection started.",
+  "workerSuccessWorkStarted": "Work started.",
+  "workerSkillNotSelected": "Skill not selected",
+  "workerLocating": "Locating…",
+  "workerTapToRetry": "Tap to retry",
+  "workerTapForLocation": "Tap for location",
+  "workerOnActiveJob": "On Active Job",
+  "workerConnecting": "Connecting...",
+  "workerGoingOffline": "Going offline...",
+  "workerGoOffline": "Go Offline",
+  "workerGoOnline": "Go Online",
+  "workerTodaysEarnings": "Today's Earnings",
+  "workerRating": "Rating",
+  "workerActive": "Active",
+  "workerGoOfflineConfirmTitle": "Go Offline?",
+  "workerGoOfflineConfirmBody": "You will stop appearing to nearby clients.",
+  "workerGoOfflineConfirmYes": "Yes, Go Offline",
+  "workerFindNewWork": "Find New Work",
+  "workerViewNewJobs": "View New Jobs",
+  "workerActiveJobCaps": "ACTIVE JOB",
+  "workerMap": "Map",
+  "workerViewDetails": "View details →",
+  "workerNoActiveJob": "No active job right now",
+  "workerStayOnlineHint": "Stay online to find work nearby.",
+  "workerReady": "Ready",
+  "workerPerformance": "Performance",
+  "workerJobsDone": "Jobs Done",
+  "workerCancelRate": "Cancel Rate",
+  "workerPercentValue": "{value}%",
+  "@workerPercentValue": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "workerResponse": "Response",
+  "workerReviews": "Reviews",
+  "workerSeeAll": "See all →",
+  "workerNoReviewsYet": "No reviews yet",
+  "workerReviewsAppearHint": "Client reviews will appear here after your completed jobs.",
+  "workerSelectMainSkill": "Select your main skill",
+  "workerSelectMainSkillHint": "Select your main skill to start receiving work",
+  "workerCategoriesLoadFailed": "Failed to load categories: {error}",
+  "@workerCategoriesLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "workerSkillsSaveFailed": "Failed to save skills. Please try again.",
+  "workerSaveAndGoOnline": "Save & Go Online",
+  "workerDashboardLoadFailed": "Failed to load dashboard",
+  "workerNewJobsTitle": "New Jobs",
+  "workerNewJobsSubtitle": "Work matching your skills",
+  "workerCompleteProfileForNewJobs": "Complete your profile. Once it is approved you will start seeing new jobs.",
+  "workerNewJobsLoadFailed": "Failed to load new jobs.",
+  "workerOfferCount": "{count, plural, =1{{count} offer} other{{count} offers}}",
+  "@workerOfferCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "workerDirectHireNote": "The client can hire you directly. No offer needed.",
+  "workerListedJob": "Listed Job",
+  "workerOfferSent": "Offer sent",
+  "workerNoNewJobs": "No new jobs right now",
+  "workerNoNewJobsHint": "New job requests matching your skills will appear here. Pull down to refresh.",
+  "workerCompleteProfileForJobs": "Complete your profile. Once it is approved you can manage your jobs.",
+  "workerJobsLoadFailed": "Failed to load jobs. Please try again.",
+  "workerClientCancelledBooking": "The client cancelled this booking",
+  "workerOnlyInspectionCompleted": "Only the inspection was completed",
+  "workerComplete": "Complete",
+  "workerCompleting": "Completing...",
+  "workerMarkCompletedTitle": "Mark as Completed?",
+  "workerMarkCompletedBody": "This will close the job and notify the client.",
+  "workerNoActiveJobs": "No active jobs",
+  "workerNoCompletedJobs": "No completed jobs yet",
+  "workerNoCancelledJobs": "No cancelled jobs",
+  "workerNoJobsAssigned": "No jobs assigned yet",
+  "workerNewRequestsHere": "New requests will appear here",
+  "workerCompletedJobsHere": "Completed jobs will show up here",
+  "workerCancelledJobsHere": "Cancelled jobs will show up here",
+  "workerAcceptToGetStarted": "Accept a booking request to get started",
+  "workerFilterCancelled": "Cancelled",
+  "workerFilterAllWork": "All Work",
+  "workerFilterMyOffers": "My Offers",
+  "workerFilterNoOfferSent": "No offer sent",
+  "bidPlaceABid": "Place a Bid",
+  "bidChatWithClient": "Chat with Client",
+  "bidLiveBids": "Live Bids",
+  "bidAreaNotAvailable": "Area not available",
+  "bidExactAddressAfterAccept": "The exact address is shared once the client accepts your bid.",
+  "bidStatusAccepted": "Accepted",
+  "bidStatusRejected": "Rejected",
+  "bidStatusPending": "Pending",
+  "bidYourCurrentBid": "Your Current Bid",
+  "bidSubmit": "Submit Bid",
+  "bidUpdate": "Update Bid",
+  "bidPlaceYourBid": "Place Your Bid",
+  "bidUpdateYourBid": "Update Your Bid",
+  "bidCanUpdateIn": "You can update your bid in {seconds}s.",
+  "@bidCanUpdateIn": {
+    "placeholders": {
+      "seconds": {
+        "type": "String"
+      }
+    }
+  },
+  "bidCanUpdateNow": "You can update your bid now.",
+  "bidAmountLabel": "Bid Amount (PKR) *",
+  "bidAmountHint": "e.g. 2500",
+  "bidLabelWithCountdown": "{label} ({seconds}s)",
+  "@bidLabelWithCountdown": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "seconds": {
+        "type": "String"
+      }
+    }
+  },
+  "bidJobCount": "{count, plural, =1{{count} job} other{{count} jobs}}",
+  "@bidJobCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "bidBeFirstToBid": "Be the first to bid on this job",
+  "earningBidding": "Bidding",
+  "earningHistoryTitle": "Earning History",
+  "earningNoneYet": "No earnings yet",
+  "earningNoneHint": "Completed jobs will show up here with your daily earnings.",
+  "reviewsMyReviews": "My Reviews",
+  "reviewsCount": "{count, plural, =1{{count} review} other{{count} reviews}}",
+  "@reviewsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reviewsSubtitle": "Reviews from clients for jobs you completed",
+  "reviewsAvg": "Avg",
+  "reviewsMax": "Max",
+  "reviewsMin": "Min",
+  "reviewsEmptyHint": "Once clients review your completed jobs,\ntheir reviews will appear here.",
+  "reviewsRatingSummary": "{rating} · {count, plural, =1{{count} review} other{{count} reviews}}",
+  "@reviewsRatingSummary": {
+    "placeholders": {
+      "rating": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reviewsHighestLowest": "Highest: {max} ★  ·  Lowest: {min} ★",
+  "@reviewsHighestLowest": {
+    "placeholders": {
+      "max": {
+        "type": "String"
+      },
+      "min": {
+        "type": "String"
+      }
+    }
+  },
+  "inspFormChooseFromGallery": "Choose from Gallery",
+  "inspFormSubmitted": "Report submitted. Waiting for client decision.",
+  "inspFormSubmitFailed": "Failed to submit report.",
+  "inspFormWhatWasIssue": "What was the issue?",
+  "inspFormWhatWasIssueRequired": "What was the issue? *",
+  "inspFormRecommendedRepair": "Recommended repair",
+  "inspFormRecommendedRepairRequired": "Recommended repair *",
+  "inspFormWhatWorkNeeded": "What work will be needed",
+  "inspFormWriteOrRecord": "Please write the report or record a voice note.",
+  "inspFormPartsRequired": "Parts required?",
+  "inspFormAddPart": "Add part",
+  "inspFormUstaadNotes": "Ustaad notes",
+  "inspFormSubmitReport": "Submit report",
+  "inspFormIssuePhotos": "Issue photos — optional, max {max}",
+  "@inspFormIssuePhotos": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "inspFormVoiceNote": "Voice note",
+  "inspFormVoiceNoteHint": "If writing is difficult, record a voice note instead.",
+  "inspFormRecording": "Recording  {duration}",
+  "@inspFormRecording": {
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "inspFormStop": "Stop",
+  "inspFormStartRecording": "Start recording",
+  "inspFormPartNameHint": "e.g. Gas refill",
+  "inspFormWarrantyHint": "e.g. 7 days",
+  "inspFormRemovePart": "Remove part",
+  "inspFormTotalAmount": "Total amount for the work",
+  "inspFormFeeWaivedNote": "If the customer continues with the repair, the inspection fee will not be charged.",
+  "inspHintElectrical": "e.g. switch is broken, wire is shorted...",
+  "inspHintPlumbing": "e.g. pipe is leaking, drain is blocked...",
+  "inspHintAc": "e.g. AC is not cooling, gas leak...",
+  "inspHintCarpentry": "e.g. door does not close properly, hinge is broken...",
+  "workerCompleteProfile": "Complete Profile",
+  "workerApprovalRequired": "Profile approval is required before you can receive jobs.",
+  "workerCompleteProfileDetails": "Complete your profile details.",
+  "workerCompleteProfileWhy": "You can only apply for or be hired for jobs once your profile is complete.",
+  "earningJobsCompleted": "{count, plural, =1{{count} job completed} other{{count} jobs completed}}",
+  "@earningJobsCompleted": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "bookingStatusLive": "Live",
+  "@bookingStatusLive": {
+    "description": "Booking badge: posted or work underway"
+  },
+  "bookingStatusAssigned": "Assigned",
+  "@bookingStatusAssigned": {
+    "description": "Booking badge: an Ustaad has taken the job"
+  },
+  "bookingStatusCompleted": "Completed",
+  "bookingStatusExpired": "Expired",
+  "@jobStatusPending": {
+    "description": "Ustaad job badge: waiting to be accepted"
+  },
+  "jobStatusEnRoute": "En Route",
+  "jobStatusInProgress": "In Progress",
+  "l10nFallbackProbe": "English fallback works",
+  "@l10nFallbackProbe": {
+    "description": "Intentionally left untranslated in app_ur.arb and app_ur_Latn.arb. Proves a missing key falls back to English rather than rendering blank or Urdu script on a Roman Urdu screen. Never shown in the UI; asserted by arb_parity_test.dart."
+  },
+  "workerJobDetailsTitle": "Job Details",
+  "workerJobLoadFailed": "Failed to load job.",
+  "workerStandardDirectHireNote": "This is a Standard job. The client can hire you directly — you do not need to send an offer.",
+  "workerBidNow": "Bid Now",
+  "workerReportSubmittedWaiting": "Report submitted. Waiting for the client to accept the quote or close after inspection.",
+  "workerClientSection": "Client",
+  "workerPostedBy": "Posted by",
+  "workerCategoryLabel": "Category",
+  "workerTitleLabel": "Title",
+  "workerTimeSlotLabel": "Time Slot",
+  "workerTimelineSection": "Timeline",
+  "workerTimelineScheduled": "Scheduled",
+  "workerTimelineStarted": "Started",
+  "workerEstimatedLabel": "Estimated",
+  "workerFeeStatusLabel": "Status",
+  "workerCancelJob": "Cancel Job",
+  "workerCancelJobTitle": "Cancel this job?",
+  "workerCancelJobBody": "Please tell the client why you are cancelling.",
+  "workerCancelOwnReasonHint": "Write your own reason (required)",
+  "workerKeepJob": "Keep Job",
+  "workerYesCancel": "Yes, cancel",
+  "workerCancelReasonEmergency": "An emergency came up",
+  "workerCancelReasonTooFar": "The location is too far",
+  "workerCancelReasonNoTools": "Required tools or parts are not available",
+  "workerCancelReasonSchedule": "Time or schedule issue",
+  "workerCancelReasonCustomer": "Customer or site related issue",
+  "workerCancelReasonOther": "Other",
+  "workerAttachmentsVideos": "Videos",
+  "workerAttachmentsVoiceNotes": "Voice Notes",
+  "workerStatusHistory": "Status History",
+  "workerMarkAsCompleted": "Mark as Completed",
+  "workerClientReview": "Client Review",
+  "workerReviewRatingOutOfFive": "{rating}/5",
+  "@workerReviewRatingOutOfFive": {
+    "description": "Numeric rating shown next to the stars. Stays Latin digits in every language.",
+    "placeholders": {
+      "rating": {
+        "type": "int"
+      }
+    }
+  },
+  "workerApproximateArea": "Approximate area: {city}",
+  "@workerApproximateArea": {
+    "description": "City comes from the backend and is never translated.",
+    "placeholders": {
+      "city": {
+        "type": "String"
+      }
+    }
+  },
+  "workerApproximateAreaUnavailable": "Approximate area not available",
+  "workerDistanceLabel": "Distance: {distance}",
+  "@workerDistanceLabel": {
+    "description": "{distance} is an already-formatted distance string such as \"250 m away\".",
+    "placeholders": {
+      "distance": {
+        "type": "String"
+      }
+    }
+  },
+  "workerExactAddressAfterHire": "The exact address and map become visible once you are hired for this job.",
+  "workerRoadRouteNotConfigured": "Road route is not configured yet. Opening Google Maps for navigation.",
+  "workerLocationPermissionDenied": "Location permission denied.",
+  "workerDirectionsLocationFailed": "Unable to get your location for directions.",
+  "workerArrivedAtJobLocation": "You have arrived at the job location.",
+  "workerYourLocation": "Your Location",
+  "workerCityLabel": "City",
+  "workerClientAddress": "Client Address",
+  "workerPinnedJobLocation": "Pinned Job Location",
+  "workerPinnedOnMap": "Pinned on map",
+  "workerGettingLocation": "Getting location...",
+  "workerDirections": "Directions",
+  "workerOpenInMaps": "Open in Maps",
+  "workerDirectionsActive": "Directions active",
+  "workerUploadFailed": "Upload failed. Please try again.",
+  "workerCompleteHighlightedFields": "Please complete the highlighted fields below.",
+  "workerProfileSaveFailed": "Failed to save profile. Please try again.",
+  "workerProfileSubmitted": "Profile submitted for approval.",
+  "workerCompleteAllRequired": "Please complete all required fields before submitting.",
+  "workerProfileLoadFailed": "Failed to load profile.",
+  "workerFullLegalName": "Full Legal Name",
+  "workerLegalNameHint": "As written on your CNIC",
+  "workerLegalNameRequired": "Full legal name is required.",
+  "workerCnicNumber": "CNIC Number",
+  "workerCnicInvalid": "Enter CNIC like 12345-1234567-1",
+  "workerMainSkill": "Main Skill",
+  "workerMainSkillNotSelected": "Not selected",
+  "workerChangeSkill": "Change",
+  "workerMainSkillRequired": "Please select your main skill.",
+  "workerExperienceYears": "Experience in Years",
+  "workerExperienceHint": "e.g. 3",
+  "workerExperienceInvalid": "Enter a valid number of years (0 or more).",
+  "workerResidentialAddress": "Residential Address",
+  "workerResidentialAddressHint": "House #, street, area, city",
+  "workerResidentialAddressRequired": "Residential address is required.",
+  "workerIdentityDocuments": "Identity Documents",
+  "workerCnicFront": "CNIC Front",
+  "workerCnicBack": "CNIC Back",
+  "workerLiveSelfie": "Live Selfie",
+  "workerDocumentRequired": "Required",
+  "workerAgreements": "Agreements",
+  "workerConfirmLegalName": "I confirm my legal name matches my CNIC.",
+  "workerAcceptGeneralAgreement": "I accept the General Ustaad Agreement.",
+  "workerAcceptGeneralAgreementVersioned": "I accept the General Ustaad Agreement (v{version}).",
+  "@workerAcceptGeneralAgreementVersioned": {
+    "description": "{version} is the backend agreement version and stays Latin in every language.",
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "workerAcceptTradeAgreement": "I accept the Trade-specific Agreement.",
+  "workerAcceptTradeAgreementVersioned": "I accept the Trade-specific Agreement (v{version}).",
+  "@workerAcceptTradeAgreementVersioned": {
+    "description": "{version} is the backend agreement version and stays Latin in every language.",
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "workerViewAgreement": "View Agreement",
+  "workerConfirmationRequired": "This confirmation is required.",
+  "workerSubmitForApproval": "Submit for Approval",
+  "workerAgreementFallbackTitle": "Agreement",
+  "workerAgreementVersion": "Version {version}",
+  "@workerAgreementVersion": {
+    "description": "{version} is the backend agreement version and stays Latin in every language.",
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "workerAgreementSelectSkillFirst": "Select your main skill first to load this agreement.",
+  "workerCloseDialog": "Close",
+  "workerOnboardingSubmitted": "Submitted for Review",
+  "workerOnboardingChangesRequired": "Changes Required",
+  "workerOnboardingApproved": "Approved",
+  "workerOnboardingDraft": "Draft",
+  "workerRoleBadge": "Ustaad",
+  "workerMainSkillWithName": "Main Skill: {skill}",
+  "@workerMainSkillWithName": {
+    "description": "{skill} is the backend category name and is never translated.",
+    "placeholders": {
+      "skill": {
+        "type": "String"
+      }
+    }
+  },
+  "workerNoMainSkillYet": "No main skill selected yet",
+  "workerProfileApproval": "Profile Approval",
+  "inspHintFallback": "e.g. Gas leak — a refill is needed",
+  "@inspHintFallback": {
+    "description": "Issue-example hint shown when the booking's service category has no hint of its own."
+  },
+  "bidAmountRequired": "Please enter a bid amount.",
+  "bidAmountRange": "Bid amount must be between 100 and 500,000.",
+  "bidSubmitted": "Bid submitted!",
+  "bidSubmitFailed": "Failed to submit bid.",
+  "workerViewJobDetails": "View Details",
+  "workerSendOffer": "Send Offer",
+  "workerChangeOffer": "Change Offer",
+  "workerOnboardingSubmittedBody": "Your profile is with the admin for review.",
+  "workerOnboardingChangesRequiredBody": "Your profile needs changes — see the details.",
+  "workerOnboardingRejectedBody": "Your profile was rejected — see the reason.",
+  "workerProfileIncomplete": "Profile Incomplete",
+  "inspFormLabourCostRequired": "Labour cost *",
+  "inspFormNotesOptional": "Notes (optional)",
+  "inspFormPartName": "Part name",
+  "inspFormQty": "Qty",
+  "inspFormUnitPrice": "Unit price",
+  "inspFormWarrantyOptional": "Warranty / guarantee (optional)",
+  "inspFormPartsTotal": "Parts total",
+  "inspFormLabour": "Labour",
+  "inspFormMicPermanentlyDenied": "Microphone access is permanently denied. Enable it in Settings.",
+  "inspFormMicDenied": "Microphone permission denied.",
+  "errorTimeout": "The connection timed out. Please try again.",
+  "@errorTimeout": {
+    "description": "Request timed out (Dio connect/send/receive timeout)"
+  },
+  "errorRequestCancelled": "The request was cancelled.",
+  "@errorRequestCancelled": {
+    "description": "The app cancelled an in-flight request"
+  },
+  "errorInvalidRequest": "Some details are not correct. Please check them and try again.",
+  "@errorInvalidRequest": {
+    "description": "HTTP 400 with no message from the backend"
+  },
+  "errorSessionExpired": "Your session has expired. Please log in again.",
+  "@errorSessionExpired": {
+    "description": "HTTP 401 - the refresh token is gone too"
+  },
+  "errorForbidden": "You do not have permission for this action.",
+  "@errorForbidden": {
+    "description": "HTTP 403"
+  },
+  "errorNotFound": "This is no longer available.",
+  "@errorNotFound": {
+    "description": "HTTP 404 - the booking/bid/profile is gone"
+  },
+  "errorConflict": "This has already been updated. Please refresh and try again.",
+  "@errorConflict": {
+    "description": "HTTP 409 with no message from the backend"
+  },
+  "errorTooManyRequests": "Too many attempts. Please wait a moment and try again.",
+  "@errorTooManyRequests": {
+    "description": "HTTP 429 - rate limited"
+  },
+  "errorServer": "Server error. Please try again later.",
+  "@errorServer": {
+    "description": "HTTP 5xx"
+  },
+  "errorSmsSendFailed": "The SMS could not be sent. Please try again.",
+  "@errorSmsSendFailed": {
+    "description": "Backend SMS provider could not deliver the OTP"
+  },
+  "errorInspectorBusy": "The inspecting Ustaad is busy on another job right now. Please choose another Ustaad from the list below.",
+  "@errorInspectorBusy": {
+    "description": "Backend code INSPECTOR_BUSY on a rehire attempt"
+  },
+  "errorPhoneIsWorker": "This mobile number is already registered as an Ustaad account.",
+  "@errorPhoneIsWorker": {
+    "description": "Backend code PHONE_IS_WORKER"
+  },
+  "errorPhoneIsClient": "This mobile number is already registered as a Client account.",
+  "@errorPhoneIsClient": {
+    "description": "Backend code PHONE_IS_CLIENT"
+  },
+  "errorUnknown": "Something went wrong. Please try again.",
+  "@errorUnknown": {
+    "description": "Last-resort wording when nothing more specific is known"
+  },
+  "authForgotPasswordTitle": "Forgot your\npassword?",
+  "@authForgotPasswordTitle": {
+    "description": "Forgot-password screen, step 1 heading"
+  },
+  "authSetNewPasswordTitle": "Set a new\npassword",
+  "@authSetNewPasswordTitle": {
+    "description": "Forgot-password screen, step 2 heading"
+  },
+  "authEnterCodeSentToNumber": "Enter the code sent to your number.",
+  "@authEnterCodeSentToNumber": {
+    "description": "Forgot-password screen, step 2 subtitle"
+  },
+  "authForgotPasswordClientOnly": "For Client accounts only. A code will be sent to the registered number.",
+  "@authForgotPasswordClientOnly": {
+    "description": "Client forgot-password screen subtitle"
+  },
+  "authForgotPasswordWorkerOnly": "For Ustaad accounts only. A code will be sent to the registered number.",
+  "@authForgotPasswordWorkerOnly": {
+    "description": "Ustaad forgot-password screen subtitle"
+  },
+  "authErrorCodeSendFailed": "The code could not be sent.",
+  "@authErrorCodeSendFailed": {
+    "description": "Snackbar when an OTP request fails"
+  },
+  "authErrorPasswordChangeFailed": "The password could not be changed.",
+  "@authErrorPasswordChangeFailed": {
+    "description": "Snackbar when a password reset fails"
+  },
+  "authErrorLoginFailed": "Could not log you in.",
+  "@authErrorLoginFailed": {
+    "description": "Snackbar when a login attempt fails"
+  },
+  "authErrorRegisterFailed": "The account could not be created.",
+  "@authErrorRegisterFailed": {
+    "description": "Snackbar when Ustaad registration fails"
+  },
+  "authLoginWithOtp": "Log In With OTP",
+  "@authLoginWithOtp": {
+    "description": "Ustaad login button once the code has been sent"
+  },
+  "authHintExampleFullName": "Muhammad Ali Khan",
+  "@authHintExampleFullName": {
+    "description": "Example name shown as the full-name field hint"
+  },
+  "notificationsBannerFallbackTitle": "Notification",
+  "@notificationsBannerFallbackTitle": {
+    "description": "In-app banner title when the payload carries none"
+  },
+  "legalEnglishOnlyNotice": "This legal document is currently available in English only.",
+  "@legalEnglishOnlyNotice": {
+    "description": "Shown above the Privacy Policy and Terms bodies, which are approved in English only"
+  },
+  "myBookingsTotalCount": "{count} total",
+  "@myBookingsTotalCount": {
+    "description": "Pill above the bookings list showing how many there are",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "workerBidJobFallbackTitle": "Job",
+  "@workerBidJobFallbackTitle": {
+    "description": "Heading on the bid screen when the job title was not passed through"
+  }
+}

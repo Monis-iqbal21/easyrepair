@@ -5,11 +5,13 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../../../../core/errors/failures.dart';
 import '../../domain/entities/worker_profile_entity.dart';
 import '../../domain/entities/agreement_template_entity.dart';
 import '../providers/worker_providers.dart';
 import '../pages/worker_home_page.dart' show showSkillsSheet;
+import '../../../../core/l10n/l10n_extensions.dart';
+import '../../../../l10n/app_localizations.dart';
+import '../../../../core/errors/failure_messages.dart';
 
 // ── Palette (matches the rest of the worker app) ────────────────────────────
 const _kOrange = Color(0xFFDB6234);
@@ -129,10 +131,17 @@ class _WorkerProfileCompletionPageState
   /// photo. Camera is listed first for all three (Live Selfie should
   /// preferably use the camera; CNIC front/back are equally likely to be an
   /// existing gallery photo), so both options are always offered.
-  static const _imageSourceOptions = [
-    (ImageSource.camera, Icons.camera_alt_outlined, 'Take Photo'),
-    (ImageSource.gallery, Icons.photo_library_outlined, 'Choose from Gallery'),
-  ];
+  List<(ImageSource, IconData, String)> _imageSourceOptions(
+    AppLocalizations l10n,
+  ) =>
+      [
+        (ImageSource.camera, Icons.camera_alt_outlined, l10n.chatTakePhoto),
+        (
+          ImageSource.gallery,
+          Icons.photo_library_outlined,
+          l10n.inspFormChooseFromGallery,
+        ),
+      ];
 
   Future<ImageSource?> _chooseImageSource() {
     return showModalBottomSheet<ImageSource>(
@@ -155,7 +164,8 @@ class _WorkerProfileCompletionPageState
               ),
             ),
             const SizedBox(height: 12),
-            for (final (source, icon, label) in _imageSourceOptions)
+            for (final (source, icon, label)
+                in _imageSourceOptions(context.l10n))
               ListTile(
                 leading: Icon(icon, color: _kOrange),
                 title: Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
@@ -192,7 +202,8 @@ class _WorkerProfileCompletionPageState
       final err = ref.read(profileCompletionNotifierProvider).error;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(err is Failure ? err.message : 'Upload failed. Please try again.'),
+          content: Text(
+              failureMessage(context.l10n, err, fallback: context.l10n.workerUploadFailed)),
           backgroundColor: _kRed,
           behavior: SnackBarBehavior.floating,
         ),
@@ -238,8 +249,8 @@ class _WorkerProfileCompletionPageState
 
     if (missing.isNotEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please complete the highlighted fields below.'),
+        SnackBar(
+          content: Text(context.l10n.workerCompleteHighlightedFields),
           backgroundColor: _kRed,
           behavior: SnackBarBehavior.floating,
         ),
@@ -259,7 +270,7 @@ class _WorkerProfileCompletionPageState
       tradeAgreementAccepted: _tradeAgreementAccepted,
     );
     if (!mounted || !saved) {
-      if (mounted) _showError('Failed to save profile. Please try again.');
+      if (mounted) _showError(context.l10n.workerProfileSaveFailed);
       return;
     }
 
@@ -267,16 +278,14 @@ class _WorkerProfileCompletionPageState
     if (!mounted) return;
     if (submitted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Profile submitted for approval.'),
+        SnackBar(
+          content: Text(context.l10n.workerProfileSubmitted),
           backgroundColor: _kGreen,
           behavior: SnackBarBehavior.floating,
         ),
       );
     } else {
-      _showError(
-        'Please complete all required fields before submitting.',
-      );
+      _showError(context.l10n.workerCompleteAllRequired);
     }
   }
 
@@ -284,7 +293,7 @@ class _WorkerProfileCompletionPageState
     final err = ref.read(profileCompletionNotifierProvider).error;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(err is Failure ? err.message : fallback),
+        content: Text(failureMessage(context.l10n, err, fallback: fallback)),
         backgroundColor: _kRed,
         behavior: SnackBarBehavior.floating,
       ),
@@ -310,16 +319,17 @@ class _WorkerProfileCompletionPageState
         backgroundColor: _kBg,
         elevation: 0,
         scrolledUnderElevation: 0,
-        title: const Text(
-          'Complete Profile',
-          style: TextStyle(color: _kDark, fontWeight: FontWeight.w700, fontSize: 18),
+        title: Text(
+          context.l10n.workerCompleteProfile,
+          style: const TextStyle(
+              color: _kDark, fontWeight: FontWeight.w700, fontSize: 18),
         ),
       ),
       body: profileAsync.when(
         skipError: true,
         loading: () => const Center(child: CircularProgressIndicator(color: _kOrange)),
         error: (err, _) => Center(
-          child: Text(err is Failure ? err.message : 'Failed to load profile.'),
+          child: Text(failureMessage(context.l10n, err, fallback: context.l10n.workerProfileLoadFailed)),
         ),
         data: (profile) {
           _prefillFrom(profile);
@@ -335,18 +345,18 @@ class _WorkerProfileCompletionPageState
                 _StatusBanner(profile: profile),
                 const SizedBox(height: 16),
 
-                _SectionLabel('Full Legal Name'),
+                _SectionLabel(context.l10n.workerFullLegalName),
                 _TextInput(
                   controller: _fullLegalNameCtrl,
-                  hint: 'As written on your CNIC',
+                  hint: context.l10n.workerLegalNameHint,
                   enabled: editable,
                   hasError: _missingFields.contains(_kFieldFullLegalName),
-                  errorText: 'Full legal name is required.',
+                  errorText: context.l10n.workerLegalNameRequired,
                   onChanged: (_) => _clearFieldError(_kFieldFullLegalName),
                 ),
                 const SizedBox(height: 16),
 
-                _SectionLabel('CNIC Number'),
+                _SectionLabel(context.l10n.workerCnicNumber),
                 _TextInput(
                   controller: _cnicNumberCtrl,
                   hint: '12345-1234567-1',
@@ -354,12 +364,12 @@ class _WorkerProfileCompletionPageState
                   keyboardType: TextInputType.number,
                   inputFormatters: [_CnicInputFormatter()],
                   hasError: _missingFields.contains(_kFieldCnicNumber),
-                  errorText: 'Enter CNIC like 12345-1234567-1',
+                  errorText: context.l10n.workerCnicInvalid,
                   onChanged: (_) => _clearFieldError(_kFieldCnicNumber),
                 ),
                 const SizedBox(height: 16),
 
-                _SectionLabel('Main Skill'),
+                _SectionLabel(context.l10n.workerMainSkill),
                 _MainSkillRow(
                   skillName: mainSkillName,
                   editable: editable,
@@ -371,34 +381,34 @@ class _WorkerProfileCompletionPageState
                 ),
                 const SizedBox(height: 16),
 
-                _SectionLabel('Experience in Years'),
+                _SectionLabel(context.l10n.workerExperienceYears),
                 _TextInput(
                   controller: _experienceYearsCtrl,
-                  hint: 'e.g. 3',
+                  hint: context.l10n.workerExperienceHint,
                   enabled: editable,
                   keyboardType: TextInputType.number,
                   hasError: _missingFields.contains(_kFieldExperienceYears),
-                  errorText: 'Enter a valid number of years (0 or more).',
+                  errorText: context.l10n.workerExperienceInvalid,
                   onChanged: (_) => _clearFieldError(_kFieldExperienceYears),
                 ),
                 const SizedBox(height: 16),
 
-                _SectionLabel('Residential Address'),
+                _SectionLabel(context.l10n.workerResidentialAddress),
                 _TextInput(
                   controller: _residentialAddressCtrl,
-                  hint: 'House #, street, area, city',
+                  hint: context.l10n.workerResidentialAddressHint,
                   enabled: editable,
                   maxLines: 3,
                   hasError: _missingFields.contains(_kFieldResidentialAddress),
-                  errorText: 'Residential address is required.',
+                  errorText: context.l10n.workerResidentialAddressRequired,
                   onChanged: (_) => _clearFieldError(_kFieldResidentialAddress),
                 ),
                 const SizedBox(height: 20),
 
-                _SectionLabel('Identity Documents'),
+                _SectionLabel(context.l10n.workerIdentityDocuments),
                 const SizedBox(height: 8),
                 _DocumentTile(
-                  label: 'CNIC Front',
+                  label: context.l10n.workerCnicFront,
                   imageUrl: profile.cnicFrontUrl,
                   uploading: _uploadingCnicFront,
                   editable: editable,
@@ -411,7 +421,7 @@ class _WorkerProfileCompletionPageState
                 ),
                 const SizedBox(height: 10),
                 _DocumentTile(
-                  label: 'CNIC Back',
+                  label: context.l10n.workerCnicBack,
                   imageUrl: profile.cnicBackUrl,
                   uploading: _uploadingCnicBack,
                   editable: editable,
@@ -424,7 +434,7 @@ class _WorkerProfileCompletionPageState
                 ),
                 const SizedBox(height: 10),
                 _DocumentTile(
-                  label: 'Live Selfie',
+                  label: context.l10n.workerLiveSelfie,
                   imageUrl: profile.liveSelfieUrl,
                   uploading: _uploadingSelfie,
                   editable: editable,
@@ -437,13 +447,13 @@ class _WorkerProfileCompletionPageState
                 ),
                 const SizedBox(height: 20),
 
-                _SectionLabel('Agreements'),
+                _SectionLabel(context.l10n.workerAgreements),
                 const SizedBox(height: 8),
                 _AgreementCheckbox(
                   value: _legalNameConfirmed,
                   enabled: editable,
                   hasError: _missingFields.contains(_kFieldLegalNameConfirmed),
-                  label: 'I confirm my legal name matches my CNIC.',
+                  label: context.l10n.workerConfirmLegalName,
                   onChanged: (v) {
                     setState(() => _legalNameConfirmed = v);
                     if (v) _clearFieldError(_kFieldLegalNameConfirmed);
@@ -453,9 +463,13 @@ class _WorkerProfileCompletionPageState
                   value: _generalAgreementAccepted,
                   enabled: editable,
                   hasError: _missingFields.contains(_kFieldGeneralAgreement),
-                  label: 'I accept the General Ustaad Agreement'
-                      '${findTemplate(true) != null ? ' (v${findTemplate(true)!.version})' : ''}.',
-                  linkLabel: 'View Agreement',
+                  // Whole sentence per variant — never a translated fragment
+                  // glued onto a version number.
+                  label: findTemplate(true) != null
+                      ? context.l10n.workerAcceptGeneralAgreementVersioned(
+                          findTemplate(true)!.version)
+                      : context.l10n.workerAcceptGeneralAgreement,
+                  linkLabel: context.l10n.workerViewAgreement,
                   onViewTap: () => _showAgreement(context, findTemplate(true)),
                   onChanged: (v) {
                     setState(() => _generalAgreementAccepted = v);
@@ -466,9 +480,11 @@ class _WorkerProfileCompletionPageState
                   value: _tradeAgreementAccepted,
                   enabled: editable,
                   hasError: _missingFields.contains(_kFieldTradeAgreement),
-                  label: 'I accept the Trade-specific Agreement'
-                      '${findTemplate(false) != null ? ' (v${findTemplate(false)!.version})' : ''}.',
-                  linkLabel: 'View Agreement',
+                  label: findTemplate(false) != null
+                      ? context.l10n.workerAcceptTradeAgreementVersioned(
+                          findTemplate(false)!.version)
+                      : context.l10n.workerAcceptTradeAgreement,
+                  linkLabel: context.l10n.workerViewAgreement,
                   onViewTap: () => _showAgreement(context, findTemplate(false)),
                   onChanged: (v) {
                     setState(() => _tradeAgreementAccepted = v);
@@ -500,9 +516,10 @@ class _WorkerProfileCompletionPageState
                                 color: Colors.white,
                               ),
                             )
-                          : const Text(
-                              'Submit for Approval',
-                              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                          : Text(
+                              context.l10n.workerSubmitForApproval,
+                              style: const TextStyle(
+                                  fontSize: 15, fontWeight: FontWeight.w700),
                             ),
                     ),
                   ),
@@ -524,7 +541,8 @@ class _WorkerProfileCompletionPageState
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
-          template?.title ?? 'Agreement',
+          // template.title is the backend's own agreement title — shown as-is.
+          template?.title ?? context.l10n.workerAgreementFallbackTitle,
           style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
         ),
         content: SizedBox(
@@ -535,7 +553,7 @@ class _WorkerProfileCompletionPageState
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Version ${template.version}',
+                        context.l10n.workerAgreementVersion(template.version),
                         style: const TextStyle(
                           color: _kOrange,
                           fontSize: 12,
@@ -549,16 +567,16 @@ class _WorkerProfileCompletionPageState
                       ),
                     ],
                   )
-                : const Text(
-                    'Select your main skill first to load this agreement.',
-                    style: TextStyle(color: _kGray, fontSize: 13.5),
+                : Text(
+                    context.l10n.workerAgreementSelectSkillFirst,
+                    style: const TextStyle(color: _kGray, fontSize: 13.5),
                   ),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Close'),
+            child: Text(context.l10n.workerCloseDialog),
           ),
         ],
       ),
@@ -572,33 +590,36 @@ class _StatusBanner extends StatelessWidget {
   final WorkerProfileEntity profile;
   const _StatusBanner({required this.profile});
 
-  (String, Color, Color, IconData) get _visual => switch (profile.onboardingStatus) {
+  /// [profile.onboardingStatus] stays the raw backend token — only the words
+  /// on the banner are translated.
+  (String, Color, Color, IconData) _visual(AppLocalizations l10n) =>
+      switch (profile.onboardingStatus) {
         'SUBMITTED_FOR_REVIEW' => (
-            'Submitted for Review',
+            l10n.workerOnboardingSubmitted,
             const Color(0xFFB45309),
             const Color(0xFFFFFBEB),
             Icons.hourglass_top_rounded,
           ),
         'CHANGES_REQUIRED' => (
-            'Changes Required',
+            l10n.workerOnboardingChangesRequired,
             const Color(0xFFB45309),
             const Color(0xFFFFF7ED),
             Icons.edit_note_rounded,
           ),
         'REJECTED' => (
-            'Rejected',
+            l10n.bidStatusRejected,
             _kRed,
             const Color(0xFFFEF2F2),
             Icons.cancel_outlined,
           ),
         'APPROVED' => (
-            'Approved',
+            l10n.workerOnboardingApproved,
             const Color(0xFF15803D),
             const Color(0xFFF0FDF4),
             Icons.verified_rounded,
           ),
         _ => (
-            'Draft',
+            l10n.workerOnboardingDraft,
             _kGray,
             const Color(0xFFF1F5F9),
             Icons.description_outlined,
@@ -607,7 +628,7 @@ class _StatusBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (label, fg, bg, icon) = _visual;
+    final (label, fg, bg, icon) = _visual(context.l10n);
     final reason = profile.onboardingStatus == 'CHANGES_REQUIRED'
         ? profile.changesRequiredReason
         : profile.onboardingStatus == 'REJECTED'
@@ -761,7 +782,7 @@ class _MainSkillRow extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  skillName ?? 'Not selected',
+                  skillName ?? context.l10n.workerMainSkillNotSelected,
                   style: TextStyle(
                     fontSize: 14,
                     color: skillName != null ? _kDark : _kLight,
@@ -772,9 +793,12 @@ class _MainSkillRow extends StatelessWidget {
               if (editable)
                 GestureDetector(
                   onTap: onChangeTap,
-                  child: const Text(
-                    'Change',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: _kOrange),
+                  child: Text(
+                    context.l10n.workerChangeSkill,
+                    style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: _kOrange),
                   ),
                 ),
             ],
@@ -782,9 +806,9 @@ class _MainSkillRow extends StatelessWidget {
         ),
         if (hasError) ...[
           const SizedBox(height: 4),
-          const Text(
-            'Please select your main skill.',
-            style: TextStyle(fontSize: 11.5, color: _kRed),
+          Text(
+            context.l10n.workerMainSkillRequired,
+            style: const TextStyle(fontSize: 11.5, color: _kRed),
           ),
         ],
       ],
@@ -864,9 +888,9 @@ class _DocumentTile extends StatelessWidget {
           ),
           if (hasError) ...[
             const SizedBox(height: 4),
-            const Text(
-              'Required — ضروری ہے',
-              style: TextStyle(fontSize: 11.5, color: _kRed),
+            Text(
+              context.l10n.workerDocumentRequired,
+              style: const TextStyle(fontSize: 11.5, color: _kRed),
             ),
           ],
         ],
@@ -938,9 +962,9 @@ class _AgreementCheckbox extends StatelessWidget {
                   ),
                 if (hasError) ...[
                   const SizedBox(height: 2),
-                  const Text(
-                    'This confirmation is required.',
-                    style: TextStyle(fontSize: 11.5, color: _kRed),
+                  Text(
+                    context.l10n.workerConfirmationRequired,
+                    style: const TextStyle(fontSize: 11.5, color: _kRed),
                   ),
                 ],
               ],

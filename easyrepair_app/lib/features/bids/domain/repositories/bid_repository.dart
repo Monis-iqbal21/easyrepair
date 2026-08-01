@@ -65,14 +65,8 @@ class BidWithWorkerEntity {
       '${firstName.isNotEmpty ? firstName[0] : ''}${lastName.isNotEmpty ? lastName[0] : ''}'
           .toUpperCase();
 
-  String get ratingLabel {
-    if (completedJobs == 0) return 'New worker';
-    final rStr = rating > 0 ? '${rating.toStringAsFixed(1)}/5' : 'No rating';
-    return '$rStr ($completedJobs ${completedJobs == 1 ? 'job' : 'jobs'})';
-  }
+  // Rating and distance labels are built in the presentation layer by
+  // bookings/presentation/utils/worker_labels.dart — the wording depends on
+  // the selected language, the raw numbers above do not.
 
-  String get distanceLabel {
-    if (distanceKm < 1) return '< 1 km away';
-    return '${distanceKm.toStringAsFixed(1)} km away';
-  }
 }

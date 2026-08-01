@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../domain/entities/booking_entity.dart';
+import '../../../../core/l10n/l10n_extensions.dart';
 
 class UrgencyBadge extends StatelessWidget {
   final BookingUrgency urgency;
@@ -36,7 +37,7 @@ class UrgencyBadge extends StatelessWidget {
           ),
           const SizedBox(width: 3),
           Text(
-            isUrgent ? 'Urgent' : 'Normal',
+            isUrgent ? context.l10n.postJobUrgent : context.l10n.postJobNormal,
             style: TextStyle(
               fontSize: fontSize,
               fontWeight: FontWeight.w600,

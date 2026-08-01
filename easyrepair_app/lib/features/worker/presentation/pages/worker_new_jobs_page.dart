@@ -14,6 +14,9 @@ import '../providers/worker_providers.dart';
 import '../widgets/onboarding_gate.dart';
 import '../widgets/worker_bottom_nav_bar.dart';
 import '../widgets/worker_chat_action.dart';
+import '../../../bookings/presentation/utils/worker_labels.dart';
+import '../../../../core/l10n/l10n_extensions.dart';
+import '../utils/worker_status_labels.dart';
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 const _kAccent = Color(0xFFDB6234);
@@ -78,23 +81,23 @@ class _WorkerNewJobsPageState extends ConsumerState<WorkerNewJobsPage>
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
               child: Row(
                 children: [
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'New Jobs',
-                          style: TextStyle(
+                          context.l10n.workerNewJobsTitle,
+                          style: const TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.w800,
                             color: _kDark,
                             letterSpacing: -0.3,
                           ),
                         ),
-                        SizedBox(height: 2),
+                        const SizedBox(height: 2),
                         Text(
-                          'Aapke hunar ke hisaab se kaam',
-                          style: TextStyle(fontSize: 13, color: _kGray),
+                          context.l10n.workerNewJobsSubtitle,
+                          style: const TextStyle(fontSize: 13, color: _kGray),
                         ),
                       ],
                     ),
@@ -126,12 +129,9 @@ class _WorkerNewJobsPageState extends ConsumerState<WorkerNewJobsPage>
             if (!isApproved)
               // Profile incomplete/not approved — never a fetch error, and
               // there's nothing meaningful to filter/list yet either way.
-              const Expanded(
+              Expanded(
                 child: ProfileIncompleteState(
-                  romanUrdu:
-                      'Apni profile complete karain. Profile approval ke baad aapko new jobs nazar ayengi.',
-                  urdu:
-                      'اپنی پروفائل مکمل کریں۔ پروفائل منظور ہونے کے بعد آپ کو نئی jobs نظر آئیں گی۔',
+                  message: context.l10n.workerCompleteProfileForNewJobs,
                 ),
               )
             else ...[
@@ -154,7 +154,7 @@ class _WorkerNewJobsPageState extends ConsumerState<WorkerNewJobsPage>
                   error: (err, _) => _ErrorState(
                     message: err is Failure
                         ? err.message
-                        : 'Failed to load new jobs.',
+                        : context.l10n.workerNewJobsLoadFailed,
                     onRetry: notifier.refresh,
                   ),
                   data: (jobs) => jobs.isEmpty
@@ -203,7 +203,7 @@ class _FilterBar extends ConsumerWidget {
         children: NewJobFilter.values.map((f) {
           final selected = f == current;
           return Padding(
-            padding: const EdgeInsets.only(right: 8),
+            padding: const EdgeInsetsDirectional.only(end: 8),
             child: GestureDetector(
               onTap: () => notifier.setFilter(f),
               child: AnimatedContainer(
@@ -217,7 +217,7 @@ class _FilterBar extends ConsumerWidget {
                   ),
                 ),
                 child: Text(
-                  f.label,
+                  newJobFilterLabel(context.l10n, f),
                   style: TextStyle(
                     fontSize: 12.5,
                     fontWeight: FontWeight.w600,
@@ -413,18 +413,18 @@ class _NewJobCard extends ConsumerWidget {
                       if (job.distanceKm != null)
                         _MetaChip(
                           icon: Icons.near_me_outlined,
-                          label: job.distanceLabel,
+                          label: workerDistanceLabel(context.l10n, job.distanceKm),
                         ),
                       // Bid count (BIDDING lane only)
                       if (!isDirectAssign)
                         _MetaChip(
                           icon: Icons.gavel_rounded,
-                          label: '${job.bidCount} offer',
+                          label: context.l10n.workerOfferCount(job.bidCount),
                         ),
                       // Posted time
                       _MetaChip(
                         icon: Icons.access_time_rounded,
-                        label: _relativeTime(job.createdAt),
+                        label: _relativeTime(context, job.createdAt),
                       ),
                     ],
                   ),
@@ -464,7 +464,7 @@ class _NewJobCard extends ConsumerWidget {
                             context.push('/worker/job/${job.id}');
                           },
                           icon: const Icon(Icons.info_outline_rounded, size: 14),
-                          label: const Text('Detail Dekhein'),
+                          label: Text(context.l10n.workerViewJobDetails),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: _kAccent,
                             side: const BorderSide(color: _kAccent),
@@ -491,7 +491,9 @@ class _NewJobCard extends ConsumerWidget {
                               context.push('/worker/job/${job.id}/bid?title=$title');
                             },
                             icon: const Icon(Icons.gavel_rounded, size: 14),
-                            label: Text(job.hasMyBid ? 'Offer Badlein' : 'Offer Bhejein'),
+                            label: Text(job.hasMyBid
+                                ? context.l10n.workerChangeOffer
+                                : context.l10n.workerSendOffer),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: _kAccent,
                               foregroundColor: Colors.white,
@@ -525,7 +527,7 @@ class _NewJobCard extends ConsumerWidget {
                           const SizedBox(width: 6),
                           Expanded(
                             child: Text(
-                              'Client aap ko seedha hire kar sakta hai. Koi offer bhejne ki zaroorat nahi.',
+                              context.l10n.workerDirectHireNote,
                               style: TextStyle(fontSize: 11, color: _kAccent.withValues(alpha: 0.9)),
                             ),
                           ),
@@ -542,11 +544,12 @@ class _NewJobCard extends ConsumerWidget {
     );
   }
 
-  String _relativeTime(DateTime dt) {
+  String _relativeTime(BuildContext context, DateTime dt) {
+    final l10n = context.l10n;
     final diff = DateTime.now().difference(dt);
-    if (diff.inMinutes < 1) return 'Just now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    if (diff.inMinutes < 1) return l10n.timeJustNow;
+    if (diff.inMinutes < 60) return l10n.timeMinutesAgo(diff.inMinutes);
+    if (diff.inHours < 24) return l10n.timeHoursAgo(diff.inHours);
     return DateFormat('MMM d').format(dt);
   }
 }
@@ -564,14 +567,14 @@ class _StandardJobBadge extends StatelessWidget {
         color: _kAccent,
         borderRadius: BorderRadius.circular(20),
       ),
-      child: const Row(
+      child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.verified_rounded, size: 11, color: Colors.white),
-          SizedBox(width: 3),
+          const Icon(Icons.verified_rounded, size: 11, color: Colors.white),
+          const SizedBox(width: 3),
           Text(
-            'Listed Job',
-            style: TextStyle(
+            context.l10n.workerListedJob,
+            style: const TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
               color: Colors.white,
@@ -598,12 +601,12 @@ class _BidPlacedBadge extends StatelessWidget {
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
-        children: const [
-          Icon(Icons.check_circle_rounded, size: 11, color: Colors.white),
-          SizedBox(width: 3),
+        children: [
+          const Icon(Icons.check_circle_rounded, size: 11, color: Colors.white),
+          const SizedBox(width: 3),
           Text(
-            'Offer bhej di',
-            style: TextStyle(
+            context.l10n.workerOfferSent,
+            style: const TextStyle(
               fontSize: 10.5,
               fontWeight: FontWeight.w600,
               color: Colors.white,
@@ -641,7 +644,7 @@ class _UrgencyChip extends StatelessWidget {
           ),
           const SizedBox(width: 3),
           Text(
-            isUrgent ? 'Urgent' : 'Normal',
+            isUrgent ? context.l10n.postJobUrgent : context.l10n.postJobNormal,
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
@@ -702,19 +705,19 @@ class _EmptyState extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 20),
-            const Text(
-              'No new jobs right now',
-              style: TextStyle(
+            Text(
+              context.l10n.workerNoNewJobs,
+              style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
                 color: _kDark,
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'New job requests matching your skills will appear here. Pull down to refresh.',
+            Text(
+              context.l10n.workerNoNewJobsHint,
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 13,
                 color: _kLight,
                 height: 1.5,
@@ -740,9 +743,9 @@ class _RefreshFailedBanner extends StatelessWidget {
       width: double.infinity,
       color: const Color(0xFFFEF3C7),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: const Text(
-        'Could not refresh. Pull to retry.',
-        style: TextStyle(fontSize: 12, color: Color(0xFF92400E)),
+      child: Text(
+        context.l10n.myBookingsRefreshFailed,
+        style: const TextStyle(fontSize: 12, color: Color(0xFF92400E)),
       ),
     );
   }
@@ -773,9 +776,9 @@ class _ErrorState extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
-              'Something went wrong',
-              style: TextStyle(
+            Text(
+              context.l10n.myBookingsSomethingWrong,
+              style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
                 color: _kDark,
@@ -802,9 +805,9 @@ class _ErrorState extends StatelessWidget {
                   color: _kAccent,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Text(
-                  'Retry',
-                  style: TextStyle(
+                child: Text(
+                  context.l10n.commonRetry,
+                  style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w700,
                     fontSize: 13,

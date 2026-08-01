@@ -31,27 +31,13 @@ class NearbyWorkerEntity {
       '${firstName.isNotEmpty ? firstName[0] : ''}${lastName.isNotEmpty ? lastName[0] : ''}'
           .toUpperCase();
 
-  /// e.g. "4.6/5 (12 jobs)" or "No ratings yet"
-  String get ratingLabel {
-    if (completedJobs == 0) return 'New worker';
-    final rStr = rating > 0 ? '${rating.toStringAsFixed(1)}/5' : 'No rating';
-    return '$rStr ($completedJobs ${completedJobs == 1 ? 'job' : 'jobs'})';
-  }
+  // Rating and distance labels are built in the presentation layer by
+  // bookings/presentation/utils/worker_labels.dart — the wording depends on
+  // the selected language, the raw numbers above do not.
 
-  /// e.g. "1.8 km away" or "< 1 km away"
-  String get distanceLabel {
-    if (distanceKm < 1) return '< 1 km away';
-    return '${distanceKm.toStringAsFixed(1)} km away';
-  }
 
-  /// Display badge derived from completed job count.
-  String get levelBadge {
-    if (completedJobs > 70) return 'Master';
-    if (completedJobs > 50) return 'Elite';
-    if (completedJobs > 30) return 'Pro Ustaad';
-    if (completedJobs > 10) return 'Pro';
-    return 'Standard';
-  }
+  // The level badge is built in the presentation layer by
+  // presentation/utils/booking_labels.dart — completedJobs above is the input.
 }
 
 /// Wraps the nearby-workers list together with search metadata returned by
@@ -75,6 +61,6 @@ class NearbyWorkersResult {
     required this.searchCompleted,
   });
 
-  /// e.g. "Searched within 5 km" or "Searched up to 20 km"
-  String get radiusLabel => 'within ${searchedRadiusKm.toStringAsFixed(0)} km';
+  // A radius label, if one is ever shown, belongs in the presentation layer:
+  // searchedRadiusKm above is the input.
 }

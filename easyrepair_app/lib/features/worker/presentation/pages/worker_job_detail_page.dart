@@ -12,7 +12,6 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/config/app_config.dart';
-import '../../../../core/errors/failures.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../../bookings/domain/entities/booking_entity.dart';
 import '../../../bookings/presentation/providers/booking_providers.dart';
@@ -23,6 +22,12 @@ import '../providers/worker_job_providers.dart';
 import '../providers/worker_providers.dart';
 import '../widgets/onboarding_gate.dart';
 import '../widgets/worker_chat_action.dart';
+import '../../../../core/l10n/l10n_extensions.dart';
+import '../../../../l10n/app_localizations.dart';
+import '../../../bookings/presentation/utils/status_labels.dart';
+import '../utils/worker_status_labels.dart';
+import '../../../bookings/presentation/utils/booking_labels.dart';
+import '../../../../core/errors/failure_messages.dart';
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 const _kGreen  = Color(0xFFDB6234);
@@ -70,7 +75,7 @@ class WorkerJobDetailPage extends ConsumerWidget {
           color: _kGreen,
         )),
         error: (err, _) => _ErrorScreen(
-          message: err is Failure ? err.message : 'Failed to load job.',
+          message: failureMessage(context.l10n, err, fallback: context.l10n.workerJobLoadFailed),
           onRetry: () => ref.invalidate(workerJobDetailProvider(jobId)),
         ),
         data: (job) => _JobBody(job: job, openMapOnLoad: openMapOnLoad),
@@ -108,9 +113,9 @@ class _AppBar extends StatelessWidget implements PreferredSizeWidget {
           child: const Icon(Icons.arrow_back_rounded, color: _kDark, size: 20),
         ),
       ),
-      title: const Text(
-        'Job Details',
-        style: TextStyle(
+      title: Text(
+        context.l10n.workerJobDetailsTitle,
+        style: const TextStyle(
           color: _kDark,
           fontWeight: FontWeight.w700,
           fontSize: 18,
@@ -177,7 +182,7 @@ class _JobBody extends ConsumerWidget {
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
-                            'Yeh ek Standard job hai. Client aap ko seedha hire kar sakta hai — offer bhejne ki zaroorat nahi.',
+                            context.l10n.workerStandardDirectHireNote,
                             style: TextStyle(fontSize: 12.5, color: _kGreen.withValues(alpha: 0.9), height: 1.4),
                           ),
                         ),
@@ -205,7 +210,7 @@ class _JobBody extends ConsumerWidget {
                         );
                       },
                       icon: const Icon(Icons.gavel_rounded, size: 16),
-                      label: const Text('Bid Now'),
+                      label: Text(context.l10n.workerBidNow),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _kGreen,
                         foregroundColor: Colors.white,
@@ -232,7 +237,7 @@ class _JobBody extends ConsumerWidget {
                         child: OutlinedButton.icon(
                           onPressed: () => _callClient(job.clientPhone!),
                           icon: const Icon(Icons.call_rounded, size: 16),
-                          label: const Text('Call'),
+                          label: Text(context.l10n.trackCall),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: _kGreen,
                             side: const BorderSide(color: _kGreen),
@@ -254,7 +259,7 @@ class _JobBody extends ConsumerWidget {
                         onPressed: () =>
                             openWorkerChatForBooking(context, ref, job.id),
                         icon: const Icon(Icons.chat_bubble_outline_rounded, size: 16),
-                        label: const Text('Chat with Client'),
+                        label: Text(context.l10n.bidChatWithClient),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: _kGreen,
                           side: const BorderSide(color: _kGreen),
@@ -305,16 +310,16 @@ class _JobBody extends ConsumerWidget {
                   ViewInspectionReportButton(
                     bookingId: job.id,
                     route: '/worker/job/${job.id}/inspection-report/view',
-                    label: 'Inspection Report Dekhein',
+                    label: context.l10n.discoveryViewInspectionReport,
                   ),
 
                 // ── Client info ──────────────────────────────────────────
                 if (job.clientName != null && job.clientName!.isNotEmpty) ...[
                   _Section(
-                    title: 'Client',
+                    title: context.l10n.workerClientSection,
                     child: _InfoRow(
                       icon: Icons.person_outline_rounded,
-                      label: 'Posted by',
+                      label: context.l10n.workerPostedBy,
                       value: job.clientName!,
                     ),
                   ),
@@ -323,53 +328,56 @@ class _JobBody extends ConsumerWidget {
 
                 // ── Service details ──────────────────────────────────────
                 _Section(
-                  title: 'Service Details',
+                  title: context.l10n.bookingServiceDetails,
                   child: Column(
                     children: [
                       _InfoRow(
                         icon: Icons.category_outlined,
-                        label: 'Category',
+                        label: context.l10n.workerCategoryLabel,
                         value: job.primaryServiceLabel,
                       ),
                       if (job.displayIssueTitle != null)
                         _InfoRow(
                           icon: Icons.title_rounded,
-                          label: 'Title',
+                          label: context.l10n.workerTitleLabel,
                           value: job.displayIssueTitle!,
                         ),
                       if (job.cleanDescription != null &&
                           job.cleanDescription!.isNotEmpty)
                         _InfoRow(
                           icon: Icons.description_outlined,
-                          label: 'Description',
+                          label: context.l10n.postJobDescription,
                           value: job.cleanDescription!,
                           multiline: true,
                         ),
                       _InfoRow(
                         icon: Icons.bolt_rounded,
-                        label: 'Urgency',
+                        label: context.l10n.bookingUrgency,
                         value: job.urgency == BookingUrgency.urgent
-                            ? 'Urgent'
-                            : 'Normal',
+                            ? context.l10n.postJobUrgent
+                            : context.l10n.postJobNormal,
                       ),
                       _InfoRow(
                         icon: Icons.schedule_rounded,
-                        label: 'Timing',
+                        label: context.l10n.bookingTiming,
                         value: job.urgency == BookingUrgency.urgent
-                            ? (job.urgentWindow?.label ?? 'Urgent')
+                            ? (job.urgentWindow != null
+                              ? urgentWindowLabel(
+                                  context.l10n, job.urgentWindow!)
+                              : context.l10n.postJobUrgent)
                             : job.scheduledDate != null
                                 ? DateFormat('EEE, d MMM yyyy')
                                         .format(job.scheduledDate!) +
                                     (job.timeSlot != null
-                                        ? ' • ${job.timeSlot!.label}'
+                                        ? ' • ${timeSlotLabel(context.l10n, job.timeSlot!)}'
                                         : '')
-                                : 'Not scheduled yet',
+                                : context.l10n.bookingNotScheduledYet,
                       ),
                       if (job.timeSlot != null)
                         _InfoRow(
                           icon: Icons.schedule_rounded,
-                          label: 'Time Slot',
-                          value: job.timeSlot!.label,
+                          label: context.l10n.workerTimeSlotLabel,
+                          value: timeSlotLabel(context.l10n, job.timeSlot!),
                         ),
                     ],
                   ),
@@ -390,36 +398,36 @@ class _JobBody extends ConsumerWidget {
 
                 // ── Timeline ─────────────────────────────────────────────
                 _Section(
-                  title: 'Timeline',
+                  title: context.l10n.workerTimelineSection,
                   child: Column(
                     children: [
                       _InfoRow(
                         icon: Icons.add_circle_outline_rounded,
-                        label: 'Created',
+                        label: context.l10n.bookingCreated,
                         value: _fmtDateTime(job.createdAt),
                       ),
                       if (job.scheduledDate != null)
                         _InfoRow(
                           icon: Icons.event_rounded,
-                          label: 'Scheduled',
+                          label: context.l10n.workerTimelineScheduled,
                           value: _fmtDateTime(job.scheduledDate!),
                         ),
                       if (job.acceptedAt != null)
                         _InfoRow(
                           icon: Icons.handshake_outlined,
-                          label: 'Accepted',
+                          label: context.l10n.bidStatusAccepted,
                           value: _fmtDateTime(job.acceptedAt!),
                         ),
                       if (job.startedAt != null)
                         _InfoRow(
                           icon: Icons.play_circle_outline_rounded,
-                          label: 'Started',
+                          label: context.l10n.workerTimelineStarted,
                           value: _fmtDateTime(job.startedAt!),
                         ),
                       if (job.completedAt != null)
                         _InfoRow(
                           icon: Icons.check_circle_outline_rounded,
-                          label: 'Completed',
+                          label: context.l10n.bookingStatusCompleted,
                           value: _fmtDateTime(job.completedAt!),
                         ),
                     ],
@@ -430,22 +438,36 @@ class _JobBody extends ConsumerWidget {
                 // ── Pricing ───────────────────────────────────────────────
                 if (job.estimatedPrice != null || job.finalPrice != null) ...[
                   _Section(
-                    title: 'Pricing',
+                    title: context.l10n.bookingPricing,
                     child: Column(
                       children: [
                         if (job.estimatedPrice != null)
                           _InfoRow(
                             icon: Icons.attach_money_rounded,
-                            label: 'Estimated',
+                            label: context.l10n.workerEstimatedLabel,
                             value: formatPkr(job.estimatedPrice),
                           ),
                         if (job.finalPrice != null)
                           _InfoRow(
                             icon: Icons.payments_outlined,
                             label: job.isInspectionOnlyForCaller
-                                ? 'Inspection Fee Earned'
-                                : 'Final Price',
+                                ? context.l10n.postJobInspectionFeeTitle
+                                : context.l10n.bookingFinalPrice,
                             value: formatPkr(job.finalPrice),
+                          ),
+                        // Paid/not-paid follows the ORIGINAL inspection work
+                        // unit, so the inspecting Ustaad is never told the fee
+                        // is earned before that booking is COMPLETED.
+                        if (workerInspectionFeeLabel(
+                                context.l10n, job.inspectionFeePaid) !=
+                            null)
+                          _InfoRow(
+                            icon: job.inspectionFeePaid == true
+                                ? Icons.check_circle_outline_rounded
+                                : Icons.schedule_rounded,
+                            label: context.l10n.workerFeeStatusLabel,
+                            value: workerInspectionFeeLabel(
+                                context.l10n, job.inspectionFeePaid)!,
                           ),
                       ],
                     ),
@@ -504,7 +526,7 @@ class _StandardServicesSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _Section(
-      title: 'Selected Services',
+      title: context.l10n.bookingSelectedServices,
       child: Column(
         children: [
           ...job.standardServiceItems.map(
@@ -515,7 +537,8 @@ class _StandardServicesSection extends StatelessWidget {
                   Expanded(
                     child: Text(
                       item.quantity > 1
-                          ? '${item.nameSnapshot} x${item.quantity}'
+                          ? context.l10n.bookingServiceQuantity(
+                              item.nameSnapshot, item.quantity)
                           : item.nameSnapshot,
                       style: const TextStyle(fontSize: 13.5, color: _kDark),
                     ),
@@ -535,10 +558,10 @@ class _StandardServicesSection extends StatelessWidget {
           const Divider(height: 20, color: _kBorder),
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'Total',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: _kDark),
+                  context.l10n.postJobTotal,
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: _kDark),
                 ),
               ),
               Text(
@@ -588,7 +611,8 @@ class _StandardLifecycleSection extends ConsumerWidget {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(e is Failure ? e.message : 'Action failed. Try again.'),
+              content: Text(
+                  failureMessage(context.l10n, e, fallback: context.l10n.inspectionActionFailed)),
               backgroundColor: _kRed,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -645,11 +669,11 @@ class _StandardLifecycleSection extends ConsumerWidget {
       children: [
         if (nextAction != null)
           primaryButton(
-            label: nextAction.label,
+            label: lifecycleActionLabel(context.l10n, nextAction),
             icon: iconFor(nextAction),
             onPressed: () => runAction(
               () => nextAction.invoke(ref, job.id),
-              successMessage: nextAction.successMessage,
+              successMessage: lifecycleActionSuccess(context.l10n, nextAction),
             ),
           )
         else
@@ -664,7 +688,7 @@ class _StandardLifecycleSection extends ConsumerWidget {
                   : () => _showWorkerCancelReasonDialog(
                       context, ref, job.id, runAction),
               icon: const Icon(Icons.close_rounded, size: 16),
-              label: const Text('Cancel Job'),
+              label: Text(context.l10n.workerCancelJob),
               style: OutlinedButton.styleFrom(
                 foregroundColor: _kRed,
                 side: const BorderSide(color: _kRed),
@@ -712,7 +736,8 @@ class _InspectionLifecycleSection extends ConsumerWidget {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(e is Failure ? e.message : 'Action failed. Try again.'),
+              content: Text(
+                  failureMessage(context.l10n, e, fallback: context.l10n.inspectionActionFailed)),
               backgroundColor: _kRed,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -782,10 +807,10 @@ class _InspectionLifecycleSection extends ConsumerWidget {
               children: [
                 const Icon(Icons.hourglass_top_rounded, size: 18, color: Color(0xFFC2541D)),
                 const SizedBox(width: 10),
-                const Expanded(
+                Expanded(
                   child: Text(
-                    'Report submitted. Waiting for the client to accept the quote or close after inspection.',
-                    style: TextStyle(fontSize: 12.5, color: Color(0xFFC2541D), height: 1.4),
+                    context.l10n.workerReportSubmittedWaiting,
+                    style: const TextStyle(fontSize: 12.5, color: Color(0xFFC2541D), height: 1.4),
                   ),
                 ),
               ],
@@ -793,7 +818,7 @@ class _InspectionLifecycleSection extends ConsumerWidget {
           )
         else if (nextAction == InspectionWorkerAction.fillReport)
           primaryButton(
-            label: nextAction!.label,
+            label: inspectionActionLabel(context.l10n, nextAction!),
             icon: iconFor(nextAction),
             onPressed: () async {
               await context.push('/worker/job/${job.id}/inspection-report');
@@ -802,11 +827,11 @@ class _InspectionLifecycleSection extends ConsumerWidget {
           )
         else if (nextAction != null)
           primaryButton(
-            label: nextAction.label,
+            label: inspectionActionLabel(context.l10n, nextAction),
             icon: iconFor(nextAction),
             onPressed: () => runAction(
               () => nextAction.invoke(ref, job.id),
-              successMessage: nextAction.successMessage,
+              successMessage: inspectionActionSuccess(context.l10n, nextAction),
             ),
           )
         else
@@ -821,7 +846,7 @@ class _InspectionLifecycleSection extends ConsumerWidget {
                   : () => _showWorkerCancelReasonDialog(
                       context, ref, job.id, runAction),
               icon: const Icon(Icons.close_rounded, size: 16),
-              label: const Text('Cancel Job'),
+              label: Text(context.l10n.workerCancelJob),
               style: OutlinedButton.styleFrom(
                 foregroundColor: _kRed,
                 side: const BorderSide(color: _kRed),
@@ -843,14 +868,19 @@ class _InspectionLifecycleSection extends ConsumerWidget {
 // One consistent cancellation flow for every lane: a required dropdown of
 // preset reasons, with a required free-text field when "Other" is picked.
 
-const List<String> kWorkerCancelReasons = [
-  'Emergency aa gayi',
-  'Location bohat door hai',
-  'Required tools ya parts available nahi',
-  'Time ya schedule issue',
-  'Customer/site related issue',
-  'Other',
-];
+/// The preset reasons an Ustaad can pick from, in the language they chose.
+///
+/// The picked label is what gets submitted as the booking's free-text
+/// cancellation reason — exactly as before, only now it reads in the Ustaad's
+/// own language instead of always Roman Urdu.
+List<String> workerCancelReasons(AppLocalizations l10n) => [
+      l10n.workerCancelReasonEmergency,
+      l10n.workerCancelReasonTooFar,
+      l10n.workerCancelReasonNoTools,
+      l10n.workerCancelReasonSchedule,
+      l10n.workerCancelReasonCustomer,
+      l10n.workerCancelReasonOther,
+    ];
 
 Future<void> _showWorkerCancelReasonDialog(
   BuildContext context,
@@ -889,33 +919,40 @@ class _CancelReasonDialogState extends State<_CancelReasonDialog> {
     super.dispose();
   }
 
-  bool get _isOther => _selectedReason == 'Other';
-  bool get _canConfirm =>
+  /// "Other" is the only reason that needs a free-text follow-up, and the
+  /// dropdown's value is the localized label — so the comparison has to be
+  /// against the same localized string the list was built from.
+  bool _isOtherFor(AppLocalizations l10n) =>
+      _selectedReason == l10n.workerCancelReasonOther;
+
+  bool _canConfirmFor(AppLocalizations l10n) =>
       _selectedReason != null &&
-      (!_isOther || _customCtrl.text.trim().isNotEmpty);
+      (!_isOtherFor(l10n) || _customCtrl.text.trim().isNotEmpty);
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final isOther = _isOtherFor(l10n);
     return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-      title: const Text(
-        'Cancel this job?',
-        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
+      title: Text(
+        l10n.workerCancelJobTitle,
+        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
       ),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Please tell the client why you are cancelling.',
-            style: TextStyle(color: _kGray, fontSize: 13.5),
+          Text(
+            l10n.workerCancelJobBody,
+            style: const TextStyle(color: _kGray, fontSize: 13.5),
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
             initialValue: _selectedReason,
             isExpanded: true,
             decoration: InputDecoration(
-              hintText: 'Select a reason',
+              hintText: l10n.cancelReasonSelect,
               filled: true,
               fillColor: _kBg,
               border: OutlineInputBorder(
@@ -925,7 +962,7 @@ class _CancelReasonDialogState extends State<_CancelReasonDialog> {
               contentPadding:
                   const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             ),
-            items: kWorkerCancelReasons
+            items: workerCancelReasons(l10n)
                 .map(
                   (r) => DropdownMenuItem(
                     value: r,
@@ -935,14 +972,14 @@ class _CancelReasonDialogState extends State<_CancelReasonDialog> {
                 .toList(),
             onChanged: (v) => setState(() => _selectedReason = v),
           ),
-          if (_isOther) ...[
+          if (isOther) ...[
             const SizedBox(height: 12),
             TextField(
               controller: _customCtrl,
               maxLines: 3,
               onChanged: (_) => setState(() {}),
               decoration: InputDecoration(
-                hintText: 'Apni wajah likhein (required)',
+                hintText: l10n.workerCancelOwnReasonHint,
                 filled: true,
                 fillColor: _kBg,
                 border: OutlineInputBorder(
@@ -958,18 +995,18 @@ class _CancelReasonDialogState extends State<_CancelReasonDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context, null),
-          child: const Text('Keep Job', style: TextStyle(color: _kGray)),
+          child: Text(l10n.workerKeepJob, style: const TextStyle(color: _kGray)),
         ),
         TextButton(
-          onPressed: _canConfirm
+          onPressed: _canConfirmFor(l10n)
               ? () => Navigator.pop(
                     context,
-                    _isOther ? _customCtrl.text.trim() : _selectedReason,
+                    isOther ? _customCtrl.text.trim() : _selectedReason,
                   )
               : null,
-          child: const Text(
-            'Yes, cancel',
-            style: TextStyle(color: _kRed, fontWeight: FontWeight.w600),
+          child: Text(
+            l10n.workerYesCancel,
+            style: const TextStyle(color: _kRed, fontWeight: FontWeight.w600),
           ),
         ),
       ],
@@ -1043,7 +1080,7 @@ class _StatusCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  job.status.workerLabel,
+                  workerJobStatusLabel(context.l10n, job.status),
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -1176,18 +1213,20 @@ class _AttachmentsSection extends StatelessWidget {
     final audios = attachments.where((a) => a.type == AttachmentType.audio).toList();
 
     return _Section(
-      title: 'Attachments',
+      title: context.l10n.bookingAttachments,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (images.isNotEmpty) ...[
-            const Text('Photos', style: TextStyle(fontSize: 12, color: _kLight)),
+            Text(context.l10n.inspectionPhotos,
+                style: const TextStyle(fontSize: 12, color: _kLight)),
             const SizedBox(height: 10),
             BookingImageGrid(images: images),
           ],
           if (videos.isNotEmpty) ...[
             if (images.isNotEmpty) const SizedBox(height: 14),
-            const Text('Videos', style: TextStyle(fontSize: 12, color: _kLight)),
+            Text(context.l10n.workerAttachmentsVideos,
+                style: const TextStyle(fontSize: 12, color: _kLight)),
             const SizedBox(height: 8),
             ...videos.map((v) => Padding(
                   padding: const EdgeInsets.only(bottom: 8),
@@ -1196,7 +1235,8 @@ class _AttachmentsSection extends StatelessWidget {
           ],
           if (audios.isNotEmpty) ...[
             if (images.isNotEmpty || videos.isNotEmpty) const SizedBox(height: 14),
-            const Text('Voice Notes', style: TextStyle(fontSize: 12, color: _kLight)),
+            Text(context.l10n.workerAttachmentsVoiceNotes,
+                style: const TextStyle(fontSize: 12, color: _kLight)),
             const SizedBox(height: 8),
             ...audios.map((a) => Padding(
                   padding: const EdgeInsets.only(bottom: 8),
@@ -1220,7 +1260,7 @@ class _StatusHistorySection extends StatelessWidget {
   Widget build(BuildContext context) {
     final hasReview = review != null;
     return _Section(
-      title: 'Status History',
+      title: context.l10n.workerStatusHistory,
       child: Column(
         children: [
           ...history.asMap().entries.map((e) {
@@ -1252,7 +1292,7 @@ class _StatusHistorySection extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          entry.status.workerLabel,
+                          workerJobStatusLabel(context.l10n, entry.status),
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
@@ -1299,9 +1339,9 @@ class _StatusHistorySection extends StatelessWidget {
                       children: [
                         Row(
                           children: [
-                            const Text(
-                              'Reviewed',
-                              style: TextStyle(
+                            Text(
+                              context.l10n.trackStepReviewed,
+                              style: const TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
                                 color: Color(0xFFF59E0B),
@@ -1371,7 +1411,9 @@ class _CompleteJobBar extends ConsumerWidget {
                   child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                 )
               : const Icon(Icons.check_circle_outline_rounded, size: 18),
-          label: Text(isLoading ? 'Completing...' : 'Mark as Completed'),
+          label: Text(isLoading
+              ? context.l10n.workerCompleting
+              : context.l10n.workerMarkAsCompleted),
           style: ElevatedButton.styleFrom(
             backgroundColor: _kGreen,
             foregroundColor: Colors.white,
@@ -1388,18 +1430,19 @@ class _CompleteJobBar extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: const Text(
-          'Mark as Completed?',
-          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
+        title: Text(
+          context.l10n.workerMarkCompletedTitle,
+          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
         ),
-        content: const Text(
-          'This will close the job and notify the client.',
-          style: TextStyle(color: _kGray, fontSize: 14),
+        content: Text(
+          context.l10n.workerMarkCompletedBody,
+          style: const TextStyle(color: _kGray, fontSize: 14),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel', style: TextStyle(color: _kLight)),
+            child: Text(context.l10n.commonCancel,
+                style: const TextStyle(color: _kLight)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -1409,7 +1452,7 @@ class _CompleteJobBar extends ConsumerWidget {
               elevation: 0,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
-            child: const Text('Complete'),
+            child: Text(context.l10n.workerComplete),
           ),
         ],
       ),
@@ -1444,7 +1487,7 @@ class _ReviewSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _Section(
-      title: 'Client Review',
+      title: context.l10n.workerClientReview,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1459,7 +1502,7 @@ class _ReviewSection extends StatelessWidget {
               )),
               const SizedBox(width: 8),
               Text(
-                '${review.rating}/5',
+                context.l10n.workerReviewRatingOutOfFive(review.rating),
                 style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
@@ -1606,9 +1649,9 @@ class _ClientCancelledBanner extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Client cancelled this booking',
-                  style: TextStyle(
+                Text(
+                  context.l10n.workerClientCancelledBooking,
+                  style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
                     color: _kRed,
@@ -1636,17 +1679,19 @@ class _ApproximateLocationCard extends StatelessWidget {
   final BookingEntity job;
   const _ApproximateLocationCard({required this.job});
 
-  String? get _distanceLabel {
+  String? _distanceLabel(AppLocalizations l10n) {
     final km = job.distanceKm;
     if (km == null) return null;
-    return km < 1 ? '${(km * 1000).round()} m away' : '${km.toStringAsFixed(1)} km away';
+    return km < 1
+        ? l10n.distanceMetersAway((km * 1000).round())
+        : l10n.distanceKmAway(km.toStringAsFixed(1));
   }
 
   @override
   Widget build(BuildContext context) {
-    final distanceLabel = _distanceLabel;
+    final distanceLabel = _distanceLabel(context.l10n);
     return _Section(
-      title: 'Location',
+      title: context.l10n.chatAttachLocation,
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(14),
@@ -1666,8 +1711,8 @@ class _ApproximateLocationCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     job.city.isNotEmpty
-                        ? 'Approximate area: ${job.city}'
-                        : 'Approximate area not available',
+                        ? context.l10n.workerApproximateArea(job.city)
+                        : context.l10n.workerApproximateAreaUnavailable,
                     style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
@@ -1684,16 +1729,16 @@ class _ApproximateLocationCard extends StatelessWidget {
                   const Icon(Icons.near_me_outlined, size: 16, color: _kLight),
                   const SizedBox(width: 8),
                   Text(
-                    'Distance: $distanceLabel',
+                    context.l10n.workerDistanceLabel(distanceLabel),
                     style: const TextStyle(fontSize: 12.5, color: _kGray),
                   ),
                 ],
               ),
             ],
             const SizedBox(height: 8),
-            const Text(
-              'Exact address and map become visible once you are hired for this job.',
-              style: TextStyle(fontSize: 11.5, color: _kLight, height: 1.4),
+            Text(
+              context.l10n.workerExactAddressAfterHire,
+              style: const TextStyle(fontSize: 11.5, color: _kLight, height: 1.4),
             ),
           ],
         ),
@@ -1805,13 +1850,15 @@ class _LocationSectionState extends ConsumerState<_LocationSection>
   Future<void> _startDirections() async {
     if (_gettingLocation) return;
 
+    // Resolved up front: every message below is reached after an await, and
+    // reading `context.l10n` there would cross an async gap.
+    final l10n = context.l10n;
+
     if (AppConfig.googleMapsApiKey.isEmpty) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Road route is not configured yet. Opening Google Maps for navigation.',
-            ),
+          SnackBar(
+            content: Text(l10n.workerRoadRouteNotConfigured),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -1835,7 +1882,7 @@ class _LocationSectionState extends ConsumerState<_LocationSection>
         }
         if (perm == LocationPermission.denied ||
             perm == LocationPermission.deniedForever) {
-          errorMessage = 'Location permission denied.';
+          errorMessage = l10n.workerLocationPermissionDenied;
         } else {
           try {
             final p = await Geolocator.getCurrentPosition(
@@ -1872,9 +1919,7 @@ class _LocationSectionState extends ConsumerState<_LocationSection>
     if (workerPos == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            errorMessage ?? 'Unable to get your location for directions.',
-          ),
+          content: Text(errorMessage ?? l10n.workerDirectionsLocationFailed),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -1954,8 +1999,8 @@ class _LocationSectionState extends ConsumerState<_LocationSection>
       _stopDirections();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('You have arrived at the job location.'),
+          SnackBar(
+            content: Text(context.l10n.workerArrivedAtJobLocation),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -2020,7 +2065,7 @@ class _LocationSectionState extends ConsumerState<_LocationSection>
           position: _workerPos!,
           icon: BitmapDescriptor.defaultMarkerWithHue(
               BitmapDescriptor.hueAzure),
-          infoWindow: const InfoWindow(title: 'Your Location'),
+          infoWindow: InfoWindow(title: context.l10n.workerYourLocation),
         ),
     };
   }
@@ -2056,20 +2101,20 @@ class _LocationSectionState extends ConsumerState<_LocationSection>
   Widget build(BuildContext context) {
     if (!_hasJobLoc) {
       return _Section(
-        title: 'Location',
+        title: context.l10n.chatAttachLocation,
         child: Column(
           children: [
             if (widget.job.address != null && widget.job.address!.isNotEmpty)
               _InfoRow(
                 icon: Icons.location_on_outlined,
-                label: 'Address',
+                label: context.l10n.postJobStepAddress,
                 value: widget.job.address!,
                 multiline: true,
               ),
             if (widget.job.city.isNotEmpty)
               _InfoRow(
                 icon: Icons.location_city_rounded,
-                label: 'City',
+                label: context.l10n.workerCityLabel,
                 value: widget.job.city,
               ),
           ],
@@ -2078,7 +2123,7 @@ class _LocationSectionState extends ConsumerState<_LocationSection>
     }
 
     return _Section(
-      title: 'Location',
+      title: context.l10n.chatAttachLocation,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -2160,7 +2205,7 @@ class _LocationSectionState extends ConsumerState<_LocationSection>
                     widget.job.address!.isNotEmpty) ...[
                   _InfoRow(
                     icon: Icons.home_work_outlined,
-                    label: 'Client Address',
+                    label: context.l10n.workerClientAddress,
                     value: widget.job.address!,
                     multiline: true,
                   ),
@@ -2169,8 +2214,8 @@ class _LocationSectionState extends ConsumerState<_LocationSection>
                 ],
                 _InfoRow(
                   icon: Icons.location_on_rounded,
-                  label: 'Pinned Job Location',
-                  value: 'Pinned on map',
+                  label: context.l10n.workerPinnedJobLocation,
+                  value: context.l10n.workerPinnedOnMap,
                 ),
               ],
             ),
@@ -2201,8 +2246,8 @@ class _LocationSectionState extends ConsumerState<_LocationSection>
                           ),
                     label: Text(
                       _gettingLocation
-                          ? 'Getting location...'
-                          : 'Directions',
+                          ? context.l10n.workerGettingLocation
+                          : context.l10n.workerDirections,
                       style: const TextStyle(
                           color: _kGreen, fontSize: 13),
                     ),
@@ -2224,10 +2269,9 @@ class _LocationSectionState extends ConsumerState<_LocationSection>
                       size: 16,
                       color: _kGray,
                     ),
-                    label: const Text(
-                      'Open in Maps',
-                      style:
-                          TextStyle(color: _kGray, fontSize: 13),
+                    label: Text(
+                      context.l10n.workerOpenInMaps,
+                      style: const TextStyle(color: _kGray, fontSize: 13),
                     ),
                     style: OutlinedButton.styleFrom(
                       side: const BorderSide(color: _kBorder),
@@ -2251,14 +2295,14 @@ class _LocationSectionState extends ConsumerState<_LocationSection>
                       color: const Color(0xFFECFDF5),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Row(
+                    child: Row(
                       children: [
-                        Icon(Icons.navigation_rounded,
+                        const Icon(Icons.navigation_rounded,
                             size: 16, color: _kGreen),
-                        SizedBox(width: 6),
+                        const SizedBox(width: 6),
                         Text(
-                          'Directions active',
-                          style: TextStyle(
+                          context.l10n.workerDirectionsActive,
+                          style: const TextStyle(
                             color: _kGreen,
                             fontSize: 13,
                             fontWeight: FontWeight.w500,
@@ -2278,10 +2322,9 @@ class _LocationSectionState extends ConsumerState<_LocationSection>
                     padding: const EdgeInsets.symmetric(
                         vertical: 9, horizontal: 16),
                   ),
-                  child: const Text(
-                    'Stop',
-                    style:
-                        TextStyle(color: _kRed, fontSize: 13),
+                  child: Text(
+                    context.l10n.inspFormStop,
+                    style: const TextStyle(color: _kRed, fontSize: 13),
                   ),
                 ),
               ],
@@ -2292,7 +2335,7 @@ class _LocationSectionState extends ConsumerState<_LocationSection>
             const SizedBox(height: 10),
             _InfoRow(
               icon: Icons.location_city_rounded,
-              label: 'City',
+              label: context.l10n.workerCityLabel,
               value: widget.job.city,
             ),
           ],
@@ -2381,13 +2424,15 @@ class _FullScreenMapPageState extends ConsumerState<_FullScreenMapPage>
   Future<void> _startDirections() async {
     if (_gettingLocation) return;
 
+    // Resolved up front: every message below is reached after an await, and
+    // reading `context.l10n` there would cross an async gap.
+    final l10n = context.l10n;
+
     if (AppConfig.googleMapsApiKey.isEmpty) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Road route is not configured yet. Opening Google Maps for navigation.',
-            ),
+          SnackBar(
+            content: Text(l10n.workerRoadRouteNotConfigured),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -2411,7 +2456,7 @@ class _FullScreenMapPageState extends ConsumerState<_FullScreenMapPage>
         }
         if (perm == LocationPermission.denied ||
             perm == LocationPermission.deniedForever) {
-          errorMessage = 'Location permission denied.';
+          errorMessage = l10n.workerLocationPermissionDenied;
         } else {
           try {
             final p = await Geolocator.getCurrentPosition(
@@ -2444,9 +2489,7 @@ class _FullScreenMapPageState extends ConsumerState<_FullScreenMapPage>
     if (workerPos == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            errorMessage ?? 'Unable to get your location for directions.',
-          ),
+          content: Text(errorMessage ?? l10n.workerDirectionsLocationFailed),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -2527,8 +2570,8 @@ class _FullScreenMapPageState extends ConsumerState<_FullScreenMapPage>
       _stopDirections();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('You have arrived at the job location.'),
+          SnackBar(
+            content: Text(context.l10n.workerArrivedAtJobLocation),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -2590,7 +2633,7 @@ class _FullScreenMapPageState extends ConsumerState<_FullScreenMapPage>
           position: _workerPos!,
           icon: BitmapDescriptor.defaultMarkerWithHue(
               BitmapDescriptor.hueAzure),
-          infoWindow: const InfoWindow(title: 'Your Location'),
+          infoWindow: InfoWindow(title: context.l10n.workerYourLocation),
         ),
     };
   }
@@ -2686,7 +2729,7 @@ class _FullScreenMapPageState extends ConsumerState<_FullScreenMapPage>
                       children: [
                         Expanded(
                           child: _MapButton(
-                            label: 'Directions active',
+                            label: context.l10n.workerDirectionsActive,
                             icon: Icons.navigation_rounded,
                             color: _kGreen,
                             onPressed: null,
@@ -2694,7 +2737,7 @@ class _FullScreenMapPageState extends ConsumerState<_FullScreenMapPage>
                         ),
                         const SizedBox(width: 10),
                         _MapButton(
-                          label: 'Stop',
+                          label: context.l10n.inspFormStop,
                           icon: Icons.stop_rounded,
                           color: _kRed,
                           onPressed: _stopDirections,
@@ -2706,8 +2749,8 @@ class _FullScreenMapPageState extends ConsumerState<_FullScreenMapPage>
                         Expanded(
                           child: _MapButton(
                             label: _gettingLocation
-                                ? 'Getting location...'
-                                : 'Directions',
+                                ? context.l10n.workerGettingLocation
+                                : context.l10n.workerDirections,
                             icon: Icons.directions_rounded,
                             color: _kGreen,
                             onPressed:
@@ -2718,7 +2761,7 @@ class _FullScreenMapPageState extends ConsumerState<_FullScreenMapPage>
                         const SizedBox(width: 10),
                         Expanded(
                           child: _MapButton(
-                            label: 'Open in Maps',
+                            label: context.l10n.workerOpenInMaps,
                             icon: Icons.open_in_new_rounded,
                             color: _kGray,
                             onPressed: _openExternalMaps,
@@ -2826,7 +2869,7 @@ class _ErrorScreen extends StatelessWidget {
                 elevation: 0,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
-              child: const Text('Retry'),
+              child: Text(context.l10n.commonRetry),
             ),
           ],
         ),

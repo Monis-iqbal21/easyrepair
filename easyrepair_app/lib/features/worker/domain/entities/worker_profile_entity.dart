@@ -16,27 +16,9 @@ extension AvailabilityStatusX on AvailabilityStatus {
     }
   }
 
-  String get label {
-    switch (this) {
-      case AvailabilityStatus.offline:
-        return 'Offline';
-      case AvailabilityStatus.online:
-        return 'Online';
-      case AvailabilityStatus.busy:
-        return 'Busy';
-    }
-  }
-
-  String get helperText {
-    switch (this) {
-      case AvailabilityStatus.offline:
-        return 'You are hidden from clients';
-      case AvailabilityStatus.online:
-        return 'Clients near your location can see you';
-      case AvailabilityStatus.busy:
-        return 'You are currently working on a job';
-    }
-  }
+  // Display wording lives in presentation/utils/worker_labels.dart —
+  // availabilityLabel() and availabilityHelper(). The enum and its raw API
+  // value are untouched.
 
   static AvailabilityStatus fromRaw(String raw) {
     switch (raw.toUpperCase()) {

@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/errors/failures.dart';
 import '../../../chat/presentation/providers/chat_providers.dart';
+import '../../../../core/l10n/l10n_extensions.dart';
+import '../../../../core/errors/failure_messages.dart';
 
 /// Opens (or creates) the chat conversation tied to [bookingId] and
 /// navigates the worker into it. Used by the New Jobs card, job detail page,
@@ -26,7 +27,7 @@ Future<void> openWorkerChatForBooking(
     }
   } catch (e) {
     if (!context.mounted) return;
-    final message = e is Failure ? e.message : 'Could not open chat.';
+    final message = failureMessage(context.l10n, e, fallback: context.l10n.chatOpenFailed);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),

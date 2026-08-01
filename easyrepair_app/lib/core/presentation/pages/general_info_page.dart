@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../features/auth/presentation/providers/auth_providers.dart';
+import '../../../core/l10n/l10n_extensions.dart';
 
 class GeneralInfoPage extends ConsumerWidget {
   const GeneralInfoPage({super.key});
@@ -24,8 +25,8 @@ class GeneralInfoPage extends ConsumerWidget {
           ),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: const Text(
-          'General',
+        title: Text(
+          context.l10n.generalInfoTitle,
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w700,
@@ -39,33 +40,33 @@ class GeneralInfoPage extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _SectionLabel(label: 'Account Info'),
+            _SectionLabel(label: context.l10n.generalAccountSection),
             const SizedBox(height: 12),
             _InfoCard(
               children: [
-                _InfoRow(label: 'First Name', value: user?.firstName ?? '—'),
+                _InfoRow(label: context.l10n.generalFirstName, value: user?.firstName ?? '—'),
                 const _Divider(),
-                _InfoRow(label: 'Last Name', value: user?.lastName ?? '—'),
+                _InfoRow(label: context.l10n.generalLastName, value: user?.lastName ?? '—'),
                 const _Divider(),
-                _InfoRow(label: 'Phone Number', value: user?.phone ?? '—'),
+                _InfoRow(label: context.l10n.generalPhoneNumber, value: user?.phone ?? '—'),
               ],
             ),
             const SizedBox(height: 8),
-            const Padding(
+            Padding(
               padding: EdgeInsets.symmetric(horizontal: 4),
               child: Text(
-                'Name and phone are managed by your account and cannot be changed here.',
+                context.l10n.generalNamePhoneLocked,
                 style: TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
               ),
             ),
             const SizedBox(height: 28),
-            _SectionLabel(label: 'Security'),
+            _SectionLabel(label: context.l10n.generalSecuritySection),
             const SizedBox(height: 12),
             _InfoCard(
               children: [
                 _ActionRow(
                   icon: Icons.lock_outline_rounded,
-                  label: 'Change Password',
+                  label: context.l10n.generalChangePassword,
                   onTap: () => _showChangePasswordSheet(context),
                 ),
               ],
@@ -125,8 +126,8 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
         children: [
           Row(
             children: [
-              const Text(
-                'Change Password',
+              Text(
+                context.l10n.generalChangePassword,
                 style: TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.w700,
@@ -143,27 +144,27 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
           const SizedBox(height: 20),
           _PasswordField(
             controller: _currentCtrl,
-            label: 'Current Password',
+            label: context.l10n.generalCurrentPassword,
             obscure: _obscureCurrent,
             onToggle: () => setState(() => _obscureCurrent = !_obscureCurrent),
           ),
           const SizedBox(height: 14),
           _PasswordField(
             controller: _newCtrl,
-            label: 'New Password',
+            label: context.l10n.generalNewPassword,
             obscure: _obscureNew,
             onToggle: () => setState(() => _obscureNew = !_obscureNew),
           ),
           const SizedBox(height: 14),
           _PasswordField(
             controller: _confirmCtrl,
-            label: 'Confirm New Password',
+            label: context.l10n.generalConfirmNewPassword,
             obscure: _obscureConfirm,
             onToggle: () => setState(() => _obscureConfirm = !_obscureConfirm),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Password change via in-app flow coming soon. Contact support if you need immediate assistance.',
+          Text(
+            context.l10n.generalChangePasswordComingSoon,
             style: TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
           ),
           const SizedBox(height: 20),
@@ -181,8 +182,8 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
                   borderRadius: BorderRadius.circular(14),
                 ),
               ),
-              child: const Text(
-                'Update Password',
+              child: Text(
+                context.l10n.generalUpdatePassword,
                 style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
               ),
             ),

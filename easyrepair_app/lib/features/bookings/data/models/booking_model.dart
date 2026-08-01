@@ -231,6 +231,15 @@ class BookingModel {
   final String city;
   final double latitude;
   final double longitude;
+  /// Whether the API actually sent coordinates for this booking.
+  ///
+  /// Captured from the RAW JSON before any defaulting, because the backend
+  /// legitimately nulls lat/lng for viewers who may not see the exact address
+  /// (see WorkersService._toJobDto's isAssignedToCaller gate). Without this,
+  /// "no coordinates" and a real 0,0 are indistinguishable once the `?? 0`
+  /// default has been applied, and the UI cannot tell a privacy-redacted
+  /// booking from a genuinely located one.
+  final bool hasLocation;
   final double? distanceKm;
   final DateTime? completedAt;
   final String? cancellationReason;
@@ -263,6 +272,7 @@ class BookingModel {
   final bool isInspectionOnlyForCaller;
   final String? sourceInspectionBookingId;
   final String? linkedRepairBookingId;
+  final bool? inspectionFeePaid;
 
   const BookingModel({
     required this.id,
@@ -285,6 +295,7 @@ class BookingModel {
     this.city = '',
     this.latitude = 0,
     this.longitude = 0,
+    this.hasLocation = false,
     this.distanceKm,
     this.completedAt,
     this.cancellationReason,
@@ -317,6 +328,7 @@ class BookingModel {
     this.isInspectionOnlyForCaller = false,
     this.sourceInspectionBookingId,
     this.linkedRepairBookingId,
+    this.inspectionFeePaid,
   });
 
   factory BookingModel.fromJson(Map<String, dynamic> json) {
@@ -362,6 +374,8 @@ class BookingModel {
       city: json['city'] as String? ?? '',
       latitude: (json['latitude'] as num?)?.toDouble() ?? 0,
       longitude: (json['longitude'] as num?)?.toDouble() ?? 0,
+      // Read from the raw payload, NOT from the defaulted values above.
+      hasLocation: json['latitude'] != null && json['longitude'] != null,
       distanceKm: (json['distanceKm'] as num?)?.toDouble(),
       completedAt: json['completedAt'] != null
           ? DateTime.tryParse(json['completedAt'] as String)
@@ -424,6 +438,7 @@ class BookingModel {
           json['isInspectionOnlyForCaller'] as bool? ?? false,
       sourceInspectionBookingId: json['sourceInspectionBookingId'] as String?,
       linkedRepairBookingId: json['linkedRepairBookingId'] as String?,
+      inspectionFeePaid: json['inspectionFeePaid'] as bool?,
     );
   }
 
@@ -470,6 +485,7 @@ class BookingModel {
       city: city,
       latitude: latitude,
       longitude: longitude,
+      hasLocation: hasLocation,
       distanceKm: distanceKm,
       completedAt: completedAt,
       cancellationReason: cancellationReason,
@@ -504,6 +520,7 @@ class BookingModel {
       isInspectionOnlyForCaller: isInspectionOnlyForCaller,
       sourceInspectionBookingId: sourceInspectionBookingId,
       linkedRepairBookingId: linkedRepairBookingId,
+      inspectionFeePaid: inspectionFeePaid,
     );
   }
 }

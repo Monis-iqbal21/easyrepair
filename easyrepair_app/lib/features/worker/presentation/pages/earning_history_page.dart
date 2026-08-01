@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../domain/entities/earning_history_entity.dart';
 import '../providers/earning_history_providers.dart';
+import '../../../../core/l10n/l10n_extensions.dart';
 
 // ── Palette (matches existing worker UI) ─────────────────────────────────────
 const _kOrange = Color(0xFFDB6234);
@@ -15,15 +16,15 @@ const _kBorder = Color(0xFFE2E8F0);
 const _kBg = Color(0xFFF9FAFB);
 const _kGreen = Color(0xFF22C55E);
 
-String _laneLabel(EarningHistoryJobEntity job) {
-  if (job.isInspectionOnly) return 'Inspection Fee';
+String _laneLabel(BuildContext context, EarningHistoryJobEntity job) {
+  if (job.isInspectionOnly) return context.l10n.postJobInspectionFeeTitle;
   switch (job.lane) {
     case 'STANDARD':
-      return 'Standard';
+      return context.l10n.workerLevelStandard;
     case 'INSPECTION':
-      return 'Inspection';
+      return context.l10n.inspectionBadge;
     case 'BIDDING':
-      return 'Bidding';
+      return context.l10n.earningBidding;
     default:
       return job.lane;
   }
@@ -61,8 +62,8 @@ class EarningHistoryPage extends ConsumerWidget {
               size: 18, color: _kDark),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: const Text(
-          'Earning History',
+        title: Text(
+          context.l10n.earningHistoryTitle,
           style: TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w700,
@@ -130,7 +131,7 @@ class _DayCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 3),
                       Text(
-                        '${day.jobsCount} ${day.jobsCount == 1 ? 'job' : 'jobs'} completed',
+                        context.l10n.earningJobsCompleted(day.jobsCount),
                         style: const TextStyle(fontSize: 12, color: _kGray),
                       ),
                     ],
@@ -173,7 +174,7 @@ class _JobRow extends StatelessWidget {
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
-              _laneLabel(job),
+              _laneLabel(context, job),
               style: TextStyle(
                 fontSize: 10.5,
                 fontWeight: FontWeight.w700,
@@ -217,8 +218,8 @@ class _EmptyState extends StatelessWidget {
           children: [
             const Icon(Icons.savings_outlined, size: 48, color: _kLight),
             const SizedBox(height: 12),
-            const Text(
-              'No earnings yet',
+            Text(
+              context.l10n.earningNoneYet,
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
@@ -226,8 +227,8 @@ class _EmptyState extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 6),
-            const Text(
-              'Completed jobs will show up here with your daily earnings.',
+            Text(
+              context.l10n.earningNoneHint,
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 12.5, color: _kGray),
             ),
@@ -265,7 +266,7 @@ class _ErrorState extends StatelessWidget {
                 foregroundColor: _kOrange,
                 side: const BorderSide(color: _kOrange),
               ),
-              child: const Text('Retry'),
+              child: Text(context.l10n.commonRetry),
             ),
           ],
         ),

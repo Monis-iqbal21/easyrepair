@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
+import '../../core/l10n/l10n_extensions.dart';
 
 /// Requests camera, microphone, and location-when-in-use permissions once per
 /// app session. Call [maybeRequest] after the user is authenticated.
@@ -72,20 +73,19 @@ class _PermissionExplainDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      title: const Text(
-        'Allow permissions',
+      title: Text(
+        context.l10n.permissionsTitle,
         style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
       ),
-      content: const Text(
-        'Handygo needs camera, microphone, and location permissions so you can '
-        'upload photos/videos, send voice notes, and share or track job location.',
+      content: Text(
+        context.l10n.permissionsRationale,
         style: TextStyle(fontSize: 14, height: 1.5),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context, false),
-          child: const Text(
-            'Not now',
+          child: Text(
+            context.l10n.commonNotNow,
             style: TextStyle(color: Color(0xFF6B7280)),
           ),
         ),
@@ -99,7 +99,7 @@ class _PermissionExplainDialog extends StatelessWidget {
               borderRadius: BorderRadius.circular(10),
             ),
           ),
-          child: const Text('Continue'),
+          child: Text(context.l10n.commonContinue),
         ),
       ],
     );
@@ -117,19 +117,19 @@ class _OpenSettingsDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      title: const Text(
-        'Permissions blocked',
+      title: Text(
+        context.l10n.permissionsBlockedTitle,
         style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
       ),
-      content: const Text(
-        'Some permissions were permanently denied. Open Settings to enable them manually.',
+      content: Text(
+        context.l10n.permissionsBlockedBody,
         style: TextStyle(fontSize: 14, height: 1.5),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text(
-            'Not now',
+          child: Text(
+            context.l10n.commonNotNow,
             style: TextStyle(color: Color(0xFF6B7280)),
           ),
         ),
@@ -146,7 +146,7 @@ class _OpenSettingsDialog extends StatelessWidget {
               borderRadius: BorderRadius.circular(10),
             ),
           ),
-          child: const Text('Open Settings'),
+          child: Text(context.l10n.commonOpenSettings),
         ),
       ],
     );

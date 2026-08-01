@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/l10n/l10n_extensions.dart';
 import '../../domain/entities/booking_entity.dart';
+import '../utils/status_labels.dart';
 
 class StatusBadge extends StatelessWidget {
   final BookingStatus status;
@@ -34,7 +36,7 @@ class StatusBadge extends StatelessWidget {
           ),
           const SizedBox(width: 4),
           Text(
-            status.displayLabel,
+            bookingStatusLabel(context.l10n, status),
             style: TextStyle(
               fontSize: fontSize,
               fontWeight: FontWeight.w600,

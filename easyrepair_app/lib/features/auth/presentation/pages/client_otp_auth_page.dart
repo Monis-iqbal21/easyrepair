@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/l10n/l10n_extensions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -10,6 +11,7 @@ import '../widgets/auth_header.dart';
 import '../widgets/auth_primary_button.dart';
 import '../widgets/auth_text_field.dart';
 import '../widgets/otp_input_section.dart';
+import '../../../../core/errors/failure_messages.dart';
 
 enum _ClientAuthMode { otp, password }
 
@@ -48,6 +50,22 @@ class _ClientOtpAuthPageState extends ConsumerState<ClientOtpAuthPage> {
   String? _workerConflictMessage;
 
   @override
+  void initState() {
+    super.initState();
+    // otpRequestNotifierProvider is a global, non-autoDispose provider shared
+    // by all three OTP pages and is never reset by any of them. Without this,
+    // a successful OTP request earlier in the session leaves `expiresAt`
+    // non-null forever, so re-entering this page renders the phone field in
+    // its "OTP sent" state on the very first frame and the number can no
+    // longer be corrected. Clearing state only — this never sends anything.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.read(otpRequestNotifierProvider.notifier).reset();
+      ref.read(clientPhoneCheckNotifierProvider.notifier).reset();
+    });
+  }
+
+  @override
   void dispose() {
     _nameCtrl.dispose();
     _phoneCtrl.dispose();
@@ -58,23 +76,47 @@ class _ClientOtpAuthPageState extends ConsumerState<ClientOtpAuthPage> {
     super.dispose();
   }
 
+  /// Editing the phone number invalidates any OTP already requested for the
+  /// PREVIOUS number. Clears that state so the field stays editable and the
+  /// countdown never belongs to a different number.
+  ///
+  /// Deliberately state-only: it must never re-request an OTP, or correcting
+  /// a single digit would burn an SMS send.
+  void _onOtpPhoneChanged(String _) {
+    if (ref.read(otpRequestNotifierProvider).valueOrNull != null) {
+      ref.read(otpRequestNotifierProvider.notifier).reset();
+    }
+  }
+
+  /// Same idea for the password flow: the phone check result belongs to the
+  /// number that was checked, so editing it must invalidate the result rather
+  /// than locking the field.
+  void _onPasswordPhoneChanged(String _) {
+    if (_workerConflictMessage != null) {
+      setState(() => _workerConflictMessage = null);
+    }
+    if (ref.read(clientPhoneCheckNotifierProvider).valueOrNull != null) {
+      ref.read(clientPhoneCheckNotifierProvider.notifier).reset();
+    }
+  }
+
   String? _validateName(String? value) {
-    if (value == null || value.trim().isEmpty) return 'Poora naam likhein.';
+    if (value == null || value.trim().isEmpty) return context.l10n.authValidationNameRequired;
     return null;
   }
 
   String? _validatePhone(String? value) {
-    if (value == null || value.isEmpty) return 'Mobile number likhein.';
+    if (value == null || value.isEmpty) return context.l10n.authValidationPhoneRequired;
     if (!RegExp(r'^(\+92|0092|92|0)?[3][0-9]{9}$').hasMatch(value.trim())) {
-      return 'Sahi Pakistani mobile number likhein.';
+      return context.l10n.authValidationPhoneInvalid;
     }
     return null;
   }
 
   String? _validatePassword(String? value) {
-    if (value == null || value.isEmpty) return 'Password likhein.';
+    if (value == null || value.isEmpty) return context.l10n.authValidationPasswordRequired;
     if (value.length < 8) {
-      return 'Password kam az kam 8 characters ka hona chahiye.';
+      return context.l10n.authValidationPasswordTooShort;
     }
     return null;
   }
@@ -220,10 +262,10 @@ class _ClientOtpAuthPageState extends ConsumerState<ClientOtpAuthPage> {
                         children: [
                           SizedBox(height: isSmall ? 16 : 28),
                           AuthHeader(
-                            title: 'Ustaad book karne ke liye\nlogin karein',
+                            title: context.l10n.authClientLoginTitle,
                             subtitle: _mode == _ClientAuthMode.otp
-                                ? 'Apna naam aur mobile number dalain. Hum verification code bhejein ge.'
-                                : 'Apna mobile number aur password se continue karein.',
+                                ? context.l10n.authClientOtpSubtitle
+                                : context.l10n.authClientPasswordSubtitle,
                             isSmall: isSmall,
                             showBackButton: true,
                           ),
@@ -260,7 +302,9 @@ class _ClientOtpAuthPageState extends ConsumerState<ClientOtpAuthPage> {
 
   void _handleAuthFailure(Object? error) {
     if (error is WorkerPhoneConflictFailure) {
-      setState(() => _workerConflictMessage = error.message);
+      setState(
+        () => _workerConflictMessage = failureMessage(context.l10n, error),
+      );
       return;
     }
     _showSnackBar(error);
@@ -268,8 +312,12 @@ class _ClientOtpAuthPageState extends ConsumerState<ClientOtpAuthPage> {
 
   void _showSnackBar(Object? error) {
     final message = error is SmsSendFailure
-        ? 'OTP filhal send nahi ho saka. Password se continue karein ya thori dair baad dobara koshish karein.'
-        : (error is Failure ? error.message : 'Kuch ghalat ho gaya.');
+        ? context.l10n.authErrorOtpSendFailed
+        : failureMessage(
+            context.l10n,
+            error,
+            fallback: context.l10n.authErrorGeneric,
+          );
     if (!mounted) return;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
@@ -287,27 +335,31 @@ class _ClientOtpAuthPageState extends ConsumerState<ClientOtpAuthPage> {
             children: [
               AuthTextField(
                 controller: _nameCtrl,
-                label: 'Aap ka poora naam',
-                hint: 'Apna poora naam likhein',
+                label: context.l10n.authFieldFullName,
+                hint: context.l10n.authHintFullName,
                 prefixIcon: Icons.person_outline_rounded,
                 validator: _validateName,
                 enabled: !showOtp,
               ),
               const SizedBox(height: 14),
+              // Stays editable after the code is sent — a mistyped number is
+              // the single most common reason to come back to this field.
+              // Editing it clears the previous request's countdown (see
+              // _onOtpPhoneChanged) rather than locking the field.
               AuthTextField(
                 controller: _phoneCtrl,
-                label: 'Mobile number',
+                label: context.l10n.authFieldMobileNumber,
                 hint: '03XXXXXXXXX',
                 keyboardType: TextInputType.phone,
                 prefixIcon: Icons.phone_outlined,
                 validator: _validatePhone,
-                enabled: !showOtp,
+                onChanged: _onOtpPhoneChanged,
               ),
               const SizedBox(height: 6),
-              const Padding(
-                padding: EdgeInsets.only(left: 4),
+              Padding(
+                padding: const EdgeInsetsDirectional.only(start: 4),
                 child: Text(
-                  'Is number par verification code bheja jayega.',
+                  context.l10n.authOtpWillBeSentNotice,
                   style: TextStyle(fontSize: 12, color: kAuthGray),
                 ),
               ),
@@ -330,7 +382,7 @@ class _ClientOtpAuthPageState extends ConsumerState<ClientOtpAuthPage> {
         ],
         const SizedBox(height: 24),
         AuthPrimaryButton(
-          label: showOtp ? 'Verify Karke Aage Barhein' : 'Code Bhejein',
+          label: showOtp ? context.l10n.authButtonVerifyAndContinue : context.l10n.authButtonSendCode,
           isLoading: showOtp ? _verifyInFlight : _sendInFlight,
           onPressed: showOtp ? (_otp.length == 6 ? _verify : null) : _sendCode,
         ),
@@ -349,25 +401,26 @@ class _ClientOtpAuthPageState extends ConsumerState<ClientOtpAuthPage> {
       children: [
         Form(
           key: _pwPhoneKey,
+          // Deliberately NOT disabled once the phone check resolves. Resolving
+          // the check is exactly what reveals the password field, so disabling
+          // here made the number uneditable the moment the user moved focus to
+          // the password and came back — the reported bug. (The old
+          // `enabled: !resolved` also made this onChanged unreachable, since a
+          // disabled field never emits it.)
           child: AuthTextField(
             controller: _pwPhoneCtrl,
-            label: 'Mobile Number',
+            label: context.l10n.authFieldMobileNumberTitle,
             hint: '03XXXXXXXXX',
             keyboardType: TextInputType.phone,
             prefixIcon: Icons.phone_outlined,
             validator: _validatePhone,
-            enabled: !resolved,
-            onChanged: (_) {
-              if (resolved) {
-                ref.read(clientPhoneCheckNotifierProvider.notifier).reset();
-              }
-            },
+            onChanged: _onPasswordPhoneChanged,
           ),
         ),
         if (!resolved) ...[
           const SizedBox(height: 20),
           AuthPrimaryButton(
-            label: 'Aage Barhein',
+            label: context.l10n.commonContinue,
             isLoading: _pwCheckInFlight,
             onPressed: _checkPhone,
           ),
@@ -377,24 +430,24 @@ class _ClientOtpAuthPageState extends ConsumerState<ClientOtpAuthPage> {
             key: _pwFormKey,
             child: AuthTextField(
               controller: _pwPasswordCtrl,
-              label: 'Password',
+              label: context.l10n.authFieldPassword,
               prefixIcon: Icons.lock_outline_rounded,
               obscureText: true,
               textInputAction: TextInputAction.done,
               validator: (v) =>
-                  (v == null || v.isEmpty) ? 'Password likhein.' : null,
+                  (v == null || v.isEmpty) ? context.l10n.authValidationPasswordRequired : null,
               onFieldSubmitted: (_) => _passwordLogin(),
             ),
           ),
           const SizedBox(height: 8),
           Align(
-            alignment: Alignment.centerRight,
+            alignment: AlignmentDirectional.centerEnd,
             child: GestureDetector(
               onTap: () => context.push('/auth/client/forgot-password'),
-              child: const Padding(
-                padding: EdgeInsets.symmetric(vertical: 4),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
                 child: Text(
-                  'Password Bhool Gaye?',
+                  context.l10n.authButtonForgotPassword,
                   style: TextStyle(
                     color: kAuthAccent,
                     fontSize: 13,
@@ -406,7 +459,7 @@ class _ClientOtpAuthPageState extends ConsumerState<ClientOtpAuthPage> {
           ),
           const SizedBox(height: 12),
           AuthPrimaryButton(
-            label: 'Login Karein',
+            label: context.l10n.authButtonLogIn,
             isLoading: pwLoginLoading,
             onPressed: _passwordLogin,
           ),
@@ -419,15 +472,15 @@ class _ClientOtpAuthPageState extends ConsumerState<ClientOtpAuthPage> {
               children: [
                 AuthTextField(
                   controller: _pwNameCtrl,
-                  label: 'Pura Naam',
-                  hint: 'Apna poora naam likhein',
+                  label: context.l10n.authFieldFullNameShort,
+                  hint: context.l10n.authHintFullName,
                   prefixIcon: Icons.person_outline_rounded,
                   validator: _validateName,
                 ),
                 const SizedBox(height: 14),
                 AuthTextField(
                   controller: _pwPasswordCtrl,
-                  label: 'Password',
+                  label: context.l10n.authFieldPassword,
                   prefixIcon: Icons.lock_outline_rounded,
                   obscureText: true,
                   validator: _validatePassword,
@@ -435,16 +488,16 @@ class _ClientOtpAuthPageState extends ConsumerState<ClientOtpAuthPage> {
                 const SizedBox(height: 14),
                 AuthTextField(
                   controller: _pwConfirmCtrl,
-                  label: 'Password Dobara Likhein',
+                  label: context.l10n.authFieldConfirmPassword,
                   prefixIcon: Icons.lock_outline_rounded,
                   obscureText: true,
                   textInputAction: TextInputAction.done,
                   validator: (v) {
                     if (v == null || v.isEmpty) {
-                      return 'Password dobara likhein.';
+                      return context.l10n.authValidationConfirmPasswordRequired;
                     }
                     if (v != _pwPasswordCtrl.text) {
-                      return 'Passwords match nahi karte.';
+                      return context.l10n.authValidationPasswordsDoNotMatch;
                     }
                     return null;
                   },
@@ -454,7 +507,7 @@ class _ClientOtpAuthPageState extends ConsumerState<ClientOtpAuthPage> {
           ),
           const SizedBox(height: 20),
           AuthPrimaryButton(
-            label: 'Account Banayein',
+            label: context.l10n.authButtonCreateAccount,
             isLoading: pwRegisterLoading,
             onPressed: _passwordRegister,
           ),
@@ -483,14 +536,14 @@ class _ModeSelector extends StatelessWidget {
         children: [
           Expanded(
             child: _ModeSegment(
-              label: 'OTP se Continue',
+              label: context.l10n.authButtonContinueWithOtp,
               isSelected: mode == _ClientAuthMode.otp,
               onTap: () => onChanged(_ClientAuthMode.otp),
             ),
           ),
           Expanded(
             child: _ModeSegment(
-              label: 'Password se Continue',
+              label: context.l10n.authButtonContinueWithPassword,
               isSelected: mode == _ClientAuthMode.password,
               onTap: () => onChanged(_ClientAuthMode.password),
             ),
@@ -562,7 +615,7 @@ class _WorkerConflictBanner extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           AuthSecondaryButton(
-            label: 'Ustaad Login',
+            label: context.l10n.authButtonUstaadLogin,
             onPressed: () => context.go('/auth/worker/login'),
           ),
         ],

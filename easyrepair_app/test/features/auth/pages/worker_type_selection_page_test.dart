@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:handygo_app/core/l10n/l10n_config.dart';
+import 'package:handygo_app/core/l10n/app_locale.dart';
 import 'package:go_router/go_router.dart';
 import 'package:handygo_app/features/auth/presentation/pages/worker_type_selection_page.dart';
 
@@ -10,7 +12,13 @@ Widget _app(Map<String, WidgetBuilder> routes, {String initial = '/choice'}) {
         .map((e) => GoRoute(path: e.key, builder: (ctx, _) => e.value(ctx)))
         .toList(),
   );
-  return MaterialApp.router(routerConfig: router);
+  return MaterialApp.router(
+      routerConfig: router,
+      locale: AppLocale.romanUrdu.locale,
+      supportedLocales: appSupportedLocales,
+      localizationsDelegates: appLocalizationsDelegates,
+      localeResolutionCallback: (_, _) => AppLocale.romanUrdu.locale,
+    );
 }
 
 void main() {

@@ -7,15 +7,19 @@ import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
 
-import '../../../../core/errors/failures.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../../bids/domain/entities/bid_entity.dart';
+import '../../../bookings/domain/entities/booking_entity.dart';
 import '../../../bids/domain/repositories/bid_repository.dart';
 import '../../../bids/presentation/providers/bid_providers.dart';
 import '../../domain/entities/new_job_entity.dart';
 import '../providers/worker_job_providers.dart';
 import '../widgets/onboarding_gate.dart';
 import '../widgets/worker_chat_action.dart';
+import '../../../../core/l10n/l10n_extensions.dart';
+import '../../../bookings/presentation/utils/status_labels.dart';
+import '../../../bookings/presentation/utils/worker_labels.dart';
+import '../../../../core/errors/failure_messages.dart';
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 const _kGreen  = Color(0xFFDB6234);
@@ -75,18 +79,20 @@ class _WorkerBidPageState extends ConsumerState<WorkerBidPage> {
 
   Future<void> _submit() async {
     if (!ensureApprovedOrWarn(context, ref)) return;
+    // Resolved before the await below so no message crosses an async gap.
+    final l10n = context.l10n;
     final amtStr = _amountCtrl.text.trim();
     if (amtStr.isEmpty) {
-      _showSnack('Please enter a bid amount.', error: true);
+      _showSnack(l10n.bidAmountRequired, error: true);
       return;
     }
     final amount = double.tryParse(amtStr);
     if (amount == null || amount < 100) {
-      _showSnack('Bid amount must be between 100 and 500,000.', error: true);
+      _showSnack(l10n.bidAmountRange, error: true);
       return;
     }
     if (amount > 500000) {
-      _showSnack('Bid amount must be between 100 and 500,000.', error: true);
+      _showSnack(l10n.bidAmountRange, error: true);
       return;
     }
 
@@ -96,13 +102,13 @@ class _WorkerBidPageState extends ConsumerState<WorkerBidPage> {
             bookingId: widget.jobId,
             amount: amount,
           );
-      _showSnack('Bid submitted!');
+      _showSnack(l10n.bidSubmitted);
       // Refresh own-bid, live feed, and new-jobs list (bid count changes).
       ref.invalidate(myBidProvider(widget.jobId));
       ref.invalidate(jobBidsFeedProvider(widget.jobId));
       ref.invalidate(newJobsProvider);
     } catch (e) {
-      _showSnack(e is Failure ? e.message : 'Failed to submit bid.', error: true);
+      _showSnack(failureMessage(l10n, e, fallback: l10n.bidSubmitFailed), error: true);
     }
   }
 
@@ -136,8 +142,8 @@ class _WorkerBidPageState extends ConsumerState<WorkerBidPage> {
             child: const Icon(Icons.arrow_back_rounded, color: _kDark, size: 20),
           ),
         ),
-        title: const Text(
-          'Place a Bid',
+        title: Text(
+          context.l10n.bidPlaceABid,
           style: TextStyle(
             color: _kDark,
             fontWeight: FontWeight.w700,
@@ -170,7 +176,9 @@ class _WorkerBidPageState extends ConsumerState<WorkerBidPage> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    widget.jobTitle,
+                    widget.jobTitle.isNotEmpty
+                        ? widget.jobTitle
+                        : context.l10n.workerBidJobFallbackTitle,
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
@@ -182,7 +190,18 @@ class _WorkerBidPageState extends ConsumerState<WorkerBidPage> {
                 ),
                 if (job != null) ...[
                   const SizedBox(width: 8),
-                  _StatusBadge(label: job.displayStatus),
+                  _StatusBadge(
+                    label: newJobStatusLabel(
+                      context.l10n,
+                      job.status,
+                      hasAssignedWorker: job.hasAssignedWorker,
+                    ),
+                    // Derived from the raw status, never from the label —
+                    // matching translated text would drop the "live" styling
+                    // in every language but English.
+                    isLive: job.status == BookingStatus.pending &&
+                        !job.hasAssignedWorker,
+                  ),
                 ],
               ],
             ),
@@ -197,7 +216,7 @@ class _WorkerBidPageState extends ConsumerState<WorkerBidPage> {
               onPressed: () =>
                   openWorkerChatForBooking(context, ref, widget.jobId),
               icon: const Icon(Icons.chat_bubble_outline_rounded, size: 16),
-              label: const Text('Chat with Client'),
+              label: Text(context.l10n.bidChatWithClient),
               style: OutlinedButton.styleFrom(
                 foregroundColor: _kGreen,
                 side: const BorderSide(color: _kGreen),
@@ -246,8 +265,8 @@ class _WorkerBidPageState extends ConsumerState<WorkerBidPage> {
           // ── Live bids feed ────────────────────────────────────────────────
           Row(
             children: [
-              const Text(
-                'Live Bids',
+              Text(
+                context.l10n.bidLiveBids,
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
@@ -271,7 +290,7 @@ class _WorkerBidPageState extends ConsumerState<WorkerBidPage> {
               ),
             ),
             error: (e, _) => _FeedError(
-              message: e is Failure ? e.message : 'Could not load bids',
+              message: failureMessage(context.l10n, e, fallback: context.l10n.discoveryBidsLoadFailedShort),
               onRetry: () => ref.invalidate(jobBidsFeedProvider(widget.jobId)),
             ),
             data: (bids) => bids.isEmpty
@@ -292,11 +311,11 @@ class _WorkerBidPageState extends ConsumerState<WorkerBidPage> {
 
 class _StatusBadge extends StatelessWidget {
   final String label;
-  const _StatusBadge({required this.label});
+  final bool isLive;
+  const _StatusBadge({required this.label, required this.isLive});
 
   @override
   Widget build(BuildContext context) {
-    final isLive = label == 'Live';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration: BoxDecoration(
@@ -312,7 +331,7 @@ class _StatusBadge extends StatelessWidget {
             Container(
               width: 6,
               height: 6,
-              margin: const EdgeInsets.only(right: 4),
+              margin: const EdgeInsetsDirectional.only(end: 4),
               decoration: const BoxDecoration(
                 color: _kGreen,
                 shape: BoxShape.circle,
@@ -400,7 +419,7 @@ class _JobLocationCard extends StatelessWidget {
                       Text(
                         job.addressLine?.isNotEmpty == true
                             ? '${job.addressLine}, ${job.city}'
-                            : (job.city.isNotEmpty ? job.city : 'Area not available'),
+                            : (job.city.isNotEmpty ? job.city : context.l10n.bidAreaNotAvailable),
                         style: const TextStyle(
                           fontSize: 12.5,
                           color: _kGray,
@@ -410,16 +429,16 @@ class _JobLocationCard extends StatelessWidget {
                       if (!hasCoords && job.distanceKm != null) ...[
                         const SizedBox(height: 2),
                         Text(
-                          job.distanceLabel.isNotEmpty
-                              ? '${job.distanceLabel} away'
+                          workerDistanceLabel(context.l10n, job.distanceKm).isNotEmpty
+                              ? workerDistanceLabel(context.l10n, job.distanceKm)
                               : '',
                           style: const TextStyle(fontSize: 11.5, color: _kLight),
                         ),
                       ],
                       if (!hasCoords) ...[
                         const SizedBox(height: 4),
-                        const Text(
-                          'Exact address is shared once the client accepts your bid.',
+                        Text(
+                          context.l10n.bidExactAddressAfterAccept,
                           style: TextStyle(fontSize: 11, color: _kLight, height: 1.3),
                         ),
                       ],
@@ -450,9 +469,9 @@ class _CurrentBidCard extends StatelessWidget {
     };
 
     final statusLabel = switch (bid.status) {
-      BidStatus.accepted => 'Accepted',
-      BidStatus.rejected => 'Rejected',
-      _                  => 'Pending',
+      BidStatus.accepted => context.l10n.bidStatusAccepted,
+      BidStatus.rejected => context.l10n.bidStatusRejected,
+      _                  => context.l10n.bidStatusPending,
     };
 
     return Container(
@@ -468,8 +487,8 @@ class _CurrentBidCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Your Current Bid',
+                Text(
+                  context.l10n.bidYourCurrentBid,
                   style: TextStyle(fontSize: 11, color: _kLight),
                 ),
                 const SizedBox(height: 2),
@@ -570,7 +589,7 @@ class _BidFormState extends State<_BidForm> {
   Widget build(BuildContext context) {
     final hasExisting = widget.existingBid != null;
     final onCooldown = hasExisting && _remaining > 0;
-    final label = hasExisting ? 'Update Bid' : 'Submit Bid';
+    final label = hasExisting ? context.l10n.bidUpdate : context.l10n.bidSubmit;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -583,7 +602,7 @@ class _BidFormState extends State<_BidForm> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            hasExisting ? 'Update Your Bid' : 'Place Your Bid',
+            hasExisting ? context.l10n.bidUpdateYourBid : context.l10n.bidPlaceYourBid,
             style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w700,
@@ -594,8 +613,8 @@ class _BidFormState extends State<_BidForm> {
             const SizedBox(height: 4),
             Text(
               onCooldown
-                  ? 'You can update your bid in ${_remaining}s.'
-                  : 'You can update your bid now.',
+                  ? context.l10n.bidCanUpdateIn('$_remaining')
+                  : context.l10n.bidCanUpdateNow,
               style: TextStyle(
                 fontSize: 11.5,
                 fontWeight: onCooldown ? FontWeight.w600 : FontWeight.normal,
@@ -605,14 +624,14 @@ class _BidFormState extends State<_BidForm> {
           ],
           const SizedBox(height: 14),
           _FormField(
-            label: 'Bid Amount (PKR) *',
+            label: context.l10n.bidAmountLabel,
             child: TextField(
               controller: widget.amountCtrl,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               inputFormatters: [
                 FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
               ],
-              decoration: _inputDec(hint: 'e.g. 2500'),
+              decoration: _inputDec(hint: context.l10n.bidAmountHint),
               style: const TextStyle(fontSize: 15, color: _kDark),
             ),
           ),
@@ -639,7 +658,7 @@ class _BidFormState extends State<_BidForm> {
                       child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                     )
                   : Text(
-                      onCooldown ? '$label (${_remaining}s)' : label,
+                      onCooldown ? context.l10n.bidLabelWithCountdown(label, '$_remaining') : label,
                       style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                     ),
             ),
@@ -770,17 +789,17 @@ class _BidFeedTile extends StatelessWidget {
                     Text(
                       worker.rating > 0
                           ? worker.rating.toStringAsFixed(1)
-                          : 'New',
+                          : context.l10n.chooseNewBadge,
                       style: const TextStyle(fontSize: 11, color: _kGray),
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      '${worker.completedJobs} job${worker.completedJobs == 1 ? '' : 's'}',
+                      context.l10n.bidJobCount(worker.completedJobs),
                       style: const TextStyle(fontSize: 11, color: _kLight),
                     ),
                     const Spacer(),
                     Text(
-                      _relativeTime(bid.updatedAt),
+                      _relativeTime(context, bid.updatedAt),
                       style: const TextStyle(fontSize: 10.5, color: _kLight),
                     ),
                   ],
@@ -802,11 +821,11 @@ class _BidFeedTile extends StatelessWidget {
     );
   }
 
-  String _relativeTime(DateTime dt) {
+  String _relativeTime(BuildContext context, DateTime dt) {
     final diff = DateTime.now().difference(dt);
-    if (diff.inSeconds < 60) return 'Just now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    if (diff.inHours < 24)   return '${diff.inHours}h ago';
+    if (diff.inSeconds < 60) return context.l10n.timeJustNow;
+    if (diff.inMinutes < 60) return context.l10n.timeMinutesAgo(diff.inMinutes);
+    if (diff.inHours < 24)   return context.l10n.timeHoursAgo(diff.inHours);
     return DateFormat('MMM d').format(dt);
   }
 }
@@ -824,9 +843,9 @@ class _FeedEmpty extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: _kBorder),
       ),
-      child: const Center(
+      child: Center(
         child: Text(
-          'Be the first to bid on this job',
+          context.l10n.bidBeFirstToBid,
           style: TextStyle(fontSize: 13, color: _kLight),
         ),
       ),
@@ -858,8 +877,8 @@ class _FeedError extends StatelessWidget {
           const SizedBox(height: 8),
           GestureDetector(
             onTap: onRetry,
-            child: const Text(
-              'Retry',
+            child: Text(
+              context.l10n.commonRetry,
               style: TextStyle(
                 fontSize: 12,
                 color: _kGreen,

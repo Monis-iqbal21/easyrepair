@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../widgets/client_bottom_nav_bar.dart';
+import '../../../../core/l10n/l10n_extensions.dart';
 
 class ClientJobsPage extends StatelessWidget {
   const ClientJobsPage({super.key});
@@ -13,12 +14,12 @@ class ClientJobsPage extends StatelessWidget {
         bottom: false,
         child: Column(
           children: [
-            const Padding(
+            Padding(
               padding: EdgeInsets.fromLTRB(20, 20, 20, 0),
               child: Align(
-                alignment: Alignment.centerLeft,
+                alignment: AlignmentDirectional.centerStart,
                 child: Text(
-                  'My Jobs',
+                  context.l10n.clientJobsTitle,
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w700,
@@ -27,10 +28,10 @@ class ClientJobsPage extends StatelessWidget {
                 ),
               ),
             ),
-            const Expanded(
+            Expanded(
               child: Center(
                 child: Text(
-                  '📋  No jobs yet',
+                  context.l10n.clientJobsEmpty,
                   style: TextStyle(color: Colors.grey, fontSize: 16),
                 ),
               ),

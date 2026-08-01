@@ -6,6 +6,8 @@ import '../../domain/entities/booking_entity.dart';
 import 'inspection_badge.dart';
 import 'status_badge.dart';
 import 'urgency_badge.dart';
+import '../../../../core/l10n/l10n_extensions.dart';
+import '../utils/booking_labels.dart';
 
 class BookingCard extends StatelessWidget {
   final BookingEntity booking;
@@ -133,7 +135,7 @@ class BookingCard extends StatelessWidget {
                                 const SizedBox(width: 6),
                                 Flexible(
                                   child: Text(
-                                    _formatDate(booking.createdAt),
+                                    _formatDate(context, booking.createdAt),
                                     style: const TextStyle(
                                       fontSize: 11,
                                       color: Color(0xFF94A3B8),
@@ -307,17 +309,17 @@ class BookingCard extends StatelessWidget {
       booking.status != BookingStatus.cancelled &&
       booking.status != BookingStatus.rejected;
 
-  String _formatDate(DateTime dt) {
+  String _formatDate(BuildContext context, DateTime dt) {
     final now = DateTime.now();
     if (dt.year == now.year &&
         dt.month == now.month &&
         dt.day == now.day) {
-      return 'Today, ${DateFormat('h:mm a').format(dt)}';
+      return context.l10n.cardTodayAt(DateFormat('h:mm a').format(dt));
     }
     if (dt.year == now.year &&
         dt.month == now.month &&
         dt.day == now.day - 1) {
-      return 'Yesterday';
+      return context.l10n.commonYesterday;
     }
     return DateFormat('MMM d, yyyy').format(dt);
   }
@@ -383,7 +385,7 @@ class _SlotInfo extends StatelessWidget {
           const SizedBox(width: 5),
           Text(
             [
-              slot.label,
+              timeSlotLabel(context.l10n, slot),
               if (dateStr != null) '· $dateStr',
             ].join(' '),
             style: TextStyle(
@@ -396,7 +398,7 @@ class _SlotInfo extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Text(
-            'Goes live 1h before window',
+            context.l10n.cardGoesLiveBefore,
             style: const TextStyle(
               fontSize: 10.5,
               color: Color(0xFF94A3B8),
@@ -419,11 +421,11 @@ class _UrgentHint extends StatelessWidget {
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
-        children: const [
-          Icon(Icons.bolt_rounded, size: 13, color: Color(0xFFEA580C)),
-          SizedBox(width: 4),
+        children: [
+          const Icon(Icons.bolt_rounded, size: 13, color: Color(0xFFEA580C)),
+          const SizedBox(width: 4),
           Text(
-            'Workers are notified immediately',
+            context.l10n.cardWorkersNotified,
             style: TextStyle(
               fontSize: 11.5,
               color: Color(0xFFEA580C),
@@ -504,8 +506,8 @@ class _WorkerSection extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Searching for workers...',
+                Text(
+                  context.l10n.cardSearchingWorkers,
                   style: TextStyle(
                     fontSize: 12,
                     color: Color(0xFFDB6234),
@@ -515,15 +517,16 @@ class _WorkerSection extends StatelessWidget {
                 if (booking.availableWorkersCount != null &&
                     booking.availableWorkersCount! > 0)
                   Text(
-                    '${booking.availableWorkersCount} workers available nearby',
+                    context.l10n.bookingWorkersAvailableNearby(
+                    booking.availableWorkersCount ?? 0),
                     style: const TextStyle(
                       fontSize: 10.5,
                       color: Color(0xFF6B7280),
                     ),
                   )
                 else
-                  const Text(
-                    'No worker yet',
+                  Text(
+                    context.l10n.cardNoWorkerYet,
                     style: TextStyle(
                       fontSize: 10.5,
                       color: Color(0xFF94A3B8),
@@ -667,8 +670,8 @@ class _PriceTag extends StatelessWidget {
           ),
         ),
         if (!isCancelled)
-          const Text(
-            'est.',
+          Text(
+            context.l10n.cardEstimatePrefix,
             style: TextStyle(fontSize: 9.5, color: Color(0xFF94A3B8)),
           ),
       ],
@@ -686,7 +689,7 @@ class _FindWorkersBtn extends StatelessWidget {
     // STANDARD/INSPECTION are direct-assignment lanes — matches the
     // "Choose Ustaad" wording used by booking_detail_page.dart's
     // _ChooseUstaadButton, so the list card and detail page never disagree.
-    final label = isDirectAssign ? 'Choose Ustaad' : 'Find Workers';
+    final label = isDirectAssign ? context.l10n.bookingChooseUstaad : context.l10n.cardFindWorkers;
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -729,13 +732,13 @@ class _TrackWorkerBtn extends StatelessWidget {
           color: const Color(0xFFDB6234),
           borderRadius: BorderRadius.circular(12),
         ),
-        child: const Row(
+        child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.location_on_rounded, size: 15, color: Colors.white),
             SizedBox(width: 6),
             Text(
-              'Track Worker',
+              context.l10n.bookingTrackWorker,
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
@@ -773,7 +776,7 @@ class _QuickActions extends StatelessWidget {
         if (hasWorker && onChat != null) ...[
           Expanded(
             child: _ActionBtn(
-              label: 'Chat',
+              label: context.l10n.chatTitleFallback,
               icon: Icons.chat_bubble_outline_rounded,
               color: const Color(0xFFDB6234),
               bgColor: const Color(0xFFFFF0EB),
@@ -785,7 +788,7 @@ class _QuickActions extends StatelessWidget {
         if (canEdit && onEdit != null) ...[
           Expanded(
             child: _ActionBtn(
-              label: 'Edit',
+              label: context.l10n.cardEdit,
               icon: Icons.edit_outlined,
               color: const Color(0xFF1A1A1A),
               bgColor: const Color(0xFFF1F5F9),
@@ -797,7 +800,7 @@ class _QuickActions extends StatelessWidget {
         if (canCancel && onCancel != null)
           Expanded(
             child: _ActionBtn(
-              label: 'Cancel',
+              label: context.l10n.commonCancel,
               icon: Icons.close_rounded,
               color: const Color(0xFFDC2626),
               bgColor: const Color(0xFFFFF1F2),

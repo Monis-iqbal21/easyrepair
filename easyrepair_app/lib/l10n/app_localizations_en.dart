@@ -1,0 +1,2794 @@
+// ignore: unused_import
+import 'package:intl/intl.dart' as intl;
+import 'app_localizations.dart';
+
+// ignore_for_file: type=lint
+
+/// The translations for English (`en`).
+class AppLocalizationsEn extends AppLocalizations {
+  AppLocalizationsEn([String locale = 'en']) : super(locale);
+
+  @override
+  String get languageSectionTitle => 'Preferences';
+
+  @override
+  String get languageRowLabel => 'Language';
+
+  @override
+  String get languageSheetTitle => 'Choose your language';
+
+  @override
+  String get authRoleQuestion => 'What would you like to do on HandyGo?';
+
+  @override
+  String get authRoleClientTitle => 'I need an Ustaad for work at home';
+
+  @override
+  String get authRoleClientSubtitle =>
+      'Book verified Ustaads and get your work done easily.';
+
+  @override
+  String get authRoleWorkerTitle => 'I am an Ustaad and want to find work';
+
+  @override
+  String get authRoleWorkerSubtitle =>
+      'Join HandyGo and find work that matches your skills.';
+
+  @override
+  String get authWorkerTypeQuestion => 'Are you already a HandyGo\nUstaad?';
+
+  @override
+  String get authWorkerTypeNewTitle => 'I am a new Ustaad';
+
+  @override
+  String get authWorkerTypeNewSubtitle => 'Create your new account on HandyGo.';
+
+  @override
+  String get authWorkerTypeExistingTitle => 'I already have an account';
+
+  @override
+  String get authWorkerTypeExistingSubtitle =>
+      'Log in to your account with OTP or password.';
+
+  @override
+  String authWelcomeToastTitle(String name) {
+    return 'Welcome, $name!';
+  }
+
+  @override
+  String get authWelcomeToastSubtitle => 'Your account is ready to go.';
+
+  @override
+  String get authOtpExpired => 'The code has expired. Request a new one.';
+
+  @override
+  String authOtpExpiresIn(String time) {
+    return 'Code expires in $time';
+  }
+
+  @override
+  String authOtpResendCooldown(int seconds) {
+    return 'Resend code (${seconds}s)';
+  }
+
+  @override
+  String get authOtpResend => 'Resend code';
+
+  @override
+  String get authFieldFullName => 'Your full name';
+
+  @override
+  String get authFieldFullNameShort => 'Full name';
+
+  @override
+  String get authHintFullName => 'Enter your full name';
+
+  @override
+  String get authFieldMobileNumber => 'Mobile number';
+
+  @override
+  String get authFieldMobileNumberTitle => 'Mobile Number';
+
+  @override
+  String get authFieldPassword => 'Password';
+
+  @override
+  String get authFieldConfirmPassword => 'Re-enter password';
+
+  @override
+  String get authValidationNameRequired => 'Please enter your name.';
+
+  @override
+  String get authValidationPhoneRequired => 'Please enter a mobile number.';
+
+  @override
+  String get authValidationPhoneInvalid =>
+      'Please enter a valid Pakistani mobile number.';
+
+  @override
+  String get authValidationPasswordRequired => 'Please enter a password.';
+
+  @override
+  String get authValidationPasswordTooShort =>
+      'Password must be at least 8 characters.';
+
+  @override
+  String get authValidationConfirmPasswordRequired =>
+      'Please re-enter your password.';
+
+  @override
+  String get authValidationPasswordsDoNotMatch => 'Passwords do not match.';
+
+  @override
+  String get authClientLoginTitle => 'Log in to book\nan Ustaad';
+
+  @override
+  String get authClientOtpSubtitle =>
+      'Enter your name and mobile number. We will send a verification code.';
+
+  @override
+  String get authClientPasswordSubtitle =>
+      'Continue with your mobile number and password.';
+
+  @override
+  String get authOtpWillBeSentNotice =>
+      'A verification code will be sent to this number.';
+
+  @override
+  String get authButtonSendCode => 'Send Code';
+
+  @override
+  String get authButtonVerifyAndContinue => 'Verify and Continue';
+
+  @override
+  String get authButtonLogIn => 'Log In';
+
+  @override
+  String get authButtonCreateAccount => 'Create Account';
+
+  @override
+  String get authButtonForgotPassword => 'Forgot password?';
+
+  @override
+  String get authButtonContinueWithOtp => 'Continue with OTP';
+
+  @override
+  String get authButtonContinueWithPassword => 'Continue with password';
+
+  @override
+  String get authButtonUstaadLogin => 'Ustaad Login';
+
+  @override
+  String get authErrorGeneric => 'Something went wrong.';
+
+  @override
+  String get authErrorOtpSendFailed =>
+      'The OTP could not be sent right now. Continue with your password, or try again shortly.';
+
+  @override
+  String get commonCancel => 'Cancel';
+
+  @override
+  String get commonSave => 'Save';
+
+  @override
+  String get commonDelete => 'Delete';
+
+  @override
+  String get commonRetry => 'Retry';
+
+  @override
+  String get commonUser => 'User';
+
+  @override
+  String get commonYesterday => 'Yesterday';
+
+  @override
+  String get commonUploading => 'Uploading...';
+
+  @override
+  String get chatTitleFallback => 'Chat';
+
+  @override
+  String get chatListTitle => 'Messages';
+
+  @override
+  String get chatSearchHint => 'Search chats or type “support”';
+
+  @override
+  String get chatEmptyTitle => 'No conversations yet';
+
+  @override
+  String get chatEmptySubtitle => 'Messages will appear here';
+
+  @override
+  String get chatNoResultsTitle => 'No chats found';
+
+  @override
+  String get chatNoResultsSubtitle =>
+      'Try a different name, or search “support”';
+
+  @override
+  String get chatNoMessagesYet => 'No messages yet. Say hello!';
+
+  @override
+  String get chatSupportBanner =>
+      'Write your problem or question here. HandyGo Support will help you.';
+
+  @override
+  String get chatEditMessage => 'Edit message';
+
+  @override
+  String get chatEditHint => 'Edit your message...';
+
+  @override
+  String get chatDeleteMessage => 'Delete message';
+
+  @override
+  String get chatDeleteConfirm =>
+      'This message will be deleted for everyone in the chat.';
+
+  @override
+  String get chatMicPermissionRequired =>
+      'Microphone permission is needed to send a voice message.';
+
+  @override
+  String get chatLocationPermissionDenied => 'Location permission denied';
+
+  @override
+  String get chatLocationPermissionPermanentlyDenied =>
+      'Location permission permanently denied — enable it in Settings';
+
+  @override
+  String chatLocationFailed(String error) {
+    return 'Could not get your location: $error';
+  }
+
+  @override
+  String get weekdayMon => 'Mon';
+
+  @override
+  String get weekdayTue => 'Tue';
+
+  @override
+  String get weekdayWed => 'Wed';
+
+  @override
+  String get weekdayThu => 'Thu';
+
+  @override
+  String get weekdayFri => 'Fri';
+
+  @override
+  String get weekdaySat => 'Sat';
+
+  @override
+  String get weekdaySun => 'Sun';
+
+  @override
+  String get commonContinue => 'Continue';
+
+  @override
+  String get commonNotNow => 'Not now';
+
+  @override
+  String get commonToday => 'Today';
+
+  @override
+  String get commonOpenSettings => 'Open Settings';
+
+  @override
+  String get permissionsTitle => 'Allow permissions';
+
+  @override
+  String get permissionsRationale =>
+      'HandyGo needs camera, microphone, and location permissions so you can upload photos and videos, send voice notes, and share or track job location.';
+
+  @override
+  String get permissionsBlockedTitle => 'Permissions blocked';
+
+  @override
+  String get permissionsBlockedBody =>
+      'Some permissions were permanently denied. Open Settings to enable them manually.';
+
+  @override
+  String get generalInfoTitle => 'General';
+
+  @override
+  String get generalAccountSection => 'Account Info';
+
+  @override
+  String get generalFirstName => 'First Name';
+
+  @override
+  String get generalLastName => 'Last Name';
+
+  @override
+  String get generalPhoneNumber => 'Phone Number';
+
+  @override
+  String get generalNamePhoneLocked =>
+      'Name and phone are managed by your account and cannot be changed here.';
+
+  @override
+  String get generalSecuritySection => 'Security';
+
+  @override
+  String get generalChangePassword => 'Change Password';
+
+  @override
+  String get generalCurrentPassword => 'Current Password';
+
+  @override
+  String get generalNewPassword => 'New Password';
+
+  @override
+  String get generalConfirmNewPassword => 'Re-enter new password';
+
+  @override
+  String get generalChangePasswordComingSoon =>
+      'Changing your password in the app is coming soon. Contact support if you need help right away.';
+
+  @override
+  String get generalUpdatePassword => 'Update Password';
+
+  @override
+  String get distanceAtYourLocation => 'Right at your location';
+
+  @override
+  String distanceMetersAway(int meters) {
+    return '$meters m away';
+  }
+
+  @override
+  String distanceKmAway(String km) {
+    return '$km km away';
+  }
+
+  @override
+  String get distanceUnderOneKm => '< 1 km away';
+
+  @override
+  String get notificationsTitle => 'Notifications';
+
+  @override
+  String get notificationsMarkAllRead => 'Mark all read';
+
+  @override
+  String get notificationsEmptyTitle => 'No notifications yet';
+
+  @override
+  String get notificationsEmptySubtitle =>
+      'You will be notified about job updates,\nreviews, and more.';
+
+  @override
+  String get timeJustNow => 'Just now';
+
+  @override
+  String timeMinutesAgo(int minutes) {
+    return '${minutes}m ago';
+  }
+
+  @override
+  String timeHoursAgo(int hours) {
+    return '${hours}h ago';
+  }
+
+  @override
+  String get workerRatingNew => 'New worker';
+
+  @override
+  String get workerRatingNone => 'No rating';
+
+  @override
+  String workerRatingWithJobs(String rating, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count jobs',
+      one: '$count job',
+    );
+    return '$rating ($_temp0)';
+  }
+
+  @override
+  String get chatSeen => 'Seen';
+
+  @override
+  String get chatMessageDeleted => 'This message was deleted';
+
+  @override
+  String get chatEdited => 'edited';
+
+  @override
+  String get chatCouldNotOpenMaps => 'Could not open maps';
+
+  @override
+  String get chatSharedLocation => 'Shared location';
+
+  @override
+  String get chatComposerHint => 'Type a message...';
+
+  @override
+  String get chatAttachPhoto => 'Photo';
+
+  @override
+  String get chatAttachVideo => 'Video';
+
+  @override
+  String get chatAttachVoice => 'Voice';
+
+  @override
+  String get chatAttachLocation => 'Location';
+
+  @override
+  String get chatTakePhoto => 'Take Photo';
+
+  @override
+  String get chatRecordVideo => 'Record Video';
+
+  @override
+  String get monthJan => 'Jan';
+
+  @override
+  String get monthFeb => 'Feb';
+
+  @override
+  String get monthMar => 'Mar';
+
+  @override
+  String get monthApr => 'Apr';
+
+  @override
+  String get monthMay => 'May';
+
+  @override
+  String get monthJun => 'Jun';
+
+  @override
+  String get monthJul => 'Jul';
+
+  @override
+  String get monthAug => 'Aug';
+
+  @override
+  String get monthSep => 'Sep';
+
+  @override
+  String get monthOct => 'Oct';
+
+  @override
+  String get monthNov => 'Nov';
+
+  @override
+  String get monthDec => 'Dec';
+
+  @override
+  String dateDayMonthYear(int day, String month, int year) {
+    return '$day $month $year';
+  }
+
+  @override
+  String get authPasswordResetSuccess =>
+      'Your password has been changed successfully.';
+
+  @override
+  String get authForgotPasswordPrompt => 'Enter your registered mobile number';
+
+  @override
+  String get authSendOtp => 'Send OTP';
+
+  @override
+  String get authNewPasswordRequired => 'Please enter a new password.';
+
+  @override
+  String get authOr => 'Or';
+
+  @override
+  String get authLoginWithPassword => 'Log In With Password';
+
+  @override
+  String get authWorkerRegisterTitle => 'Create a new Ustaad\naccount';
+
+  @override
+  String get authCnicNameHint => 'Enter your full name exactly as on your CNIC';
+
+  @override
+  String get authCreatePasswordLabel => 'Create a password';
+
+  @override
+  String get authSelectSkill => 'Select your skill';
+
+  @override
+  String get authSkillsLoadFailed => 'Skills could not load. Please try again.';
+
+  @override
+  String get authSkillRequired => 'Please select a skill.';
+
+  @override
+  String get authConfirmNewPasswordButton => 'Confirm New Password';
+
+  @override
+  String get postJobOffersSoon =>
+      'You will start getting Ustaad offers within minutes.';
+
+  @override
+  String get postJobSelectDateTimeFirst => 'Select date and time to continue.';
+
+  @override
+  String postJobGoesLiveAt(String time, String date) {
+    return 'Job goes live at $time on $date — 1 hour before the Ustaad arrival time.';
+  }
+
+  @override
+  String get postJobAddPhotoVideo => 'Add Photo/Video';
+
+  @override
+  String get postJobChoosePhoto => 'Choose Photo';
+
+  @override
+  String get postJobChooseVideo => 'Choose Video - 30 sec';
+
+  @override
+  String get postJobCamera => 'Camera';
+
+  @override
+  String get postJobRecordVideo30 => 'Record Video - 30 sec';
+
+  @override
+  String get errorNoInternet =>
+      'No internet connection. Please check your network.';
+
+  @override
+  String get postJobSaveFailed => 'Unable to save booking. Please try again.';
+
+  @override
+  String get postJobBookingUpdatedTitle => 'Booking Updated!';
+
+  @override
+  String get postJobBookingUpdatedBody =>
+      'Your booking details have been updated successfully.';
+
+  @override
+  String get postJobViewBooking => 'View Booking';
+
+  @override
+  String get postJobSelectService => 'Select Service';
+
+  @override
+  String get postJobServicesLoadFailed =>
+      'Failed to load services. Please restart the app.';
+
+  @override
+  String get postJobBookingType => 'Booking Type';
+
+  @override
+  String get postJobNormal => 'Normal';
+
+  @override
+  String get postJobUrgent => 'Urgent';
+
+  @override
+  String get postJobDateTime => 'Date & Time';
+
+  @override
+  String get postJobArrivalTime => 'Arrival time';
+
+  @override
+  String get postJobWhatNeedsFixing => 'What needs fixing?';
+
+  @override
+  String get postJobIssueHint =>
+      'e.g. AC not cooling, water leaking, switch not working';
+
+  @override
+  String get postJobDescription => 'Description';
+
+  @override
+  String get postJobDescriptionHint => 'Describe the issue (optional)';
+
+  @override
+  String get postJobServiceAddress => 'Service Address';
+
+  @override
+  String get postJobAddressHint =>
+      'e.g. House 12, Street 5, DHA Phase 6, Karachi';
+
+  @override
+  String get postJobAddLocationFirst => 'Add your location to continue.';
+
+  @override
+  String get postJobVoiceAndPhotos => 'Voice note & photos';
+
+  @override
+  String get postJobVoiceAttached => 'Voice note attached';
+
+  @override
+  String postJobAttachmentCount(int count) {
+    return '$count of 4 · Photos or 30-sec video';
+  }
+
+  @override
+  String postJobAttachmentsWillBeRemoved(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count existing attachments will be removed on save.',
+      one: '$count existing attachment will be removed on save.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get postJobTapToRecord =>
+      'Tap to record — describe the problem in your own words';
+
+  @override
+  String get postJobService => 'Service';
+
+  @override
+  String get postJobWhatDoYouNeed => 'What do you need?';
+
+  @override
+  String get postJobChooseOneOption => 'Choose one option';
+
+  @override
+  String get postJobUnderstandingIsOurJob =>
+      'Understanding the problem is our job — not yours.';
+
+  @override
+  String get postJobStandardWork => 'Standard work';
+
+  @override
+  String get postJobStandardWorkSubtitle => 'Work and price are clear upfront.';
+
+  @override
+  String get postJobOr => 'OR';
+
+  @override
+  String get postJobIKnowThePart => 'I know the exact part';
+
+  @override
+  String get postJobIKnowThePartSubtitle =>
+      'Ustaads send their rate, you choose';
+
+  @override
+  String get postJobIKnowThePartWarning =>
+      'Only choose this if you are completely sure about the part. If it turns out wrong, the Ustaad visit is wasted and a new rate will apply.';
+
+  @override
+  String get postJobSomethingIsBroken => 'Something is broken';
+
+  @override
+  String get postJobDontKnowIssue => 'I do not know what the problem is';
+
+  @override
+  String get postJobInspectionFeeTitle => 'Inspection Fee';
+
+  @override
+  String get postJobNothingOpensBeforeRate =>
+      'Nothing is opened before the rate is given — what is quoted is what is charged.';
+
+  @override
+  String get postJobChooseStandardService => 'Choose a standard service';
+
+  @override
+  String get postJobServicesUnavailable =>
+      'Unable to load services. Please go back and try again.';
+
+  @override
+  String get postJobSelectCategoryFirst => 'Select a service category first.';
+
+  @override
+  String get postJobStandardServicesUnavailable =>
+      'Unable to load standard services.';
+
+  @override
+  String get postJobNoStandardServices =>
+      'No standard services are available for this service yet. Please choose another option above.';
+
+  @override
+  String get postJobMultiSelectHint => 'You can choose more than one service.';
+
+  @override
+  String get postJobTotal => 'Total';
+
+  @override
+  String get postJobInspectionFeeLower => 'Inspection fee';
+
+  @override
+  String get postJobInspectionFeeLoadFailed =>
+      'Unable to load the inspection fee.';
+
+  @override
+  String get postJobHowInspectionWorks => 'How inspection works';
+
+  @override
+  String get postJobWhatDoYouSee => 'What do you see? (optional)';
+
+  @override
+  String get postJobWhatDoYouSeeHint => 'e.g. AC turns on but room stays hot…';
+
+  @override
+  String get postJobBack => 'Back';
+
+  @override
+  String get postJobNext => 'Next';
+
+  @override
+  String get postJobStepAddress => 'Address';
+
+  @override
+  String get postJobStepDetails => 'Details';
+
+  @override
+  String get postJobStepTimeSelection => 'Time Selection';
+
+  @override
+  String postJobStepIndicator(int current, int total, String title) {
+    return 'Step $current of $total  ·  $title';
+  }
+
+  @override
+  String get clientHomeYourArea => 'Your Area';
+
+  @override
+  String get clientHomeSectionRepairs => 'Repairs';
+
+  @override
+  String get clientHomeSectionCleaning => 'Cleaning';
+
+  @override
+  String get clientHomeSectionPainting => 'Painting';
+
+  @override
+  String get clientHomeSectionOutdoorVehicle => 'Outdoor & Vehicle';
+
+  @override
+  String get serviceAcTechnician => 'AC Technician';
+
+  @override
+  String get serviceElectrician => 'Electrician';
+
+  @override
+  String get servicePlumber => 'Plumber';
+
+  @override
+  String get serviceCarpenter => 'Carpenter';
+
+  @override
+  String get serviceDeepCleaning => 'Deep Cleaning';
+
+  @override
+  String get servicePestControl => 'Pest Control';
+
+  @override
+  String get servicePainter => 'Painter';
+
+  @override
+  String get serviceGardening => 'Gardening';
+
+  @override
+  String get serviceCarWash => 'Car Wash';
+
+  @override
+  String get serviceMoversPackers => 'Movers & Packers';
+
+  @override
+  String get clientHomeNoServicesFound => 'No services found';
+
+  @override
+  String get clientHomeSearchResults => 'Search Results';
+
+  @override
+  String get clientHomeBookUrgently => 'Book Urgently';
+
+  @override
+  String get clientHomeChooseServiceHelp =>
+      'Choose a service to get help right away.';
+
+  @override
+  String clientHomeGreeting(String name) {
+    return 'Hi $name 👋';
+  }
+
+  @override
+  String get clientHomeBeatTheHeat => 'Beat the Karachi Heat ☀️';
+
+  @override
+  String get clientHomeAcServiceBanner =>
+      'Get your AC serviced\nbefore it gets worse.';
+
+  @override
+  String get clientHomeBookAcTechnician => 'Book AC Technician';
+
+  @override
+  String get clientHomeNeedHelpNow => 'Need help now?';
+
+  @override
+  String get clientHomeUrgentSubtitle => 'For urgent issues, book instantly.';
+
+  @override
+  String get clientHome247Service => '24/7 Service';
+
+  @override
+  String get clientHomeRecent => 'Recent';
+
+  @override
+  String get clientHomeSeeAll => 'See all';
+
+  @override
+  String get timeNow => 'Now';
+
+  @override
+  String timeMinutesShort(int minutes) {
+    return '${minutes}m';
+  }
+
+  @override
+  String timeHoursShort(int hours) {
+    return '${hours}h';
+  }
+
+  @override
+  String get clientProfileTitle => 'Profile';
+
+  @override
+  String get clientProfileAvatarLocalOnly =>
+      'Profile image saved on this device. Cloud sync is not available yet.';
+
+  @override
+  String get settingsSectionAccount => 'Account';
+
+  @override
+  String get settingsSectionLegal => 'Legal';
+
+  @override
+  String get settingsSectionDangerZone => 'Danger Zone';
+
+  @override
+  String get settingsPrivacyPolicy => 'Privacy Policy';
+
+  @override
+  String get settingsTermsConditions => 'Terms & Conditions';
+
+  @override
+  String get profilePhotoTitle => 'Profile Photo';
+
+  @override
+  String get commonGallery => 'Gallery';
+
+  @override
+  String get commonRemove => 'Remove';
+
+  @override
+  String get deleteAccountConfirmTitle => 'Delete account?';
+
+  @override
+  String get deleteAccountConfirmBody =>
+      'This will delete your HandyGo account and sign you out. This action may not be reversible.';
+
+  @override
+  String get deleteAccountTitle => 'Delete Account';
+
+  @override
+  String get deleteAccountRequestByEmail => 'Request deletion by email';
+
+  @override
+  String get commonLogout => 'Logout';
+
+  @override
+  String get clientJobsTitle => 'My Jobs';
+
+  @override
+  String get clientJobsEmpty => '📋  No jobs yet';
+
+  @override
+  String get locationSelected => 'Selected location';
+
+  @override
+  String get locationSearchHint => 'Search for an area or landmark…';
+
+  @override
+  String get locationGettingAddress => 'Getting address…';
+
+  @override
+  String get locationUseThis => 'Use This Location';
+
+  @override
+  String get serviceComingSoon => 'Coming Soon';
+
+  @override
+  String get clientHomeSearchHint => 'Search services...';
+
+  @override
+  String get profileDeleteFailed => 'Failed to delete account.';
+
+  @override
+  String get serviceBookNow => 'Book Now';
+
+  @override
+  String get serviceSelectedTick => 'Selected ✓';
+
+  @override
+  String get locationMoveMapHint => 'Move the map or tap to pick a location';
+
+  @override
+  String get slotMorning => 'Morning';
+
+  @override
+  String get slotAfternoon => 'Afternoon';
+
+  @override
+  String get slotEvening => 'Evening';
+
+  @override
+  String get slotNight => 'Night';
+
+  @override
+  String get slotMorningRange => '9 AM – 12 PM';
+
+  @override
+  String get slotAfternoonRange => '12 PM – 4 PM';
+
+  @override
+  String get slotEveningRange => '4 PM – 8 PM';
+
+  @override
+  String get slotNightRange => '8 PM – 11 PM';
+
+  @override
+  String get postJobSelectDate => 'Select date';
+
+  @override
+  String get postJobLocationAdded => 'Location added';
+
+  @override
+  String get postJobCurrentLocation => 'Current Location';
+
+  @override
+  String get postJobMapLocationAdded => 'Map location added';
+
+  @override
+  String get postJobPickOnMap => 'Pick on Map';
+
+  @override
+  String postJobMapPrefix(String address) {
+    return 'Map: $address';
+  }
+
+  @override
+  String postJobGpsPrefix(String coordinates) {
+    return 'GPS: $coordinates';
+  }
+
+  @override
+  String get postJobBookService => 'Book Service';
+
+  @override
+  String get postJobSaveChanges => 'Save Changes';
+
+  @override
+  String get postJobBookAService => 'Book a Service';
+
+  @override
+  String get postJobEditBooking => 'Edit Booking';
+
+  @override
+  String get postJobNotAvailable => 'Not available';
+
+  @override
+  String get bookingLoadFailed => 'Failed to load booking.';
+
+  @override
+  String get bookingServiceDetails => 'Service Details';
+
+  @override
+  String get bookingIssue => 'Issue';
+
+  @override
+  String get bookingUrgency => 'Urgency';
+
+  @override
+  String get bookingTiming => 'Timing';
+
+  @override
+  String get bookingNotScheduledYet => 'Not scheduled yet';
+
+  @override
+  String get bookingTimeWindow => 'Time Window';
+
+  @override
+  String get bookingScheduledDate => 'Scheduled Date';
+
+  @override
+  String get bookingCreated => 'Created';
+
+  @override
+  String get bookingCancellationReason => 'Cancellation Reason';
+
+  @override
+  String get bookingInspectionCompletedBy => 'Inspection completed by';
+
+  @override
+  String get bookingWorkBeingCompletedBy => 'Work being completed by';
+
+  @override
+  String get bookingInspectionAndRepairBy => 'Inspection & repair by';
+
+  @override
+  String get bookingAssignedWorker => 'Assigned Worker';
+
+  @override
+  String get bookingDetailsTitle => 'Booking Details';
+
+  @override
+  String get bookingNoAddressProvided => 'No address provided';
+
+  @override
+  String get bookingAttachments => 'Attachments';
+
+  @override
+  String bookingPhotosCount(int count) {
+    return 'Photos ($count)';
+  }
+
+  @override
+  String bookingVideosCount(int count) {
+    return 'Videos ($count)';
+  }
+
+  @override
+  String get bookingVoiceNote => 'Voice Note';
+
+  @override
+  String get bookingPricing => 'Pricing';
+
+  @override
+  String get bookingEstimatedPrice => 'Estimated Price';
+
+  @override
+  String get bookingInspectionCharges => 'Inspection Charges';
+
+  @override
+  String get bookingWorkCharges => 'Work Charges';
+
+  @override
+  String get bookingFinalPrice => 'Final Price';
+
+  @override
+  String get bookingJobLocation => 'Job location';
+
+  @override
+  String get bookingLiveLocation => 'Live Location';
+
+  @override
+  String bookingTrackingWorker(String name) {
+    return 'Tracking $name';
+  }
+
+  @override
+  String get bookingWaitingForWorkerLocation =>
+      'Waiting for worker to share location';
+
+  @override
+  String get bookingLiveLocationNotAvailable =>
+      'Live location not available yet';
+
+  @override
+  String get bookingLocationPending => 'Location pending';
+
+  @override
+  String get bookingMapPreviewUnavailable => 'Map preview unavailable';
+
+  @override
+  String get bookingMapImageLoadFailed => 'Could not load the map image';
+
+  @override
+  String get bookingAppearsWhenEnRoute =>
+      'Will appear once the worker is en route';
+
+  @override
+  String get bookingWorkerNearlyThere => 'Worker is nearly there';
+
+  @override
+  String get bookingWorkerOnTheWay => 'Worker is on the way';
+
+  @override
+  String get bookingLiveUpdatedNow => 'Live · Updated now';
+
+  @override
+  String get bookingStatusTimeline => 'Job Status Timeline';
+
+  @override
+  String get bookingJobExpired => 'This job expired';
+
+  @override
+  String get bookingExpiredExplanation =>
+      'No worker was hired within 72 hours. Make it live again to keep looking.';
+
+  @override
+  String get bookingMakeLiveFailed => 'Failed to make job live again.';
+
+  @override
+  String get bookingMakeLiveAgain => 'Make Live Again';
+
+  @override
+  String bookingPreviousUstaadCancelledNamed(String name) {
+    return 'Previous Ustaad cancelled: $name';
+  }
+
+  @override
+  String get bookingPreviousUstaadCancelled => 'Previous Ustaad cancelled';
+
+  @override
+  String get bookingUstaadCancelledJob => 'The Ustaad cancelled this job';
+
+  @override
+  String bookingReasonPrefix(String reason) {
+    return 'Reason: $reason';
+  }
+
+  @override
+  String get bookingFindAnotherUstaadFailed => 'Failed to find another Ustaad.';
+
+  @override
+  String get bookingFindAnotherUstaad => 'Find Another Ustaad';
+
+  @override
+  String get bookingSelectedServices => 'Selected Services';
+
+  @override
+  String bookingServiceQuantity(String name, int quantity) {
+    return '$name x$quantity';
+  }
+
+  @override
+  String get bookingChooseUstaad => 'Choose Ustaad';
+
+  @override
+  String get bookingSeeWorkerBids => 'See Worker Bids';
+
+  @override
+  String get bookingTrackWorker => 'Track Worker';
+
+  @override
+  String get bookingReviewWorker => 'Review Worker';
+
+  @override
+  String get bookingYourReview => 'Your Review';
+
+  @override
+  String get bookingCallWorker => 'Call Worker';
+
+  @override
+  String get bookingCancelBooking => 'Cancel Booking';
+
+  @override
+  String get bookingCancelFailed => 'The booking could not be cancelled.';
+
+  @override
+  String get bookingChatWithWorker => 'Chat with Worker';
+
+  @override
+  String get bookingLoadFailedShort => 'Failed to load booking';
+
+  @override
+  String get workerLevelMaster => 'Master';
+
+  @override
+  String get workerLevelElite => 'Elite';
+
+  @override
+  String get workerLevelProUstaad => 'Pro Ustaad';
+
+  @override
+  String get workerLevelPro => 'Pro';
+
+  @override
+  String get workerLevelStandard => 'Standard';
+
+  @override
+  String get trackLoadFailed => 'Failed to load tracking data.';
+
+  @override
+  String get trackTitleUstaad => 'Track Ustaad';
+
+  @override
+  String get trackNoLocationForBooking =>
+      'Location not available for this booking.';
+
+  @override
+  String get trackUstaadLocationUnavailable =>
+      'The Ustaad\'s location is not available yet.';
+
+  @override
+  String get trackJobCompleted => 'Job Completed ✓';
+
+  @override
+  String get trackQuoteAcceptedRepairInProgress =>
+      'Quote Accepted — Repair In Progress';
+
+  @override
+  String get trackReportSubmitted => 'Report Submitted';
+
+  @override
+  String get trackInspectionInProgress => 'Inspection In Progress';
+
+  @override
+  String get trackReviewReportAndDecide =>
+      'Review the report below and decide how to proceed';
+
+  @override
+  String get trackWorkerLabel => 'Worker';
+
+  @override
+  String trackHiredAt(String price) {
+    return 'Hired at $price';
+  }
+
+  @override
+  String get trackPhoneUnavailable => 'Phone number unavailable';
+
+  @override
+  String get trackDialerFailed => 'Could not open phone dialer';
+
+  @override
+  String get trackAssignedWorkerCaps => 'ASSIGNED WORKER';
+
+  @override
+  String get trackCall => 'Call';
+
+  @override
+  String get trackLocationUnavailable => 'Location unavailable';
+
+  @override
+  String trackArrivingIn(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Arriving in ~$count minutes',
+      one: 'Arriving in ~$count minute',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get trackEtaUnavailable => 'ETA unavailable';
+
+  @override
+  String get trackStepHired => 'Hired';
+
+  @override
+  String get trackStepUstaadOnTheWay => 'Ustaad on the way';
+
+  @override
+  String get trackStepInspectionInProgress => 'Inspection in progress';
+
+  @override
+  String get trackStepReportSubmitted => 'Report submitted';
+
+  @override
+  String get trackStepClosedAfterInspection => 'Closed after inspection';
+
+  @override
+  String get trackStepQuoteAccepted => 'Quote accepted';
+
+  @override
+  String get trackStepReviewed => 'Reviewed';
+
+  @override
+  String get trackStepWorkInProgress => 'Work in progress';
+
+  @override
+  String get trackStepReviewPending => 'Review pending';
+
+  @override
+  String get trackJobProgress => 'Job Progress';
+
+  @override
+  String get trackLoadFailedShort => 'Failed to load tracking';
+
+  @override
+  String get discoveryJobLocation => 'Job Location';
+
+  @override
+  String get discoveryJobLocationUnavailable => 'Job location not available';
+
+  @override
+  String get discoveryLiveWorkerOffers => 'Live Worker Offers';
+
+  @override
+  String get discoveryRefresh => 'Refresh';
+
+  @override
+  String get discoveryBidsLoadFailed => 'Could not load bids.';
+
+  @override
+  String get discoveryNoBidsYet => 'No bids yet';
+
+  @override
+  String discoveryPendingCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count pending',
+      one: '$count pending',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoveryHire => 'Hire';
+
+  @override
+  String get discoveryHiring => 'Hiring…';
+
+  @override
+  String discoveryHireNamed(String name) {
+    return 'Hire $name?';
+  }
+
+  @override
+  String discoveryAcceptBid(String name, String price) {
+    return 'Accept $name\'s bid of $price?';
+  }
+
+  @override
+  String get discoveryInspectionFeeSeparate =>
+      'The inspecting Ustaad\'s inspection fee is paid separately. The new Ustaad will charge the full amount of their own offer, and the inspection fee is not adjusted into it.';
+
+  @override
+  String get discoveryWorkerHired => 'Worker hired successfully';
+
+  @override
+  String get discoveryHireFailed => 'Failed to hire worker.';
+
+  @override
+  String get discoveryInspectedThisJob => 'INSPECTED THIS JOB';
+
+  @override
+  String get discoveryTheirQuote => 'their quote';
+
+  @override
+  String get discoveryInspectionCompletedByThis =>
+      'Inspection completed by this Ustaad.';
+
+  @override
+  String get discoveryViewInspectionReport => 'View Inspection Report';
+
+  @override
+  String get discoveryHireAgain => 'Hire Again';
+
+  @override
+  String discoveryHireAgainNamed(String name) {
+    return 'Hire $name again?';
+  }
+
+  @override
+  String get discoveryOriginalQuoteContinues =>
+      'They\'ll continue using their original inspection quote.';
+
+  @override
+  String get discoveryWorkersWillAppear =>
+      'Workers who apply will appear here.\nCheck back shortly.';
+
+  @override
+  String get discoveryTryAgain => 'Try again';
+
+  @override
+  String get inspectionReportTitle => 'Inspection Report';
+
+  @override
+  String get inspectionReportNotAvailable => 'Report not available yet.';
+
+  @override
+  String get inspectionUstaadVoiceNote => 'Ustaad Voice Note';
+
+  @override
+  String get inspectionPhotos => 'Photos';
+
+  @override
+  String get inspectionParts => 'Parts';
+
+  @override
+  String get inspectionRepairQuoteTotal => 'Repair quote total';
+
+  @override
+  String get inspectionAcceptQuoteContinue => 'Accept Quote & Continue Repair';
+
+  @override
+  String get inspectionFindOtherUstaad => 'Find Other Ustaad';
+
+  @override
+  String get inspectionCloseAfterInspection => 'Close After Inspection';
+
+  @override
+  String get inspectionAcceptQuoteConfirmTitle =>
+      'Accept quote & continue repair?';
+
+  @override
+  String get inspectionCloseConfirmTitle => 'Close after inspection?';
+
+  @override
+  String get inspectionAcceptQuoteConfirmBody =>
+      'The same Ustaad will continue the repair. The inspection fee is waived — you will only pay the repair quote.';
+
+  @override
+  String get inspectionCloseConfirmBody =>
+      'You will only be charged the inspection fee. The job will be marked completed.';
+
+  @override
+  String get inspectionClosedAfterInspection => 'Closed after inspection.';
+
+  @override
+  String get inspectionQuoteAcceptedRepairInProgress =>
+      'Quote accepted — repair in progress.';
+
+  @override
+  String get inspectionActionFailed => 'Action failed. Try again.';
+
+  @override
+  String get inspectionFindAnotherConfirmTitle => 'Find another Ustaad?';
+
+  @override
+  String get inspectionFindAnotherConfirmBody =>
+      'Confirming completes the inspection and charges the inspection fee. Your job goes live again so other Ustaads can send their rates.';
+
+  @override
+  String get inspectionBadge => 'Inspection';
+
+  @override
+  String get chooseHireConfirmTitle => 'Hire this Ustaad?';
+
+  @override
+  String chooseHireConfirmBody(String name) {
+    return 'Hire $name for this job? You won\'t be able to choose a different Ustaad afterwards.';
+  }
+
+  @override
+  String get chooseAssignFailed =>
+      'Unable to assign this Ustaad. Please try again.';
+
+  @override
+  String chooseServiceTotal(String price) {
+    return 'Service Total $price';
+  }
+
+  @override
+  String chooseInspectionFeeAmount(String price) {
+    return 'Inspection fee $price';
+  }
+
+  @override
+  String get chooseFindingUstaads => 'Finding verified Ustaads near you…';
+
+  @override
+  String get chooseLoadFailed => 'Unable to load available Ustaads right now.';
+
+  @override
+  String get chooseNoUstaadAvailable =>
+      'No verified Ustaad available right now.';
+
+  @override
+  String get chooseAutoRefreshNote =>
+      'The list refreshes automatically every 45 seconds.';
+
+  @override
+  String get chooseRefreshOrWait =>
+      'You can refresh or wait a little — checking available Ustaads…';
+
+  @override
+  String get chooseNewBadge => 'New';
+
+  @override
+  String get chooseSelect => 'Select';
+
+  @override
+  String get chooseRecommended => 'Recommended';
+
+  @override
+  String get chooseSkills => 'Skills';
+
+  @override
+  String get myBookingsLoadFailed =>
+      'Unable to load your bookings. Please try again.';
+
+  @override
+  String get myBookingsTitle => 'My Bookings';
+
+  @override
+  String get myBookingsEmptyTitle => 'No bookings yet';
+
+  @override
+  String get myBookingsNoResults => 'No results found';
+
+  @override
+  String get myBookingsAdjustFilters =>
+      'Try adjusting your filters or search term';
+
+  @override
+  String get myBookingsBookFirst => 'Book your first service to get started';
+
+  @override
+  String get myBookingsRefreshFailed => 'Could not refresh. Pull to retry.';
+
+  @override
+  String get myBookingsSomethingWrong => 'Something went wrong';
+
+  @override
+  String cardTodayAt(String time) {
+    return 'Today, $time';
+  }
+
+  @override
+  String get cardGoesLiveBefore => 'Goes live 1h before window';
+
+  @override
+  String get cardWorkersNotified => 'Workers are notified immediately';
+
+  @override
+  String get cardSearchingWorkers => 'Searching for workers...';
+
+  @override
+  String get cardNoWorkerYet => 'No worker yet';
+
+  @override
+  String get cardEstimatePrefix => 'est.';
+
+  @override
+  String get cardFindWorkers => 'Find Workers';
+
+  @override
+  String get cardEdit => 'Edit';
+
+  @override
+  String get filterTitle => 'Filter Bookings';
+
+  @override
+  String get filterReset => 'Reset';
+
+  @override
+  String get filterAll => 'All';
+
+  @override
+  String get filterUrgentOption => '⚡ Urgent';
+
+  @override
+  String get filterNormalOption => '🗓 Normal';
+
+  @override
+  String get filterSortByDate => 'Sort by date';
+
+  @override
+  String get filterNewestFirst => 'Newest first';
+
+  @override
+  String get filterOldestFirst => 'Oldest first';
+
+  @override
+  String get filterApply => 'Apply Filters';
+
+  @override
+  String get searchBookingsHint => 'Search bookings, services...';
+
+  @override
+  String get cancelReasonTitle => 'Reason for cancelling the booking';
+
+  @override
+  String get cancelReasonRequired => 'Please give a reason.';
+
+  @override
+  String get cancelReasonSelect => 'Select a reason';
+
+  @override
+  String get cancelReasonWriteOwn => 'Write your own reason';
+
+  @override
+  String get reviewSubmitFailed => 'The review could not be submitted.';
+
+  @override
+  String get reviewPromptBeforeContinuing =>
+      'Please review your Ustaad before continuing.';
+
+  @override
+  String get reviewHowWasWork => 'How was the work?';
+
+  @override
+  String get reviewCommentHint => 'Write a comment (optional)...';
+
+  @override
+  String get reviewSubmit => 'Submit Review';
+
+  @override
+  String get reviewLater => 'Later';
+
+  @override
+  String get chatOpenFailed => 'Could not open chat.';
+
+  @override
+  String get mediaTapToPlay => 'Tap to play';
+
+  @override
+  String get inspectionConfirm => 'Confirm';
+
+  @override
+  String trackSubtextCompleted(String name) {
+    return '$name has completed the job';
+  }
+
+  @override
+  String trackSubtextContinuingRepair(String name) {
+    return '$name is continuing the repair';
+  }
+
+  @override
+  String trackSubtextOnTheWay(String name) {
+    return '$name is on the way to your location';
+  }
+
+  @override
+  String trackSubtextArrived(String name) {
+    return '$name has arrived at your location';
+  }
+
+  @override
+  String trackSubtextInspecting(String name) {
+    return '$name is inspecting the issue';
+  }
+
+  @override
+  String trackSubtextHiredForInspection(String name) {
+    return '$name has been hired for this inspection';
+  }
+
+  @override
+  String trackSubtextWorking(String name) {
+    return '$name is working on your job';
+  }
+
+  @override
+  String trackSubtextHiredForJob(String name) {
+    return '$name has been hired for this job';
+  }
+
+  @override
+  String get urgentWithin1Hour => 'Within 1 hour';
+
+  @override
+  String get urgentWithin2Hours => 'Within 2 hours';
+
+  @override
+  String get urgentWithin4Hours => 'Within 4 hours';
+
+  @override
+  String get inspectionFeePaid => 'Inspection fee paid';
+
+  @override
+  String get inspectionFeeNotPaid => 'Inspection fee not paid';
+
+  @override
+  String chooseWithinRadius(String km) {
+    return 'within $km km';
+  }
+
+  @override
+  String chooseHireConfirmBodyFull(String name) {
+    return 'Hire $name for this job? You will not be able to choose a different Ustaad afterwards.';
+  }
+
+  @override
+  String get trackHeadlineUstaadOnTheWay => 'Ustaad On The Way';
+
+  @override
+  String get trackHeadlineUstaadArrived => 'Ustaad Arrived';
+
+  @override
+  String get trackHeadlineWorkInProgress => 'Work In Progress';
+
+  @override
+  String get trackHeadlineHired => 'Hired ✓';
+
+  @override
+  String trackRatingOutOfFive(String rating) {
+    return '$rating / 5.0';
+  }
+
+  @override
+  String get discoveryLoadingBids => 'Loading bids...';
+
+  @override
+  String get discoveryBidsLoadFailedShort => 'Could not load bids';
+
+  @override
+  String bookingWorkersAvailableNearby(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count workers available nearby',
+      one: '$count worker available nearby',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String bookingIdShort(String code) {
+    return '#ER-$code';
+  }
+
+  @override
+  String inspectionPartWithWarranty(
+    String name,
+    int quantity,
+    String warranty,
+  ) {
+    return '$name x$quantity · $warranty';
+  }
+
+  @override
+  String discoveryPendingBidsSorted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count pending bids · sorted by price',
+      one: '$count pending bid · sorted by price',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get workerOffline => 'Offline';
+
+  @override
+  String get workerOnline => 'Online';
+
+  @override
+  String get workerBusy => 'Busy';
+
+  @override
+  String get workerOfflineHelper => 'You are hidden from clients';
+
+  @override
+  String get workerOnlineHelper => 'Clients near your location can see you';
+
+  @override
+  String get workerBusyHelper => 'You are currently working on a job';
+
+  @override
+  String get workerStatusOnTheWay => 'On the Way';
+
+  @override
+  String get workerActionOnMyWay => 'On My Way';
+
+  @override
+  String get workerActionArrived => 'Arrived';
+
+  @override
+  String get workerActionStartJob => 'Start Job';
+
+  @override
+  String get workerActionCompleteJob => 'Complete Job';
+
+  @override
+  String get workerActionStartInspection => 'Start Inspection';
+
+  @override
+  String get workerActionStartWork => 'Start Work';
+
+  @override
+  String get workerActionFillReport => 'Fill Inspection Report';
+
+  @override
+  String get workerActionWaitingForClient => 'Waiting for Client Decision';
+
+  @override
+  String get workerSuccessOnTheWay => 'On the way — client notified.';
+
+  @override
+  String get workerSuccessArrived => 'Marked as arrived.';
+
+  @override
+  String get workerSuccessJobStarted => 'Job started.';
+
+  @override
+  String get workerSuccessJobCompleted => 'Job marked as completed.';
+
+  @override
+  String get workerSuccessInspectionStarted => 'Inspection started.';
+
+  @override
+  String get workerSuccessWorkStarted => 'Work started.';
+
+  @override
+  String get workerSkillNotSelected => 'Skill not selected';
+
+  @override
+  String get workerLocating => 'Locating…';
+
+  @override
+  String get workerTapToRetry => 'Tap to retry';
+
+  @override
+  String get workerTapForLocation => 'Tap for location';
+
+  @override
+  String get workerOnActiveJob => 'On Active Job';
+
+  @override
+  String get workerConnecting => 'Connecting...';
+
+  @override
+  String get workerGoingOffline => 'Going offline...';
+
+  @override
+  String get workerGoOffline => 'Go Offline';
+
+  @override
+  String get workerGoOnline => 'Go Online';
+
+  @override
+  String get workerTodaysEarnings => 'Today\'s Earnings';
+
+  @override
+  String get workerRating => 'Rating';
+
+  @override
+  String get workerActive => 'Active';
+
+  @override
+  String get workerGoOfflineConfirmTitle => 'Go Offline?';
+
+  @override
+  String get workerGoOfflineConfirmBody =>
+      'You will stop appearing to nearby clients.';
+
+  @override
+  String get workerGoOfflineConfirmYes => 'Yes, Go Offline';
+
+  @override
+  String get workerFindNewWork => 'Find New Work';
+
+  @override
+  String get workerViewNewJobs => 'View New Jobs';
+
+  @override
+  String get workerActiveJobCaps => 'ACTIVE JOB';
+
+  @override
+  String get workerMap => 'Map';
+
+  @override
+  String get workerViewDetails => 'View details →';
+
+  @override
+  String get workerNoActiveJob => 'No active job right now';
+
+  @override
+  String get workerStayOnlineHint => 'Stay online to find work nearby.';
+
+  @override
+  String get workerReady => 'Ready';
+
+  @override
+  String get workerPerformance => 'Performance';
+
+  @override
+  String get workerJobsDone => 'Jobs Done';
+
+  @override
+  String get workerCancelRate => 'Cancel Rate';
+
+  @override
+  String workerPercentValue(String value) {
+    return '$value%';
+  }
+
+  @override
+  String get workerResponse => 'Response';
+
+  @override
+  String get workerReviews => 'Reviews';
+
+  @override
+  String get workerSeeAll => 'See all →';
+
+  @override
+  String get workerNoReviewsYet => 'No reviews yet';
+
+  @override
+  String get workerReviewsAppearHint =>
+      'Client reviews will appear here after your completed jobs.';
+
+  @override
+  String get workerSelectMainSkill => 'Select your main skill';
+
+  @override
+  String get workerSelectMainSkillHint =>
+      'Select your main skill to start receiving work';
+
+  @override
+  String workerCategoriesLoadFailed(String error) {
+    return 'Failed to load categories: $error';
+  }
+
+  @override
+  String get workerSkillsSaveFailed =>
+      'Failed to save skills. Please try again.';
+
+  @override
+  String get workerSaveAndGoOnline => 'Save & Go Online';
+
+  @override
+  String get workerDashboardLoadFailed => 'Failed to load dashboard';
+
+  @override
+  String get workerNewJobsTitle => 'New Jobs';
+
+  @override
+  String get workerNewJobsSubtitle => 'Work matching your skills';
+
+  @override
+  String get workerCompleteProfileForNewJobs =>
+      'Complete your profile. Once it is approved you will start seeing new jobs.';
+
+  @override
+  String get workerNewJobsLoadFailed => 'Failed to load new jobs.';
+
+  @override
+  String workerOfferCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count offers',
+      one: '$count offer',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get workerDirectHireNote =>
+      'The client can hire you directly. No offer needed.';
+
+  @override
+  String get workerListedJob => 'Listed Job';
+
+  @override
+  String get workerOfferSent => 'Offer sent';
+
+  @override
+  String get workerNoNewJobs => 'No new jobs right now';
+
+  @override
+  String get workerNoNewJobsHint =>
+      'New job requests matching your skills will appear here. Pull down to refresh.';
+
+  @override
+  String get workerCompleteProfileForJobs =>
+      'Complete your profile. Once it is approved you can manage your jobs.';
+
+  @override
+  String get workerJobsLoadFailed => 'Failed to load jobs. Please try again.';
+
+  @override
+  String get workerClientCancelledBooking =>
+      'The client cancelled this booking';
+
+  @override
+  String get workerOnlyInspectionCompleted =>
+      'Only the inspection was completed';
+
+  @override
+  String get workerComplete => 'Complete';
+
+  @override
+  String get workerCompleting => 'Completing...';
+
+  @override
+  String get workerMarkCompletedTitle => 'Mark as Completed?';
+
+  @override
+  String get workerMarkCompletedBody =>
+      'This will close the job and notify the client.';
+
+  @override
+  String get workerNoActiveJobs => 'No active jobs';
+
+  @override
+  String get workerNoCompletedJobs => 'No completed jobs yet';
+
+  @override
+  String get workerNoCancelledJobs => 'No cancelled jobs';
+
+  @override
+  String get workerNoJobsAssigned => 'No jobs assigned yet';
+
+  @override
+  String get workerNewRequestsHere => 'New requests will appear here';
+
+  @override
+  String get workerCompletedJobsHere => 'Completed jobs will show up here';
+
+  @override
+  String get workerCancelledJobsHere => 'Cancelled jobs will show up here';
+
+  @override
+  String get workerAcceptToGetStarted =>
+      'Accept a booking request to get started';
+
+  @override
+  String get workerFilterCancelled => 'Cancelled';
+
+  @override
+  String get workerFilterAllWork => 'All Work';
+
+  @override
+  String get workerFilterMyOffers => 'My Offers';
+
+  @override
+  String get workerFilterNoOfferSent => 'No offer sent';
+
+  @override
+  String get bidPlaceABid => 'Place a Bid';
+
+  @override
+  String get bidChatWithClient => 'Chat with Client';
+
+  @override
+  String get bidLiveBids => 'Live Bids';
+
+  @override
+  String get bidAreaNotAvailable => 'Area not available';
+
+  @override
+  String get bidExactAddressAfterAccept =>
+      'The exact address is shared once the client accepts your bid.';
+
+  @override
+  String get bidStatusAccepted => 'Accepted';
+
+  @override
+  String get bidStatusRejected => 'Rejected';
+
+  @override
+  String get bidStatusPending => 'Pending';
+
+  @override
+  String get bidYourCurrentBid => 'Your Current Bid';
+
+  @override
+  String get bidSubmit => 'Submit Bid';
+
+  @override
+  String get bidUpdate => 'Update Bid';
+
+  @override
+  String get bidPlaceYourBid => 'Place Your Bid';
+
+  @override
+  String get bidUpdateYourBid => 'Update Your Bid';
+
+  @override
+  String bidCanUpdateIn(String seconds) {
+    return 'You can update your bid in ${seconds}s.';
+  }
+
+  @override
+  String get bidCanUpdateNow => 'You can update your bid now.';
+
+  @override
+  String get bidAmountLabel => 'Bid Amount (PKR) *';
+
+  @override
+  String get bidAmountHint => 'e.g. 2500';
+
+  @override
+  String bidLabelWithCountdown(String label, String seconds) {
+    return '$label (${seconds}s)';
+  }
+
+  @override
+  String bidJobCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count jobs',
+      one: '$count job',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get bidBeFirstToBid => 'Be the first to bid on this job';
+
+  @override
+  String get earningBidding => 'Bidding';
+
+  @override
+  String get earningHistoryTitle => 'Earning History';
+
+  @override
+  String get earningNoneYet => 'No earnings yet';
+
+  @override
+  String get earningNoneHint =>
+      'Completed jobs will show up here with your daily earnings.';
+
+  @override
+  String get reviewsMyReviews => 'My Reviews';
+
+  @override
+  String reviewsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count reviews',
+      one: '$count review',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get reviewsSubtitle => 'Reviews from clients for jobs you completed';
+
+  @override
+  String get reviewsAvg => 'Avg';
+
+  @override
+  String get reviewsMax => 'Max';
+
+  @override
+  String get reviewsMin => 'Min';
+
+  @override
+  String get reviewsEmptyHint =>
+      'Once clients review your completed jobs,\ntheir reviews will appear here.';
+
+  @override
+  String reviewsRatingSummary(String rating, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count reviews',
+      one: '$count review',
+    );
+    return '$rating · $_temp0';
+  }
+
+  @override
+  String reviewsHighestLowest(String max, String min) {
+    return 'Highest: $max ★  ·  Lowest: $min ★';
+  }
+
+  @override
+  String get inspFormChooseFromGallery => 'Choose from Gallery';
+
+  @override
+  String get inspFormSubmitted =>
+      'Report submitted. Waiting for client decision.';
+
+  @override
+  String get inspFormSubmitFailed => 'Failed to submit report.';
+
+  @override
+  String get inspFormWhatWasIssue => 'What was the issue?';
+
+  @override
+  String get inspFormWhatWasIssueRequired => 'What was the issue? *';
+
+  @override
+  String get inspFormRecommendedRepair => 'Recommended repair';
+
+  @override
+  String get inspFormRecommendedRepairRequired => 'Recommended repair *';
+
+  @override
+  String get inspFormWhatWorkNeeded => 'What work will be needed';
+
+  @override
+  String get inspFormWriteOrRecord =>
+      'Please write the report or record a voice note.';
+
+  @override
+  String get inspFormPartsRequired => 'Parts required?';
+
+  @override
+  String get inspFormAddPart => 'Add part';
+
+  @override
+  String get inspFormUstaadNotes => 'Ustaad notes';
+
+  @override
+  String get inspFormSubmitReport => 'Submit report';
+
+  @override
+  String inspFormIssuePhotos(int max) {
+    return 'Issue photos — optional, max $max';
+  }
+
+  @override
+  String get inspFormVoiceNote => 'Voice note';
+
+  @override
+  String get inspFormVoiceNoteHint =>
+      'If writing is difficult, record a voice note instead.';
+
+  @override
+  String inspFormRecording(String duration) {
+    return 'Recording  $duration';
+  }
+
+  @override
+  String get inspFormStop => 'Stop';
+
+  @override
+  String get inspFormStartRecording => 'Start recording';
+
+  @override
+  String get inspFormPartNameHint => 'e.g. Gas refill';
+
+  @override
+  String get inspFormWarrantyHint => 'e.g. 7 days';
+
+  @override
+  String get inspFormRemovePart => 'Remove part';
+
+  @override
+  String get inspFormTotalAmount => 'Total amount for the work';
+
+  @override
+  String get inspFormFeeWaivedNote =>
+      'If the customer continues with the repair, the inspection fee will not be charged.';
+
+  @override
+  String get inspHintElectrical => 'e.g. switch is broken, wire is shorted...';
+
+  @override
+  String get inspHintPlumbing => 'e.g. pipe is leaking, drain is blocked...';
+
+  @override
+  String get inspHintAc => 'e.g. AC is not cooling, gas leak...';
+
+  @override
+  String get inspHintCarpentry =>
+      'e.g. door does not close properly, hinge is broken...';
+
+  @override
+  String get workerCompleteProfile => 'Complete Profile';
+
+  @override
+  String get workerApprovalRequired =>
+      'Profile approval is required before you can receive jobs.';
+
+  @override
+  String get workerCompleteProfileDetails => 'Complete your profile details.';
+
+  @override
+  String get workerCompleteProfileWhy =>
+      'You can only apply for or be hired for jobs once your profile is complete.';
+
+  @override
+  String earningJobsCompleted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count jobs completed',
+      one: '$count job completed',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get bookingStatusLive => 'Live';
+
+  @override
+  String get bookingStatusAssigned => 'Assigned';
+
+  @override
+  String get bookingStatusCompleted => 'Completed';
+
+  @override
+  String get bookingStatusExpired => 'Expired';
+
+  @override
+  String get jobStatusEnRoute => 'En Route';
+
+  @override
+  String get jobStatusInProgress => 'In Progress';
+
+  @override
+  String get l10nFallbackProbe => 'English fallback works';
+
+  @override
+  String get workerJobDetailsTitle => 'Job Details';
+
+  @override
+  String get workerJobLoadFailed => 'Failed to load job.';
+
+  @override
+  String get workerStandardDirectHireNote =>
+      'This is a Standard job. The client can hire you directly — you do not need to send an offer.';
+
+  @override
+  String get workerBidNow => 'Bid Now';
+
+  @override
+  String get workerReportSubmittedWaiting =>
+      'Report submitted. Waiting for the client to accept the quote or close after inspection.';
+
+  @override
+  String get workerClientSection => 'Client';
+
+  @override
+  String get workerPostedBy => 'Posted by';
+
+  @override
+  String get workerCategoryLabel => 'Category';
+
+  @override
+  String get workerTitleLabel => 'Title';
+
+  @override
+  String get workerTimeSlotLabel => 'Time Slot';
+
+  @override
+  String get workerTimelineSection => 'Timeline';
+
+  @override
+  String get workerTimelineScheduled => 'Scheduled';
+
+  @override
+  String get workerTimelineStarted => 'Started';
+
+  @override
+  String get workerEstimatedLabel => 'Estimated';
+
+  @override
+  String get workerFeeStatusLabel => 'Status';
+
+  @override
+  String get workerCancelJob => 'Cancel Job';
+
+  @override
+  String get workerCancelJobTitle => 'Cancel this job?';
+
+  @override
+  String get workerCancelJobBody =>
+      'Please tell the client why you are cancelling.';
+
+  @override
+  String get workerCancelOwnReasonHint => 'Write your own reason (required)';
+
+  @override
+  String get workerKeepJob => 'Keep Job';
+
+  @override
+  String get workerYesCancel => 'Yes, cancel';
+
+  @override
+  String get workerCancelReasonEmergency => 'An emergency came up';
+
+  @override
+  String get workerCancelReasonTooFar => 'The location is too far';
+
+  @override
+  String get workerCancelReasonNoTools =>
+      'Required tools or parts are not available';
+
+  @override
+  String get workerCancelReasonSchedule => 'Time or schedule issue';
+
+  @override
+  String get workerCancelReasonCustomer => 'Customer or site related issue';
+
+  @override
+  String get workerCancelReasonOther => 'Other';
+
+  @override
+  String get workerAttachmentsVideos => 'Videos';
+
+  @override
+  String get workerAttachmentsVoiceNotes => 'Voice Notes';
+
+  @override
+  String get workerStatusHistory => 'Status History';
+
+  @override
+  String get workerMarkAsCompleted => 'Mark as Completed';
+
+  @override
+  String get workerClientReview => 'Client Review';
+
+  @override
+  String workerReviewRatingOutOfFive(int rating) {
+    return '$rating/5';
+  }
+
+  @override
+  String workerApproximateArea(String city) {
+    return 'Approximate area: $city';
+  }
+
+  @override
+  String get workerApproximateAreaUnavailable =>
+      'Approximate area not available';
+
+  @override
+  String workerDistanceLabel(String distance) {
+    return 'Distance: $distance';
+  }
+
+  @override
+  String get workerExactAddressAfterHire =>
+      'The exact address and map become visible once you are hired for this job.';
+
+  @override
+  String get workerRoadRouteNotConfigured =>
+      'Road route is not configured yet. Opening Google Maps for navigation.';
+
+  @override
+  String get workerLocationPermissionDenied => 'Location permission denied.';
+
+  @override
+  String get workerDirectionsLocationFailed =>
+      'Unable to get your location for directions.';
+
+  @override
+  String get workerArrivedAtJobLocation =>
+      'You have arrived at the job location.';
+
+  @override
+  String get workerYourLocation => 'Your Location';
+
+  @override
+  String get workerCityLabel => 'City';
+
+  @override
+  String get workerClientAddress => 'Client Address';
+
+  @override
+  String get workerPinnedJobLocation => 'Pinned Job Location';
+
+  @override
+  String get workerPinnedOnMap => 'Pinned on map';
+
+  @override
+  String get workerGettingLocation => 'Getting location...';
+
+  @override
+  String get workerDirections => 'Directions';
+
+  @override
+  String get workerOpenInMaps => 'Open in Maps';
+
+  @override
+  String get workerDirectionsActive => 'Directions active';
+
+  @override
+  String get workerUploadFailed => 'Upload failed. Please try again.';
+
+  @override
+  String get workerCompleteHighlightedFields =>
+      'Please complete the highlighted fields below.';
+
+  @override
+  String get workerProfileSaveFailed =>
+      'Failed to save profile. Please try again.';
+
+  @override
+  String get workerProfileSubmitted => 'Profile submitted for approval.';
+
+  @override
+  String get workerCompleteAllRequired =>
+      'Please complete all required fields before submitting.';
+
+  @override
+  String get workerProfileLoadFailed => 'Failed to load profile.';
+
+  @override
+  String get workerFullLegalName => 'Full Legal Name';
+
+  @override
+  String get workerLegalNameHint => 'As written on your CNIC';
+
+  @override
+  String get workerLegalNameRequired => 'Full legal name is required.';
+
+  @override
+  String get workerCnicNumber => 'CNIC Number';
+
+  @override
+  String get workerCnicInvalid => 'Enter CNIC like 12345-1234567-1';
+
+  @override
+  String get workerMainSkill => 'Main Skill';
+
+  @override
+  String get workerMainSkillNotSelected => 'Not selected';
+
+  @override
+  String get workerChangeSkill => 'Change';
+
+  @override
+  String get workerMainSkillRequired => 'Please select your main skill.';
+
+  @override
+  String get workerExperienceYears => 'Experience in Years';
+
+  @override
+  String get workerExperienceHint => 'e.g. 3';
+
+  @override
+  String get workerExperienceInvalid =>
+      'Enter a valid number of years (0 or more).';
+
+  @override
+  String get workerResidentialAddress => 'Residential Address';
+
+  @override
+  String get workerResidentialAddressHint => 'House #, street, area, city';
+
+  @override
+  String get workerResidentialAddressRequired =>
+      'Residential address is required.';
+
+  @override
+  String get workerIdentityDocuments => 'Identity Documents';
+
+  @override
+  String get workerCnicFront => 'CNIC Front';
+
+  @override
+  String get workerCnicBack => 'CNIC Back';
+
+  @override
+  String get workerLiveSelfie => 'Live Selfie';
+
+  @override
+  String get workerDocumentRequired => 'Required';
+
+  @override
+  String get workerAgreements => 'Agreements';
+
+  @override
+  String get workerConfirmLegalName =>
+      'I confirm my legal name matches my CNIC.';
+
+  @override
+  String get workerAcceptGeneralAgreement =>
+      'I accept the General Ustaad Agreement.';
+
+  @override
+  String workerAcceptGeneralAgreementVersioned(String version) {
+    return 'I accept the General Ustaad Agreement (v$version).';
+  }
+
+  @override
+  String get workerAcceptTradeAgreement =>
+      'I accept the Trade-specific Agreement.';
+
+  @override
+  String workerAcceptTradeAgreementVersioned(String version) {
+    return 'I accept the Trade-specific Agreement (v$version).';
+  }
+
+  @override
+  String get workerViewAgreement => 'View Agreement';
+
+  @override
+  String get workerConfirmationRequired => 'This confirmation is required.';
+
+  @override
+  String get workerSubmitForApproval => 'Submit for Approval';
+
+  @override
+  String get workerAgreementFallbackTitle => 'Agreement';
+
+  @override
+  String workerAgreementVersion(String version) {
+    return 'Version $version';
+  }
+
+  @override
+  String get workerAgreementSelectSkillFirst =>
+      'Select your main skill first to load this agreement.';
+
+  @override
+  String get workerCloseDialog => 'Close';
+
+  @override
+  String get workerOnboardingSubmitted => 'Submitted for Review';
+
+  @override
+  String get workerOnboardingChangesRequired => 'Changes Required';
+
+  @override
+  String get workerOnboardingApproved => 'Approved';
+
+  @override
+  String get workerOnboardingDraft => 'Draft';
+
+  @override
+  String get workerRoleBadge => 'Ustaad';
+
+  @override
+  String workerMainSkillWithName(String skill) {
+    return 'Main Skill: $skill';
+  }
+
+  @override
+  String get workerNoMainSkillYet => 'No main skill selected yet';
+
+  @override
+  String get workerProfileApproval => 'Profile Approval';
+
+  @override
+  String get inspHintFallback => 'e.g. Gas leak — a refill is needed';
+
+  @override
+  String get bidAmountRequired => 'Please enter a bid amount.';
+
+  @override
+  String get bidAmountRange => 'Bid amount must be between 100 and 500,000.';
+
+  @override
+  String get bidSubmitted => 'Bid submitted!';
+
+  @override
+  String get bidSubmitFailed => 'Failed to submit bid.';
+
+  @override
+  String get workerViewJobDetails => 'View Details';
+
+  @override
+  String get workerSendOffer => 'Send Offer';
+
+  @override
+  String get workerChangeOffer => 'Change Offer';
+
+  @override
+  String get workerOnboardingSubmittedBody =>
+      'Your profile is with the admin for review.';
+
+  @override
+  String get workerOnboardingChangesRequiredBody =>
+      'Your profile needs changes — see the details.';
+
+  @override
+  String get workerOnboardingRejectedBody =>
+      'Your profile was rejected — see the reason.';
+
+  @override
+  String get workerProfileIncomplete => 'Profile Incomplete';
+
+  @override
+  String get inspFormLabourCostRequired => 'Labour cost *';
+
+  @override
+  String get inspFormNotesOptional => 'Notes (optional)';
+
+  @override
+  String get inspFormPartName => 'Part name';
+
+  @override
+  String get inspFormQty => 'Qty';
+
+  @override
+  String get inspFormUnitPrice => 'Unit price';
+
+  @override
+  String get inspFormWarrantyOptional => 'Warranty / guarantee (optional)';
+
+  @override
+  String get inspFormPartsTotal => 'Parts total';
+
+  @override
+  String get inspFormLabour => 'Labour';
+
+  @override
+  String get inspFormMicPermanentlyDenied =>
+      'Microphone access is permanently denied. Enable it in Settings.';
+
+  @override
+  String get inspFormMicDenied => 'Microphone permission denied.';
+
+  @override
+  String get errorTimeout => 'The connection timed out. Please try again.';
+
+  @override
+  String get errorRequestCancelled => 'The request was cancelled.';
+
+  @override
+  String get errorInvalidRequest =>
+      'Some details are not correct. Please check them and try again.';
+
+  @override
+  String get errorSessionExpired =>
+      'Your session has expired. Please log in again.';
+
+  @override
+  String get errorForbidden => 'You do not have permission for this action.';
+
+  @override
+  String get errorNotFound => 'This is no longer available.';
+
+  @override
+  String get errorConflict =>
+      'This has already been updated. Please refresh and try again.';
+
+  @override
+  String get errorTooManyRequests =>
+      'Too many attempts. Please wait a moment and try again.';
+
+  @override
+  String get errorServer => 'Server error. Please try again later.';
+
+  @override
+  String get errorSmsSendFailed =>
+      'The SMS could not be sent. Please try again.';
+
+  @override
+  String get errorInspectorBusy =>
+      'The inspecting Ustaad is busy on another job right now. Please choose another Ustaad from the list below.';
+
+  @override
+  String get errorPhoneIsWorker =>
+      'This mobile number is already registered as an Ustaad account.';
+
+  @override
+  String get errorPhoneIsClient =>
+      'This mobile number is already registered as a Client account.';
+
+  @override
+  String get errorUnknown => 'Something went wrong. Please try again.';
+
+  @override
+  String get authForgotPasswordTitle => 'Forgot your\npassword?';
+
+  @override
+  String get authSetNewPasswordTitle => 'Set a new\npassword';
+
+  @override
+  String get authEnterCodeSentToNumber => 'Enter the code sent to your number.';
+
+  @override
+  String get authForgotPasswordClientOnly =>
+      'For Client accounts only. A code will be sent to the registered number.';
+
+  @override
+  String get authForgotPasswordWorkerOnly =>
+      'For Ustaad accounts only. A code will be sent to the registered number.';
+
+  @override
+  String get authErrorCodeSendFailed => 'The code could not be sent.';
+
+  @override
+  String get authErrorPasswordChangeFailed =>
+      'The password could not be changed.';
+
+  @override
+  String get authErrorLoginFailed => 'Could not log you in.';
+
+  @override
+  String get authErrorRegisterFailed => 'The account could not be created.';
+
+  @override
+  String get authLoginWithOtp => 'Log In With OTP';
+
+  @override
+  String get authHintExampleFullName => 'Muhammad Ali Khan';
+
+  @override
+  String get notificationsBannerFallbackTitle => 'Notification';
+
+  @override
+  String get legalEnglishOnlyNotice =>
+      'This legal document is currently available in English only.';
+
+  @override
+  String myBookingsTotalCount(int count) {
+    return '$count total';
+  }
+
+  @override
+  String get workerBidJobFallbackTitle => 'Job';
+}

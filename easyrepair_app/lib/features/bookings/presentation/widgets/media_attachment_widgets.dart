@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../domain/entities/booking_entity.dart';
+import '../../../../core/l10n/l10n_extensions.dart';
 
 // ── Palette (matches booking-detail pages) ────────────────────────────────────
 const _kAccent = Color(0xFF1D9E75);
@@ -199,7 +200,7 @@ class _WhatsAppVoiceNotePlayerState extends State<WhatsAppVoiceNotePlayer> {
                         width: barW,
                         height: isHead ? (h + 4).clamp(0.0, 22.0) : h,
                         margin: i < barCount - 1
-                            ? const EdgeInsets.only(right: spacing)
+                            ? const EdgeInsetsDirectional.only(end: spacing)
                             : null,
                         decoration: BoxDecoration(
                           color: filled
@@ -426,7 +427,7 @@ class BookingVideoTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    attachment.fileName ?? 'Video',
+                    attachment.fileName ?? context.l10n.chatAttachVideo,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
@@ -435,8 +436,8 @@ class BookingVideoTile extends StatelessWidget {
                       color: Colors.white,
                     ),
                   ),
-                  const Text(
-                    'Tap to play',
+                  Text(
+                    context.l10n.mediaTapToPlay,
                     style: TextStyle(fontSize: 11, color: Colors.white54),
                   ),
                 ],

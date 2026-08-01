@@ -1,0 +1,14 @@
+# Localization codegen config — see lib/l10n/*.arb
+#
+# app_en.arb is the template: any key missing from a translated ARB falls back
+# to the English message. Note that app_ur_Latn.arb (Roman Urdu) generates a
+# class extending the Urdu one, so a key present in app_ur.arb but missing from
+# app_ur_Latn.arb would render Urdu script on an LTR screen. ARB key parity is
+# enforced by test/core/l10n/arb_parity_test.dart.
+arb-dir: lib/l10n
+template-arb-file: app_en.arb
+output-localization-file: app_localizations.dart
+output-class: AppLocalizations
+nullable-getter: false
+preferred-supported-locales:
+  - en

@@ -7,6 +7,7 @@ import '../../../../../core/notifications/notification_navigator.dart';
 import '../../../../../features/auth/presentation/providers/auth_providers.dart';
 import '../../domain/entities/notification_entity.dart';
 import '../providers/notification_providers.dart';
+import '../../../../core/l10n/l10n_extensions.dart';
 
 const _kOrange = Color(0xFFDB6234);
 const _kDark   = Color(0xFF1A1A1A);
@@ -32,8 +33,8 @@ class NotificationListPage extends ConsumerWidget {
               size: 18, color: _kDark),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: const Text(
-          'Notifications',
+        title: Text(
+          context.l10n.notificationsTitle,
           style: TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w700,
@@ -49,8 +50,8 @@ class NotificationListPage extends ConsumerWidget {
               return TextButton(
                 onPressed: () =>
                     ref.read(notificationsProvider.notifier).markAllRead(),
-                child: const Text(
-                  'Mark all read',
+                child: Text(
+                  context.l10n.notificationsMarkAllRead,
                   style: TextStyle(color: _kOrange, fontSize: 13),
                 ),
               );
@@ -85,7 +86,7 @@ class NotificationListPage extends ConsumerWidget {
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10)),
                 ),
-                child: const Text('Retry'),
+                child: Text(context.l10n.commonRetry),
               ),
             ],
           ),
@@ -234,7 +235,7 @@ class _NotificationCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    _formatTime(notification.createdAt),
+                    _formatTime(context, notification.createdAt),
                     style: const TextStyle(
                       fontSize: 11,
                       color: Color(0xFF94A3B8),
@@ -274,12 +275,12 @@ class _NotificationCard extends StatelessWidget {
     }
   }
 
-  String _formatTime(DateTime dt) {
+  String _formatTime(BuildContext context, DateTime dt) {
     final now = DateTime.now();
     final diff = now.difference(dt);
-    if (diff.inMinutes < 1) return 'Just now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    if (diff.inMinutes < 1) return context.l10n.timeJustNow;
+    if (diff.inMinutes < 60) return context.l10n.timeMinutesAgo(diff.inMinutes);
+    if (diff.inHours < 24) return context.l10n.timeHoursAgo(diff.inHours);
     return DateFormat('MMM d').format(dt);
   }
 }
@@ -311,8 +312,8 @@ class _EmptyState extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 20),
-            const Text(
-              'No notifications yet',
+            Text(
+              context.l10n.notificationsEmptyTitle,
               style: TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.w700,
@@ -320,9 +321,9 @@ class _EmptyState extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'You\'ll be notified about job updates,\nreviews, and more.',
-              style: TextStyle(
+            Text(
+              context.l10n.notificationsEmptySubtitle,
+              style: const TextStyle(
                 fontSize: 13,
                 color: _kGray,
                 height: 1.5,

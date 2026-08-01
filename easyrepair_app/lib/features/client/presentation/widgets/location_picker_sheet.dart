@@ -6,6 +6,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import '../../../../core/l10n/l10n_extensions.dart';
 
 // ── API key (dart-define) ──────────────────────────────────────────────────────
 const _kMapsApiKey = String.fromEnvironment('GOOGLE_MAPS_API_KEY');
@@ -187,6 +188,8 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
   // ── Google Geocoding API (reverse) ─────────────────────────────────────────
 
   Future<String> _reverseGeocode(LatLng latlng) async {
+    // Read before the request: everything below runs after an await.
+    final fallback = context.l10n.locationSelected;
     try {
       final res = await _geoDio.get(
         'https://maps.googleapis.com/maps/api/geocode/json',
@@ -198,11 +201,10 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
       );
       final results = res.data['results'] as List?;
       if (results != null && results.isNotEmpty) {
-        return (results.first['formatted_address'] as String?) ??
-            'Selected location';
+        return (results.first['formatted_address'] as String?) ?? fallback;
       }
     } catch (_) {}
-    return 'Selected location';
+    return fallback;
   }
 
   Future<void> _resolveAndSet(LatLng latlng) async {
@@ -451,7 +453,7 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
                 if (v.trim().isNotEmpty) _runAutocomplete(v.trim());
               },
               decoration: InputDecoration(
-                hintText: 'Search for an area or landmark…',
+                hintText: context.l10n.locationSearchHint,
                 hintStyle: const TextStyle(color: _kGray, fontSize: 13.5),
                 prefixIcon: _searching
                     ? const Padding(
@@ -728,7 +730,7 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
               const SizedBox(width: 8),
               Expanded(
                 child: _reverseGeocoding
-                    ? const Row(
+                    ? Row(
                         children: [
                           SizedBox(
                             width : 14,
@@ -738,17 +740,17 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
                           ),
                           SizedBox(width: 8),
                           Text(
-                            'Getting address…',
+                            context.l10n.locationGettingAddress,
                             style: TextStyle(fontSize: 13, color: _kGray),
                           ),
                         ],
                       )
                     : Text(
                         _picked == null
-                            ? 'Move the map or tap to pick a location'
+                            ? context.l10n.locationMoveMapHint
                             : _addressLabel.isNotEmpty
                                 ? _addressLabel
-                                : 'Selected location',
+                                : context.l10n.locationSelected,
                         style: TextStyle(
                           fontSize  : 13,
                           color     : _picked == null ? _kGray : _kDark,
@@ -777,8 +779,8 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
                     borderRadius: BorderRadius.circular(14)),
                 elevation: 0,
               ),
-              child: const Text(
-                'Use This Location',
+              child: Text(
+                context.l10n.locationUseThis,
                 style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
               ),
             ),

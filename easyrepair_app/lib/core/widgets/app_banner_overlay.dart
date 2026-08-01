@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n_extensions.dart';
 import '../services/chat_socket_service.dart';
 
 const _kGreen = Color(0xFFDB6234);
@@ -122,7 +123,9 @@ class _AppBannerOverlayState extends State<AppBannerOverlay>
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    (payload['title'] as String?) ?? 'Notification',
+                                    (payload['title'] as String?) ??
+                                        context.l10n
+                                            .notificationsBannerFallbackTitle,
                                     style: const TextStyle(
                                       fontSize: 13.5,
                                       fontWeight: FontWeight.w700,

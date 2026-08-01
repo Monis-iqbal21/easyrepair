@@ -191,7 +191,9 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/worker/job/:id/bid',
         builder: (_, state) => WorkerBidPage(
           jobId: state.pathParameters['id']!,
-          jobTitle: state.uri.queryParameters['title'] ?? 'Job',
+          // Empty means "not supplied" — WorkerBidPage renders the localized
+          // fallback, which needs a context this builder does not have.
+          jobTitle: state.uri.queryParameters['title'] ?? '',
         ),
       ),
       GoRoute(

@@ -11,13 +11,15 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../../../core/errors/failures.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../../../core/utils/distance_utils.dart';
 import '../../domain/entities/booking_entity.dart';
+import 'full_screen_map_page.dart';
 import '../providers/booking_providers.dart';
 import '../widgets/inspection_report_card.dart';
 import '../../../chat/presentation/providers/chat_providers.dart';
+import '../../../../core/l10n/l10n_extensions.dart';
+import '../../../../core/errors/failure_messages.dart';
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 const _kGreen  = Color(0xFFDB6234);
@@ -91,7 +93,7 @@ class _TrackWorkerPageState extends ConsumerState<TrackWorkerPage> {
             child: CircularProgressIndicator(color: _kGreen, strokeWidth: 2),
           ),
           error: (err, _) => _ErrorBody(
-            message: err is Failure ? err.message : 'Failed to load tracking data.',
+            message: failureMessage(context.l10n, err, fallback: context.l10n.trackLoadFailed),
             onRetry: () => ref.invalidate(bookingDetailProvider(widget.bookingId)),
             onBack: _goBack,
           ),
@@ -117,8 +119,7 @@ class _TrackBody extends StatelessWidget {
     final double? distanceM =
         (worker?.currentLat != null &&
                 worker?.currentLng != null &&
-                booking.latitude != 0 &&
-                booking.longitude != 0)
+                booking.hasLocation)
             ? haversineDistanceMeters(
                 worker!.currentLat!,
                 worker.currentLng!,
@@ -196,8 +197,8 @@ class _TopBar extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Track Worker',
+                Text(
+                  context.l10n.bookingTrackWorker,
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
@@ -258,8 +259,12 @@ class _TrackingMapState extends State<_TrackingMap> {
   /// onCameraMoveStarted isn't mistaken for a user gesture.
   bool _isProgrammaticCameraMove = false;
 
+  /// Mirror of the inline map's markers, handed to the full-screen page so it
+  /// keeps receiving live Ustaad position updates while open.
+  final _fullScreenMarkers = ValueNotifier<Set<Marker>>(<Marker>{});
+
   bool get _hasJobLoc =>
-      widget.booking.latitude != 0 || widget.booking.longitude != 0;
+      widget.booking.hasLocation;
   LatLng get _jobLatLng =>
       LatLng(widget.booking.latitude, widget.booking.longitude);
 
@@ -279,16 +284,24 @@ class _TrackingMapState extends State<_TrackingMap> {
   @override
   void dispose() {
     _mapCtrl?.dispose();
+    _fullScreenMarkers.dispose();
     super.dispose();
   }
 
   void _maybeLoadWorkerIcon() {
     final worker = widget.booking.assignedWorker;
     if (worker == null) return;
-    final key = '${worker.avatarUrl}|${worker.firstName}';
+    // The raster is density-dependent, so the pixel ratio is part of the
+    // cache key — otherwise a density change would reuse a bitmap built for
+    // the wrong scale. The key check is also what stops the icon being
+    // rebuilt (and appearing to grow) on every map refresh.
+    final dpr = MediaQuery.maybeDevicePixelRatioOf(context) ?? 1.0;
+    final key = '${worker.avatarUrl}|${worker.firstName}|$dpr';
     if (key == _iconLoadedForKey) return;
     _iconLoadedForKey = key;
-    _buildWorkerMarkerIcon(worker.firstName, worker.avatarUrl).then((built) {
+    _buildWorkerMarkerIcon(worker.firstName, worker.avatarUrl, dpr).then((
+      built,
+    ) {
       if (!mounted || built == null || _iconLoadedForKey != key) return;
       setState(() {
         _workerIcon = built.icon;
@@ -306,15 +319,30 @@ class _TrackingMapState extends State<_TrackingMap> {
   Future<({BitmapDescriptor icon, double anchorY})?> _buildWorkerMarkerIcon(
     String name,
     String? avatarUrl,
+    double devicePixelRatio,
   ) async {
     try {
-      const avatarSize = 128.0;
-      const gap = 6.0;
-      const labelHeight = 34.0;
-      const canvasWidth = 160.0;
-      const canvasHeight = avatarSize + gap + labelHeight;
-      const avatarCenter = Offset(canvasWidth / 2, avatarSize / 2);
-      const avatarRadius = avatarSize / 2;
+      // ── Sizing is in LOGICAL dp, then rasterised at [devicePixelRatio] ──
+      //
+      // This is the whole fix for the oversized marker. The previous version
+      // rasterised a 160x168 PIXEL canvas and handed it to
+      // BitmapDescriptor.bytes WITHOUT imagePixelRatio, so those bytes were
+      // interpreted at ratio 1.0 - i.e. 160x168 *logical dp*, roughly
+      // 480x504 physical px on a 3x phone, against a default pin of ~27x43dp.
+      //
+      // Now the marker is defined at a deliberate ~44dp avatar (comparable to
+      // the other pins), drawn on a canvas scaled up by the device ratio for
+      // crispness, and BitmapDescriptor is told that ratio so it renders back
+      // down to the intended dp size on every density.
+      const avatarDp = 44.0;
+      const gapDp = 4.0;
+      const labelHeightDp = 18.0;
+      const canvasWidthDp = 104.0;
+      const canvasHeightDp = avatarDp + gapDp + labelHeightDp;
+      const avatarCenter = Offset(canvasWidthDp / 2, avatarDp / 2);
+      const avatarRadius = avatarDp / 2;
+      const ringDp = 2.0;
+      const photoInsetDp = 3.0;
 
       ui.Image? avatarImage;
       if (avatarUrl != null && avatarUrl.isNotEmpty) {
@@ -323,18 +351,24 @@ class _TrackingMapState extends State<_TrackingMap> {
 
       final recorder = ui.PictureRecorder();
       final canvas = Canvas(recorder);
+      // Everything below is authored in dp; this single scale makes the
+      // output physical-pixel crisp without changing any of the geometry.
+      canvas.scale(devicePixelRatio);
 
       canvas.drawCircle(avatarCenter, avatarRadius, Paint()..color = _kGreen);
       canvas.drawCircle(
         avatarCenter,
-        avatarRadius - 5,
+        avatarRadius - ringDp,
         Paint()..color = Colors.white,
       );
       if (avatarImage != null) {
         canvas.save();
         canvas.clipPath(
           Path()..addOval(
-            Rect.fromCircle(center: avatarCenter, radius: avatarRadius - 8),
+            Rect.fromCircle(
+              center: avatarCenter,
+              radius: avatarRadius - photoInsetDp,
+            ),
           ),
         );
         canvas.drawImageRect(
@@ -345,18 +379,22 @@ class _TrackingMapState extends State<_TrackingMap> {
             avatarImage.width.toDouble(),
             avatarImage.height.toDouble(),
           ),
-          Rect.fromCircle(center: avatarCenter, radius: avatarRadius - 8),
+          Rect.fromCircle(
+            center: avatarCenter,
+            radius: avatarRadius - photoInsetDp,
+          ),
           Paint(),
         );
         canvas.restore();
       } else {
+        // Fallback initial, kept in proportion to the smaller avatar.
         final initials = name.isNotEmpty ? name[0].toUpperCase() : '?';
         final initialsPainter = TextPainter(
           text: TextSpan(
             text: initials,
             style: const TextStyle(
               color: _kGreen,
-              fontSize: 40,
+              fontSize: 18,
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -374,42 +412,50 @@ class _TrackingMapState extends State<_TrackingMap> {
           text: name,
           style: const TextStyle(
             color: Colors.white,
-            fontSize: 20,
+            fontSize: 10,
             fontWeight: FontWeight.w700,
           ),
         ),
         textDirection: ui.TextDirection.ltr,
         maxLines: 1,
         ellipsis: '…',
-      )..layout(maxWidth: canvasWidth - 16);
+      )..layout(maxWidth: canvasWidthDp - 12);
 
       final labelRect = Rect.fromLTWH(
-        (canvasWidth - (namePainter.width + 20)) / 2,
-        avatarSize + gap,
-        namePainter.width + 20,
-        labelHeight,
+        (canvasWidthDp - (namePainter.width + 12)) / 2,
+        avatarDp + gapDp,
+        namePainter.width + 12,
+        labelHeightDp,
       );
       canvas.drawRRect(
-        RRect.fromRectAndRadius(labelRect, const Radius.circular(15)),
+        RRect.fromRectAndRadius(
+          labelRect,
+          const Radius.circular(labelHeightDp / 2),
+        ),
         Paint()..color = _kDark,
       );
       namePainter.paint(
         canvas,
         Offset(
-          labelRect.left + 10,
-          labelRect.top + (labelHeight - namePainter.height) / 2,
+          labelRect.left + 6,
+          labelRect.top + (labelHeightDp - namePainter.height) / 2,
         ),
       );
 
+      // Raster dimensions are dp * ratio; imagePixelRatio below converts them
+      // back to the intended dp footprint on screen.
       final rendered = await recorder.endRecording().toImage(
-            canvasWidth.toInt(),
-            canvasHeight.toInt(),
+            (canvasWidthDp * devicePixelRatio).round(),
+            (canvasHeightDp * devicePixelRatio).round(),
           );
       final bytes = await rendered.toByteData(format: ui.ImageByteFormat.png);
       if (bytes == null) return null;
       return (
-        icon: BitmapDescriptor.bytes(bytes.buffer.asUint8List()),
-        anchorY: avatarSize / 2 / canvasHeight,
+        icon: BitmapDescriptor.bytes(
+          bytes.buffer.asUint8List(),
+          imagePixelRatio: devicePixelRatio,
+        ),
+        anchorY: avatarDp / 2 / canvasHeightDp,
       );
     } catch (_) {
       return null;
@@ -471,6 +517,34 @@ class _TrackingMapState extends State<_TrackingMap> {
     }
   }
 
+  /// Opens the shared in-app full-screen map with the SAME markers, kept
+  /// live: [_fullScreenMarkers] is refreshed on every rebuild, so the
+  /// Ustaad's position continues updating while the full-screen page is open.
+  /// Never launches an external maps app; back returns to this page.
+  void _openFullScreenMap() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => FullScreenMapPage(
+          title: context.l10n.trackTitleUstaad,
+          markersListenable: _fullScreenMarkers,
+          initialTarget: _jobLatLng,
+        ),
+      ),
+    );
+  }
+
+  /// Builds the marker set AND publishes it to [_fullScreenMarkers] so both
+  /// maps always show the same thing.
+  Set<Marker> _syncedMarkers() {
+    final markers = _buildMarkers();
+    // Deferred: this runs during build, and ValueNotifier would otherwise
+    // trigger a listener rebuild mid-frame.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _fullScreenMarkers.value = markers;
+    });
+    return markers;
+  }
+
   Set<Marker> _buildMarkers() {
     final worker = widget.booking.assignedWorker;
     final markers = <Marker>{};
@@ -516,7 +590,7 @@ class _TrackingMapState extends State<_TrackingMap> {
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: _kBorder),
         ),
-        child: const Center(
+        child: Center(
           child: Padding(
             padding: EdgeInsets.symmetric(horizontal: 20),
             child: Row(
@@ -526,7 +600,7 @@ class _TrackingMapState extends State<_TrackingMap> {
                 SizedBox(width: 8),
                 Flexible(
                   child: Text(
-                    'Location not available for this booking.',
+                    context.l10n.trackNoLocationForBooking,
                     style: TextStyle(fontSize: 12.5, color: _kLight),
                     textAlign: TextAlign.center,
                   ),
@@ -548,7 +622,7 @@ class _TrackingMapState extends State<_TrackingMap> {
             height: 200,
             child: GoogleMap(
               initialCameraPosition: CameraPosition(target: _jobLatLng, zoom: 14),
-              markers: _buildMarkers(),
+              markers: _syncedMarkers(),
               onMapCreated: (c) {
                 _mapCtrl = c;
                 _fitBounds();
@@ -568,6 +642,14 @@ class _TrackingMapState extends State<_TrackingMap> {
                 ),
               },
             ),
+          ),
+          // Expand to the in-app full-screen map. Bottom-right so it never
+          // covers Google's attribution (bottom-left). When the
+          // "location unavailable" banner is showing it is lifted above it.
+          Positioned(
+            right: 10,
+            bottom: (worker != null && !hasWorkerLoc) ? 52 : 10,
+            child: MapExpandButton(onTap: _openFullScreenMap),
           ),
           if (worker != null && !hasWorkerLoc)
             Positioned(
@@ -593,7 +675,7 @@ class _TrackingMapState extends State<_TrackingMap> {
                     const SizedBox(width: 6),
                     Flexible(
                       child: Text(
-                        'Ustaad location abhi available nahi hai.',
+                        context.l10n.trackUstaadLocationUnavailable,
                         style: const TextStyle(fontSize: 11.5, color: Color(0xFF6B7280)),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -629,58 +711,58 @@ class _StatusCard extends StatelessWidget {
   // STANDARD/BIDDING share the same status-driven headline — once hired,
   // wording is identical regardless of whether the hire came from direct
   // assignment or an accepted bid. INSPECTION keeps its richer branching.
-  String get _headline {
-    if (booking.status == BookingStatus.completed) return 'Job Completed ✓';
+  String _headlineFor(BuildContext context) {
+    if (booking.status == BookingStatus.completed) return context.l10n.trackJobCompleted;
     if (_isInspection) {
       if (booking.inspectionDecisionStatus == InspectionDecisionStatus.acceptedRepair) {
-        return 'Quote Accepted — Repair In Progress';
+        return context.l10n.trackQuoteAcceptedRepairInProgress;
       }
       return switch (booking.status) {
-        BookingStatus.enRoute => 'Ustaad On The Way',
-        BookingStatus.arrived => 'Ustaad Arrived',
+        BookingStatus.enRoute => context.l10n.trackHeadlineUstaadOnTheWay,
+        BookingStatus.arrived => context.l10n.trackHeadlineUstaadArrived,
         BookingStatus.inProgress => booking.inspectionReportSubmitted
-            ? 'Report Submitted'
-            : 'Inspection In Progress',
-        _ => 'Hired ✓',
+            ? context.l10n.trackReportSubmitted
+            : context.l10n.trackInspectionInProgress,
+        _ => context.l10n.trackHeadlineHired,
       };
     }
     return switch (booking.status) {
-      BookingStatus.enRoute => 'Ustaad On The Way',
-      BookingStatus.arrived => 'Ustaad Arrived',
-      BookingStatus.inProgress => 'Work In Progress',
-      _ => 'Hired ✓',
+      BookingStatus.enRoute => context.l10n.trackHeadlineUstaadOnTheWay,
+      BookingStatus.arrived => context.l10n.trackHeadlineUstaadArrived,
+      BookingStatus.inProgress => context.l10n.trackHeadlineWorkInProgress,
+      _ => context.l10n.trackHeadlineHired,
     };
   }
 
-  String _subtext(String firstName) {
+  String _subtext(BuildContext context, String firstName) {
     if (booking.status == BookingStatus.completed) {
-      return '$firstName has completed the job';
+      return context.l10n.trackSubtextCompleted(firstName);
     }
     if (_isInspection) {
       if (booking.inspectionDecisionStatus == InspectionDecisionStatus.acceptedRepair) {
-        return '$firstName is continuing the repair';
+        return context.l10n.trackSubtextContinuingRepair(firstName);
       }
       return switch (booking.status) {
-        BookingStatus.enRoute => '$firstName is on the way to your location',
-        BookingStatus.arrived => '$firstName has arrived at your location',
+        BookingStatus.enRoute => context.l10n.trackSubtextOnTheWay(firstName),
+        BookingStatus.arrived => context.l10n.trackSubtextArrived(firstName),
         BookingStatus.inProgress => booking.inspectionReportSubmitted
-            ? 'Review the report below and decide how to proceed'
-            : '$firstName is inspecting the issue',
-        _ => '$firstName has been hired for this inspection',
+            ? context.l10n.trackReviewReportAndDecide
+            : context.l10n.trackSubtextInspecting(firstName),
+        _ => context.l10n.trackSubtextHiredForInspection(firstName),
       };
     }
     return switch (booking.status) {
-      BookingStatus.enRoute => '$firstName is on the way to your location',
-      BookingStatus.arrived => '$firstName has arrived at your location',
-      BookingStatus.inProgress => '$firstName is working on your job',
-      _ => '$firstName has been hired for this job',
+      BookingStatus.enRoute => context.l10n.trackSubtextOnTheWay(firstName),
+      BookingStatus.arrived => context.l10n.trackSubtextArrived(firstName),
+      BookingStatus.inProgress => context.l10n.trackSubtextWorking(firstName),
+      _ => context.l10n.trackSubtextHiredForJob(firstName),
     };
   }
 
   @override
   Widget build(BuildContext context) {
     final worker = booking.assignedWorker;
-    final firstName = worker?.firstName ?? 'Worker';
+    final firstName = worker?.firstName ?? context.l10n.trackWorkerLabel;
     final price = booking.acceptedBidAmount ?? booking.finalPrice ?? booking.estimatedPrice;
 
     return Container(
@@ -721,7 +803,7 @@ class _StatusCard extends StatelessWidget {
               const SizedBox(width: 14),
               Expanded(
                 child: Text(
-                  _headline,
+                  _headlineFor(context),
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w700,
@@ -734,7 +816,7 @@ class _StatusCard extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           Text(
-            _subtext(firstName),
+            _subtext(context, firstName),
             style: TextStyle(
               fontSize: 14,
               color: Colors.white.withValues(alpha: 0.85),
@@ -754,7 +836,7 @@ class _StatusCard extends StatelessWidget {
                     color: Colors.white.withValues(alpha: 0.2)),
               ),
               child: Text(
-                'Hired at ${formatPkr(price)}',
+                context.l10n.trackHiredAt(formatPkr(price)),
                 style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
@@ -815,8 +897,8 @@ class _WorkerCardState extends ConsumerState<_WorkerCard> {
     final phone = widget.worker.phone;
     if (phone == null || phone.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Phone number unavailable'),
+        SnackBar(
+          content: Text(context.l10n.trackPhoneUnavailable),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -826,8 +908,8 @@ class _WorkerCardState extends ConsumerState<_WorkerCard> {
     if (!await launchUrl(uri)) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Could not open phone dialer'),
+          SnackBar(
+            content: Text(context.l10n.trackDialerFailed),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -855,8 +937,8 @@ class _WorkerCardState extends ConsumerState<_WorkerCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'ASSIGNED WORKER',
+          Text(
+            context.l10n.trackAssignedWorkerCaps,
             style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w700,
@@ -906,7 +988,7 @@ class _WorkerCardState extends ConsumerState<_WorkerCard> {
                               size: 14, color: Color(0xFFF59E0B)),
                           const SizedBox(width: 3),
                           Text(
-                            '${worker.rating!.toStringAsFixed(1)} / 5.0',
+                            context.l10n.trackRatingOutOfFive(worker.rating!.toStringAsFixed(1)),
                             style: const TextStyle(
                               fontSize: 12,
                               color: Color(0xFF6B7280),
@@ -926,14 +1008,14 @@ class _WorkerCardState extends ConsumerState<_WorkerCard> {
                     icon: _chatLoading ? null : Icons.chat_bubble_outline_rounded,
                     loading: _chatLoading,
                     onTap: _openChat,
-                    tooltip: 'Chat',
+                    tooltip: context.l10n.chatTitleFallback,
                   ),
                   const SizedBox(width: 10),
                   _ActionCircle(
                     icon: Icons.phone_outlined,
                     loading: false,
                     onTap: _callWorker,
-                    tooltip: 'Call',
+                    tooltip: context.l10n.trackCall,
                   ),
                 ],
               ),
@@ -1055,8 +1137,8 @@ class _DistanceEtaCard extends StatelessWidget {
               children: [
                 Text(
                   hasDistance
-                      ? formatDistance(distanceM!)
-                      : 'Location unavailable',
+                      ? formatDistanceLabel(context.l10n, distanceM!)
+                      : context.l10n.trackLocationUnavailable,
                   style: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w700,
@@ -1067,8 +1149,8 @@ class _DistanceEtaCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   hasDistance
-                      ? 'Arriving in ~$etaMin ${etaMin == 1 ? 'minute' : 'minutes'}'
-                      : 'ETA unavailable',
+                      ? context.l10n.trackArrivingIn(etaMin!)
+                      : context.l10n.trackEtaUnavailable,
                   style: TextStyle(
                     fontSize: 13,
                     color: Colors.white.withValues(alpha: 0.85),
@@ -1158,28 +1240,28 @@ class _ProgressTimeline extends StatelessWidget {
     };
   }
 
-  List<_StepData> _inspectionSteps(DateFormat fmt) {
+  List<_StepData> _inspectionSteps(BuildContext context, DateFormat fmt) {
     return [
-      _StepData(label: 'Hired', requiredRank: 1, timestamp: booking.acceptedAt, fmt: fmt),
-      _StepData(label: 'Ustaad on the way', requiredRank: 2, timestamp: booking.enRouteAt, fmt: fmt),
-      _StepData(label: 'Arrived', requiredRank: 3, timestamp: booking.arrivedAt, fmt: fmt),
-      _StepData(label: 'Inspection in progress', requiredRank: 4, timestamp: booking.startedAt, fmt: fmt),
+      _StepData(label: context.l10n.trackStepHired, requiredRank: 1, timestamp: booking.acceptedAt, fmt: fmt),
+      _StepData(label: context.l10n.trackStepUstaadOnTheWay, requiredRank: 2, timestamp: booking.enRouteAt, fmt: fmt),
+      _StepData(label: context.l10n.workerActionArrived, requiredRank: 3, timestamp: booking.arrivedAt, fmt: fmt),
+      _StepData(label: context.l10n.trackStepInspectionInProgress, requiredRank: 4, timestamp: booking.startedAt, fmt: fmt),
       _StepData(
-        label: 'Report submitted',
+        label: context.l10n.trackStepReportSubmitted,
         requiredRank: 5,
         timestamp: booking.inspectionReportSubmittedAt,
         fmt: fmt,
       ),
       _StepData(
         label: booking.inspectionDecisionStatus == InspectionDecisionStatus.closedAfterInspection
-            ? 'Closed after inspection'
-            : 'Quote accepted',
+            ? context.l10n.trackStepClosedAfterInspection
+            : context.l10n.trackStepQuoteAccepted,
         requiredRank: 6,
         timestamp: null,
         fmt: fmt,
       ),
       _StepData(
-        label: booking.review != null ? 'Reviewed' : 'Completed',
+        label: booking.review != null ? context.l10n.trackStepReviewed : context.l10n.bookingStatusCompleted,
         requiredRank: 7,
         timestamp: booking.completedAt,
         fmt: fmt,
@@ -1202,15 +1284,15 @@ class _ProgressTimeline extends StatelessWidget {
     };
   }
 
-  List<_StepData> _standardSteps(DateFormat fmt) {
+  List<_StepData> _standardSteps(BuildContext context, DateFormat fmt) {
     return [
-      _StepData(label: 'Hired', requiredRank: 1, timestamp: booking.acceptedAt, fmt: fmt),
-      _StepData(label: 'Ustaad on the way', requiredRank: 2, timestamp: booking.enRouteAt, fmt: fmt),
-      _StepData(label: 'Arrived', requiredRank: 3, timestamp: booking.arrivedAt, fmt: fmt),
-      _StepData(label: 'Work in progress', requiredRank: 4, timestamp: booking.startedAt, fmt: fmt),
-      _StepData(label: 'Completed', requiredRank: 5, timestamp: booking.completedAt, fmt: fmt),
+      _StepData(label: context.l10n.trackStepHired, requiredRank: 1, timestamp: booking.acceptedAt, fmt: fmt),
+      _StepData(label: context.l10n.trackStepUstaadOnTheWay, requiredRank: 2, timestamp: booking.enRouteAt, fmt: fmt),
+      _StepData(label: context.l10n.workerActionArrived, requiredRank: 3, timestamp: booking.arrivedAt, fmt: fmt),
+      _StepData(label: context.l10n.trackStepWorkInProgress, requiredRank: 4, timestamp: booking.startedAt, fmt: fmt),
+      _StepData(label: context.l10n.bookingStatusCompleted, requiredRank: 5, timestamp: booking.completedAt, fmt: fmt),
       _StepData(
-        label: booking.review != null ? 'Reviewed' : 'Review pending',
+        label: booking.review != null ? context.l10n.trackStepReviewed : context.l10n.trackStepReviewPending,
         requiredRank: 6,
         timestamp: booking.review?.createdAt,
         fmt: fmt,
@@ -1223,7 +1305,9 @@ class _ProgressTimeline extends StatelessWidget {
     final fmt = DateFormat('h:mm a');
     // STANDARD and BIDDING share _standardRank/_standardSteps.
     final rank = _isInspection ? _inspectionRank() : _standardRank();
-    final steps = _isInspection ? _inspectionSteps(fmt) : _standardSteps(fmt);
+    final steps = _isInspection
+        ? _inspectionSteps(context, fmt)
+        : _standardSteps(context, fmt);
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -1244,8 +1328,8 @@ class _ProgressTimeline extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Text(
-                'Job Progress',
+              Text(
+                context.l10n.trackJobProgress,
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
@@ -1427,8 +1511,8 @@ class _GreenLiveBadge extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 4),
-          const Text(
-            'Live',
+          Text(
+            context.l10n.bookingStatusLive,
             style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w600,
@@ -1485,8 +1569,8 @@ class _ErrorBody extends StatelessWidget {
                 children: [
                   const Text('⚠️', style: TextStyle(fontSize: 40)),
                   const SizedBox(height: 16),
-                  const Text(
-                    'Failed to load tracking',
+                  Text(
+                    context.l10n.trackLoadFailedShort,
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
@@ -1510,8 +1594,8 @@ class _ErrorBody extends StatelessWidget {
                         color: _kGreen,
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Text(
-                        'Retry',
+                      child: Text(
+                        context.l10n.commonRetry,
                         style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.w700,

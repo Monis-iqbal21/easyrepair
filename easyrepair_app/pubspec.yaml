@@ -11,6 +11,10 @@ dependencies:
   flutter:
     sdk: flutter
 
+  # Localization (English / Urdu / Roman Urdu)
+  flutter_localizations:
+    sdk: flutter
+
   cupertino_icons: ^1.0.8
 
   # State management
@@ -49,7 +53,6 @@ dependencies:
   geocoding: ^3.0.0
   permission_handler: ^11.3.1
 
-
   # Audio recording & playback
   record: ^6.2.0
   audioplayers: ^6.4.0
@@ -57,14 +60,16 @@ dependencies:
   # WebSocket (Socket.IO v4 client)
   socket_io_client: ^2.0.3+1
 
-  # Date formatting
-  intl: ^0.19.0
+  # Date formatting (0.20.x is required by flutter_localizations)
+  intl: ^0.20.2
 
   # Video metadata
   video_player: ^2.9.2
 
   # External URL / maps launching
   url_launcher: ^6.3.1
+
+  # OTP input / SMS autofill
   pinput: ^6.0.2
   smart_auth: ^3.2.0
 
@@ -77,6 +82,9 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  # Runs gen-l10n from l10n.yaml on every build.
+  generate: true
 
   assets:
     - assets/images/

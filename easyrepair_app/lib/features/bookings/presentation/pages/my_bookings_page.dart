@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/errors/failures.dart';
 import '../../../../features/auth/presentation/providers/auth_providers.dart';
 import '../../../../features/client/presentation/widgets/client_bottom_nav_bar.dart';
 import '../../domain/entities/booking_entity.dart';
@@ -13,9 +12,13 @@ import '../widgets/booking_card.dart';
 import '../widgets/booking_filter_sheet.dart';
 import '../widgets/booking_search_bar.dart';
 import '../widgets/booking_skeleton.dart';
+import '../widgets/client_cancel_reason_sheet.dart';
 import 'choose_ustaad_page.dart';
 import 'track_worker_page.dart';
 import 'worker_discovery_map_page.dart';
+import '../../../../core/l10n/l10n_extensions.dart';
+import '../utils/booking_labels.dart';
+import '../../../../core/errors/failure_messages.dart';
 
 class MyBookingsPage extends ConsumerStatefulWidget {
   const MyBookingsPage({super.key});
@@ -65,9 +68,7 @@ class _MyBookingsPageState extends ConsumerState<MyBookingsPage> {
                   child: BookingSkeleton(),
                 ),
                 error: (err, _) => _ErrorState(
-                  message: err is Failure
-                      ? err.message
-                      : 'Unable to load your bookings. Please try again.',
+                  message: failureMessage(context.l10n, err, fallback: context.l10n.myBookingsLoadFailed),
                   onRetry: () =>
                       ref.read(bookingsNotifierProvider.notifier).refresh(),
                 ),
@@ -148,94 +149,38 @@ class _MyBookingsPageState extends ConsumerState<MyBookingsPage> {
     );
   }
 
+  /// Opens the shared Roman Urdu cancellation-reason modal — the same widget
+  /// the booking-detail page uses, so the two can never drift.
+  ///
+  /// Cancellation ELIGIBILITY is unchanged and already decided by the caller
+  /// (`booking.canClientCancel`); this only collects the reason.
   Future<void> _confirmCancel(
     BuildContext context,
     WidgetRef ref,
     BookingEntity booking,
   ) async {
-    final reasonCtrl = TextEditingController();
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: const Text(
-          'Cancel Booking?',
-          style: TextStyle(
-            fontWeight: FontWeight.w700,
-            color: Color(0xFF1A1A1A),
-            fontSize: 16,
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Cancel ${booking.serviceCategory} request ${booking.referenceId}?',
-              style: const TextStyle(color: Color(0xFF6B7280), fontSize: 14),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: reasonCtrl,
-              maxLines: 3,
-              decoration: InputDecoration(
-                hintText: 'Reason (required)',
-                filled: true,
-                fillColor: const Color(0xFFF9FAFB),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-                ),
-                contentPadding: const EdgeInsets.all(12),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text(
-              'Keep it',
-              style: TextStyle(color: Color(0xFF6B7280)),
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              if (reasonCtrl.text.trim().isEmpty) return;
-              Navigator.pop(ctx, true);
-            },
-            child: const Text(
-              'Yes, cancel',
-              style: TextStyle(
-                color: Color(0xFFDC2626),
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-
-    final reason = reasonCtrl.text.trim();
-    if (confirmed == true && reason.isNotEmpty && context.mounted) {
-      try {
-        await ref
+    try {
+      await showClientCancelReasonSheet(
+        context: context,
+        hasAssignedWorker: booking.assignedWorker != null,
+        onSubmit: (reason) => ref
             .read(bookingsNotifierProvider.notifier)
-            .cancelBooking(booking.id, reason);
-      } catch (e) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                e is Failure ? e.message : 'Failed to cancel booking.',
-              ),
-              backgroundColor: const Color(0xFFDC2626),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
+            .cancelBooking(booking.id, reason),
+      );
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              failureMessage(context.l10n, e, fallback: context.l10n.bookingCancelFailed),
             ),
-          );
-        }
+            backgroundColor: const Color(0xFFDC2626),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        );
       }
     }
   }
@@ -263,8 +208,8 @@ class _Header extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'My Bookings',
+                    Text(
+                      context.l10n.myBookingsTitle,
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w800,
@@ -303,7 +248,7 @@ class _Header extends ConsumerWidget {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      '$all total',
+                      context.l10n.myBookingsTotalCount(all),
                       style: const TextStyle(
                         fontSize: 11,
                         color: Colors.white,
@@ -402,7 +347,7 @@ class _StatusTabs extends ConsumerWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    tab.label,
+                    bookingTabLabel(context.l10n, tab),
                     style: TextStyle(
                       fontSize: 12.5,
                       fontWeight: FontWeight.w600,
@@ -471,7 +416,7 @@ class _EmptyState extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             Text(
-              isFiltered ? 'No results found' : 'No bookings yet',
+              isFiltered ? context.l10n.myBookingsNoResults : context.l10n.myBookingsEmptyTitle,
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
@@ -481,8 +426,8 @@ class _EmptyState extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               isFiltered
-                  ? 'Try adjusting your filters or search term'
-                  : 'Book your first service to get started',
+                  ? context.l10n.myBookingsAdjustFilters
+                  : context.l10n.myBookingsBookFirst,
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 13,
@@ -504,8 +449,8 @@ class _EmptyState extends StatelessWidget {
                     color: const Color(0xFFDB6234),
                     borderRadius: BorderRadius.circular(14),
                   ),
-                  child: const Text(
-                    'Book a Service',
+                  child: Text(
+                    context.l10n.postJobBookAService,
                     style: TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w700,
@@ -535,8 +480,8 @@ class _RefreshFailedBanner extends StatelessWidget {
       width: double.infinity,
       color: const Color(0xFFFEF3C7),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: const Text(
-        'Could not refresh. Pull to retry.',
+      child: Text(
+        context.l10n.myBookingsRefreshFailed,
         style: TextStyle(fontSize: 12, color: Color(0xFF92400E)),
       ),
     );
@@ -571,8 +516,8 @@ class _ErrorState extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
-              'Something went wrong',
+            Text(
+              context.l10n.myBookingsSomethingWrong,
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
@@ -601,8 +546,8 @@ class _ErrorState extends StatelessWidget {
                   color: const Color(0xFFDB6234),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Text(
-                  'Retry',
+                child: Text(
+                  context.l10n.commonRetry,
                   style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w700,

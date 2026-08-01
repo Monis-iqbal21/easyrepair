@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../widgets/auth_header.dart';
 import '../widgets/selection_card.dart';
+import '../../../../core/l10n/l10n_extensions.dart';
 
 /// Shown after choosing "Ustaad" on the role-selection page — decides
 /// between new-Ustaad registration and existing-Ustaad login.
@@ -47,7 +48,7 @@ class _WorkerTypeSelectionPageState extends State<WorkerTypeSelectionPage> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         AuthHeader(
-                          title: 'Aap pehle se HandyGo\nUstaad hain?',
+                          title: context.l10n.authWorkerTypeQuestion,
                           subtitle: '',
                           isSmall: isSmall,
                           showBackButton: true,
@@ -55,8 +56,8 @@ class _WorkerTypeSelectionPageState extends State<WorkerTypeSelectionPage> {
                         SizedBox(height: isSmall ? 20 : 32),
                         SelectionCard(
                           icon: Icons.person_add_alt_1_rounded,
-                          title: 'Main naya Ustaad hoon',
-                          subtitle: 'HandyGo par apna naya account banayein.',
+                          title: context.l10n.authWorkerTypeNewTitle,
+                          subtitle: context.l10n.authWorkerTypeNewSubtitle,
                           isSelected: _selected == 'new',
                           onTap: () =>
                               _select('new', '/auth/worker/register'),
@@ -64,9 +65,8 @@ class _WorkerTypeSelectionPageState extends State<WorkerTypeSelectionPage> {
                         const SizedBox(height: 16),
                         SelectionCard(
                           icon: Icons.login_rounded,
-                          title: 'Mera account pehle se bana hua hai',
-                          subtitle:
-                              'OTP ya password se apne account mein login karein.',
+                          title: context.l10n.authWorkerTypeExistingTitle,
+                          subtitle: context.l10n.authWorkerTypeExistingSubtitle,
                           isSelected: _selected == 'existing',
                           onTap: () =>
                               _select('existing', '/auth/worker/login'),

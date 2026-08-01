@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import '../../../support/l10n_test_app.dart';
+import 'package:handygo_app/core/l10n/app_locale.dart';
 import 'package:handygo_app/features/auth/presentation/widgets/otp_input_section.dart';
 
-Widget _wrap(Widget child) => MaterialApp(home: Scaffold(body: child));
+// Roman Urdu: these assertions cover the exact copy this screen shipped with
+// before localization, which now lives in app_ur_Latn.arb.
+Widget _wrap(Widget child) =>
+    localizedApp(Scaffold(body: child), locale: AppLocale.romanUrdu);
 
 void main() {
   group('OtpInputSection', () {

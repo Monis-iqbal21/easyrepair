@@ -3,10 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../providers/worker_providers.dart';
+import '../../../../core/l10n/l10n_extensions.dart';
 
 const _kOrange = Color(0xFFDB6234);
 const _kDark = Color(0xFF1A1A1A);
-const _kGray = Color(0xFF6B7280);
 
 /// Gate for worker actions that require an APPROVED profile (bid, apply,
 /// go online). Shows the required bilingual message and returns false if the
@@ -18,11 +18,8 @@ bool ensureApprovedOrWarn(BuildContext context, WidgetRef ref) {
   final profile = ref.read(workerProfileProvider).valueOrNull;
   if (profile != null && !profile.isOnboardingApproved) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Profile approval required before receiving jobs.\n'
-          'Jobs hasil karne ke liye pehle profile approval zaroori hai.',
-        ),
+      SnackBar(
+        content: Text(context.l10n.workerApprovalRequired),
         backgroundColor: Color(0xFFDC2626),
         behavior: SnackBarBehavior.floating,
       ),
@@ -36,17 +33,13 @@ bool ensureApprovedOrWarn(BuildContext context, WidgetRef ref) {
 /// worker's profile isn't APPROVED yet — shown instead of "Something went
 /// wrong" (New Jobs' own fetch would otherwise 403, and even where the fetch
 /// itself doesn't error, an incomplete profile has nothing meaningful to
-/// list). [romanUrdu]/[urdu] are the two required lines; the button always
-/// opens the profile-completion page.
+/// list). [message] is the already-localized explanation — this used to be a
+/// fixed Roman-Urdu line plus an Urdu one, which the language selector makes
+/// redundant. The button always opens the profile-completion page.
 class ProfileIncompleteState extends StatelessWidget {
-  final String romanUrdu;
-  final String urdu;
+  final String message;
 
-  const ProfileIncompleteState({
-    super.key,
-    required this.romanUrdu,
-    required this.urdu,
-  });
+  const ProfileIncompleteState({super.key, required this.message});
 
   @override
   Widget build(BuildContext context) {
@@ -69,16 +62,9 @@ class ProfileIncompleteState extends StatelessWidget {
             ),
             const SizedBox(height: 18),
             Text(
-              romanUrdu,
+              message,
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 14, color: _kDark, height: 1.5, fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              urdu,
-              textAlign: TextAlign.center,
-              textDirection: TextDirection.rtl,
-              style: const TextStyle(fontSize: 13.5, color: _kGray, height: 1.7),
             ),
             const SizedBox(height: 22),
             SizedBox(
@@ -92,16 +78,10 @@ class ProfileIncompleteState extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 13),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                child: const Column(
+                child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text('Complete Profile', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
-                    SizedBox(height: 1),
-                    Text(
-                      'پروفائل مکمل کریں',
-                      textDirection: TextDirection.rtl,
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                    ),
+                    Text(context.l10n.workerCompleteProfile, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
                   ],
                 ),
               ),

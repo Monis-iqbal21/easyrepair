@@ -11,7 +11,10 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../auth/presentation/providers/auth_providers.dart';
 import '../widgets/client_bottom_nav_bar.dart';
+import '../../../../core/l10n/l10n_extensions.dart';
+import '../../../../core/l10n/locale_provider.dart';
 import '../../../../core/network/api_client.dart';
+import '../../../../core/presentation/widgets/language_selector_sheet.dart';
 import '../../../../core/presentation/pages/general_info_page.dart';
 import '../../../../core/presentation/pages/privacy_policy_page.dart';
 import '../../../../core/presentation/pages/terms_conditions_page.dart';
@@ -160,8 +163,8 @@ class _ClientProfilePageState extends ConsumerState<ClientProfilePage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text(
-              'Profile image saved on this device. Cloud sync is not available yet.',
+            content: Text(
+              context.l10n.clientProfileAvatarLocalOnly,
             ),
             backgroundColor: Colors.orange.shade700,
             duration: const Duration(seconds: 4),
@@ -192,10 +195,10 @@ class _ClientProfilePageState extends ConsumerState<ClientProfilePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Padding(
+              Padding(
                 padding: EdgeInsets.fromLTRB(20, 20, 20, 0),
                 child: Text(
-                  'Profile',
+                  context.l10n.clientProfileTitle,
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w700,
@@ -236,9 +239,9 @@ class _ClientProfilePageState extends ConsumerState<ClientProfilePage> {
                             : _buildAvatarContent(avatarPath, cloudUrl, initials),
                       ),
                     ),
-                    Positioned(
+                    PositionedDirectional(
                       bottom: 0,
-                      right: 0,
+                      end: 0,
                       child: GestureDetector(
                         onTap: _uploading ? null : _changeAvatar,
                         child: Container(
@@ -302,13 +305,13 @@ class _ClientProfilePageState extends ConsumerState<ClientProfilePage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _SectionLabel(label: 'Account'),
+                    _SectionLabel(label: context.l10n.settingsSectionAccount),
                     const SizedBox(height: 10),
                     _SettingsCard(
                       items: [
                         _SettingsItem(
                           icon: Icons.person_outline_rounded,
-                          label: 'General',
+                          label: context.l10n.generalInfoTitle,
                           onTap: () => Navigator.of(context).push(
                             MaterialPageRoute(
                               builder: (_) => const GeneralInfoPage(),
@@ -318,13 +321,27 @@ class _ClientProfilePageState extends ConsumerState<ClientProfilePage> {
                       ],
                     ),
                     const SizedBox(height: 24),
-                    _SectionLabel(label: 'Legal'),
+                    _SectionLabel(label: context.l10n.languageSectionTitle),
+                    const SizedBox(height: 10),
+                    _SettingsCard(
+                      items: [
+                        _SettingsItem(
+                          icon: Icons.language_rounded,
+                          label: context.l10n.languageRowLabel,
+                          trailingText: ref.watch(localeProvider).displayLabel,
+                          showDivider: false,
+                          onTap: () => showLanguageSelectorSheet(context),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    _SectionLabel(label: context.l10n.settingsSectionLegal),
                     const SizedBox(height: 10),
                     _SettingsCard(
                       items: [
                         _SettingsItem(
                           icon: Icons.shield_outlined,
-                          label: 'Privacy Policy',
+                          label: context.l10n.settingsPrivacyPolicy,
                           onTap: () => Navigator.of(context).push(
                             MaterialPageRoute(
                               builder: (_) => const PrivacyPolicyPage(),
@@ -333,7 +350,7 @@ class _ClientProfilePageState extends ConsumerState<ClientProfilePage> {
                         ),
                         _SettingsItem(
                           icon: Icons.article_outlined,
-                          label: 'Terms & Conditions',
+                          label: context.l10n.settingsTermsConditions,
                           onTap: () => Navigator.of(context).push(
                             MaterialPageRoute(
                               builder: (_) => const TermsConditionsPage(),
@@ -346,7 +363,7 @@ class _ClientProfilePageState extends ConsumerState<ClientProfilePage> {
                     const SizedBox(height: 32),
                     _LogoutButton(ref: ref),
                     const SizedBox(height: 24),
-                    _SectionLabel(label: 'Danger Zone'),
+                    _SectionLabel(label: context.l10n.settingsSectionDangerZone),
                     const SizedBox(height: 10),
                     _DeleteAccountSection(ref: ref),
                   ],
@@ -415,8 +432,8 @@ class _AvatarPickerSheet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          const Text(
-            'Profile Photo',
+          Text(
+            context.l10n.profilePhotoTitle,
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w700,
@@ -429,17 +446,17 @@ class _AvatarPickerSheet extends StatelessWidget {
             children: [
               _AvatarOption(
                 icon: Icons.camera_alt_outlined,
-                label: 'Camera',
+                label: context.l10n.postJobCamera,
                 onTap: () => Navigator.pop(context, _AvatarAction.camera),
               ),
               _AvatarOption(
                 icon: Icons.photo_library_outlined,
-                label: 'Gallery',
+                label: context.l10n.commonGallery,
                 onTap: () => Navigator.pop(context, _AvatarAction.gallery),
               ),
               _AvatarOption(
                 icon: Icons.delete_outline_rounded,
-                label: 'Remove',
+                label: context.l10n.commonRemove,
                 iconColor: const Color(0xFFEF4444),
                 onTap: () => Navigator.pop(context, _AvatarAction.remove),
               ),
@@ -545,11 +562,16 @@ class _SettingsItem extends StatelessWidget {
   final VoidCallback onTap;
   final bool showDivider;
 
+  /// Optional value shown before the chevron — used by the language row to
+  /// display the current language without opening the sheet.
+  final String? trailingText;
+
   const _SettingsItem({
     required this.icon,
     required this.label,
     required this.onTap,
     this.showDivider = true,
+    this.trailingText,
   });
 
   @override
@@ -584,6 +606,18 @@ class _SettingsItem extends StatelessWidget {
                     ),
                   ),
                 ),
+                if (trailingText != null) ...[
+                  Text(
+                    trailingText!,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF6B7280),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                ],
+                // Icons.chevron_right_rounded declares matchTextDirection, so
+                // it points left on its own in Urdu.
                 const Icon(Icons.chevron_right_rounded,
                     size: 20, color: Color(0xFF6B7280)),
               ],
@@ -613,23 +647,23 @@ class _DeleteAccountSection extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
-          'Delete account?',
+        title: Text(
+          context.l10n.deleteAccountConfirmTitle,
           style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
         ),
-        content: const Text(
-          'This will delete your Handygo account and sign you out. This action may not be reversible.',
+        content: Text(
+          context.l10n.deleteAccountConfirmBody,
           style: TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel',
+            child: Text(context.l10n.commonCancel,
                 style: TextStyle(color: Color(0xFF6B7280))),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete',
+            child: Text(context.l10n.commonDelete,
                 style: TextStyle(
                     color: _kDeleteRed, fontWeight: FontWeight.w700)),
           ),
@@ -646,8 +680,8 @@ class _DeleteAccountSection extends StatelessWidget {
     if (!success) {
       final state = ref.read(deleteAccountNotifierProvider);
       final msg = state is AsyncError
-          ? (state.error as dynamic).message as String? ?? 'Failed to delete account.'
-          : 'Failed to delete account.';
+          ? (state.error as dynamic).message as String? ?? context.l10n.profileDeleteFailed
+          : context.l10n.profileDeleteFailed;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(msg), backgroundColor: Colors.red.shade700),
       );
@@ -695,9 +729,9 @@ class _DeleteAccountSection extends StatelessWidget {
                         size: 18, color: _kDeleteRed),
                   ),
                   const SizedBox(width: 14),
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      'Delete Account',
+                      context.l10n.deleteAccountTitle,
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
@@ -730,9 +764,9 @@ class _DeleteAccountSection extends StatelessWidget {
                         size: 18, color: Color(0xFF6B7280)),
                   ),
                   const SizedBox(width: 14),
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      'Request deletion by email',
+                      context.l10n.deleteAccountRequestByEmail,
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
@@ -763,7 +797,7 @@ class _LogoutButton extends StatelessWidget {
       child: OutlinedButton.icon(
         onPressed: () => ref.read(logoutNotifierProvider.notifier).logout(),
         icon: const Icon(Icons.logout_rounded, size: 18),
-        label: const Text('Logout'),
+        label: Text(context.l10n.commonLogout),
         style: OutlinedButton.styleFrom(
           foregroundColor: const Color(0xFFEF4444),
           side: const BorderSide(color: Color(0xFFEF4444), width: 1.2),

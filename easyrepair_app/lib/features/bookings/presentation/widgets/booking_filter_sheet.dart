@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../domain/entities/booking_entity.dart';
 import '../providers/booking_providers.dart';
+import '../../../../core/l10n/l10n_extensions.dart';
 
 class BookingFilterSheet extends StatefulWidget {
   final BookingFilter currentFilter;
@@ -63,8 +64,8 @@ class _BookingFilterSheetState extends State<BookingFilterSheet> {
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Row(
               children: [
-                const Text(
-                  'Filter Bookings',
+                Text(
+                  context.l10n.filterTitle,
                   style: TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.w700,
@@ -82,8 +83,8 @@ class _BookingFilterSheetState extends State<BookingFilterSheet> {
                     widget.onReset();
                     Navigator.pop(context);
                   },
-                  child: const Text(
-                    'Reset',
+                  child: Text(
+                    context.l10n.filterReset,
                     style: TextStyle(
                       fontSize: 13,
                       color: Color(0xFFDB6234),
@@ -98,7 +99,7 @@ class _BookingFilterSheetState extends State<BookingFilterSheet> {
           const SizedBox(height: 24),
 
           // Urgency
-          _SectionLabel(label: 'Urgency'),
+          _SectionLabel(label: context.l10n.bookingUrgency),
           const SizedBox(height: 10),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -106,10 +107,10 @@ class _BookingFilterSheetState extends State<BookingFilterSheet> {
               value: _urgency,
               options: const [null, BookingUrgency.urgent, BookingUrgency.normal],
               labelOf: (v) => v == null
-                  ? 'All'
+                  ? context.l10n.filterAll
                   : v == BookingUrgency.urgent
-                      ? '⚡ Urgent'
-                      : '🗓 Normal',
+                      ? context.l10n.filterUrgentOption
+                      : context.l10n.filterNormalOption,
               onSelected: (v) => setState(() => _urgency = v),
             ),
           ),
@@ -117,7 +118,7 @@ class _BookingFilterSheetState extends State<BookingFilterSheet> {
           const SizedBox(height: 20),
 
           // Sort
-          _SectionLabel(label: 'Sort by date'),
+          _SectionLabel(label: context.l10n.filterSortByDate),
           const SizedBox(height: 10),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -125,7 +126,7 @@ class _BookingFilterSheetState extends State<BookingFilterSheet> {
               value: _sortOrder,
               options: const [SortOrder.newest, SortOrder.oldest],
               labelOf: (v) =>
-                  v == SortOrder.newest ? 'Newest first' : 'Oldest first',
+                  v == SortOrder.newest ? context.l10n.filterNewestFirst : context.l10n.filterOldestFirst,
               onSelected: (v) => setState(() => _sortOrder = v),
             ),
           ),
@@ -133,7 +134,7 @@ class _BookingFilterSheetState extends State<BookingFilterSheet> {
           const SizedBox(height: 20),
 
           // Worker assignment
-          _SectionLabel(label: 'Worker'),
+          _SectionLabel(label: context.l10n.trackWorkerLabel),
           const SizedBox(height: 10),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -141,10 +142,10 @@ class _BookingFilterSheetState extends State<BookingFilterSheet> {
               value: _hasWorker,
               options: const [null, true, false],
               labelOf: (v) => v == null
-                  ? 'All'
+                  ? context.l10n.filterAll
                   : v
-                      ? 'Assigned'
-                      : 'No worker yet',
+                      ? context.l10n.bookingStatusAssigned
+                      : context.l10n.cardNoWorkerYet,
               onSelected: (v) => setState(() => _hasWorker = v),
             ),
           ),
@@ -177,8 +178,8 @@ class _BookingFilterSheetState extends State<BookingFilterSheet> {
                   elevation: 0,
                   minimumSize: Size.zero,
                 ),
-                child: const Text(
-                  'Apply Filters',
+                child: Text(
+                  context.l10n.filterApply,
                   style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
                 ),
               ),

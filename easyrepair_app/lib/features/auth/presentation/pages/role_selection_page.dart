@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../widgets/auth_primary_button.dart';
 import '../widgets/selection_card.dart';
+import '../../../../core/l10n/l10n_extensions.dart';
 
 /// New auth entry page — replaces the old direct Login/Register screen.
 /// Roman Urdu throughout, per the redesigned onboarding flow.
@@ -68,7 +69,7 @@ class _RoleSelectionPageState extends State<RoleSelectionPage> {
                         ),
                         SizedBox(height: isSmall ? 24 : 40),
                         Text(
-                          'HandyGo par aap kya karna chahte hain?',
+                          context.l10n.authRoleQuestion,
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: isSmall ? 21 : 24,
@@ -80,19 +81,16 @@ class _RoleSelectionPageState extends State<RoleSelectionPage> {
                         SizedBox(height: isSmall ? 24 : 36),
                         SelectionCard(
                           icon: Icons.home_repair_service_rounded,
-                          title: 'Mujhe ghar ke kaam ke liye Ustaad chahiye',
-                          subtitle:
-                              'Verified Ustaad book karein aur apna kaam asaani se karwayein.',
+                          title: context.l10n.authRoleClientTitle,
+                          subtitle: context.l10n.authRoleClientSubtitle,
                           isSelected: _selected == 'client',
                           onTap: () => _select('client', '/auth/client'),
                         ),
                         const SizedBox(height: 16),
                         SelectionCard(
                           icon: Icons.handyman_rounded,
-                          title:
-                              'Main Ustaad hoon aur kaam hasil karna chahta hoon',
-                          subtitle:
-                              'HandyGo join karein aur apni skill ke mutabiq kaam hasil karein.',
+                          title: context.l10n.authRoleWorkerTitle,
+                          subtitle: context.l10n.authRoleWorkerSubtitle,
                           isSelected: _selected == 'worker',
                           onTap: () =>
                               _select('worker', '/auth/worker/choice'),

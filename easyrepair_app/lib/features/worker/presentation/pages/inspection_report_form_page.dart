@@ -8,13 +8,14 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
 
-import '../../../../core/errors/failures.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../../bookings/domain/entities/inspection_report_entity.dart';
 import '../../../bookings/presentation/providers/booking_providers.dart';
 import '../../../bookings/presentation/widgets/media_attachment_widgets.dart';
 import '../config/inspection_issue_hints.dart';
 import '../providers/worker_job_providers.dart';
+import '../../../../core/l10n/l10n_extensions.dart';
+import '../../../../core/errors/failure_messages.dart';
 
 const _kPrimary = Color(0xFFDB6234);
 const _kDark = Color(0xFF1A1A1A);
@@ -92,16 +93,17 @@ class _InspectionReportFormPageState
   // ── Voice recording ───────────────────────────────────────────────────────
 
   Future<void> _startVoiceRecording() async {
+    // Resolved before the permission round-trip so neither message reads
+    // `context` across an async gap.
+    final l10n = context.l10n;
     final status = await Permission.microphone.request();
     if (status.isPermanentlyDenied) {
-      _showError(
-        'Microphone access is permanently denied. Enable it in Settings.',
-      );
+      _showError(l10n.inspFormMicPermanentlyDenied);
       openAppSettings();
       return;
     }
     if (!status.isGranted) {
-      _showError('Microphone permission denied.');
+      _showError(l10n.inspFormMicDenied);
       return;
     }
     _recorder ??= AudioRecorder();
@@ -202,12 +204,12 @@ class _InspectionReportFormPageState
             const SizedBox(height: 8),
             ListTile(
               leading: const Icon(Icons.camera_alt_rounded, color: _kPrimary),
-              title: const Text('Take Photo'),
+              title: Text(context.l10n.chatTakePhoto),
               onTap: () => Navigator.pop(context, ImageSource.camera),
             ),
             ListTile(
               leading: const Icon(Icons.image_rounded, color: _kPrimary),
-              title: const Text('Choose from Gallery'),
+              title: Text(context.l10n.inspFormChooseFromGallery),
               onTap: () => Navigator.pop(context, ImageSource.gallery),
             ),
             const SizedBox(height: 8),
@@ -254,8 +256,8 @@ class _InspectionReportFormPageState
           );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Report submitted. Waiting for client decision.'),
+          SnackBar(
+            content: Text(context.l10n.inspFormSubmitted),
             backgroundColor: _kPrimary,
             behavior: SnackBarBehavior.floating,
           ),
@@ -267,7 +269,7 @@ class _InspectionReportFormPageState
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              e is Failure ? e.message : 'Failed to submit report.',
+              failureMessage(context.l10n, e, fallback: context.l10n.inspFormSubmitFailed),
             ),
             backgroundColor: _kError,
             behavior: SnackBarBehavior.floating,
@@ -290,7 +292,7 @@ class _InspectionReportFormPageState
         .watch(workerJobDetailProvider(widget.bookingId))
         .valueOrNull
         ?.serviceCategory;
-    final issueHint = inspectionIssueHintFor(categoryName);
+    final issueHint = inspectionIssueHintFor(context.l10n, categoryName);
 
     return Scaffold(
       backgroundColor: _kBg,
@@ -298,8 +300,8 @@ class _InspectionReportFormPageState
         backgroundColor: Colors.white,
         elevation: 0,
         foregroundColor: _kDark,
-        title: const Text(
-          'Inspection Report',
+        title: Text(
+          context.l10n.inspectionReportTitle,
           style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
         ),
       ),
@@ -318,8 +320,8 @@ class _InspectionReportFormPageState
                         children: [
                           _FieldLabel(
                             _hasVoiceNote
-                                ? 'Masla kya nikla?'
-                                : 'Masla kya nikla? *',
+                                ? context.l10n.inspFormWhatWasIssue
+                                : context.l10n.inspFormWhatWasIssueRequired,
                           ),
                           _TextInput(
                             controller: _issueCtrl,
@@ -329,12 +331,12 @@ class _InspectionReportFormPageState
                           const SizedBox(height: 16),
                           _FieldLabel(
                             _hasVoiceNote
-                                ? 'Recommended repair'
-                                : 'Recommended repair *',
+                                ? context.l10n.inspFormRecommendedRepair
+                                : context.l10n.inspFormRecommendedRepairRequired,
                           ),
                           _TextInput(
                             controller: _repairCtrl,
-                            hint: 'Kya kaam karna hoga',
+                            hint: context.l10n.inspFormWhatWorkNeeded,
                             maxLines: 3,
                             onChanged: (_) => setState(() {}),
                           ),
@@ -356,8 +358,8 @@ class _InspectionReportFormPageState
                     ),
                     if (!_hasReportContent) ...[
                       const SizedBox(height: 8),
-                      const Text(
-                        'Please write the report or record a voice note.',
+                      Text(
+                        context.l10n.inspFormWriteOrRecord,
                         style: TextStyle(
                           color: _kError,
                           fontSize: 12.5,
@@ -381,8 +383,8 @@ class _InspectionReportFormPageState
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text(
-                                'Parts required?',
+                              Text(
+                                context.l10n.inspFormPartsRequired,
                                 style: TextStyle(
                                   fontWeight: FontWeight.w700,
                                   fontSize: 14.5,
@@ -418,7 +420,7 @@ class _InspectionReportFormPageState
                                 ),
                               ),
                               icon: const Icon(Icons.add_rounded, size: 18),
-                              label: const Text('Add part'),
+                              label: Text(context.l10n.inspFormAddPart),
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: _kPrimary,
                                 side: const BorderSide(color: _kPrimary),
@@ -436,7 +438,7 @@ class _InspectionReportFormPageState
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _FieldLabel('Labour cost *'),
+                          _FieldLabel(context.l10n.inspFormLabourCostRequired),
                           _TextInput(
                             controller: _labourCtrl,
                             hint: '0',
@@ -444,10 +446,10 @@ class _InspectionReportFormPageState
                             onChanged: (_) => setState(() {}),
                           ),
                           const SizedBox(height: 16),
-                          _FieldLabel('Notes (optional)'),
+                          _FieldLabel(context.l10n.inspFormNotesOptional),
                           _TextInput(
                             controller: _notesCtrl,
-                            hint: 'Ustaad notes',
+                            hint: context.l10n.inspFormUstaadNotes,
                             maxLines: 2,
                           ),
                         ],
@@ -490,8 +492,8 @@ class _InspectionReportFormPageState
                               color: Colors.white,
                             ),
                           )
-                        : const Text(
-                            'Report submit karain',
+                        : Text(
+                            context.l10n.inspFormSubmitReport,
                             style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w800,
@@ -618,7 +620,7 @@ class _PhotosSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Issue photos — optional, max $_kMaxPhotos',
+          context.l10n.inspFormIssuePhotos(_kMaxPhotos),
           style: const TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w700,
@@ -726,8 +728,8 @@ class _VoiceNoteSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Voice note',
+        Text(
+          context.l10n.inspFormVoiceNote,
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w700,
@@ -735,8 +737,8 @@ class _VoiceNoteSection extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 4),
-        const Text(
-          'Agar likhna mushkil ho, voice note record kar dein.',
+        Text(
+          context.l10n.inspFormVoiceNoteHint,
           style: TextStyle(fontSize: 12, color: _kGray),
         ),
         const SizedBox(height: 12),
@@ -753,7 +755,7 @@ class _VoiceNoteSection extends StatelessWidget {
               ),
               const SizedBox(width: 10),
               Text(
-                'Recording  ${_fmt(recordingDuration)}',
+                context.l10n.inspFormRecording(_fmt(recordingDuration)),
                 style: const TextStyle(
                   fontSize: 14,
                   color: _kDark,
@@ -764,7 +766,7 @@ class _VoiceNoteSection extends StatelessWidget {
               IconButton(
                 onPressed: onCancelRecording,
                 icon: const Icon(Icons.close_rounded, color: _kGray),
-                tooltip: 'Cancel',
+                tooltip: context.l10n.commonCancel,
               ),
               IconButton(
                 onPressed: onStopRecording,
@@ -773,7 +775,7 @@ class _VoiceNoteSection extends StatelessWidget {
                   color: _kPrimary,
                   size: 32,
                 ),
-                tooltip: 'Stop',
+                tooltip: context.l10n.inspFormStop,
               ),
             ],
           )
@@ -786,7 +788,7 @@ class _VoiceNoteSection extends StatelessWidget {
               IconButton(
                 onPressed: onDelete,
                 icon: const Icon(Icons.delete_outline_rounded, color: _kError),
-                tooltip: 'Delete',
+                tooltip: context.l10n.commonDelete,
               ),
             ],
           )
@@ -794,7 +796,7 @@ class _VoiceNoteSection extends StatelessWidget {
           OutlinedButton.icon(
             onPressed: onStartRecording,
             icon: const Icon(Icons.mic_rounded, size: 18),
-            label: const Text('Start recording'),
+            label: Text(context.l10n.inspFormStartRecording),
             style: OutlinedButton.styleFrom(
               foregroundColor: _kPrimary,
               side: const BorderSide(color: _kPrimary),
@@ -871,10 +873,10 @@ class _PartCardState extends State<_PartCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _FieldLabel('Part name'),
+          _FieldLabel(context.l10n.inspFormPartName),
           _TextInput(
             controller: _name,
-            hint: 'e.g. Gas refill',
+            hint: context.l10n.inspFormPartNameHint,
             onChanged: (_) => _emit(),
           ),
           const SizedBox(height: 10),
@@ -884,7 +886,7 @@ class _PartCardState extends State<_PartCard> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _FieldLabel('Qty'),
+                    _FieldLabel(context.l10n.inspFormQty),
                     _TextInput(
                       controller: _qty,
                       hint: '1',
@@ -899,7 +901,7 @@ class _PartCardState extends State<_PartCard> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _FieldLabel('Unit price'),
+                    _FieldLabel(context.l10n.inspFormUnitPrice),
                     _TextInput(
                       controller: _price,
                       hint: '0',
@@ -912,10 +914,10 @@ class _PartCardState extends State<_PartCard> {
             ],
           ),
           const SizedBox(height: 10),
-          _FieldLabel('Warranty / guarantee (optional)'),
+          _FieldLabel(context.l10n.inspFormWarrantyOptional),
           _TextInput(
             controller: _warranty,
-            hint: 'e.g. 7 days',
+            hint: context.l10n.inspFormWarrantyHint,
             onChanged: (_) => _emit(),
           ),
           const SizedBox(height: 10),
@@ -930,7 +932,7 @@ class _PartCardState extends State<_PartCard> {
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
-              child: const Text('Remove part'),
+              child: Text(context.l10n.inspFormRemovePart),
             ),
           ),
         ],
@@ -962,8 +964,8 @@ class _SummaryCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _line('Parts ki total raqam', formatPkr(partsTotal)),
-          _line('Mazdoori', formatPkr(labourCost)),
+          _line(context.l10n.inspFormPartsTotal, formatPkr(partsTotal)),
+          _line(context.l10n.inspFormLabour, formatPkr(labourCost)),
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 8),
             child: Divider(height: 1, color: Colors.white24),
@@ -971,8 +973,8 @@ class _SummaryCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Kam ki puri raqam',
+              Text(
+                context.l10n.inspFormTotalAmount,
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 15.5,
@@ -990,8 +992,8 @@ class _SummaryCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 6),
-          const Text(
-            'Agar customer repair continue karwata hai to inspection fee nhi deni hogi.',
+          Text(
+            context.l10n.inspFormFeeWaivedNote,
             style: TextStyle(
               color: Colors.white60,
               fontSize: 11.5,

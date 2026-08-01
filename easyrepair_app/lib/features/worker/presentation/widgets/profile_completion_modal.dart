@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/l10n/l10n_extensions.dart';
 
 const _kOrange = Color(0xFFDB6234);
 const _kDark = Color(0xFF1A1A1A);
@@ -42,36 +43,19 @@ Future<void> showProfileCompletionModal(BuildContext context) {
               ],
             ),
             const SizedBox(height: 16),
-            const Text(
-              'Apni profile ki details complete karain.',
-              style: TextStyle(
+            Text(
+              context.l10n.workerCompleteProfileDetails,
+              style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
                 color: _kDark,
                 height: 1.4,
               ),
             ),
-            const SizedBox(height: 4),
-            const Text(
-              'اپنی پروفائل کی تفصیلات مکمل کریں۔',
-              textDirection: TextDirection.rtl,
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                color: _kDark,
-                height: 1.6,
-              ),
-            ),
             const SizedBox(height: 14),
-            const Text(
-              'Profile complete honay ke baad hi aap jobs/bookings ke liye apply ya hire ho sakenge.',
-              style: TextStyle(fontSize: 13.5, color: _kGray, height: 1.45),
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              'پروفائل مکمل ہونے کے بعد ہی آپ jobs/bookings کے لیے apply یا hire ہو سکیں گے۔',
-              textDirection: TextDirection.rtl,
-              style: TextStyle(fontSize: 13, color: _kGray, height: 1.6),
+            Text(
+              context.l10n.workerCompleteProfileWhy,
+              style: const TextStyle(fontSize: 13.5, color: _kGray, height: 1.45),
             ),
             const SizedBox(height: 22),
             SizedBox(
@@ -90,17 +74,11 @@ Future<void> showProfileCompletionModal(BuildContext context) {
                     borderRadius: BorderRadius.circular(14),
                   ),
                 ),
-                child: const Column(
+                child: Column(
                   children: [
                     Text(
-                      'Complete Profile',
+                      context.l10n.workerCompleteProfile,
                       style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-                    ),
-                    SizedBox(height: 2),
-                    Text(
-                      'پروفائل مکمل کریں',
-                      textDirection: TextDirection.rtl,
-                      style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
                     ),
                   ],
                 ),

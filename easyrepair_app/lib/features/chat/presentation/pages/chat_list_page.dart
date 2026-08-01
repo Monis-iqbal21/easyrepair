@@ -2,10 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/l10n/l10n_extensions.dart';
+import '../../../../core/utils/support_search.dart';
 import '../../domain/entities/chat_entities.dart';
 import '../providers/chat_providers.dart';
 
-class ChatListPage extends ConsumerWidget {
+/// Asset used as the HandyGo Support avatar (same logo as splash / auth header).
+const String kSupportAvatarAsset = 'assets/images/logo-green.png';
+
+class ChatListPage extends ConsumerStatefulWidget {
   /// Route prefix for detail navigation — '/client/chat' or '/worker/chat'.
   final String detailRoutePrefix;
 
@@ -23,13 +28,71 @@ class ChatListPage extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ChatListPage> createState() => _ChatListPageState();
+}
+
+class _ChatListPageState extends ConsumerState<ChatListPage> {
+  final TextEditingController _searchController = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  /// Builds the rendered order: HandyGo Support first, then everything else.
+  ///
+  /// Pinning happens here rather than in the notifier because
+  /// [ChatConversationsNotifier.upsertConversation] inserts at index 0 on every
+  /// `conversation_updated` socket event and would otherwise push Support down.
+  List<ConversationEntity> _visibleConversations(
+    List<ConversationEntity> all,
+  ) {
+    final query = _query.trim();
+
+    // `firstWhereOrNull` semantics without the extra dependency — taking only
+    // the first also guarantees a single Support row even if the list ever
+    // carried a duplicate.
+    ConversationEntity? support;
+    final others = <ConversationEntity>[];
+    for (final c in all) {
+      if (c.isSupport) {
+        support ??= c;
+      } else {
+        others.add(c);
+      }
+    }
+
+    final filteredOthers = query.isEmpty
+        ? others
+        : others.where((c) => _matchesConversation(c, query)).toList();
+
+    // Support is matched only against its own alias list, never against
+    // conversation text, so an unrelated search cannot surface it.
+    final showSupport = support != null && matchesSupport(query);
+
+    return [
+      if (showSupport) support,
+      ...filteredOthers,
+    ];
+  }
+
+  bool _matchesConversation(ConversationEntity c, String query) {
+    final needle = query.toLowerCase();
+    if (c.otherParticipant.fullName.toLowerCase().contains(needle)) return true;
+    final preview = c.lastMessagePreview?.toLowerCase();
+    return preview != null && preview.contains(needle);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final conversationsAsync = ref.watch(chatConversationsProvider);
 
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) context.go(homeRoute);
+        if (!didPop) context.go(widget.homeRoute);
       },
       child: Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
@@ -39,14 +102,60 @@ class ChatListPage extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 20, 20, 16),
+            Padding(
+              padding: EdgeInsets.fromLTRB(20, 20, 20, 12),
               child: Text(
-                'Messages',
+                context.l10n.chatListTitle,
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w700,
                   color: Color(0xFF1A1A1A),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+              child: TextField(
+                controller: _searchController,
+                onChanged: (value) => setState(() => _query = value),
+                textInputAction: TextInputAction.search,
+                decoration: InputDecoration(
+                  hintText: context.l10n.chatSearchHint,
+                  hintStyle: const TextStyle(
+                    fontSize: 14,
+                    color: Color(0xFF9CA3AF),
+                  ),
+                  prefixIcon: const Icon(
+                    Icons.search,
+                    size: 20,
+                    color: Color(0xFF6B7280),
+                  ),
+                  suffixIcon: _query.isEmpty
+                      ? null
+                      : IconButton(
+                          icon: const Icon(Icons.close, size: 18),
+                          color: const Color(0xFF6B7280),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() => _query = '');
+                          },
+                        ),
+                  filled: true,
+                  fillColor: Colors.white,
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFFDB6234)),
+                  ),
                 ),
               ),
             ),
@@ -63,38 +172,44 @@ class ChatListPage extends ConsumerWidget {
                       .read(chatConversationsProvider.notifier)
                       .refresh(),
                 ),
-                data: (conversations) => conversations.isEmpty
-                    ? _EmptyView()
-                    : RefreshIndicator(
-                        color: const Color(0xFFDB6234),
-                        onRefresh: () => ref
-                            .read(chatConversationsProvider.notifier)
-                            .refresh(),
-                        child: ListView.builder(
-                          padding: const EdgeInsets.only(bottom: 110),
-                          itemCount: conversations.length,
-                          itemBuilder: (context, index) {
-                            return _ConversationTile(
-                              conversation: conversations[index],
-                              onTap: () async {
-                                await context.push(
-                                  '$detailRoutePrefix/${conversations[index].id}',
-                                );
-                                // Refresh unread counts when returning from chat detail.
-                                ref
-                                    .read(chatConversationsProvider.notifier)
-                                    .refresh();
-                              },
+                data: (conversations) {
+                  final visible = _visibleConversations(conversations);
+                  if (visible.isEmpty) {
+                    return _query.trim().isEmpty
+                        ? _EmptyView()
+                        : const _NoResultsView();
+                  }
+                  return RefreshIndicator(
+                    color: const Color(0xFFDB6234),
+                    onRefresh: () =>
+                        ref.read(chatConversationsProvider.notifier).refresh(),
+                    child: ListView.builder(
+                      padding: const EdgeInsets.only(bottom: 110),
+                      itemCount: visible.length,
+                      itemBuilder: (context, index) {
+                        final conversation = visible[index];
+                        return _ConversationTile(
+                          conversation: conversation,
+                          onTap: () async {
+                            await context.push(
+                              '${widget.detailRoutePrefix}/${conversation.id}',
                             );
+                            // Refresh unread counts when returning from chat detail.
+                            ref
+                                .read(chatConversationsProvider.notifier)
+                                .refresh();
                           },
-                        ),
-                      ),
+                        );
+                      },
+                    ),
+                  );
+                },
               ),
             ),
           ],
         ),
       ),
-      bottomNavigationBar: bottomNavigationBar,
+      bottomNavigationBar: widget.bottomNavigationBar,
     ),
     );
   }
@@ -113,7 +228,7 @@ class _ConversationTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final participant = conversation.otherParticipant;
     final preview = conversation.lastMessagePreview;
-    final timeStr = _formatTime(conversation.lastMessageAt);
+    final timeStr = _formatTime(context, conversation.lastMessageAt);
 
     final unread = conversation.unreadCount;
 
@@ -129,7 +244,10 @@ class _ConversationTile extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            _Avatar(participant: participant),
+            _Avatar(
+              participant: participant,
+              isSupport: conversation.isSupport,
+            ),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
@@ -138,7 +256,7 @@ class _ConversationTile extends StatelessWidget {
                   Text(
                     participant.fullName.isNotEmpty
                         ? participant.fullName
-                        : 'User',
+                        : context.l10n.commonUser,
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: unread > 0
@@ -214,7 +332,7 @@ class _ConversationTile extends StatelessWidget {
     );
   }
 
-  String? _formatTime(String? isoString) {
+  String? _formatTime(BuildContext context, String? isoString) {
     if (isoString == null) return null;
     try {
       final dt = DateTime.parse(isoString).toLocal();
@@ -227,9 +345,18 @@ class _ConversationTile extends StatelessWidget {
         return '$h:$m';
       }
       final diff = today.difference(msgDay).inDays;
-      if (diff == 1) return 'Yesterday';
+      if (diff == 1) return context.l10n.commonYesterday;
       if (diff < 7) {
-        const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        final l10n = context.l10n;
+        final days = [
+          l10n.weekdayMon,
+          l10n.weekdayTue,
+          l10n.weekdayWed,
+          l10n.weekdayThu,
+          l10n.weekdayFri,
+          l10n.weekdaySat,
+          l10n.weekdaySun,
+        ];
         return days[dt.weekday - 1];
       }
       return '${dt.day}/${dt.month}/${dt.year % 100}';
@@ -241,11 +368,31 @@ class _ConversationTile extends StatelessWidget {
 
 class _Avatar extends StatelessWidget {
   final ConversationParticipantEntity participant;
+  final bool isSupport;
 
-  const _Avatar({required this.participant});
+  const _Avatar({required this.participant, this.isSupport = false});
 
   @override
   Widget build(BuildContext context) {
+    if (isSupport) {
+      // The support account is a system user with no uploaded avatar — always
+      // render the official HandyGo logo instead of initials.
+      return CircleAvatar(
+        radius: 26,
+        backgroundColor: Colors.white,
+        child: ClipOval(
+          child: Padding(
+            padding: const EdgeInsets.all(6),
+            child: Image.asset(
+              kSupportAvatarAsset,
+              width: 40,
+              height: 40,
+              fit: BoxFit.contain,
+            ),
+          ),
+        ),
+      );
+    }
     final url = participant.avatarUrl;
     if (url != null && url.isNotEmpty) {
       return CircleAvatar(
@@ -272,7 +419,7 @@ class _Avatar extends StatelessWidget {
 class _EmptyView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -283,7 +430,7 @@ class _EmptyView extends StatelessWidget {
           ),
           SizedBox(height: 14),
           Text(
-            'No conversations yet',
+            context.l10n.chatEmptyTitle,
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
@@ -292,7 +439,37 @@ class _EmptyView extends StatelessWidget {
           ),
           SizedBox(height: 6),
           Text(
-            'Messages will appear here',
+            context.l10n.chatEmptySubtitle,
+            style: TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NoResultsView extends StatelessWidget {
+  const _NoResultsView();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.search_off_rounded, size: 52, color: Color(0xFF94A3B8)),
+          SizedBox(height: 14),
+          Text(
+            context.l10n.chatNoResultsTitle,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF1A1A1A),
+            ),
+          ),
+          SizedBox(height: 6),
+          Text(
+            context.l10n.chatNoResultsSubtitle,
             style: TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
           ),
         ],
@@ -325,8 +502,8 @@ class _ErrorView extends StatelessWidget {
             const SizedBox(height: 16),
             TextButton(
               onPressed: onRetry,
-              child: const Text(
-                'Retry',
+              child: Text(
+                context.l10n.commonRetry,
                 style: TextStyle(color: Color(0xFFDB6234)),
               ),
             ),

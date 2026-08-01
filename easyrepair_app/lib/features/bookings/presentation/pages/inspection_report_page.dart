@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/errors/failures.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../domain/entities/booking_entity.dart';
 import '../../domain/entities/inspection_report_entity.dart';
 import '../providers/booking_providers.dart';
+import '../providers/review_prompt_controller.dart';
 import '../widgets/media_attachment_widgets.dart';
 import 'worker_discovery_map_page.dart';
+import '../../../../core/l10n/l10n_extensions.dart';
+import '../../../../core/errors/failure_messages.dart';
 
 const _kPrimary = Color(0xFFDB6234);
 const _kPrimaryLight = Color(0xFFF5E8E0);
@@ -47,8 +49,8 @@ class InspectionReportPage extends ConsumerWidget {
         backgroundColor: Colors.white,
         elevation: 0,
         foregroundColor: _kDark,
-        title: const Text(
-          'Inspection Report',
+        title: Text(
+          context.l10n.inspectionReportTitle,
           style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
         ),
       ),
@@ -66,7 +68,7 @@ class InspectionReportPage extends ConsumerWidget {
                   const Icon(Icons.description_outlined, size: 40, color: _kGray),
                   const SizedBox(height: 12),
                   Text(
-                    err is Failure ? err.message : 'Report not available yet.',
+                    failureMessage(context.l10n, err, fallback: context.l10n.inspectionReportNotAvailable),
                     textAlign: TextAlign.center,
                     style: const TextStyle(color: _kGray, fontSize: 13.5),
                   ),
@@ -77,7 +79,7 @@ class InspectionReportPage extends ConsumerWidget {
                       foregroundColor: _kPrimary,
                       side: const BorderSide(color: _kPrimary),
                     ),
-                    child: const Text('Retry'),
+                    child: Text(context.l10n.commonRetry),
                   ),
                 ],
               ),
@@ -139,8 +141,8 @@ class _ReportBody extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Ustaad Voice Note',
+                  Text(
+                    context.l10n.inspectionUstaadVoiceNote,
                     style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: _kGray),
                   ),
                   const SizedBox(height: 10),
@@ -155,7 +157,7 @@ class _ReportBody extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Photos', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: _kGray)),
+                  Text(context.l10n.inspectionPhotos, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: _kGray)),
                   const SizedBox(height: 10),
                   SizedBox(
                     height: 88,
@@ -205,7 +207,7 @@ class _ReportBody extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Parts', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: _kGray)),
+                  Text(context.l10n.inspectionParts, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: _kGray)),
                   const SizedBox(height: 8),
                   ...report.parts.map(
                     (p) => Padding(
@@ -214,7 +216,11 @@ class _ReportBody extends ConsumerWidget {
                         children: [
                           Expanded(
                             child: Text(
-                              '${p.name} x${p.quantity}${p.warranty != null && p.warranty!.isNotEmpty ? ' · ${p.warranty}' : ''}',
+                              p.warranty != null && p.warranty!.isNotEmpty
+                                  ? context.l10n.inspectionPartWithWarranty(
+                                      p.name, p.quantity, p.warranty!)
+                                  : context.l10n.bookingServiceQuantity(
+                                      p.name, p.quantity),
                               style: const TextStyle(fontSize: 13.5, color: _kDark),
                             ),
                           ),
@@ -250,7 +256,7 @@ class _ReportBody extends ConsumerWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Repair quote total', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: _kDark)),
+                      Text(context.l10n.inspectionRepairQuoteTotal, style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: _kDark)),
                       Text(formatPkr(report.repairQuoteTotal!),
                           style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17, color: _kPrimary)),
                     ],
@@ -274,7 +280,7 @@ class _ReportBody extends ConsumerWidget {
                 ),
                 child: isDeciding
                     ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                    : const Text('Accept Quote & Continue Repair', style: TextStyle(fontWeight: FontWeight.w800)),
+                    : Text(context.l10n.inspectionAcceptQuoteContinue, style: TextStyle(fontWeight: FontWeight.w800)),
               ),
             ),
             const SizedBox(height: 10),
@@ -288,7 +294,7 @@ class _ReportBody extends ConsumerWidget {
                   padding: const EdgeInsets.symmetric(vertical: 15),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
-                child: const Text('Find Other Ustaad', style: TextStyle(fontWeight: FontWeight.w800)),
+                child: Text(context.l10n.inspectionFindOtherUstaad, style: TextStyle(fontWeight: FontWeight.w800)),
               ),
             ),
             const SizedBox(height: 10),
@@ -302,7 +308,7 @@ class _ReportBody extends ConsumerWidget {
                   padding: const EdgeInsets.symmetric(vertical: 15),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
-                child: const Text('Close After Inspection', style: TextStyle(fontWeight: FontWeight.w800)),
+                child: Text(context.l10n.inspectionCloseAfterInspection, style: TextStyle(fontWeight: FontWeight.w800)),
               ),
             ),
           ],
@@ -347,24 +353,24 @@ class _ReportBody extends ConsumerWidget {
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         title: Text(
-          accept ? 'Accept quote & continue repair?' : 'Close after inspection?',
+          accept ? context.l10n.inspectionAcceptQuoteConfirmTitle : context.l10n.inspectionCloseConfirmTitle,
           style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
         ),
         content: Text(
           accept
-              ? 'The same Ustaad will continue the repair. Inspection fee is waived — you\'ll only pay the repair quote.'
-              : 'You\'ll only be charged the inspection fee. The job will be marked completed.',
+              ? context.l10n.inspectionAcceptQuoteConfirmBody
+              : context.l10n.inspectionCloseConfirmBody,
           style: const TextStyle(color: _kGray, fontSize: 14),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel', style: TextStyle(color: _kGray)),
+            child: Text(context.l10n.commonCancel, style: TextStyle(color: _kGray)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(backgroundColor: _kPrimary, foregroundColor: Colors.white),
-            child: const Text('Confirm'),
+            child: Text(context.l10n.inspectionConfirm),
           ),
         ],
       ),
@@ -381,7 +387,7 @@ class _ReportBody extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(accept ? 'Quote accepted — repair in progress.' : 'Closed after inspection.'),
+            content: Text(accept ? context.l10n.inspectionQuoteAcceptedRepairInProgress : context.l10n.inspectionClosedAfterInspection),
             backgroundColor: _kPrimary,
             behavior: SnackBarBehavior.floating,
           ),
@@ -392,7 +398,7 @@ class _ReportBody extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e is Failure ? e.message : 'Action failed. Try again.'),
+            content: Text(failureMessage(context.l10n, e, fallback: context.l10n.inspectionActionFailed)),
             backgroundColor: _kError,
             behavior: SnackBarBehavior.floating,
           ),
@@ -406,20 +412,22 @@ class _ReportBody extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: const Text(
-          'Find another Ustaad?',
+        title: Text(
+          context.l10n.inspectionFindAnotherConfirmTitle,
           style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
         ),
-        content: const Text(
-          'Your inspection fee is already paid. We\'ll open this job for '
-          'nearby Ustaads to bid on — you can hire someone new, or hire the '
-          'same Ustaad again using their original quote.',
+        // Deliberately future tense: at this point the inspection booking is
+        // still IN_PROGRESS, so the fee is NOT yet paid — confirming here is
+        // what completes the inspection and makes it payable. Claiming
+        // "already paid" here was factually wrong.
+        content: Text(
+          context.l10n.inspectionFindAnotherConfirmBody,
           style: TextStyle(color: _kGray, fontSize: 14),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel', style: TextStyle(color: _kGray)),
+            child: Text(context.l10n.commonCancel, style: TextStyle(color: _kGray)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -427,7 +435,7 @@ class _ReportBody extends ConsumerWidget {
               backgroundColor: const Color(0xFFB45309),
               foregroundColor: Colors.white,
             ),
-            child: const Text('Find Other Ustaad'),
+            child: Text(context.l10n.inspectionFindOtherUstaad),
           ),
         ],
       ),
@@ -438,45 +446,74 @@ class _ReportBody extends ConsumerWidget {
     // backend is idempotent regardless, but there's no reason to send it.
     if (ref.read(inspectionDecisionNotifierProvider).isLoading) return;
 
+    final reviewController = ref.read(reviewPromptControllerProvider);
+
+    // RESERVE BEFORE THE REQUEST. The backend's `booking.completed` push can
+    // arrive before this call's HTTP response, so reserving afterwards would
+    // still let the ordinary foreground review modal open first. Claiming the
+    // guard up front means any such event finds this booking already active
+    // and enqueues nothing.
+    reviewController.reserveMandatory(bookingId);
+
     try {
-      await ref.read(inspectionDecisionNotifierProvider.notifier).findOtherUstaad(bookingId);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Looking for other Ustaads nearby.'),
-            backgroundColor: Color(0xFFB45309),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-        // findOtherUstaad's _run already pushed the (now completed)
-        // inspection booking into bookingDetailProvider. The open repair is
-        // the LINKED child booking — fetch it and take the client straight
-        // to its bidding page (old-style records without a link fall back
-        // to the same booking, which is itself still the open job there).
-        final booking = await ref.read(bookingDetailProvider(bookingId).future);
-        final repairBookingId = booking.linkedRepairBookingId;
-        final biddingBooking = repairBookingId != null
-            ? await ref.read(bookingDetailProvider(repairBookingId).future)
-            : booking;
-        if (context.mounted) {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(
-              builder: (_) => WorkerDiscoveryMapPage(booking: biddingBooking),
-            ),
-          );
-        }
-      }
+      await ref
+          .read(inspectionDecisionNotifierProvider.notifier)
+          .findOtherUstaad(bookingId);
     } catch (e) {
+      // The request that the reservation was guarding failed — release it so
+      // the booking is not left permanently blocked.
+      reviewController.releaseReservation(bookingId);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e is Failure ? e.message : 'Action failed. Try again.'),
+            content:
+                Text(failureMessage(context.l10n, e, fallback: context.l10n.inspectionActionFailed)),
             backgroundColor: _kError,
             behavior: SnackBarBehavior.floating,
           ),
         );
       }
+      return;
     }
+
+    if (!context.mounted) return;
+
+    // findOtherUstaad's _run already pushed the (now completed) inspection
+    // booking into bookingDetailProvider. The open repair is the LINKED child
+    // booking — old-style records without a link fall back to the same
+    // booking, which is itself still the open job there.
+    final inspectionBooking =
+        await ref.read(bookingDetailProvider(bookingId).future);
+    final repairBookingId = inspectionBooking.linkedRepairBookingId;
+
+    // The review ALWAYS belongs to the original completed inspection booking,
+    // never to the child repair booking.
+    if (inspectionBooking.review == null) {
+      if (!context.mounted) return;
+      final submitted =
+          await reviewController.showMandatory(context, inspectionBooking);
+      // Only a confirmed successful submission may proceed. A failed
+      // submission leaves the modal open and never resolves this, so we
+      // simply never get here — and definitely never navigate.
+      if (!submitted) return;
+    } else {
+      // Already reviewed — nothing to collect, go straight through.
+      reviewController.releaseReservation(bookingId);
+    }
+
+    if (!context.mounted) return;
+    final biddingBooking = repairBookingId != null
+        ? await ref.read(bookingDetailProvider(repairBookingId).future)
+        : inspectionBooking;
+    if (!context.mounted) return;
+
+    // `pushReplacement` plus the awaited-review gate above means this can
+    // only ever run once per successful decision.
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (_) => WorkerDiscoveryMapPage(booking: biddingBooking),
+      ),
+    );
   }
 }
 

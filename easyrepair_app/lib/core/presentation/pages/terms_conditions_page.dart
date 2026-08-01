@@ -1,5 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/l10n_extensions.dart';
+import '../widgets/legal_english_only_notice.dart';
+
+/// The page chrome here (app bar, back button, the English-only notice) is
+/// localized like the rest of the app. The document itself is not: the
+/// approved Terms and Conditions text stays in English until professionally
+/// translated Urdu and Roman Urdu versions are supplied. See
+/// `docs/legal_translation_exclusions.md`.
 class TermsConditionsPage extends StatelessWidget {
   const TermsConditionsPage({super.key});
 
@@ -16,9 +24,9 @@ class TermsConditionsPage extends StatelessWidget {
               size: 18, color: Color(0xFF1A1A1A)),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: const Text(
-          'Terms & Conditions',
-          style: TextStyle(
+        title: Text(
+          context.l10n.settingsTermsConditions,
+          style: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w700,
             color: Color(0xFF1A1A1A),
@@ -28,11 +36,31 @@ class TermsConditionsPage extends StatelessWidget {
       ),
       body: const SingleChildScrollView(
         padding: EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-        child: _TermsContent(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            LegalEnglishOnlyNotice(),
+            SizedBox(height: 16),
+            // The document is English, so it reads left-to-right even when
+            // the rest of the app is mirrored for Urdu.
+            Directionality(
+              textDirection: TextDirection.ltr,
+              child: _TermsContent(),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
+
+// ── L10N-LEGAL-BODY:START ────────────────────────────────────────────────────
+// Everything below is the approved Terms and Conditions text. It is
+// deliberately NOT localized and NOT machine-translated: legal wording needs a
+// professionally approved Urdu / Roman Urdu translation before it can ship in
+// another language. The hard-coded string audit reports this block as
+// Category 5, not as missed migration work.
+// See docs/legal_translation_exclusions.md.
 
 class _TermsContent extends StatelessWidget {
   const _TermsContent();
@@ -305,3 +333,4 @@ class _BulletPoint extends StatelessWidget {
     );
   }
 }
+// ── L10N-LEGAL-BODY:END ──────────────────────────────────────────────────────

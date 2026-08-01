@@ -17,6 +17,7 @@ abstract class BookingRemoteDataSource {
   Future<BookingModel> createBooking(CreateBookingRequest request);
   Future<List<BookingModel>> getClientBookings();
   Future<BookingModel> getBookingById(String bookingId);
+  Future<List<BookingModel>> getPendingReviews();
   Future<BookingModel> updateBooking(UpdateBookingRequest request);
   Future<BookingModel> cancelBooking(String bookingId, String reason);
   Future<BookingModel> submitReview(ReviewRequest request);
@@ -124,6 +125,19 @@ class BookingRemoteDataSourceImpl implements BookingRemoteDataSource {
       final response = await _dio.get('/bookings/$bookingId');
       final data = response.data['data'] as Map<String, dynamic>;
       return BookingModel.fromJson(data);
+    } on DioException catch (e) {
+      throw dioExceptionToFailure(e);
+    }
+  }
+
+  @override
+  Future<List<BookingModel>> getPendingReviews() async {
+    try {
+      final response = await _dio.get('/bookings/pending-reviews');
+      final data = response.data['data'] as List<dynamic>? ?? [];
+      return data
+          .map((e) => BookingModel.fromJson(e as Map<String, dynamic>))
+          .toList();
     } on DioException catch (e) {
       throw dioExceptionToFailure(e);
     }

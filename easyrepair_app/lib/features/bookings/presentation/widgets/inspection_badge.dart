@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/l10n/l10n_extensions.dart';
 
 /// Small pill shown when a booking has `inspection == true` — kept visually
 /// consistent with [StatusBadge]/[UrgencyBadge] (same pill shape/sizing).
@@ -30,7 +31,7 @@ class InspectionBadge extends StatelessWidget {
           ),
           const SizedBox(width: 3),
           Text(
-            'Inspection',
+            context.l10n.inspectionBadge,
             style: TextStyle(
               fontSize: fontSize,
               fontWeight: FontWeight.w600,

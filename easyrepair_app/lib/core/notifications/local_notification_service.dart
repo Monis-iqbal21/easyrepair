@@ -23,6 +23,13 @@ class LocalNotificationService {
 
   final _plugin = FlutterLocalNotificationsPlugin();
 
+  // Android notification-channel names and descriptions. These are rendered
+  // by the OS settings screen, not by this app's widget tree, and they are
+  // registered from main() before any BuildContext or locale exists. They are
+  // therefore NOT localized today — doing so means loading AppLocalizations
+  // outside the widget tree and re-registering both channels whenever the user
+  // changes language. Tracked in docs/TRANSLATIONS_README.md; deliberately out
+  // of scope for the in-app localization work.
   static const channelId = 'easyrepair_bookings';
   static const _kChannelName = 'Booking Updates';
   static const _kChannelDesc =

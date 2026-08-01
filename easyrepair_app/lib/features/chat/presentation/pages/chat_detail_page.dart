@@ -14,11 +14,13 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:video_player/video_player.dart';
 
+import '../../../../core/l10n/l10n_extensions.dart';
 import '../../../../core/services/chat_socket_service.dart';
 import '../../../../features/auth/presentation/providers/auth_providers.dart';
 import '../../../../features/notifications/presentation/providers/notification_providers.dart';
 import '../../domain/entities/chat_entities.dart';
 import '../providers/chat_providers.dart';
+import 'chat_list_page.dart' show kSupportAvatarAsset;
 
 class ChatDetailPage extends ConsumerStatefulWidget {
   final String conversationId;
@@ -249,14 +251,16 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
   // ── Voice recording ───────────────────────────────────────────────────────
 
   Future<void> _startVoiceRecording() async {
+    // Captured before the await — the permission prompt is an async gap.
+    final micDenied = context.l10n.chatMicPermissionRequired;
     final status = await Permission.microphone.request();
     if (status.isPermanentlyDenied) {
-      _showError('Microphone permission required to send voice message.');
+      _showError(micDenied);
       openAppSettings();
       return;
     }
     if (!status.isGranted) {
-      _showError('Microphone permission required to send voice message.');
+      _showError(micDenied);
       return;
     }
     _recorder ??= AudioRecorder();
@@ -379,16 +383,18 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
   // ── Location ──────────────────────────────────────────────────────────────
 
   Future<void> _sendLocation() async {
+    // Captured up front: everything below runs after an await.
+    final l10n = context.l10n;
     LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
-        _showError('Location permission denied');
+        _showError(l10n.chatLocationPermissionDenied);
         return;
       }
     }
     if (permission == LocationPermission.deniedForever) {
-      _showError('Location permission permanently denied — enable in Settings');
+      _showError(l10n.chatLocationPermissionPermanentlyDenied);
       return;
     }
 
@@ -415,7 +421,7 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
         },
       );
     } catch (e) {
-      _showError('Could not get location: $e');
+      _showError(l10n.chatLocationFailed('$e'));
     } finally {
       if (mounted) setState(() => _isSendingAttachment = false);
     }
@@ -466,7 +472,7 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
                     Icons.edit_outlined,
                     color: Color(0xFF1A1A1A),
                   ),
-                  title: const Text('Edit message'),
+                  title: Text(context.l10n.chatEditMessage),
                   onTap: () {
                     Navigator.pop(context);
                     _showEditDialog(message);
@@ -477,8 +483,8 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
                   Icons.delete_outline_rounded,
                   color: Color(0xFFEF4444),
                 ),
-                title: const Text(
-                  'Delete message',
+                title: Text(
+                  context.l10n.chatDeleteMessage,
                   style: TextStyle(color: Color(0xFFEF4444)),
                 ),
                 onTap: () {
@@ -500,21 +506,21 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Edit message'),
+        title: Text(context.l10n.chatEditMessage),
         content: TextField(
           controller: editController,
           maxLines: 5,
           minLines: 1,
           autofocus: true,
-          decoration: const InputDecoration(
-            hintText: 'Edit your message...',
+          decoration: InputDecoration(
+            hintText: context.l10n.chatEditHint,
             border: OutlineInputBorder(),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel',
+            child: Text(context.l10n.commonCancel,
                 style: TextStyle(color: Color(0xFF6B7280))),
           ),
           TextButton(
@@ -527,7 +533,7 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
               Navigator.pop(dialogContext);
               await _doEdit(message, newText);
             },
-            child: const Text('Save',
+            child: Text(context.l10n.commonSave,
                 style: TextStyle(
                     color: Color(0xFFDB6234), fontWeight: FontWeight.w600)),
           ),
@@ -554,18 +560,18 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
     showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Delete message'),
+        title: Text(context.l10n.chatDeleteMessage),
         content:
-            const Text('This message will be deleted for everyone in the chat.'),
+            Text(context.l10n.chatDeleteConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel',
+            child: Text(context.l10n.commonCancel,
                 style: TextStyle(color: Color(0xFF6B7280))),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete',
+            child: Text(context.l10n.commonDelete,
                 style: TextStyle(
                     color: Color(0xFFEF4444), fontWeight: FontWeight.w600)),
           ),
@@ -681,6 +687,7 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
       orElse: _emptyConversation,
     );
     final participant = conversation?.otherParticipant;
+    final isSupport = conversation?.isSupport ?? false;
 
     // Always go to the explicit back route when one is provided.
     // Using canPop() as primary check breaks notification-opened pages
@@ -712,7 +719,11 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
         ),
         title: GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onTap: participant != null && participant.userId.isNotEmpty
+          // The support account is a system user with no profile, rating or
+          // booking history — there is nothing to show in the tray.
+          onTap: !isSupport &&
+                  participant != null &&
+                  participant.userId.isNotEmpty
               ? () => _showParticipantTray(context, participant)
               : null,
           child: Row(
@@ -720,13 +731,14 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
               _AppBarAvatar(
                 avatarUrl: participant?.avatarUrl,
                 initials: participant?.initials ?? '?',
+                isSupport: isSupport,
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   participant?.fullName.isNotEmpty == true
                       ? participant!.fullName
-                      : 'Chat',
+                      : context.l10n.chatTitleFallback,
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -746,6 +758,7 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
       ),
       body: Column(
         children: [
+          if (isSupport) const _SupportBanner(),
           Expanded(
             child: messagesAsync.when(
               loading: () => const Center(
@@ -771,7 +784,7 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
                             .read(chatMessagesProvider(widget.conversationId)
                                 .notifier)
                             .refresh(),
-                        child: const Text('Retry',
+                        child: Text(context.l10n.commonRetry,
                             style: TextStyle(color: Color(0xFFDB6234))),
                       ),
                     ],
@@ -780,9 +793,9 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
               ),
               data: (messages) {
                 if (messages.isEmpty) {
-                  return const Center(
+                  return Center(
                     child: Text(
-                      'No messages yet. Say hello!',
+                      context.l10n.chatNoMessagesYet,
                       style: TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
                     ),
                   );
@@ -838,7 +851,7 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
               color: Colors.white,
               padding:
                   const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              child: const Row(
+              child: Row(
                 children: [
                   SizedBox(
                     width: 14,
@@ -850,7 +863,7 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
                     ),
                   ),
                   SizedBox(width: 10),
-                  Text('Uploading...',
+                  Text(context.l10n.commonUploading,
                       style: TextStyle(
                           fontSize: 13, color: Color(0xFF6B7280))),
                 ],
@@ -919,7 +932,7 @@ class _ParticipantTray extends StatelessWidget {
                 Text(
                   participant.fullName.isNotEmpty
                       ? participant.fullName
-                      : 'User',
+                      : context.l10n.commonUser,
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
@@ -1011,10 +1024,32 @@ class _RatingRow extends StatelessWidget {
 class _AppBarAvatar extends StatelessWidget {
   final String? avatarUrl;
   final String initials;
-  const _AppBarAvatar({this.avatarUrl, required this.initials});
+  final bool isSupport;
+  const _AppBarAvatar({
+    this.avatarUrl,
+    required this.initials,
+    this.isSupport = false,
+  });
 
   @override
   Widget build(BuildContext context) {
+    if (isSupport) {
+      return CircleAvatar(
+        radius: 18,
+        backgroundColor: Colors.white,
+        child: ClipOval(
+          child: Padding(
+            padding: const EdgeInsets.all(4),
+            child: Image.asset(
+              kSupportAvatarAsset,
+              width: 28,
+              height: 28,
+              fit: BoxFit.contain,
+            ),
+          ),
+        ),
+      );
+    }
     if (avatarUrl != null && avatarUrl!.isNotEmpty) {
       return CircleAvatar(
         radius: 18,
@@ -1037,6 +1072,47 @@ class _AppBarAvatar extends StatelessWidget {
   }
 }
 
+// ── Support banner ────────────────────────────────────────────────────────────
+
+/// Static guidance shown at the top of the HandyGo Support thread.
+///
+/// Deliberately a widget and NOT a persisted SYSTEM message: nothing is written
+/// to the database, so the conversation is genuinely empty until the user
+/// writes, and the admin inbox never shows a fake incoming message.
+class _SupportBanner extends StatelessWidget {
+  const _SupportBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      color: const Color(0xFFF5E8E0),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.support_agent_rounded,
+            size: 18,
+            color: Color(0xFFC2541D),
+          ),
+          SizedBox(width: 10),
+          Expanded(
+            child: Text(
+context.l10n.chatSupportBanner,
+              style: TextStyle(
+                fontSize: 13,
+                height: 1.35,
+                color: Color(0xFF1A1A1A),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 // ── Date separator ─────────────────────────────────────────────────────────────
 
 class _DateSeparator extends StatelessWidget {
@@ -1052,7 +1128,7 @@ class _DateSeparator extends StatelessWidget {
           const Expanded(child: Divider(color: Color(0xFFE2E8F0))),
           const SizedBox(width: 10),
           Text(
-            _formatDate(isoString),
+            _formatDate(context, isoString),
             style: const TextStyle(
               fontSize: 12,
               color: Color(0xFF94A3B8),
@@ -1066,19 +1142,21 @@ class _DateSeparator extends StatelessWidget {
     );
   }
 
-  String _formatDate(String isoString) {
+  String _formatDate(BuildContext context, String isoString) {
     try {
       final dt = DateTime.parse(isoString).toLocal();
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
       final msgDay = DateTime(dt.year, dt.month, dt.day);
-      if (msgDay == today) return 'Today';
-      if (today.difference(msgDay).inDays == 1) return 'Yesterday';
-      const months = [
-        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      final l10n = context.l10n;
+      if (msgDay == today) return l10n.commonToday;
+      if (today.difference(msgDay).inDays == 1) return l10n.commonYesterday;
+      final months = [
+        l10n.monthJan, l10n.monthFeb, l10n.monthMar, l10n.monthApr,
+        l10n.monthMay, l10n.monthJun, l10n.monthJul, l10n.monthAug,
+        l10n.monthSep, l10n.monthOct, l10n.monthNov, l10n.monthDec,
       ];
-      return '${dt.day} ${months[dt.month - 1]} ${dt.year}';
+      return l10n.dateDayMonthYear(dt.day, months[dt.month - 1], dt.year);
     } catch (_) {
       return '';
     }
@@ -1145,7 +1223,9 @@ class _MessageBubble extends StatelessWidget {
     return GestureDetector(
       onLongPress: () => onLongPress(message),
       child: Align(
-        alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+        alignment: isMe
+            ? AlignmentDirectional.centerEnd
+            : AlignmentDirectional.centerStart,
         child: Column(
           crossAxisAlignment:
               isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
@@ -1185,7 +1265,7 @@ class _MessageBubble extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(bottom: 4, right: 4),
                 child: Text(
-                  'Seen',
+                  context.l10n.chatSeen,
                   style: TextStyle(
                     fontSize: 11,
                     color: const Color(0xFF94A3B8).withValues(alpha: 0.85),
@@ -1253,7 +1333,7 @@ class _DeletedContent extends StatelessWidget {
             ),
             const SizedBox(width: 4),
             Text(
-              'This message was deleted',
+              context.l10n.chatMessageDeleted,
               style: TextStyle(
                 fontSize: 13,
                 fontStyle: FontStyle.italic,
@@ -1305,7 +1385,7 @@ class _TextContent extends StatelessWidget {
           children: [
             if (message.editedAt != null)
               Text(
-                'edited  ',
+                '${context.l10n.chatEdited}  ',
                 style: TextStyle(
                   fontSize: 10,
                   fontStyle: FontStyle.italic,
@@ -1394,8 +1474,8 @@ class _ImageContent extends StatelessWidget {
                 ),
               ),
               // Time stamp overlaid bottom-right
-              Positioned(
-                right: 6,
+              PositionedDirectional(
+                end: 6,
                 bottom: 4,
                 child: Container(
                   padding:
@@ -1499,8 +1579,8 @@ class _VideoContent extends StatelessWidget {
                 ),
               ),
               // Time stamp overlaid bottom-right
-              Positioned(
-                right: 6,
+              PositionedDirectional(
+                end: 6,
                 bottom: 4,
                 child: Container(
                   padding:
@@ -1582,7 +1662,7 @@ class _VideoPlayerDialogState extends State<_VideoPlayerDialog> {
           children: [
             // Close bar
             Align(
-              alignment: Alignment.centerRight,
+              alignment: AlignmentDirectional.centerEnd,
               child: IconButton(
                 icon: const Icon(Icons.close_rounded, color: Colors.white),
                 onPressed: () => Navigator.pop(context),
@@ -1812,7 +1892,7 @@ class _LocationContent extends StatelessWidget {
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not open maps')),
+          SnackBar(content: Text(context.l10n.chatCouldNotOpenMaps)),
         );
       }
     }
@@ -1883,7 +1963,7 @@ class _LocationContent extends StatelessWidget {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          'Shared location',
+                          context.l10n.chatSharedLocation,
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -2080,8 +2160,8 @@ class _ChatInputBar extends StatelessWidget {
                               fontSize: 14,
                               color: Color(0xFF1A1A1A),
                             ),
-                            decoration: const InputDecoration(
-                              hintText: 'Type a message...',
+                            decoration: InputDecoration(
+                              hintText: context.l10n.chatComposerHint,
                               hintStyle: TextStyle(
                                   color: Color(0xFF94A3B8), fontSize: 14),
                               contentPadding: EdgeInsets.symmetric(
@@ -2230,7 +2310,7 @@ class _RecordingBar extends StatelessWidget {
           Expanded(
             child: ClipRect(
               child: Align(
-                alignment: Alignment.centerRight,
+                alignment: AlignmentDirectional.centerEnd,
                 child: _Waveform(bars: amplitudeBars),
               ),
             ),
@@ -2362,25 +2442,25 @@ class _AttachmentSheet extends StatelessWidget {
               children: [
                 _AttachOption(
                   icon: Icons.image_rounded,
-                  label: 'Photo',
+                  label: context.l10n.chatAttachPhoto,
                   color: const Color(0xFF3B82F6),
                   onTap: onGalleryImage,
                 ),
                 _AttachOption(
                   icon: Icons.videocam_rounded,
-                  label: 'Video',
+                  label: context.l10n.chatAttachVideo,
                   color: const Color(0xFF8B5CF6),
                   onTap: onGalleryVideo,
                 ),
                 _AttachOption(
                   icon: Icons.mic_rounded,
-                  label: 'Voice',
+                  label: context.l10n.chatAttachVoice,
                   color: const Color(0xFF10B981),
                   onTap: onVoiceNote,
                 ),
                 _AttachOption(
                   icon: Icons.location_on_rounded,
-                  label: 'Location',
+                  label: context.l10n.chatAttachLocation,
                   color: const Color(0xFFDB6234),
                   onTap: onLocation,
                 ),
@@ -2429,13 +2509,13 @@ class _CameraSheet extends StatelessWidget {
               children: [
                 _AttachOption(
                   icon: Icons.camera_alt_rounded,
-                  label: 'Take Photo',
+                  label: context.l10n.chatTakePhoto,
                   color: const Color(0xFF1A1A1A),
                   onTap: onPhoto,
                 ),
                 _AttachOption(
                   icon: Icons.videocam_rounded,
-                  label: 'Record Video',
+                  label: context.l10n.chatRecordVideo,
                   color: const Color(0xFF8B5CF6),
                   onTap: onVideo,
                 ),

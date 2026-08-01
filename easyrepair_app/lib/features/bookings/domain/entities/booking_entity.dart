@@ -78,22 +78,11 @@ extension BookingLaneX on BookingLane {
 /// page can never disagree about the same booking.
 enum WorkerLifecycleAction { onMyWay, arrived, start, complete }
 
-extension WorkerLifecycleActionX on WorkerLifecycleAction {
-  String get label => switch (this) {
-        WorkerLifecycleAction.onMyWay => 'On My Way',
-        WorkerLifecycleAction.arrived => 'Arrived',
-        WorkerLifecycleAction.start => 'Start Job',
-        WorkerLifecycleAction.complete => 'Complete Job',
-      };
-
-  /// Shown in the success snackbar immediately after the action succeeds.
-  String get successMessage => switch (this) {
-        WorkerLifecycleAction.onMyWay => 'On the way — client notified.',
-        WorkerLifecycleAction.arrived => 'Marked as arrived.',
-        WorkerLifecycleAction.start => 'Job started.',
-        WorkerLifecycleAction.complete => 'Job marked as completed.',
-      };
-}
+// Display wording for this enum lives in
+// features/worker/presentation/utils/worker_status_labels.dart —
+// lifecycleActionLabel() and lifecycleActionSuccess(). The enum values are the
+// app's contract and never change; the words an Ustaad reads depend on the
+// language they picked.
 
 extension BookingWorkerLifecycleX on BookingEntity {
   /// The single next lifecycle action a worker should take for this
@@ -203,29 +192,13 @@ enum InspectionWorkerAction {
 }
 
 extension InspectionWorkerActionX on InspectionWorkerAction {
-  String get label => switch (this) {
-        InspectionWorkerAction.onMyWay => 'On My Way',
-        InspectionWorkerAction.arrived => 'Arrived',
-        InspectionWorkerAction.startInspection => 'Start Inspection',
-        InspectionWorkerAction.startWork => 'Start Work',
-        InspectionWorkerAction.fillReport => 'Fill Inspection Report',
-        InspectionWorkerAction.waitingForDecision => 'Waiting for Client Decision',
-        InspectionWorkerAction.complete => 'Complete Job',
-      };
-
   /// Only [waitingForDecision] is a non-tappable informational state — every
   /// other action opens a confirmation/navigates to a screen.
+  ///
+  /// Display wording lives in
+  /// features/worker/presentation/utils/worker_status_labels.dart —
+  /// inspectionActionLabel() and inspectionActionSuccess().
   bool get isActionable => this != InspectionWorkerAction.waitingForDecision;
-
-  String get successMessage => switch (this) {
-        InspectionWorkerAction.onMyWay => 'On the way — client notified.',
-        InspectionWorkerAction.arrived => 'Marked as arrived.',
-        InspectionWorkerAction.startInspection => 'Inspection started.',
-        InspectionWorkerAction.startWork => 'Work started.',
-        InspectionWorkerAction.fillReport => '',
-        InspectionWorkerAction.waitingForDecision => '',
-        InspectionWorkerAction.complete => 'Job marked as completed.',
-      };
 }
 
 extension BookingInspectionLifecycleX on BookingEntity {
@@ -280,38 +253,23 @@ extension BookingInspectionLifecycleX on BookingEntity {
   /// "Sirf Inspection Mukammal Hui" and never look like a completed repair.
   bool get isCompletedInspectionOnly =>
       status == BookingStatus.completed && isInspectionOnlyForCaller;
+
+  // The inspection-fee label itself lives in the presentation layer —
+  // bookings/presentation/utils/booking_labels.dart's
+  // inspectionFeeStatusLabel() for client screens and
+  // worker/presentation/utils/worker_status_labels.dart's
+  // workerInspectionFeeLabel() for Ustaad screens. Both read
+  // [inspectionFeePaid], which the backend derives solely from the ORIGINAL
+  // inspection work unit reaching COMPLETED — so it stays "paid" once the
+  // inspection completes, whether the repair is still pending, performed by
+  // another Ustaad, performed by a rehired original inspector, or already
+  // finished.
 }
 
 extension BookingStatusX on BookingStatus {
-  /// Maps internal status → client-facing display label
-  String get displayLabel {
-    return switch (this) {
-      BookingStatus.pending => 'Live',
-      BookingStatus.accepted => 'Assigned',
-      BookingStatus.enRoute => 'Assigned',
-      BookingStatus.arrived => 'Assigned',
-      BookingStatus.inProgress => 'Live',
-      BookingStatus.completed => 'Completed',
-      BookingStatus.rejected => 'Cancelled',
-      BookingStatus.cancelled => 'Cancelled',
-      BookingStatus.expired => 'Expired',
-    };
-  }
-
-  /// Worker-facing label for job status
-  String get workerLabel {
-    return switch (this) {
-      BookingStatus.pending => 'Pending',
-      BookingStatus.accepted => 'Assigned',
-      BookingStatus.enRoute => 'En Route',
-      BookingStatus.arrived => 'Arrived',
-      BookingStatus.inProgress => 'In Progress',
-      BookingStatus.completed => 'Completed',
-      BookingStatus.rejected => 'Rejected',
-      BookingStatus.cancelled => 'Cancelled',
-      BookingStatus.expired => 'Expired',
-    };
-  }
+  // Display labels deliberately live in the presentation layer
+  // (bookings/presentation/utils/status_labels.dart) — they depend on the
+  // selected language, while everything below is backend contract.
 
   /// True when the worker can still act on this job (not yet terminal)
   bool get isWorkerActive =>
@@ -373,6 +331,10 @@ extension BookingUrgencyX on BookingUrgency {
 }
 
 extension TimeSlotX on TimeSlot {
+  /// NOT display text. post_job_page compares this against its slot ids when
+  /// re-opening a booking for edit, so it must stay English and stable.
+  /// The user-facing wording is `timeSlotLabel()` in
+  /// presentation/utils/booking_labels.dart.
   String get label {
     return switch (this) {
       TimeSlot.morning => 'Morning',
@@ -395,8 +357,10 @@ extension TimeSlotX on TimeSlot {
 }
 
 extension UrgentWindowX on UrgentWindow {
-  /// Matches the exact option labels used on the booking form
-  /// (post_job_page.dart's `_buildUrgentSchedule` options list).
+  /// NOT display text. Matches the option ids used on the booking form
+  /// (post_job_page.dart's `_buildUrgentSchedule` options list), so it must
+  /// stay English. User-facing wording is `urgentWindowLabel()` in
+  /// presentation/utils/booking_labels.dart.
   String get label {
     return switch (this) {
       UrgentWindow.within1Hour => 'Within 1 hour',
@@ -437,17 +401,8 @@ extension AttachmentTypeX on AttachmentType {
 
 enum BookingTab { all, live, assigned, completed, cancelled }
 
-extension BookingTabX on BookingTab {
-  String get label {
-    return switch (this) {
-      BookingTab.all => 'All',
-      BookingTab.live => 'Live',
-      BookingTab.assigned => 'Assigned',
-      BookingTab.completed => 'Completed',
-      BookingTab.cancelled => 'Cancelled',
-    };
-  }
-}
+// Tab labels are built in the presentation layer by
+// presentation/utils/booking_labels.dart — bookingTabLabel().
 
 class BookingAttachmentEntity {
   final String id;
@@ -593,6 +548,13 @@ class BookingEntity {
   final String city;
   final double latitude;
   final double longitude;
+  /// Whether the API actually sent coordinates for this booking — captured
+  /// from the raw JSON before any defaulting (see BookingModel.hasLocation).
+  ///
+  /// Always prefer this over a `latitude != 0` sentinel: the backend nulls
+  /// coordinates for viewers who may not see the exact address, and `0` is
+  /// also a legal coordinate.
+  final bool hasLocation;
   /// Server-computed distance in km — only populated on worker-facing
   /// responses for a not-yet-assigned booking (see WorkersService._toJobDto).
   final double? distanceKm;
@@ -650,6 +612,12 @@ class BookingEntity {
   /// Other Ustaad" — the linked repair booking now open for bidding.
   final String? linkedRepairBookingId;
 
+  /// Whether the client has paid the inspection fee. Computed server-side
+  /// from the ORIGINAL inspection work unit reaching COMPLETED — never from
+  /// the existence of a report or from the linked repair's own status.
+  /// Null when no inspection is involved in this booking.
+  final bool? inspectionFeePaid;
+
   const BookingEntity({
     required this.id,
     required this.referenceId,
@@ -673,6 +641,7 @@ class BookingEntity {
     this.city = '',
     this.latitude = 0,
     this.longitude = 0,
+    this.hasLocation = false,
     this.distanceKm,
     this.completedAt,
     this.cancellationReason,
@@ -705,6 +674,7 @@ class BookingEntity {
     this.isInspectionOnlyForCaller = false,
     this.sourceInspectionBookingId,
     this.linkedRepairBookingId,
+    this.inspectionFeePaid,
   });
 
   /// Sum of all selected STANDARD-lane sub-service prices (× quantity).
@@ -785,6 +755,7 @@ class BookingEntity {
       city: city,
       latitude: latitude,
       longitude: longitude,
+      hasLocation: hasLocation,
       distanceKm: distanceKm,
       completedAt: completedAt ?? this.completedAt,
       cancellationReason: cancellationReason ?? this.cancellationReason,
@@ -817,6 +788,7 @@ class BookingEntity {
       isInspectionOnlyForCaller: isInspectionOnlyForCaller,
       sourceInspectionBookingId: sourceInspectionBookingId,
       linkedRepairBookingId: linkedRepairBookingId,
+      inspectionFeePaid: inspectionFeePaid,
     );
   }
 }

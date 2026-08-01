@@ -17,6 +17,8 @@ import '../providers/worker_providers.dart';
 import '../providers/worker_review_providers.dart';
 import '../widgets/worker_bottom_nav_bar.dart';
 import '../widgets/profile_completion_modal.dart';
+import '../../../../core/l10n/l10n_extensions.dart';
+import '../../../../l10n/app_localizations.dart';
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 const _kOrange     = Color(0xFFDB6234);
@@ -143,28 +145,31 @@ class _ProfileCompletionBanner extends StatelessWidget {
   final WorkerProfileEntity profile;
   const _ProfileCompletionBanner({required this.profile});
 
-  (String, String) get _statusLabel => switch (profile.onboardingStatus) {
+  /// [profile.onboardingStatus] is the raw backend token — only the banner's
+  /// wording is translated.
+  (String, String) _statusLabel(AppLocalizations l10n) =>
+      switch (profile.onboardingStatus) {
         'SUBMITTED_FOR_REVIEW' => (
-            'Submitted for Review',
-            'Aap ki profile admin review mein hai.',
+            l10n.workerOnboardingSubmitted,
+            l10n.workerOnboardingSubmittedBody,
           ),
         'CHANGES_REQUIRED' => (
-            'Changes Required',
-            'Profile mein tabdeeli zaroori hai — details dekhein.',
+            l10n.workerOnboardingChangesRequired,
+            l10n.workerOnboardingChangesRequiredBody,
           ),
         'REJECTED' => (
-            'Rejected',
-            'Profile reject ho gayi — wajah dekhein.',
+            l10n.bidStatusRejected,
+            l10n.workerOnboardingRejectedBody,
           ),
         _ => (
-            'Profile Incomplete',
-            'Jobs hasil karne ke liye pehle profile approval zaroori hai.',
+            l10n.workerProfileIncomplete,
+            l10n.workerApprovalRequired,
           ),
       };
 
   @override
   Widget build(BuildContext context) {
-    final (title, subtitle) = _statusLabel;
+    final (title, subtitle) = _statusLabel(context.l10n);
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
       child: GestureDetector(
@@ -231,7 +236,7 @@ class _Header extends ConsumerWidget {
         children: [
           Expanded(
             child: Text(
-              skillName ?? 'Skill not selected',
+              skillName ?? context.l10n.workerSkillNotSelected,
               style: TextStyle(
                 fontSize: 19,
                 fontWeight: FontWeight.w800,
@@ -410,10 +415,10 @@ class _LocationLabelState extends ConsumerState<_LocationLabel> {
   @override
   Widget build(BuildContext context) {
     final text = _loading
-        ? 'Locating…'
+        ? context.l10n.workerLocating
         : _error
-            ? 'Tap to retry'
-            : (_label ?? 'Tap for location');
+            ? context.l10n.workerTapToRetry
+            : (_label ?? context.l10n.workerTapForLocation);
 
     return GestureDetector(
       onTap: _refresh,
@@ -551,10 +556,10 @@ class _HeroCard extends ConsumerWidget {
                       const SizedBox(width: 8),
                       Text(
                         isBusy
-                            ? 'On Active Job'
+                            ? context.l10n.workerOnActiveJob
                             : isOnline
-                                ? 'Online'
-                                : 'Offline',
+                                ? context.l10n.workerOnline
+                                : context.l10n.workerOffline,
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
@@ -569,8 +574,12 @@ class _HeroCard extends ConsumerWidget {
                       if (!isBusy)
                         _HeroToggleBtn(
                           label: isLoading
-                              ? (isOnline ? 'Going offline...' : 'Connecting...')
-                              : (isOnline ? 'Go Offline' : 'Go Online'),
+                              ? (isOnline
+                                  ? context.l10n.workerGoingOffline
+                                  : context.l10n.workerConnecting)
+                              : (isOnline
+                                  ? context.l10n.workerGoOffline
+                                  : context.l10n.workerGoOnline),
                           isOnline: isOnline,
                           loading: isLoading,
                           locked: !isOnline && !profile.isOnboardingApproved,
@@ -581,18 +590,16 @@ class _HeroCard extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: 20),
-                  // Earnings
-                  const Text(
-                    'Aaj ki Kamai',
-                    style: TextStyle(
+                  // Earnings. This used to be a Roman-Urdu headline with a
+                  // small English gloss underneath — the app now speaks one
+                  // language at a time, so the gloss line is gone.
+                  Text(
+                    context.l10n.workerTodaysEarnings,
+                    style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                       color: Colors.white,
                     ),
-                  ),
-                  const Text(
-                    "Today's Earnings",
-                    style: TextStyle(fontSize: 10, color: Color(0xFF64748B)),
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -608,13 +615,13 @@ class _HeroCard extends ConsumerWidget {
                   Row(
                     children: [
                       _HeroStat(
-                        label: 'Completed',
+                        label: context.l10n.bookingStatusCompleted,
                         value: '${profile.stats.completedJobs}',
                         icon: Icons.check_circle_outline_rounded,
                       ),
                       const SizedBox(width: 10),
                       _HeroStat(
-                        label: 'Rating',
+                        label: context.l10n.workerRating,
                         value: profile.rating > 0
                             ? profile.rating.toStringAsFixed(1)
                             : '—',
@@ -622,7 +629,7 @@ class _HeroCard extends ConsumerWidget {
                       ),
                       const SizedBox(width: 10),
                       _HeroStat(
-                        label: 'Active',
+                        label: context.l10n.workerActive,
                         value: '${profile.stats.activeJobs}',
                         icon: Icons.bolt_rounded,
                       ),
@@ -639,11 +646,7 @@ class _HeroCard extends ConsumerWidget {
 
   Future<void> _handleGoOnline(BuildContext context, WidgetRef ref) async {
     if (!profile.isOnboardingApproved) {
-      _showSnack(
-        context,
-        'Profile approval required before receiving jobs.\n'
-        'Jobs hasil karne ke liye pehle profile approval zaroori hai.',
-      );
+      _showSnack(context, context.l10n.workerApprovalRequired);
       return;
     }
     final result =
@@ -661,14 +664,15 @@ class _HeroCard extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Go Offline?',
-            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18)),
-        content: const Text('You will stop appearing to nearby clients.',
-            style: TextStyle(color: _kGray)),
+        title: Text(context.l10n.workerGoOfflineConfirmTitle,
+            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18)),
+        content: Text(context.l10n.workerGoOfflineConfirmBody,
+            style: const TextStyle(color: _kGray)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel', style: TextStyle(color: _kGray)),
+            child: Text(context.l10n.commonCancel,
+                style: const TextStyle(color: _kGray)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -679,7 +683,7 @@ class _HeroCard extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(10)),
               elevation: 0,
             ),
-            child: const Text('Yes, Go Offline'),
+            child: Text(context.l10n.workerGoOfflineConfirmYes),
           ),
         ],
       ),
@@ -818,16 +822,18 @@ class _NewJobsCta extends StatelessWidget {
         child: ElevatedButton.icon(
           onPressed: () => context.go('/worker/new-jobs'),
           icon: const Icon(Icons.work_outline_rounded, size: 18),
-          label: const Column(
+          label: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'Naya Kaam Dhondain',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                context.l10n.workerFindNewWork,
+                style:
+                    const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
               ),
               Text(
-                'View New Jobs',
-                style: TextStyle(fontSize: 10, fontWeight: FontWeight.w400),
+                context.l10n.workerViewNewJobs,
+                style:
+                    const TextStyle(fontSize: 10, fontWeight: FontWeight.w400),
               ),
             ],
           ),
@@ -863,9 +869,9 @@ class _TodaySection extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Text(
-                'Today',
-                style: TextStyle(
+              Text(
+                context.l10n.commonToday,
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
                   color: _kDark,
@@ -874,9 +880,11 @@ class _TodaySection extends StatelessWidget {
               const Spacer(),
               GestureDetector(
                 onTap: () => context.go('/worker/jobs'),
-                child: const Text(
-                  'My Jobs',
-                  style: TextStyle(
+                // Same wording as the Client "My Jobs" screen title. The
+                // bottom-nav tab of the same name stays hard-coded English.
+                child: Text(
+                  context.l10n.clientJobsTitle,
+                  style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                     color: _kOrange,
@@ -901,7 +909,7 @@ class _ActiveJobCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final statusLabel = _statusLabel(job.status, job.lane);
+    final statusLabel = _statusLabel(context, job.status, job.lane);
     final statusColor = _statusColor(job.status);
 
     return GestureDetector(
@@ -934,9 +942,9 @@ class _ActiveJobCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 6),
-                const Text(
-                  'ACTIVE JOB',
-                  style: TextStyle(
+                Text(
+                  context.l10n.workerActiveJobCaps,
+                  style: const TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
                     color: _kOrange,
@@ -1005,14 +1013,15 @@ class _ActiveJobCard extends StatelessWidget {
                         color: _kOrange.withValues(alpha: 0.3),
                       ),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.map_outlined, size: 14, color: _kOrange),
-                        SizedBox(width: 5),
+                        const Icon(Icons.map_outlined,
+                            size: 14, color: _kOrange),
+                        const SizedBox(width: 5),
                         Text(
-                          'Map',
-                          style: TextStyle(
+                          context.l10n.workerMap,
+                          style: const TextStyle(
                             fontSize: 12.5,
                             fontWeight: FontWeight.w600,
                             color: _kOrange,
@@ -1022,9 +1031,9 @@ class _ActiveJobCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                const Text(
-                  'View details →',
-                  style: TextStyle(
+                Text(
+                  context.l10n.workerViewDetails,
+                  style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                     color: _kOrange,
@@ -1038,20 +1047,24 @@ class _ActiveJobCard extends StatelessWidget {
     );
   }
 
-  String _statusLabel(String status, String lane) {
+  /// [status] and [lane] are raw backend tokens and stay untouched — only the
+  /// words shown on the card are translated. An unrecognised status is echoed
+  /// back verbatim rather than machine-translated.
+  String _statusLabel(BuildContext context, String status, String lane) {
+    final l10n = context.l10n;
     // Inspection jobs are only ever "assigned" for a look, not truly
     // "accepted" work yet (the Ustaad still has to inspect before any repair
     // is agreed) — Standard/Bidding keep their existing "Accepted" wording.
     if (status.toUpperCase() == 'ACCEPTED' && lane.toUpperCase() == 'INSPECTION') {
-      return 'Assigned';
+      return l10n.bookingStatusAssigned;
     }
     switch (status.toUpperCase()) {
       case 'ACCEPTED':
-        return 'Accepted';
+        return l10n.bidStatusAccepted;
       case 'EN_ROUTE':
-        return 'En Route';
+        return l10n.jobStatusEnRoute;
       case 'IN_PROGRESS':
-        return 'In Progress';
+        return l10n.jobStatusInProgress;
       default:
         return status;
     }
@@ -1103,19 +1116,19 @@ class _NoJobCard extends StatelessWidget {
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
+              children: [
                 Text(
-                  'No active job right now',
-                  style: TextStyle(
+                  context.l10n.workerNoActiveJob,
+                  style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: _kDark,
                   ),
                 ),
-                SizedBox(height: 3),
+                const SizedBox(height: 3),
                 Text(
-                  'Online rahein, nazdeek ka kaam dhondne ke liye.',
-                  style: TextStyle(fontSize: 12, color: _kGray),
+                  context.l10n.workerStayOnlineHint,
+                  style: const TextStyle(fontSize: 12, color: _kGray),
                 ),
               ],
             ),
@@ -1128,9 +1141,9 @@ class _NoJobCard extends StatelessWidget {
               color: const Color(0xFF22C55E).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Text(
-              'Ready',
-              style: TextStyle(
+            child: Text(
+              context.l10n.workerReady,
+              style: const TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
                 color: Color(0xFF16A34A),
@@ -1156,9 +1169,9 @@ class _PerformanceSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Performance',
-            style: TextStyle(
+          Text(
+            context.l10n.workerPerformance,
+            style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w700,
               color: _kDark,
@@ -1168,21 +1181,22 @@ class _PerformanceSection extends StatelessWidget {
           Row(
             children: [
               _PerfCard(
-                label: 'Jobs Done',
+                label: context.l10n.workerJobsDone,
                 value: '${profile.stats.completedJobs}',
                 icon: Icons.check_circle_outline_rounded,
                 iconColor: const Color(0xFF22C55E),
               ),
               const SizedBox(width: 10),
               _PerfCard(
-                label: 'Cancel Rate',
-                value: '${profile.stats.cancellationRate}%',
+                label: context.l10n.workerCancelRate,
+                value: context.l10n
+                    .workerPercentValue('${profile.stats.cancellationRate}'),
                 icon: Icons.cancel_outlined,
                 iconColor: const Color(0xFFEF4444),
               ),
               const SizedBox(width: 10),
               _PerfCard(
-                label: 'Response',
+                label: context.l10n.workerResponse,
                 value: profile.stats.responseLabel ?? '—',
                 icon: Icons.bolt_rounded,
                 iconColor: const Color(0xFFF59E0B),
@@ -1273,9 +1287,9 @@ class _ReviewsSection extends ConsumerWidget {
         children: [
           Row(
             children: [
-              const Text(
-                'Reviews',
-                style: TextStyle(
+              Text(
+                context.l10n.workerReviews,
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
                   color: _kDark,
@@ -1295,9 +1309,9 @@ class _ReviewsSection extends ConsumerWidget {
               if (profile.totalRatings > 0)
                 GestureDetector(
                   onTap: () => context.push('/worker/reviews'),
-                  child: const Text(
-                    'See all →',
-                    style: TextStyle(
+                  child: Text(
+                    context.l10n.workerSeeAll,
+                    style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                       color: _kOrange,
@@ -1379,19 +1393,19 @@ class _EmptyReviews extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          const Text(
-            'No reviews yet',
-            style: TextStyle(
+          Text(
+            context.l10n.workerNoReviewsYet,
+            style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
               color: _kDark,
             ),
           ),
           const SizedBox(height: 6),
-          const Text(
-            'Client reviews will appear here after your completed jobs.',
+          Text(
+            context.l10n.workerReviewsAppearHint,
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 12, color: _kGray, height: 1.5),
+            style: const TextStyle(fontSize: 12, color: _kGray, height: 1.5),
           ),
         ],
       ),
@@ -1533,23 +1547,23 @@ class _SkillsSheet extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 20),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 24),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Select your main skill',
-                  style: TextStyle(
+                  context.l10n.workerSelectMainSkill,
+                  style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w700,
                     color: _kDark,
                   ),
                 ),
-                SizedBox(height: 6),
+                const SizedBox(height: 6),
                 Text(
-                  'Select your main skill to start receiving work',
-                  style: TextStyle(fontSize: 13, color: _kGray),
+                  context.l10n.workerSelectMainSkillHint,
+                  style: const TextStyle(fontSize: 13, color: _kGray),
                 ),
               ],
             ),
@@ -1563,7 +1577,7 @@ class _SkillsSheet extends ConsumerWidget {
             ),
             error: (e, _) => Padding(
               padding: const EdgeInsets.all(24),
-              child: Text('Failed to load categories: $e'),
+              child: Text(context.l10n.workerCategoriesLoadFailed('$e')),
             ),
             data: (categories) => _CategoryChips(
               categories: categories,
@@ -1600,7 +1614,7 @@ class _SkillsSheet extends ConsumerWidget {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(err?.toString() ??
-                                  'Failed to save skills. Please try again.'),
+                                  context.l10n.workerSkillsSaveFailed),
                               behavior: SnackBarBehavior.floating,
                               backgroundColor: Colors.red.shade700,
                             ),
@@ -1628,8 +1642,8 @@ class _SkillsSheet extends ConsumerWidget {
                       )
                     : Text(
                         selected.isEmpty
-                            ? 'Select your main skill'
-                            : 'Save & Go Online',
+                            ? context.l10n.workerSelectMainSkill
+                            : context.l10n.workerSaveAndGoOnline,
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
@@ -1710,9 +1724,9 @@ class _ErrorView extends StatelessWidget {
           children: [
             const Icon(Icons.wifi_off_rounded, size: 48, color: _kLight),
             const SizedBox(height: 12),
-            const Text(
-              'Failed to load dashboard',
-              style: TextStyle(
+            Text(
+              context.l10n.workerDashboardLoadFailed,
+              style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
                 color: _kDark,
@@ -1728,7 +1742,7 @@ class _ErrorView extends StatelessWidget {
             ElevatedButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh_rounded, size: 18),
-              label: const Text('Retry'),
+              label: Text(context.l10n.commonRetry),
               style: ElevatedButton.styleFrom(
                 backgroundColor: _kOrange,
                 foregroundColor: Colors.white,

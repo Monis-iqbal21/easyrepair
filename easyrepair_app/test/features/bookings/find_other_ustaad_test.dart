@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import '../../support/l10n_test_app.dart';
+import 'package:handygo_app/core/l10n/l10n_config.dart';
+import 'package:handygo_app/core/l10n/app_locale.dart';
 import 'package:go_router/go_router.dart';
 import 'package:handygo_app/core/errors/failures.dart';
 import 'package:handygo_app/features/bookings/domain/entities/booking_entity.dart';
@@ -143,6 +146,11 @@ class _FakeInspectionDecisionNotifier extends InspectionDecisionNotifier {
   }
 }
 
+/// English text of the `workerOnlyInspectionCompleted` ARB key — these
+/// tests pump the app in English, and the label is now localized rather
+/// than a hard-coded Roman-Urdu literal.
+const _kInspectionOnlyLabel = 'Only the inspection was completed';
+
 Widget _wrapWorkerJobs(List<BookingEntity> jobs) {
   final router = GoRouter(
     initialLocation: '/worker/jobs',
@@ -159,7 +167,13 @@ Widget _wrapWorkerJobs(List<BookingEntity> jobs) {
       workerJobsProvider.overrideWith(() => _FakeWorkerJobsNotifier(jobs)),
       workerProfileProvider.overrideWith(_FakeWorkerProfileNotifier.new),
     ],
-    child: MaterialApp.router(routerConfig: router),
+    child: MaterialApp.router(
+      routerConfig: router,
+      locale: AppLocale.english.locale,
+      supportedLocales: appSupportedLocales,
+      localizationsDelegates: appLocalizationsDelegates,
+      localeResolutionCallback: (_, _) => AppLocale.english.locale,
+    ),
   );
 }
 
@@ -174,12 +188,12 @@ Widget _wrapReportPage({
       if (decisionNotifier != null)
         inspectionDecisionNotifierProvider.overrideWith(() => decisionNotifier),
     ],
-    child: MaterialApp(
-      home: InspectionReportPage(
+    child: localizedApp(
+       InspectionReportPage(
         bookingId: 'booking-1',
         showDecisionButtons: showDecisionButtons,
       ),
-    ),
+      ),
   );
 }
 
@@ -203,14 +217,14 @@ void main() {
     });
 
     testWidgets(
-      'shows "Sirf Inspection Mukammal Hui" and never a repair-completed look',
+      'shows the inspection-only label and never a repair-completed look',
       (tester) async {
         await tester.pumpWidget(
           _wrapWorkerJobs([_completedInspectionOnlyJob()]),
         );
         await tester.pumpAndSettle();
 
-        expect(find.text('Sirf Inspection Mukammal Hui'), findsOneWidget);
+        expect(find.text(_kInspectionOnlyLabel), findsOneWidget);
         // It's a completed entry, so no active-job action button is offered.
         expect(find.text('Complete'), findsNothing);
         expect(find.text('Start Inspection'), findsNothing);
@@ -228,7 +242,7 @@ void main() {
       await tester.tap(find.text('Completed').first);
       await tester.pumpAndSettle();
 
-      expect(find.text('Sirf Inspection Mukammal Hui'), findsOneWidget);
+      expect(find.text(_kInspectionOnlyLabel), findsOneWidget);
     });
 
     testWidgets('does NOT label an ordinary completed repair job that way', (
@@ -237,7 +251,7 @@ void main() {
       await tester.pumpWidget(_wrapWorkerJobs([_completedRepairJob()]));
       await tester.pumpAndSettle();
 
-      expect(find.text('Sirf Inspection Mukammal Hui'), findsNothing);
+      expect(find.text(_kInspectionOnlyLabel), findsNothing);
     });
 
     testWidgets(
@@ -251,7 +265,7 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        expect(find.text('Sirf Inspection Mukammal Hui'), findsOneWidget);
+        expect(find.text(_kInspectionOnlyLabel), findsOneWidget);
         expect(find.text('AC Repair'), findsOneWidget);
         expect(find.text('Plumbing'), findsOneWidget);
       },

@@ -6,8 +6,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_maps_flutter_android/google_maps_flutter_android.dart';
 import 'package:google_maps_flutter_platform_interface/google_maps_flutter_platform_interface.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app/app.dart';
+import 'core/l10n/locale_provider.dart';
 import 'core/notifications/local_notification_service.dart';
 import 'firebase_options.dart';
 
@@ -59,5 +61,14 @@ Future<void> main() async {
   // background notification.
   await LocalNotificationService.instance.init();
 
-  runApp(const ProviderScope(child: EasyRepairApp()));
+  // Resolved before runApp so the saved language is known on the first frame —
+  // otherwise the app would render English and then visibly switch.
+  final prefs = await SharedPreferences.getInstance();
+
+  runApp(
+    ProviderScope(
+      overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+      child: const EasyRepairApp(),
+    ),
+  );
 }

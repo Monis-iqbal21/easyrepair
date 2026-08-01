@@ -36,6 +36,10 @@ class ConversationEntity {
   final ConversationParticipantEntity otherParticipant;
   final int unreadCount;
 
+  /// True for the single permanent HandyGo Support thread. Decided by the
+  /// backend — the app never infers it from the participant's name.
+  final bool isSupport;
+
   const ConversationEntity({
     required this.id,
     required this.clientUserId,
@@ -47,6 +51,7 @@ class ConversationEntity {
     required this.updatedAt,
     required this.otherParticipant,
     this.unreadCount = 0,
+    this.isSupport = false,
   });
 }
 

@@ -37,15 +37,21 @@ void main() {
       },
     );
 
-    test('falls back to the Roman Urdu message when the body has none', () {
-      final failure = dioExceptionToFailure(
-        _conflict({'error': 'INSPECTOR_BUSY'}),
-      );
+    test(
+      'carries the app-owned code and no copy when the body has no message, '
+      'so the wording comes from AppLocalizations rather than this mapper',
+      () {
+        final failure = dioExceptionToFailure(
+          _conflict({'error': 'INSPECTOR_BUSY'}),
+        );
 
-      expect(failure, isA<InspectorBusyFailure>());
-      expect(failure.message, contains('doosre kaam mein masroof hai'));
-      expect(failure.message, contains('koi aur Ustaad choose karein'));
-    });
+        expect(failure, isA<InspectorBusyFailure>());
+        // An echo of the machine code is not a sentence — it must not leak
+        // through as the user-visible message.
+        expect(failure.message, isEmpty);
+        expect(failure.code, FailureCode.inspectorBusy);
+      },
+    );
 
     test(
       'an unrelated 409 still maps to the generic ConflictFailure, so the '

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/l10n/l10n_extensions.dart';
 
 /// Shows an animated welcome card anchored to the bottom of the screen.
 /// Auto-dismisses after ~2 seconds with a slide+fade animation.
@@ -110,7 +111,7 @@ class _WelcomeToastState extends State<_WelcomeToast>
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          'Welcome, ${widget.name}!',
+                          context.l10n.authWelcomeToastTitle(widget.name),
                           style: const TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w700,
@@ -118,8 +119,8 @@ class _WelcomeToastState extends State<_WelcomeToast>
                           ),
                         ),
                         const SizedBox(height: 2),
-                        const Text(
-                          'Your account is ready to go.',
+                        Text(
+                          context.l10n.authWelcomeToastSubtitle,
                           style: TextStyle(
                             fontSize: 13,
                             color: Color(0xFF6B7280),

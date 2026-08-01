@@ -44,6 +44,18 @@ class ChatRepositoryImpl implements ChatRepository {
   }
 
   @override
+  Future<Either<Failure, void>> ensureSupportConversation() async {
+    try {
+      await _dataSource.ensureSupportConversation();
+      return const Right(null);
+    } on Failure catch (f) {
+      return Left(f);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
   Future<Either<Failure, List<ConversationEntity>>> getConversations() async {
     try {
       final models = await _dataSource.getConversations();

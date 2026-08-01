@@ -30,6 +30,7 @@ import '../../../../features/categories/presentation/providers/categories_provid
 import '../../../../core/services/geocoding_service.dart';
 import '../widgets/location_picker_sheet.dart';
 import '../widgets/service_card.dart';
+import '../../../../core/l10n/l10n_extensions.dart';
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 const _kGreen = Color(0xFFDB6234);
@@ -290,10 +291,10 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
 
   String _computeLiveSummary() {
     if (_isUrgent) {
-      return 'You\'ll start getting Ustaad offers within minutes.';
+      return context.l10n.postJobOffersSoon;
     }
     if (_selectedDate == null || _selectedTimeSlot == null) {
-      return 'Select date and time to continue.';
+      return context.l10n.postJobSelectDateTimeFirst;
     }
     final liveHour = _slotStartHour(_selectedTimeSlot!) - 1;
     final liveTime = DateTime(
@@ -304,7 +305,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     );
     final timeStr = DateFormat('h:mm a').format(liveTime);
     final dateStr = DateFormat('d MMMM').format(_selectedDate!);
-    return 'Job goes live at $timeStr on $dateStr — 1 hour before the Ustaad arrival time.';
+    return context.l10n.postJobGoesLiveAt(timeStr, dateStr);
   }
 
   // ── Snackbar helpers ──────────────────────────────────────────────────────
@@ -389,16 +390,16 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
 
   Future<String?> _showMediaTypeSheet() {
     return _showPickerSheet(
-      title: 'Add Photo/Video',
-      options: const [
+      title: context.l10n.postJobAddPhotoVideo,
+      options: [
         (
           icon: Icons.image_rounded,
-          label: 'Choose Photo',
+          label: context.l10n.postJobChoosePhoto,
           value: 'gallery_image',
         ),
         (
           icon: Icons.videocam_rounded,
-          label: 'Choose Video - 30 sec',
+          label: context.l10n.postJobChooseVideo,
           value: 'gallery_video',
         ),
       ],
@@ -407,16 +408,16 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
 
   Future<String?> _showCameraTypeSheet() {
     return _showPickerSheet(
-      title: 'Camera',
-      options: const [
+      title: context.l10n.postJobCamera,
+      options: [
         (
           icon: Icons.camera_alt_rounded,
-          label: 'Take Photo',
+          label: context.l10n.chatTakePhoto,
           value: 'camera_photo',
         ),
         (
           icon: Icons.videocam_rounded,
-          label: 'Record Video - 30 sec',
+          label: context.l10n.postJobRecordVideo30,
           value: 'camera_video',
         ),
       ],
@@ -449,7 +450,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Align(
-                alignment: Alignment.centerLeft,
+                alignment: AlignmentDirectional.centerStart,
                 child: Text(
                   title,
                   style: const TextStyle(
@@ -982,17 +983,17 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
 
   String _friendlyError(Object e) {
     if (e is NetworkFailure) {
-      return 'No internet connection. Please check your network.';
+      return context.l10n.errorNoInternet;
     }
     if (e is Failure) {
       return e.message.isNotEmpty
           ? e.message
-          : 'Unable to save booking. Please try again.';
+          : context.l10n.postJobSaveFailed;
     }
     if (e.toString().contains('SocketException')) {
-      return 'No internet connection. Please check your network.';
+      return context.l10n.errorNoInternet;
     }
-    return 'Unable to save booking. Please try again.';
+    return context.l10n.postJobSaveFailed;
   }
 
   // After a successful new booking, skip the success dialog and go straight
@@ -1045,8 +1046,8 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                 ),
               ),
               const SizedBox(height: 20),
-              const Text(
-                'Booking Updated!',
+              Text(
+                context.l10n.postJobBookingUpdatedTitle,
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
@@ -1054,8 +1055,8 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                 ),
               ),
               const SizedBox(height: 8),
-              const Text(
-                'Your booking details have been updated successfully.',
+              Text(
+                context.l10n.postJobBookingUpdatedBody,
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 13, color: _kGray, height: 1.5),
               ),
@@ -1076,8 +1077,8 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                     ),
                     elevation: 0,
                   ),
-                  child: const Text(
-                    'View Booking',
+                  child: Text(
+                    context.l10n.postJobViewBooking,
                     style: TextStyle(fontWeight: FontWeight.w600),
                   ),
                 ),
@@ -1167,7 +1168,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     final categoriesAsync = ref.watch(clientBookingCategoriesProvider);
 
     return _sectionCard(
-      title: 'Select Service',
+      title: context.l10n.postJobSelectService,
       child: categoriesAsync.when(
         loading: () => const SizedBox(
           height: 80,
@@ -1175,11 +1176,11 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
             child: CircularProgressIndicator(color: _kGreen, strokeWidth: 2),
           ),
         ),
-        error: (_, _) => const SizedBox(
+        error: (_, _) => SizedBox(
           height: 40,
           child: Center(
             child: Text(
-              'Failed to load services. Please restart the app.',
+              context.l10n.postJobServicesLoadFailed,
               style: TextStyle(fontSize: 13, color: _kGray),
             ),
           ),
@@ -1249,12 +1250,12 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
   // ── B. Job type toggle ────────────────────────────────────────────────────
   Widget _buildJobTypeToggle() {
     return _sectionCard(
-      title: 'Booking Type',
+      title: context.l10n.postJobBookingType,
       child: Row(
         children: [
-          _jobTypeBtn(label: 'Normal', urgentMode: false),
+          _jobTypeBtn(label: context.l10n.postJobNormal, urgentMode: false),
           const SizedBox(width: 10),
-          _jobTypeBtn(label: 'Urgent', urgentMode: true),
+          _jobTypeBtn(label: context.l10n.postJobUrgent, urgentMode: true),
         ],
       ),
     );
@@ -1310,7 +1311,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
   // ── C. Scheduling (includes live timing summary at bottom) ────────────────
   Widget _buildSchedulingSection() {
     return _sectionCard(
-      title: 'Date & Time',
+      title: context.l10n.postJobDateTime,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1323,18 +1324,21 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
   }
 
   Widget _buildNormalSchedule() {
+    // The slot ids stay English: they drive _slotStartHour, _slotEnum and the
+    // _selectedTimeSlot state, so translating them would break scheduling.
+    // Only the labels and descriptions below are shown to the user.
     const slots = ['Morning', 'Afternoon', 'Evening', 'Night'];
-    const slotLabel = {
-      'Morning': 'Morning',
-      'Afternoon': 'Afternoon',
-      'Evening': 'Evening',
-      'Night': 'Night',
+    final slotLabel = {
+      'Morning': context.l10n.slotMorning,
+      'Afternoon': context.l10n.slotAfternoon,
+      'Evening': context.l10n.slotEvening,
+      'Night': context.l10n.slotNight,
     };
-    const slotDesc = {
-      'Morning': '9 AM – 12 PM',
-      'Afternoon': '12 PM – 4 PM',
-      'Evening': '4 PM – 8 PM',
-      'Night': '8 PM – 11 PM',
+    final slotDesc = {
+      'Morning': context.l10n.slotMorningRange,
+      'Afternoon': context.l10n.slotAfternoonRange,
+      'Evening': context.l10n.slotEveningRange,
+      'Night': context.l10n.slotNightRange,
     };
 
     Widget slotChip(String slot) {
@@ -1415,7 +1419,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                 const SizedBox(width: 10),
                 Text(
                   _selectedDate == null
-                      ? 'Select date'
+                      ? context.l10n.postJobSelectDate
                       : DateFormat('EEEE, d MMMM yyyy').format(_selectedDate!),
                   style: TextStyle(
                     fontSize: 14,
@@ -1430,8 +1434,8 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
           ),
         ),
         const SizedBox(height: 14),
-        const Text(
-          'Arrival time',
+        Text(
+          context.l10n.postJobArrivalTime,
           style: TextStyle(fontSize: 13, color: _kGray),
         ),
         const SizedBox(height: 8),
@@ -1519,13 +1523,13 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
   // ── D. Issue title ────────────────────────────────────────────────────────
   Widget _buildTitleSection() {
     return _sectionCard(
-      title: 'What needs fixing?',
+      title: context.l10n.postJobWhatNeedsFixing,
       child: TextFormField(
         controller: _titleCtrl,
         textInputAction: TextInputAction.next,
         maxLength: 120,
         decoration: InputDecoration(
-          hintText: 'e.g. AC not cooling, water leaking, switch not working',
+          hintText: context.l10n.postJobIssueHint,
           hintStyle: const TextStyle(color: _kGray, fontSize: 14),
           counterText: '',
           filled: true,
@@ -1551,13 +1555,13 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
   // ── E. Description (commented out — kept for future use) ─────────────────
   // Widget _buildDescriptionSection() {
   //   return _sectionCard(
-  //     title: 'Description',
+  //     title: context.l10n.postJobDescription,
   //     child: TextFormField(
   //       controller: _descriptionCtrl,
   //       maxLines: 4,
   //       textInputAction: TextInputAction.done,
   //       decoration: InputDecoration(
-  //         hintText: 'Describe the issue (optional)',
+  //         hintText: context.l10n.postJobDescriptionHint,
   //         hintStyle: const TextStyle(color: _kGray, fontSize: 14),
   //         filled: true,
   //         fillColor: _kSurface,
@@ -1582,7 +1586,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
   // ── F. Location ───────────────────────────────────────────────────────────
   Widget _buildLocationSection() {
     return _sectionCard(
-      title: 'Service Address',
+      title: context.l10n.postJobServiceAddress,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1590,7 +1594,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
             controller: _addressCtrl,
             textInputAction: TextInputAction.done,
             decoration: InputDecoration(
-              hintText: 'e.g. House 12, Street 5, DHA Phase 6, Karachi',
+              hintText: context.l10n.postJobAddressHint,
               hintStyle: const TextStyle(color: _kGray, fontSize: 14),
               prefixIcon: const Icon(
                 Icons.location_on_rounded,
@@ -1660,8 +1664,8 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                               Flexible(
                                 child: Text(
                                   (_gpsLat != null && _pickedAddress == null)
-                                      ? 'Location added'
-                                      : 'Current Location',
+                                      ? context.l10n.postJobLocationAdded
+                                      : context.l10n.postJobCurrentLocation,
                                   style: const TextStyle(
                                     fontSize: 12.5,
                                     fontWeight: FontWeight.w500,
@@ -1707,8 +1711,8 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                         Flexible(
                           child: Text(
                             (_gpsLat != null && _pickedAddress != null)
-                                ? 'Map location added'
-                                : 'Pick on Map',
+                                ? context.l10n.postJobMapLocationAdded
+                                : context.l10n.postJobPickOnMap,
                             style: const TextStyle(
                               fontSize: 12.5,
                               fontWeight: FontWeight.w500,
@@ -1737,9 +1741,11 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                 Expanded(
                   child: Text(
                     _pickedAddress != null
-                        ? 'Map: $_pickedAddress'
-                        : 'GPS: ${_gpsLat!.toStringAsFixed(5)}, '
-                              '${_gpsLng!.toStringAsFixed(5)}',
+                        ? context.l10n.postJobMapPrefix(_pickedAddress!)
+                        : context.l10n.postJobGpsPrefix(
+                            '${_gpsLat!.toStringAsFixed(5)}, '
+                            '${_gpsLng!.toStringAsFixed(5)}',
+                          ),
                     style: TextStyle(
                       fontSize: 11,
                       color: _kGreen.withValues(alpha: 0.85),
@@ -1753,16 +1759,16 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
           ] else ...[
             const SizedBox(height: 6),
             Row(
-              children: const [
-                Icon(
+              children: [
+                const Icon(
                   Icons.info_outline_rounded,
                   size: 13,
                   color: Color(0xFFD97706),
                 ),
-                SizedBox(width: 5),
+                const SizedBox(width: 5),
                 Expanded(
                   child: Text(
-                    'Add your location to continue.',
+                    context.l10n.postJobAddLocationFirst,
                     style: TextStyle(fontSize: 11, color: Color(0xFFD97706)),
                   ),
                 ),
@@ -1783,7 +1789,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     final hasMedia = visibleExisting.isNotEmpty || _newAttachments.isNotEmpty;
 
     return _sectionCard(
-      title: 'Voice note & photos',
+      title: context.l10n.postJobVoiceAndPhotos,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1812,9 +1818,9 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                     ),
                   ),
                   const SizedBox(width: 10),
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      'Voice note attached',
+                      context.l10n.postJobVoiceAttached,
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
@@ -1846,7 +1852,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
               Expanded(
                 child: _buildActionButton(
                   icon: Icons.attach_file_rounded,
-                  label: 'Add Photo/Video',
+                  label: context.l10n.postJobAddPhotoVideo,
                   onTap: canAddMore ? _pickAttachment : null,
                 ),
               ),
@@ -1854,7 +1860,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
               Expanded(
                 child: _buildActionButton(
                   icon: Icons.camera_alt_outlined,
-                  label: 'Camera',
+                  label: context.l10n.postJobCamera,
                   onTap: canAddMore ? _pickFromCamera : null,
                 ),
               ),
@@ -1869,13 +1875,15 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
 
           const SizedBox(height: 8),
           Text(
-            '$_totalAttachmentCount of 4 · Photos or 30-sec video',
+            context.l10n.postJobAttachmentCount(_totalAttachmentCount),
             style: const TextStyle(fontSize: 11, color: _kGray),
           ),
           if (_removedAttachmentIds.isNotEmpty) ...[
             const SizedBox(height: 4),
             Text(
-              '${_removedAttachmentIds.length} existing attachment(s) will be removed on save.',
+              context.l10n.postJobAttachmentsWillBeRemoved(
+                _removedAttachmentIds.length,
+              ),
               style: const TextStyle(fontSize: 11, color: _kRed),
             ),
           ],
@@ -1968,9 +1976,9 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
           children: [
             const Icon(Icons.mic_none_rounded, size: 18, color: _kGray),
             const SizedBox(width: 10),
-            const Expanded(
+            Expanded(
               child: Text(
-                'Tap to record — describe the problem in your own words',
+                context.l10n.postJobTapToRecord,
                 style: TextStyle(fontSize: 13, color: _kGray),
               ),
             ),
@@ -2283,7 +2291,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                 ),
               )
             : Text(
-                _isEditMode ? 'Save Changes' : 'Book Service',
+                _isEditMode ? context.l10n.postJobSaveChanges : context.l10n.postJobBookService,
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
@@ -2350,7 +2358,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
           final isActive = i == _currentStep;
           return Expanded(
             child: Padding(
-              padding: EdgeInsets.only(right: i < 2 ? 8 : 0),
+              padding: EdgeInsetsDirectional.only(end: i < 2 ? 8 : 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -2519,8 +2527,8 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Service',
+                Text(
+                  context.l10n.postJobService,
                   style: TextStyle(
                     fontSize: 11,
                     color: _kGray,
@@ -2529,7 +2537,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  _selectedService ?? 'Service',
+                  _selectedService ?? context.l10n.postJobService,
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
@@ -2560,12 +2568,12 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     final inspectionFee = category?.inspectionFee;
 
     return _sectionCard(
-      title: 'Aap ko kya chahiye?',
+      title: context.l10n.postJobWhatDoYouNeed,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Ek option chunain',
+          Text(
+            context.l10n.postJobChooseOneOption,
             style: TextStyle(fontSize: 12, color: _kGray),
           ),
           const SizedBox(height: 12),
@@ -2576,8 +2584,8 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
               color: _kCream,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Text(
-              'Masla samajhna hamara kaam hai — aapka nahi.',
+            child: Text(
+              context.l10n.postJobUnderstandingIsOurJob,
               style: TextStyle(
                 fontSize: 12.5,
                 fontWeight: FontWeight.w600,
@@ -2590,8 +2598,8 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
             _laneRowOption(
               lane: BookingLane.standard,
               icon: Icons.build_circle_rounded,
-              title: 'Standard kaam',
-              subtitle: 'Kaam aur qeemat pehle se clear.',
+              title: context.l10n.postJobStandardWork,
+              subtitle: context.l10n.postJobStandardWorkSubtitle,
             ),
             const SizedBox(height: 10),
           ],
@@ -2599,8 +2607,8 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
           const SizedBox(height: 16),
           const Divider(height: 1, color: _kBorder),
           const SizedBox(height: 12),
-          const Text(
-            'YA PHIR',
+          Text(
+            context.l10n.postJobOr,
             style: TextStyle(
               fontSize: 10.5,
               fontWeight: FontWeight.w700,
@@ -2612,8 +2620,8 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
           _laneSmallOption(
             lane: BookingLane.bidding,
             icon: Icons.forum_rounded,
-            title: 'Mujhe exact part pata hai',
-            subtitle: 'Ustaad rate bhejenge, aap chunain',
+            title: context.l10n.postJobIKnowThePart,
+            subtitle: context.l10n.postJobIKnowThePartSubtitle,
           ),
           if (_laneChoice == BookingLane.bidding) ...[
             const SizedBox(height: 9),
@@ -2624,7 +2632,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                 borderRadius: BorderRadius.circular(11),
                 border: Border.all(color: const Color(0xFFFDE9BC)),
               ),
-              child: const Row(
+              child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Icon(
@@ -2635,9 +2643,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Sirf tab chunain jab part ka poora yaqeen ho. Ghalat '
-                      'nikla to ustaad ka chakkar zaya jayega aur naya rate '
-                      'lagega.',
+                      context.l10n.postJobIKnowThePartWarning,
                       style: TextStyle(
                         fontSize: 11.5,
                         height: 1.35,
@@ -2704,7 +2710,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Kuch kharab hai',
+                          context.l10n.postJobSomethingIsBroken,
                           style: TextStyle(
                             fontSize: 14.5,
                             fontWeight: FontWeight.w700,
@@ -2712,8 +2718,8 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                           ),
                         ),
                         const SizedBox(height: 2),
-                        const Text(
-                          'Masla kya hai, ye pata nahi',
+                        Text(
+                          context.l10n.postJobDontKnowIssue,
                           style: TextStyle(fontSize: 12.5, color: _kGray),
                         ),
                       ],
@@ -2761,8 +2767,8 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        'Inspection Fee',
+                      Text(
+                        context.l10n.postJobInspectionFeeTitle,
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -2805,8 +2811,8 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                       left: BorderSide(color: Color(0xFF22C55E), width: 3),
                     ),
                   ),
-                  child: const Text(
-                    'Rate batane se pehle kuch nahi khulta — jo kaha, wohi liya.',
+                  child: Text(
+                    context.l10n.postJobNothingOpensBeforeRate,
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
@@ -3150,7 +3156,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     final categoriesAsync = ref.watch(clientBookingCategoriesProvider);
     return categoriesAsync.when(
       loading: () => _sectionCard(
-        title: 'Choose a standard service',
+        title: context.l10n.postJobChooseStandardService,
         child: const Padding(
           padding: EdgeInsets.symmetric(vertical: 12),
           child: Center(
@@ -3163,9 +3169,9 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
         ),
       ),
       error: (_, _) => _sectionCard(
-        title: 'Choose a standard service',
-        child: const Text(
-          'Unable to load services. Please go back and try again.',
+        title: context.l10n.postJobChooseStandardService,
+        child: Text(
+          context.l10n.postJobServicesUnavailable,
           style: TextStyle(fontSize: 13, color: _kGray),
         ),
       ),
@@ -3173,9 +3179,9 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
         final category = _resolveCategory(categories);
         if (category == null) {
           return _sectionCard(
-            title: 'Choose a standard service',
-            child: const Text(
-              'Select a service category first.',
+            title: context.l10n.postJobChooseStandardService,
+            child: Text(
+              context.l10n.postJobSelectCategoryFirst,
               style: TextStyle(fontSize: 13, color: _kGray),
             ),
           );
@@ -3183,7 +3189,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
         final servicesAsync = ref.watch(standardServicesProvider(category.id));
         return servicesAsync.when(
           loading: () => _sectionCard(
-            title: 'Choose a standard service',
+            title: context.l10n.postJobChooseStandardService,
             child: const Padding(
               padding: EdgeInsets.symmetric(vertical: 12),
               child: Center(
@@ -3196,12 +3202,12 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
             ),
           ),
           error: (_, _) => _sectionCard(
-            title: 'Choose a standard service',
+            title: context.l10n.postJobChooseStandardService,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Unable to load standard services.',
+                Text(
+                  context.l10n.postJobStandardServicesUnavailable,
                   style: TextStyle(fontSize: 13, color: _kGray),
                 ),
                 const SizedBox(height: 8),
@@ -3209,7 +3215,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                   onPressed: () =>
                       ref.invalidate(standardServicesProvider(category.id)),
                   style: TextButton.styleFrom(foregroundColor: _kGreen),
-                  child: const Text('Retry'),
+                  child: Text(context.l10n.commonRetry),
                 ),
               ],
             ),
@@ -3218,21 +3224,20 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
             _applyPendingStandardServicePreselection(services);
             if (services.isEmpty) {
               return _sectionCard(
-                title: 'Choose a standard service',
-                child: const Text(
-                  'No standard services are available for this service yet. '
-                  'Please choose another option above.',
+                title: context.l10n.postJobChooseStandardService,
+                child: Text(
+                  context.l10n.postJobNoStandardServices,
                   style: TextStyle(fontSize: 13, color: _kGray, height: 1.4),
                 ),
               );
             }
             return _sectionCard(
-              title: 'Choose a standard service',
+              title: context.l10n.postJobChooseStandardService,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Aap ek se zyada services chun sakte hain.',
+                  Text(
+                    context.l10n.postJobMultiSelectHint,
                     style: TextStyle(fontSize: 12, color: _kGray),
                   ),
                   const SizedBox(height: 10),
@@ -3279,9 +3284,9 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                           const Divider(height: 14),
                           Row(
                             children: [
-                              const Expanded(
+                              Expanded(
                                 child: Text(
-                                  'Total',
+                                  context.l10n.postJobTotal,
                                   style: TextStyle(
                                     fontSize: 13.5,
                                     fontWeight: FontWeight.w700,
@@ -3397,7 +3402,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     final categoriesAsync = ref.watch(clientBookingCategoriesProvider);
     return categoriesAsync.when(
       loading: () => _sectionCard(
-        title: 'Inspection fee',
+        title: context.l10n.postJobInspectionFeeLower,
         child: const Padding(
           padding: EdgeInsets.symmetric(vertical: 4),
           child: Center(
@@ -3410,9 +3415,9 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
         ),
       ),
       error: (_, _) => _sectionCard(
-        title: 'Inspection fee',
-        child: const Text(
-          'Unable to load the inspection fee.',
+        title: context.l10n.postJobInspectionFeeLower,
+        child: Text(
+          context.l10n.postJobInspectionFeeLoadFailed,
           style: TextStyle(fontSize: 13, color: _kGray),
         ),
       ),
@@ -3420,20 +3425,20 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
         final category = _resolveCategory(categories);
         final fee = category?.inspectionFee;
         return _sectionCard(
-          title: 'Inspection fee',
+          title: context.l10n.postJobInspectionFeeLower,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
                 child: Text(
-                  _selectedService ?? 'Service',
+                  _selectedService ?? context.l10n.postJobService,
                   style: const TextStyle(fontSize: 13, color: _kGray),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
               Text(
-                fee != null ? formatPkr(fee) : 'Not available',
+                fee != null ? formatPkr(fee) : context.l10n.postJobNotAvailable,
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
@@ -3457,7 +3462,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
           'choice.',
     ];
     return _sectionCard(
-      title: 'How inspection works',
+      title: context.l10n.postJobHowInspectionWorks,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -3505,13 +3510,13 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
   // ── Mode B: optional "What do you see?" field ──────────────────────────────
   Widget _buildInspectionOptionalField() {
     return _sectionCard(
-      title: 'What do you see? (optional)',
+      title: context.l10n.postJobWhatDoYouSee,
       child: TextFormField(
         controller: _descriptionCtrl,
         maxLines: 3,
         textInputAction: TextInputAction.done,
         decoration: InputDecoration(
-          hintText: 'e.g. AC turns on but room stays hot…',
+          hintText: context.l10n.postJobWhatDoYouSeeHint,
           hintStyle: const TextStyle(color: _kGray, fontSize: 14),
           filled: true,
           fillColor: _kSurface,
@@ -3564,8 +3569,8 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                     borderRadius: BorderRadius.circular(14),
                   ),
                 ),
-                child: const Text(
-                  'Back',
+                child: Text(
+                  context.l10n.postJobBack,
                   style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                 ),
               ),
@@ -3599,14 +3604,14 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                             ),
                           )
                         : Text(
-                            _isEditMode ? 'Save Changes' : 'Book Service',
+                            _isEditMode ? context.l10n.postJobSaveChanges : context.l10n.postJobBookService,
                             style: const TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w700,
                             ),
                           ))
-                  : const Text(
-                      'Next',
+                  : Text(
+                      context.l10n.postJobNext,
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
@@ -3622,7 +3627,11 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
   // ── Build ─────────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    const stepTitles = ['Address', 'Details', 'Time Selection'];
+    final stepTitles = [
+      context.l10n.postJobStepAddress,
+      context.l10n.postJobStepDetails,
+      context.l10n.postJobStepTimeSelection,
+    ];
 
     return Scaffold(
       backgroundColor: _kSurface,
@@ -3662,7 +3671,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        _isEditMode ? 'Edit Booking' : 'Book a Service',
+                        _isEditMode ? context.l10n.postJobEditBooking : context.l10n.postJobBookAService,
                         style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w700,
@@ -3670,7 +3679,11 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                         ),
                       ),
                       Text(
-                        'Step ${_currentStep + 1} of 3  ·  ${stepTitles[_currentStep]}',
+                        context.l10n.postJobStepIndicator(
+                          _currentStep + 1,
+                          3,
+                          stepTitles[_currentStep],
+                        ),
                         style: const TextStyle(
                           fontSize: 12,
                           color: _kGray,
@@ -3779,7 +3792,7 @@ class _AnimatedWaveform extends StatelessWidget {
                 child: Container(
                   height: h,
                   margin: i < barCount - 1
-                      ? const EdgeInsets.only(right: 2)
+                      ? const EdgeInsetsDirectional.only(end: 2)
                       : null,
                   decoration: BoxDecoration(
                     color: _kGreen.withValues(

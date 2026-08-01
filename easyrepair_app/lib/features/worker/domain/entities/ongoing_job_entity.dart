@@ -17,16 +17,6 @@ class OngoingJobEntity {
     this.lane = 'STANDARD',
   });
 
-  String get displayStatus {
-    switch (status.toUpperCase()) {
-      case 'ACCEPTED':
-        return 'Assigned';
-      case 'EN_ROUTE':
-        return 'On the Way';
-      case 'IN_PROGRESS':
-        return 'In Progress';
-      default:
-        return status;
-    }
-  }
+  // The visible label is built by ongoingJobStatusLabel() in
+  // presentation/utils/worker_labels.dart; `status` stays the backend token.
 }

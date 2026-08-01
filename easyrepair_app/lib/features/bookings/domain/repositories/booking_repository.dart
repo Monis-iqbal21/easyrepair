@@ -16,6 +16,14 @@ abstract class BookingRepository {
   /// Fetch a single booking by id.
   Future<Either<Failure, BookingEntity>> getBookingById(String bookingId);
 
+  /// Completed bookings this client still owes a review for.
+  ///
+  /// Backend truth for "a review is pending" — the app never relies on an
+  /// in-memory notification callback, so a missed completion push can never
+  /// permanently lose the prompt. A booking leaves this list only once its
+  /// review actually exists.
+  Future<Either<Failure, List<BookingEntity>>> getPendingReviews();
+
   /// Create a new service request / booking.
   Future<Either<Failure, BookingEntity>> createBooking(
     CreateBookingRequest request,

@@ -1,72 +1,132 @@
 import 'package:dio/dio.dart';
 import 'failures.dart';
 
+/// Turns a [DioException] into a [Failure].
+///
+/// This file is deliberately free of user-facing wording. It decides *what*
+/// went wrong ([FailureCode]) and passes through any human sentence the
+/// backend wrote; the language the user reads is chosen later, in
+/// `failure_messages.dart`, from `AppLocalizations`.
 Failure dioExceptionToFailure(DioException e) {
   switch (e.type) {
     case DioExceptionType.connectionTimeout:
     case DioExceptionType.sendTimeout:
     case DioExceptionType.receiveTimeout:
-      return const NetworkFailure('Connection timeout. Please try again.');
+      return NetworkFailure(
+        '',
+        code: FailureCode.timeout,
+        diagnostic: e.message,
+      );
+
+    case DioExceptionType.connectionError:
+      return NetworkFailure(
+        '',
+        code: FailureCode.noInternet,
+        diagnostic: e.message,
+      );
+
+    case DioExceptionType.badCertificate:
+      return NetworkFailure(
+        '',
+        code: FailureCode.noInternet,
+        diagnostic: e.message,
+      );
 
     case DioExceptionType.badResponse:
       final statusCode = e.response?.statusCode;
       final data = e.response?.data;
 
-      final message = _extractMessage(data);
+      // `message` is only ever a sentence a human wrote on the backend. An
+      // echo of the machine code is filtered out by _humanMessage.
+      final message = _humanMessage(data);
       final errorCode = _extractErrorCode(data);
+      final diagnostic = _diagnostic(statusCode, errorCode);
 
       if (errorCode == 'SMS_SEND_FAILED') {
         // A genuine VeevoTech provider failure (e.g. LOW_BALANCE) — never
         // show the raw provider/API details, just the code as a signal for
         // pages to render their own specific fallback message.
-        return SmsSendFailure(message ?? 'SMS bhejne mein masla hua.');
+        return SmsSendFailure(message ?? '', diagnostic: diagnostic);
       }
 
       if (statusCode == 400) {
-        return ValidationFailure(message ?? 'Invalid request');
+        return ValidationFailure(message ?? '', diagnostic: diagnostic);
       } else if (statusCode == 401) {
-        return const UnauthorizedFailure(
-          'Session expired. Please login again.',
-        );
+        return UnauthorizedFailure('', diagnostic: diagnostic);
+      } else if (statusCode == 403) {
+        return ForbiddenFailure(message ?? '', diagnostic: diagnostic);
+      } else if (statusCode == 404) {
+        return NotFoundFailure(message ?? '', diagnostic: diagnostic);
       } else if (statusCode == 409) {
         if (errorCode == 'INSPECTOR_BUSY') {
           // Rehire attempt while the original inspector is on another job —
-          // the bidding page shows this exact Roman Urdu message and keeps
-          // the bid list open (see InspectorBusyFailure). `message` falls
-          // back to the `error` field when the body has no message, so an
-          // echo of the code itself must not be shown to the user.
-          return InspectorBusyFailure(
-            (message == null || message == errorCode)
-                ? 'Inspection karne wala Ustaad abhi doosre kaam mein masroof hai. Neeche se koi aur Ustaad choose karein.'
-                : message,
-          );
+          // the bidding page shows this exact message and keeps the bid list
+          // open (see InspectorBusyFailure).
+          return InspectorBusyFailure(message ?? '', diagnostic: diagnostic);
         }
         if (errorCode == 'PHONE_IS_WORKER') {
           return WorkerPhoneConflictFailure(
-            message ?? 'Ye mobile number Ustaad account ke saath registered hai.',
+            message ?? '',
+            diagnostic: diagnostic,
           );
         }
         if (errorCode == 'PHONE_IS_CLIENT') {
           return ClientPhoneConflictFailure(
-            message ?? 'Ye number Client account ke saath registered hai.',
+            message ?? '',
+            diagnostic: diagnostic,
           );
         }
-        return ConflictFailure(message ?? 'Conflict occurred');
+        return ConflictFailure(message ?? '', diagnostic: diagnostic);
       } else if (statusCode == 429) {
-        return ServerFailure(message ?? 'Too many requests. Please wait.');
-      } else if (statusCode == 500) {
-        return const ServerFailure('Server error. Try again later.');
+        return ServerFailure(
+          message ?? '',
+          code: FailureCode.tooManyRequests,
+          diagnostic: diagnostic,
+        );
+      } else if (statusCode != null && statusCode >= 500) {
+        return ServerFailure('', diagnostic: diagnostic);
       }
 
-      return ServerFailure(message ?? 'Something went wrong');
+      return ServerFailure(
+        message ?? '',
+        code: FailureCode.unknown,
+        diagnostic: diagnostic,
+      );
 
     case DioExceptionType.cancel:
-      return const NetworkFailure('Request cancelled');
+      return NetworkFailure(
+        '',
+        code: FailureCode.requestCancelled,
+        diagnostic: e.message,
+      );
 
     case DioExceptionType.unknown:
-    default:
-      return NetworkFailure(e.message ?? 'Unexpected error occurred');
+      return NetworkFailure(
+        '',
+        code: FailureCode.unknown,
+        // Dio's own English text is a diagnostic, not a sentence for a user.
+        diagnostic: e.message ?? e.error?.toString(),
+      );
   }
+}
+
+/// The backend's `error` field doubles as a machine-checkable code, so an
+/// all-caps token is never a sentence to show anybody.
+final RegExp _machineCode = RegExp(r'^[A-Z][A-Z0-9_]*$');
+
+/// The human sentence in the body, or null when there isn't one.
+String? _humanMessage(dynamic data) {
+  final message = _extractMessage(data);
+  if (message == null) return null;
+  final trimmed = message.trim();
+  if (trimmed.isEmpty) return null;
+  // _extractMessage falls back to the `error` field, which carries the code
+  // when the body has no message. Showing `INSPECTOR_BUSY` to a user is worse
+  // than showing nothing — the localized wording for the code is better.
+  if (trimmed == _extractErrorCode(data) && _machineCode.hasMatch(trimmed)) {
+    return null;
+  }
+  return trimmed;
 }
 
 String? _extractMessage(dynamic data) {
@@ -102,3 +162,8 @@ String? _extractErrorCode(dynamic data) {
   }
   return null;
 }
+
+/// Status + backend code, for logs only. Never shown, never translated.
+// l10n-ignore: Technical diagnostic (HTTP status + backend code) kept for logs
+String _diagnostic(int? statusCode, String? errorCode) =>
+    'HTTP $statusCode${errorCode == null ? '' : ' $errorCode'}';

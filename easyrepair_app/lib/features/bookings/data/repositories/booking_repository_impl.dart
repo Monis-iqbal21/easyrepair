@@ -57,6 +57,18 @@ class BookingRepositoryImpl implements BookingRepository {
   }
 
   @override
+  Future<Either<Failure, List<BookingEntity>>> getPendingReviews() async {
+    try {
+      final models = await _dataSource.getPendingReviews();
+      return Right(models.map((m) => m.toEntity()).toList());
+    } on Failure catch (f) {
+      return Left(f);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
   Future<Either<Failure, BookingEntity>> updateBooking(
     UpdateBookingRequest request,
   ) async {

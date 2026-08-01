@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/presentation/responsive_utils.dart';
+import '../../../../core/l10n/l10n_extensions.dart';
 
 const _kAccent = Color(0xFF1D9E75);
 
@@ -150,8 +151,8 @@ class _ImageTile extends StatelessWidget {
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      child: const Text(
-                        'Coming Soon',
+                      child: Text(
+                        context.l10n.serviceComingSoon,
                         style: TextStyle(
                           fontSize: 10.5,
                           fontWeight: FontWeight.w700,
@@ -241,7 +242,7 @@ class _EmojiLayout extends StatelessWidget {
               borderRadius: BorderRadius.circular(6),
             ),
             child: Text(
-              locked ? 'Coming Soon' : (isSelected ? 'Selected ✓' : 'Book Now'),
+              locked ? context.l10n.serviceComingSoon : (isSelected ? context.l10n.serviceSelectedTick : context.l10n.serviceBookNow),
               style: const TextStyle(
                 fontSize: 11,
                 color: Colors.white,

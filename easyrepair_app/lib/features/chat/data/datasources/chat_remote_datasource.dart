@@ -13,6 +13,9 @@ abstract class ChatRemoteDataSource {
   Future<ConversationModel> getOrCreateConversationForBooking(
     String bookingId,
   );
+
+  /// Idempotent on the backend — safe to call on every Chat-tab load.
+  Future<void> ensureSupportConversation();
   Future<List<ConversationModel>> getConversations();
   Future<List<MessageModel>> getMessages(
     String conversationId, {
@@ -78,6 +81,15 @@ class ChatRemoteDataSourceImpl implements ChatRemoteDataSource {
       );
       final data = response.data['data'] as Map<String, dynamic>;
       return ConversationModel.fromJson(data);
+    } on DioException catch (e) {
+      throw dioExceptionToFailure(e);
+    }
+  }
+
+  @override
+  Future<void> ensureSupportConversation() async {
+    try {
+      await _dio.post('/chat/conversations/support');
     } on DioException catch (e) {
       throw dioExceptionToFailure(e);
     }

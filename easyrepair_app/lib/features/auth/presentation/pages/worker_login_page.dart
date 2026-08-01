@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/errors/failures.dart';
+import '../../../../core/errors/failure_messages.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../providers/auth_otp_providers.dart';
 import '../providers/auth_providers.dart';
@@ -10,6 +10,7 @@ import '../widgets/auth_header.dart';
 import '../widgets/auth_primary_button.dart';
 import '../widgets/auth_text_field.dart';
 import '../widgets/otp_input_section.dart';
+import '../../../../core/l10n/l10n_extensions.dart';
 
 /// Existing Ustaad login — OTP or password, both against the same phone
 /// field. Password login reuses the existing, unchanged `/auth/login` path
@@ -29,16 +30,38 @@ class _WorkerLoginPageState extends ConsumerState<WorkerLoginPage> {
   bool _otpVerifyInFlight = false;
 
   @override
+  void initState() {
+    super.initState();
+    // otpRequestNotifierProvider is a global, non-autoDispose provider shared
+    // with the other OTP pages and never reset by any of them. Without this,
+    // an OTP requested earlier in the session leaves `expiresAt` non-null
+    // forever, so this page opens already in its "OTP sent" state and the
+    // number cannot be corrected. Clears state only — sends nothing.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) ref.read(otpRequestNotifierProvider.notifier).reset();
+    });
+  }
+
+  @override
   void dispose() {
     _phoneCtrl.dispose();
     _passwordCtrl.dispose();
     super.dispose();
   }
 
+  /// Editing the number invalidates the OTP requested for the previous one.
+  /// State-only: it must never re-request a code, or fixing one digit would
+  /// burn an SMS send.
+  void _onPhoneChanged(String _) {
+    if (ref.read(otpRequestNotifierProvider).valueOrNull != null) {
+      ref.read(otpRequestNotifierProvider.notifier).reset();
+    }
+  }
+
   String? _validatePhone(String? value) {
-    if (value == null || value.isEmpty) return 'Mobile number likhein.';
+    if (value == null || value.isEmpty) return context.l10n.authValidationPhoneRequired;
     if (!RegExp(r'^(\+92|0092|92|0)?[3][0-9]{9}$').hasMatch(value.trim())) {
-      return 'Sahi Pakistani mobile number likhein.';
+      return context.l10n.authValidationPhoneInvalid;
     }
     return null;
   }
@@ -85,7 +108,7 @@ class _WorkerLoginPageState extends ConsumerState<WorkerLoginPage> {
     if (_passwordCtrl.text.isEmpty) {
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
-        ..showSnackBar(const SnackBar(content: Text('Password likhein.')));
+        ..showSnackBar(SnackBar(content: Text(context.l10n.authValidationPasswordRequired)));
       return;
     }
     await ref
@@ -97,8 +120,11 @@ class _WorkerLoginPageState extends ConsumerState<WorkerLoginPage> {
   Widget build(BuildContext context) {
     ref.listen(otpRequestNotifierProvider, (_, state) {
       if (state is AsyncError) {
-        final failure = state.error;
-        final message = failure is Failure ? failure.message : 'Code bhejne mein masla hua.';
+        final message = failureMessage(
+          context.l10n,
+          state.error,
+          fallback: context.l10n.authErrorCodeSendFailed,
+        );
         ScaffoldMessenger.of(context)
           ..hideCurrentSnackBar()
           ..showSnackBar(SnackBar(content: Text(message)));
@@ -106,8 +132,11 @@ class _WorkerLoginPageState extends ConsumerState<WorkerLoginPage> {
     });
     ref.listen(workerOtpLoginNotifierProvider, (_, state) {
       if (state is AsyncError) {
-        final failure = state.error;
-        final message = failure is Failure ? failure.message : 'Login nahi ho saka.';
+        final message = failureMessage(
+          context.l10n,
+          state.error,
+          fallback: context.l10n.authErrorLoginFailed,
+        );
         ScaffoldMessenger.of(context)
           ..hideCurrentSnackBar()
           ..showSnackBar(SnackBar(content: Text(message)));
@@ -115,8 +144,11 @@ class _WorkerLoginPageState extends ConsumerState<WorkerLoginPage> {
     });
     ref.listen(loginNotifierProvider, (_, state) {
       if (state is AsyncError) {
-        final failure = state.error;
-        final message = failure is Failure ? failure.message : 'Login nahi ho saka.';
+        final message = failureMessage(
+          context.l10n,
+          state.error,
+          fallback: context.l10n.authErrorLoginFailed,
+        );
         ScaffoldMessenger.of(context)
           ..hideCurrentSnackBar()
           ..showSnackBar(SnackBar(content: Text(message)));
@@ -153,20 +185,23 @@ class _WorkerLoginPageState extends ConsumerState<WorkerLoginPage> {
                         children: [
                           SizedBox(height: isSmall ? 16 : 28),
                           AuthHeader(
-                            title: 'Ustaad Login',
+                            title: context.l10n.authButtonUstaadLogin,
                             subtitle: '',
                             isSmall: isSmall,
                             showBackButton: true,
                           ),
                           SizedBox(height: isSmall ? 20 : 32),
+                          // Stays editable after the code is sent — editing
+                          // clears the previous request's countdown rather
+                          // than locking the field (see _onPhoneChanged).
                           AuthTextField(
                             controller: _phoneCtrl,
-                            label: 'Apna registered mobile number dalain',
+                            label: context.l10n.authForgotPasswordPrompt,
                             hint: '03XXXXXXXXX',
                             keyboardType: TextInputType.phone,
                             prefixIcon: Icons.phone_outlined,
                             validator: _validatePhone,
-                            enabled: !showOtp,
+                            onChanged: _onPhoneChanged,
                           ),
                           const SizedBox(height: 20),
                           if (showOtp) ...[
@@ -185,8 +220,8 @@ class _WorkerLoginPageState extends ConsumerState<WorkerLoginPage> {
                           ],
                           AuthPrimaryButton(
                             label: showOtp
-                                ? 'OTP Se Login Karein'
-                                : 'OTP Bhejein',
+                                ? context.l10n.authLoginWithOtp
+                                : context.l10n.authSendOtp,
                             isLoading: showOtp ? _otpVerifyInFlight : _sendInFlight,
                             onPressed: showOtp
                                 ? (_otp.length == 6 ? _verifyOtp : null)
@@ -199,7 +234,7 @@ class _WorkerLoginPageState extends ConsumerState<WorkerLoginPage> {
                               Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 12),
                                 child: Text(
-                                  'Ya phir',
+                                  context.l10n.authOr,
                                   style: TextStyle(
                                     color: kAuthGray,
                                     fontSize: 13,
@@ -212,7 +247,7 @@ class _WorkerLoginPageState extends ConsumerState<WorkerLoginPage> {
                           SizedBox(height: isSmall ? 20 : 28),
                           AuthTextField(
                             controller: _passwordCtrl,
-                            label: 'Password',
+                            label: context.l10n.authFieldPassword,
                             prefixIcon: Icons.lock_outline_rounded,
                             obscureText: true,
                             textInputAction: TextInputAction.done,
@@ -220,13 +255,13 @@ class _WorkerLoginPageState extends ConsumerState<WorkerLoginPage> {
                           ),
                           const SizedBox(height: 8),
                           Align(
-                            alignment: Alignment.centerRight,
+                            alignment: AlignmentDirectional.centerEnd,
                             child: GestureDetector(
                               onTap: () => context.go('/forgot-password'),
-                              child: const Padding(
+                              child: Padding(
                                 padding: EdgeInsets.symmetric(vertical: 4),
                                 child: Text(
-                                  'Password bhool gaye?',
+                                  context.l10n.authButtonForgotPassword,
                                   style: TextStyle(
                                     color: kAuthAccent,
                                     fontSize: 13,
@@ -238,7 +273,7 @@ class _WorkerLoginPageState extends ConsumerState<WorkerLoginPage> {
                           ),
                           const SizedBox(height: 12),
                           AuthPrimaryButton(
-                            label: 'Password Se Login Karein',
+                            label: context.l10n.authLoginWithPassword,
                             isLoading: passwordLoginLoading,
                             onPressed: _loginWithPassword,
                           ),

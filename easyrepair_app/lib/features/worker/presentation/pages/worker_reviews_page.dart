@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../domain/entities/worker_review_entity.dart';
 import '../providers/worker_review_providers.dart';
+import '../../../../core/l10n/l10n_extensions.dart';
 
 // ── Palette (matches existing worker UI) ─────────────────────────────────────
 const _kOrange = Color(0xFFDB6234);
@@ -33,8 +34,8 @@ class WorkerReviewsPage extends ConsumerWidget {
               size: 18, color: _kDark),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: const Text(
-          'My Reviews',
+        title: Text(
+          context.l10n.reviewsMyReviews,
           style: TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w700,
@@ -138,20 +139,20 @@ class _SummaryBanner extends StatelessWidget {
                   _StarRow(rating: summary.averageRating.round()),
                   const SizedBox(height: 4),
                   Text(
-                    '${summary.totalReviews} ${summary.totalReviews == 1 ? 'review' : 'reviews'}',
+                    context.l10n.reviewsCount(summary.totalReviews),
                     style: const TextStyle(fontSize: 12, color: _kGray),
                   ),
                 ],
               ),
               const SizedBox(width: 20),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Icon(Icons.verified_rounded, color: _kOrange, size: 28),
                     SizedBox(height: 6),
                     Text(
-                      'Reviews from clients for jobs you completed',
+                      context.l10n.reviewsSubtitle,
                       style: TextStyle(
                         fontSize: 12,
                         color: _kGray,
@@ -170,9 +171,9 @@ class _SummaryBanner extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _RatingStat(label: 'Avg', value: summary.averageRating.toStringAsFixed(1)),
-                _RatingStat(label: 'Max', value: '$maxRating'),
-                _RatingStat(label: 'Min', value: '$minRating'),
+                _RatingStat(label: context.l10n.reviewsAvg, value: summary.averageRating.toStringAsFixed(1)),
+                _RatingStat(label: context.l10n.reviewsMax, value: '$maxRating'),
+                _RatingStat(label: context.l10n.reviewsMin, value: '$minRating'),
               ],
             ),
           ],
@@ -369,8 +370,8 @@ class _EmptyState extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 20),
-            const Text(
-              'No reviews yet',
+            Text(
+              context.l10n.workerNoReviewsYet,
               style: TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.w700,
@@ -378,8 +379,8 @@ class _EmptyState extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'Once clients review your completed jobs,\ntheir reviews will appear here.',
+            Text(
+              context.l10n.reviewsEmptyHint,
               style: TextStyle(
                 fontSize: 13,
                 color: _kGray,
@@ -427,7 +428,7 @@ class _ErrorState extends StatelessWidget {
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10)),
               ),
-              child: const Text('Retry'),
+              child: Text(context.l10n.commonRetry),
             ),
           ],
         ),

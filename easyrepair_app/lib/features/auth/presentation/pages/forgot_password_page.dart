@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/errors/failures.dart';
+import '../../../../core/errors/failure_messages.dart';
 import '../../data/repositories/auth_repository_impl.dart';
 import '../widgets/auth_header.dart';
 import '../widgets/auth_primary_button.dart';
 import '../widgets/auth_text_field.dart';
 import '../widgets/otp_input_section.dart';
+import '../../../../core/l10n/l10n_extensions.dart';
 
 // ── Providers ─────────────────────────────────────────────────────────────────
 
@@ -107,10 +108,19 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
     super.dispose();
   }
 
+  /// Editing the number invalidates the OTP requested for the previous one,
+  /// returning the screen to step 1. State-only — never re-requests a code.
+  void _onPhoneChanged(String _) {
+    if (ref.read(_forgotPasswordRequestProvider).valueOrNull != null) {
+      ref.invalidate(_forgotPasswordRequestProvider);
+      setState(() => _otp = '');
+    }
+  }
+
   String? _validatePhone(String? value) {
-    if (value == null || value.isEmpty) return 'Mobile number likhein.';
+    if (value == null || value.isEmpty) return context.l10n.authValidationPhoneRequired;
     if (!RegExp(r'^(\+92|0092|92|0)?[3][0-9]{9}$').hasMatch(value.trim())) {
-      return 'Sahi Pakistani mobile number likhein.';
+      return context.l10n.authValidationPhoneInvalid;
     }
     return null;
   }
@@ -142,8 +152,8 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
           );
       if (ok && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Password kamyabi se badal diya gaya hai.'),
+          SnackBar(
+            content: Text(context.l10n.authPasswordResetSuccess),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -158,10 +168,11 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
   Widget build(BuildContext context) {
     ref.listen(_forgotPasswordRequestProvider, (_, s) {
       if (s is AsyncError && mounted) {
-        final failure = s.error;
-        final message = failure is Failure
-            ? failure.message
-            : 'Code bhejne mein masla hua.';
+        final message = failureMessage(
+          context.l10n,
+          s.error,
+          fallback: context.l10n.authErrorCodeSendFailed,
+        );
         ScaffoldMessenger.of(context)
           ..hideCurrentSnackBar()
           ..showSnackBar(SnackBar(content: Text(message)));
@@ -169,9 +180,11 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
     });
     ref.listen(_forgotPasswordResetProvider, (_, s) {
       if (s is AsyncError && mounted) {
-        final failure = s.error;
-        final message =
-            failure is Failure ? failure.message : 'Password badal nahi saka.';
+        final message = failureMessage(
+          context.l10n,
+          s.error,
+          fallback: context.l10n.authErrorPasswordChangeFailed,
+        );
         ScaffoldMessenger.of(context)
           ..hideCurrentSnackBar()
           ..showSnackBar(SnackBar(content: Text(message)));
@@ -209,44 +222,53 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
                           SizedBox(height: isSmall ? 16 : 28),
                           AuthHeader(
                             title: showOtp
-                                ? 'Naya Password\nSet Karein'
-                                : 'Password Bhool\nGaye?',
+                                ? context.l10n.authSetNewPasswordTitle
+                                : context.l10n.authForgotPasswordTitle,
                             subtitle: showOtp
-                                ? 'Apne number par bheja gaya code darj karein.'
-                                : 'Sirf Ustaad account ke liye. Registered number par code bheja jayega.',
+                                ? context.l10n.authEnterCodeSentToNumber
+                                : context.l10n.authForgotPasswordWorkerOnly,
                             isSmall: isSmall,
                             showBackButton: true,
                           ),
                           SizedBox(height: isSmall ? 20 : 32),
-                          if (!showOtp)
-                            Form(
-                              key: _phoneKey,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  AuthTextField(
-                                    controller: _phoneCtrl,
-                                    label: 'Apna registered mobile number dalain',
-                                    hint: '03XXXXXXXXX',
-                                    keyboardType: TextInputType.phone,
-                                    prefixIcon: Icons.phone_outlined,
-                                    validator: _validatePhone,
-                                  ),
+                          // The phone field stays MOUNTED in both steps. It
+                          // used to be removed from the tree once the code was
+                          // sent, which left no way to correct a mistyped
+                          // number without leaving the screen. Editing it
+                          // clears the pending request (see _onPhoneChanged)
+                          // and returns to step 1.
+                          Form(
+                            key: _phoneKey,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                AuthTextField(
+                                  controller: _phoneCtrl,
+                                  label: context.l10n.authForgotPasswordPrompt,
+                                  hint: '03XXXXXXXXX',
+                                  keyboardType: TextInputType.phone,
+                                  prefixIcon: Icons.phone_outlined,
+                                  validator: _validatePhone,
+                                  onChanged: _onPhoneChanged,
+                                ),
+                                if (!showOtp) ...[
                                   const SizedBox(height: 24),
                                   AuthPrimaryButton(
-                                    label: 'OTP Bhejein',
+                                    label: context.l10n.authSendOtp,
                                     isLoading: _sendInFlight,
                                     onPressed: _sendCode,
                                   ),
                                 ],
-                              ),
-                            )
-                          else
+                              ],
+                            ),
+                          ),
+                          if (showOtp)
                             Form(
                               key: _resetKey,
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
+                                  const SizedBox(height: 20),
                                   OtpInputSection(
                                     expiresAt: expiresAt,
                                     hasError: hasOtpError,
@@ -259,15 +281,15 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
                                   const SizedBox(height: 20),
                                   AuthTextField(
                                     controller: _newPasswordCtrl,
-                                    label: 'Naya Password',
+                                    label: context.l10n.generalNewPassword,
                                     prefixIcon: Icons.lock_outline_rounded,
                                     obscureText: true,
                                     validator: (v) {
                                       if (v == null || v.isEmpty) {
-                                        return 'Naya password likhein.';
+                                        return context.l10n.authNewPasswordRequired;
                                       }
                                       if (v.length < 8) {
-                                        return 'Password kam az kam 8 characters ka hona chahiye.';
+                                        return context.l10n.authValidationPasswordTooShort;
                                       }
                                       return null;
                                     },
@@ -275,23 +297,23 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
                                   const SizedBox(height: 14),
                                   AuthTextField(
                                     controller: _confirmCtrl,
-                                    label: 'Naya Password Dobara Likhein',
+                                    label: context.l10n.generalConfirmNewPassword,
                                     prefixIcon: Icons.lock_outline_rounded,
                                     obscureText: true,
                                     textInputAction: TextInputAction.done,
                                     validator: (v) {
                                       if (v == null || v.isEmpty) {
-                                        return 'Password dobara likhein.';
+                                        return context.l10n.authValidationConfirmPasswordRequired;
                                       }
                                       if (v != _newPasswordCtrl.text) {
-                                        return 'Passwords match nahi karte.';
+                                        return context.l10n.authValidationPasswordsDoNotMatch;
                                       }
                                       return null;
                                     },
                                   ),
                                   const SizedBox(height: 24),
                                   AuthPrimaryButton(
-                                    label: 'Naya Password Confirm Karein',
+                                    label: context.l10n.authConfirmNewPasswordButton,
                                     isLoading: _resetInFlight,
                                     onPressed: _otp.length == 6
                                         ? _resetPassword

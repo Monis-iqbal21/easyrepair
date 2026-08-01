@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:handygo_app/core/l10n/app_locale.dart';
+import '../../support/l10n_test_app.dart';
 import 'package:handygo_app/core/errors/failures.dart';
 import 'package:handygo_app/features/bids/domain/entities/bid_entity.dart';
 import 'package:handygo_app/features/bids/domain/repositories/bid_repository.dart';
@@ -142,7 +144,11 @@ void main() {
           inspectionDecisionNotifierProvider
               .overrideWith(() => decisionNotifier),
         ],
-        child: MaterialApp(home: WorkerDiscoveryMapPage(booking: booking)),
+        child: localizedApp(
+          WorkerDiscoveryMapPage(booking: booking),
+          // Asserts the Roman Urdu copy these flows shipped with.
+          locale: AppLocale.romanUrdu,
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -163,10 +169,10 @@ void main() {
       (tester) async {
         await pumpBiddingPage(tester);
 
-        expect(find.text('INSPECTED THIS JOB'), findsOneWidget);
+        expect(find.text('IS KAAM KI INSPECTION KI'), findsOneWidget);
         expect(find.text('Ali Khan'), findsOneWidget);
         // The client (and only the client) sees the inspector's repair quote.
-        expect(find.text('their quote'), findsOneWidget);
+        expect(find.text('un ka quote'), findsOneWidget);
         expect(find.text('Dobara Hire Karein'), findsOneWidget);
       },
     );
@@ -188,7 +194,7 @@ void main() {
 
         await tester.tap(find.text('Dobara Hire Karein'));
         await tester.pumpAndSettle();
-        await tester.tap(find.widgetWithText(FilledButton, 'Hire'));
+        await tester.tap(find.widgetWithText(FilledButton, 'Hire karein'));
         await tester.pumpAndSettle();
 
         expect(decisionNotifier.hireCalls, 1);
@@ -200,7 +206,7 @@ void main() {
         // the rehire button is usable again rather than stuck loading.
         expect(find.byType(WorkerDiscoveryMapPage), findsOneWidget);
         expect(find.text('Dobara Hire Karein'), findsOneWidget);
-        expect(find.text('Hiring…'), findsNothing);
+        expect(find.text('Hire kiya ja raha hai…'), findsNothing);
 
         // The competing bid is still in the list, ready to hire instead.
         expect(find.text('Bilal Ahmed'), findsOneWidget);
@@ -226,7 +232,7 @@ void main() {
 
         await tester.tap(find.text('Dobara Hire Karein'));
         await tester.pumpAndSettle();
-        await tester.tap(find.widgetWithText(FilledButton, 'Hire'));
+        await tester.tap(find.widgetWithText(FilledButton, 'Hire karein'));
         await tester.pumpAndSettle();
 
         expect(find.text(_kBusyMessage), findsOneWidget);
@@ -236,7 +242,7 @@ void main() {
         // `isHiring` flag drives both the label and onPressed, so the idle
         // label being back means the button is tappable again.
         expect(find.text('Dobara Hire Karein'), findsOneWidget);
-        expect(find.text('Hiring…'), findsNothing);
+        expect(find.text('Hire kiya ja raha hai…'), findsNothing);
 
         // Both competing bids survive the failed rehire untouched and stay
         // reachable — the list was never invalidated or cleared.

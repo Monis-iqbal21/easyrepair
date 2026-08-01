@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:handygo_app/core/l10n/l10n_config.dart';
+import 'package:handygo_app/core/l10n/app_locale.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:go_router/go_router.dart';
 import 'package:handygo_app/core/errors/failures.dart';
@@ -217,7 +219,13 @@ Widget _wrap(_FakeAuthRepository repo) {
   );
   return ProviderScope(
     overrides: [authRepositoryProvider.overrideWithValue(repo)],
-    child: MaterialApp.router(routerConfig: router),
+    child: MaterialApp.router(
+      routerConfig: router,
+      locale: AppLocale.romanUrdu.locale,
+      supportedLocales: appSupportedLocales,
+      localizationsDelegates: appLocalizationsDelegates,
+      localeResolutionCallback: (_, _) => AppLocale.romanUrdu.locale,
+    ),
   );
 }
 
@@ -326,9 +334,12 @@ void main() {
       await tester.pump(const Duration(milliseconds: 50));
 
       // Pinput renders its input capture via a raw EditableText (not a
-      // Material TextField) — target it directly rather than relying on the
-      // other (disabled) fields being unable to steal focus from it.
-      await tester.enterText(find.byType(EditableText).first, '123456');
+      // Material TextField) — target it directly. It is the LAST EditableText
+      // in the tree: the name and phone fields precede it and both now stay
+      // editable through the OTP step, so `.first` would type into the name
+      // field (and typing into the phone field deliberately cancels the
+      // pending OTP).
+      await tester.enterText(find.byType(EditableText).last, '123456');
       await tester.pump();
 
       await tester.ensureVisible(find.text('Verify Karke Aage Barhein'));

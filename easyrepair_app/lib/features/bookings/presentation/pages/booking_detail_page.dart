@@ -3,24 +3,30 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../../../core/errors/failures.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../../../core/utils/distance_utils.dart';
 import '../../domain/entities/booking_entity.dart';
+import '../widgets/client_cancel_reason_sheet.dart';
 import '../widgets/client_chat_action.dart';
 import '../widgets/media_attachment_widgets.dart';
-import '../../domain/entities/update_booking_request.dart';
 import '../providers/booking_providers.dart';
+import '../providers/review_prompt_controller.dart';
 import '../widgets/inspection_badge.dart';
 import '../widgets/inspection_report_card.dart';
 import '../widgets/status_badge.dart';
 import '../widgets/urgency_badge.dart';
+import '../utils/status_labels.dart';
+import '../../../../core/l10n/l10n_extensions.dart';
 import 'choose_ustaad_page.dart';
+import 'full_screen_map_page.dart';
 import 'track_worker_page.dart';
 import 'worker_discovery_map_page.dart';
+import '../utils/booking_labels.dart';
+import '../../../../core/errors/failure_messages.dart';
 
 /// Statuses during which the client detail page polls GET /bookings/:id
 /// every few seconds to reflect the worker's live progress/location.
@@ -74,7 +80,7 @@ class _BookingDetailPageState extends ConsumerState<BookingDetailPage> {
           skipError: true,
           loading: () => _LoadingSkeleton(bookingId: widget.bookingId),
           error: (err, _) => _ErrorScreen(
-            message: err is Failure ? err.message : 'Failed to load booking.',
+            message: failureMessage(context.l10n, err, fallback: context.l10n.bookingLoadFailed),
             onRetry: () => ref.invalidate(bookingDetailProvider(widget.bookingId)),
           ),
           data: (booking) => _DetailBody(booking: booking),
@@ -315,14 +321,16 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
     super.dispose();
   }
 
-  /// Auto-shows the review modal once per booking when it's COMPLETED and
-  /// has no review yet — applies to STANDARD, INSPECTION, and BIDDING lanes
-  /// alike. Scheduled post-frame (safe to call from initState/
-  /// didUpdateWidget) and guarded by [_reviewPromptedForBookingId] so it
-  /// never re-fires from polling or other rebuilds of the same booking.
+  /// Asks the shared [ReviewPromptController] to prompt for this booking when
+  /// it's COMPLETED and unreviewed — all lanes alike.
+  ///
+  /// Deliberately delegates rather than opening the modal itself: the
+  /// foreground completion event, the notification tap and this page all
+  /// funnel through one controller, so an app-level prompt and this
+  /// page-level prompt can never both open for the same booking.
   void _maybePromptReview() {
-    final eligible = booking.status == BookingStatus.completed &&
-        booking.review == null;
+    final eligible =
+        booking.status == BookingStatus.completed && booking.review == null;
     if (!eligible) return;
     if (_reviewPromptedForBookingId == booking.id) return;
     _reviewPromptedForBookingId = booking.id;
@@ -333,11 +341,7 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
   }
 
   void _openReviewModal() {
-    showDialog<void>(
-      context: context,
-      barrierDismissible: true,
-      builder: (_) => ReviewModal(booking: booking),
-    );
+    ref.read(reviewPromptControllerProvider).enqueueFront(context, booking.id);
   }
 
   BookingEntity get booking => widget.booking;
@@ -420,70 +424,71 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
 
                 // Service info
                 _InfoCard(
-                  title: 'Service Details',
+                  title: context.l10n.bookingServiceDetails,
                   children: [
                     _InfoRow(
                       icon: Icons.build_circle_outlined,
-                      label: 'Service',
+                      label: context.l10n.postJobService,
                       value: '${booking.serviceEmoji}  ${booking.primaryServiceLabel}',
                     ),
                     if (booking.displayIssueTitle != null)
                       _InfoRow(
                         icon: Icons.title_rounded,
-                        label: 'Issue',
+                        label: context.l10n.bookingIssue,
                         value: booking.displayIssueTitle!,
                       ),
                     if (booking.cleanDescription != null &&
                         booking.cleanDescription!.isNotEmpty)
                       _InfoRow(
                         icon: Icons.description_outlined,
-                        label: 'Description',
+                        label: context.l10n.postJobDescription,
                         value: booking.cleanDescription!,
                         multiline: true,
                       ),
                     _InfoRow(
                       icon: Icons.bolt_rounded,
-                      label: 'Urgency',
+                      label: context.l10n.bookingUrgency,
                       value: booking.urgency == BookingUrgency.urgent
-                          ? 'Urgent'
-                          : 'Normal',
+                          ? context.l10n.postJobUrgent
+                          : context.l10n.postJobNormal,
                     ),
                     _InfoRow(
                       icon: Icons.schedule_rounded,
-                      label: 'Timing',
+                      label: context.l10n.bookingTiming,
                       value: booking.urgency == BookingUrgency.urgent
-                          ? (booking.urgentWindow?.label ?? 'Urgent')
+                          ? (urgentWindowLabel(context.l10n, booking.urgentWindow!) as String? ??
+                              context.l10n.postJobUrgent)
                           : booking.scheduledDate != null
                               ? DateFormat('EEE, d MMM yyyy')
                                       .format(booking.scheduledDate!) +
                                   (booking.timeSlot != null
-                                      ? ' • ${booking.timeSlot!.label}'
+                                      ? ' \u2022 ${timeSlotLabel(context.l10n, booking.timeSlot!)}'
                                       : '')
-                              : 'Not scheduled yet',
+                              : context.l10n.bookingNotScheduledYet,
                     ),
                     if (booking.timeSlot != null)
                       _InfoRow(
                         icon: Icons.access_time_rounded,
-                        label: 'Time Window',
-                        value: booking.timeSlot!.label,
+                        label: context.l10n.bookingTimeWindow,
+                        value: timeSlotLabel(context.l10n, booking.timeSlot!),
                       ),
                     if (booking.scheduledDate != null)
                       _InfoRow(
                         icon: Icons.calendar_today_outlined,
-                        label: 'Scheduled Date',
+                        label: context.l10n.bookingScheduledDate,
                         value: DateFormat('EEE, d MMM yyyy')
                             .format(booking.scheduledDate!),
                       ),
                     _InfoRow(
                       icon: Icons.access_time_filled_rounded,
-                      label: 'Created',
+                      label: context.l10n.bookingCreated,
                       value: DateFormat('d MMM yyyy, h:mm a')
                           .format(booking.createdAt),
                     ),
                     if (isCompleted && booking.completedAt != null)
                       _InfoRow(
                         icon: Icons.check_circle_outline_rounded,
-                        label: 'Completed',
+                        label: context.l10n.bookingStatusCompleted,
                         value: DateFormat('d MMM yyyy, h:mm a')
                             .format(booking.completedAt!),
                       ),
@@ -492,7 +497,7 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
                         booking.cancellationReason!.isNotEmpty)
                       _InfoRow(
                         icon: Icons.cancel_outlined,
-                        label: 'Cancellation Reason',
+                        label: context.l10n.bookingCancellationReason,
                         value: booking.cancellationReason!,
                         multiline: true,
                       ),
@@ -509,6 +514,23 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
                 // Location
                 _LocationCard(booking: booking),
                 const SizedBox(height: 16),
+
+                // Inspection-fee status — driven solely by the ORIGINAL
+                // inspection work unit reaching COMPLETED (see
+                // inspectionFeeStatusLabel). Rendered independently of the
+                // pricing card, which is hidden before an Ustaad is hired,
+                // so the status is visible across the whole lifecycle. Shows
+                // on the inspection booking AND on its linked repair booking.
+                if (inspectionFeeStatusLabel(
+                        context.l10n, booking.inspectionFeePaid) !=
+                    null) ...[
+                  _InspectionFeeStatusChip(
+                    label: inspectionFeeStatusLabel(
+                        context.l10n, booking.inspectionFeePaid)!,
+                    paid: booking.inspectionFeePaid == true,
+                  ),
+                  const SizedBox(height: 16),
+                ],
 
                 // Pricing
                 if (booking.estimatedPrice != null || booking.finalPrice != null)
@@ -527,25 +549,26 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
                       booking.inspectingWorker!.id != booking.assignedWorker!.id) ...[
                     _WorkerCard(
                       worker: booking.inspectingWorker!,
-                      label: 'Inspection completed by',
+                      label: context.l10n.bookingInspectionCompletedBy,
                     ),
                     const SizedBox(height: 12),
                     _WorkerCard(
                       worker: booking.assignedWorker!,
-                      label: 'Work being completed by',
+                      label: context.l10n.bookingWorkBeingCompletedBy,
                     ),
                   ] else
                     _WorkerCard(
                       worker: booking.assignedWorker!,
                       label: booking.inspectingWorker != null
-                          ? 'Inspection & repair by'
-                          : 'Assigned Worker',
+                          ? context.l10n.bookingInspectionAndRepairBy
+                          : context.l10n.bookingAssignedWorker,
                     ),
                   const SizedBox(height: 16),
                   _WorkerMapSection(
                     worker: booking.assignedWorker!,
                     jobLat: booking.latitude,
                     jobLng: booking.longitude,
+                    hasJobLocation: booking.hasLocation,
                   ),
                   if (!isCompleted && !isCancelled) ...[
                     const SizedBox(height: 16),
@@ -567,7 +590,7 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
                       booking.inspectingWorker != null) ...[
                     _WorkerCard(
                       worker: booking.inspectingWorker!,
-                      label: 'Inspection completed by',
+                      label: context.l10n.bookingInspectionCompletedBy,
                     ),
                     const SizedBox(height: 12),
                   ],
@@ -625,8 +648,8 @@ class _AppBar extends StatelessWidget {
       title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Booking Details',
+          Text(
+            context.l10n.bookingDetailsTitle,
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w700,
@@ -733,8 +756,8 @@ class _LocationCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Service Address',
+          Text(
+            context.l10n.postJobServiceAddress,
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w700,
@@ -765,7 +788,7 @@ class _LocationCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      hasAddress ? address : 'No address provided',
+                      hasAddress ? address : context.l10n.bookingNoAddressProvided,
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
@@ -908,8 +931,8 @@ class _AttachmentsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Attachments',
+          Text(
+            context.l10n.bookingAttachments,
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w700,
@@ -922,7 +945,7 @@ class _AttachmentsCard extends StatelessWidget {
           if (images.isNotEmpty) ...[
             _attachmentSectionLabel(
               icon: Icons.image_outlined,
-              label: 'Photos (${images.length})',
+              label: context.l10n.bookingPhotosCount(images.length),
             ),
             const SizedBox(height: 10),
             BookingImageGrid(images: images),
@@ -933,7 +956,7 @@ class _AttachmentsCard extends StatelessWidget {
             if (images.isNotEmpty) const SizedBox(height: 14),
             _attachmentSectionLabel(
               icon: Icons.videocam_outlined,
-              label: 'Videos (${videos.length})',
+              label: context.l10n.bookingVideosCount(videos.length),
             ),
             const SizedBox(height: 8),
             ...videos.map((v) => Padding(
@@ -948,7 +971,7 @@ class _AttachmentsCard extends StatelessWidget {
               const SizedBox(height: 14),
             _attachmentSectionLabel(
               icon: Icons.mic_none_rounded,
-              label: 'Voice Note',
+              label: context.l10n.bookingVoiceNote,
             ),
             const SizedBox(height: 8),
             ...audios.map((a) => Padding(
@@ -1018,8 +1041,8 @@ class _PricingCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Pricing',
+          Text(
+            context.l10n.bookingPricing,
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w700,
@@ -1031,8 +1054,8 @@ class _PricingCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Estimated Price',
+                Text(
+                  context.l10n.bookingEstimatedPrice,
                   style: TextStyle(fontSize: 13, color: _kGray),
                 ),
                 Text(
@@ -1053,8 +1076,8 @@ class _PricingCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Inspection Charges',
+                Text(
+                  context.l10n.bookingInspectionCharges,
                   style: TextStyle(fontSize: 13, color: _kGray),
                 ),
                 Text(
@@ -1068,8 +1091,8 @@ class _PricingCard extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'Work Charges',
+                  Text(
+                    context.l10n.bookingWorkCharges,
                     style: TextStyle(fontSize: 13, color: _kGray),
                   ),
                   Text(
@@ -1085,8 +1108,8 @@ class _PricingCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Total',
+                Text(
+                  context.l10n.postJobTotal,
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
@@ -1111,8 +1134,8 @@ class _PricingCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Final Price',
+                Text(
+                  context.l10n.bookingFinalPrice,
                   style: TextStyle(fontSize: 13, color: _kGray),
                 ),
                 Text(
@@ -1132,13 +1155,59 @@ class _PricingCard extends StatelessWidget {
   }
 }
 
+/// Small paid/not-paid chip shown wherever the inspection fee is relevant.
+class _InspectionFeeStatusChip extends StatelessWidget {
+  final String label;
+  final bool paid;
+
+  const _InspectionFeeStatusChip({required this.label, required this.paid});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = paid ? const Color(0xFF22C55E) : const Color(0xFFB45309);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withValues(alpha: 0.30)),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            paid
+                ? Icons.check_circle_outline_rounded
+                : Icons.schedule_rounded,
+            size: 14,
+            color: color,
+          ),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 // ── Worker card ───────────────────────────────────────────────────────────────
 
 class _WorkerCard extends StatelessWidget {
   final AssignedWorkerEntity worker;
-  final String label;
 
-  const _WorkerCard({required this.worker, this.label = 'Assigned Worker'});
+  /// Null means "use the default heading", which is localized in [build].
+  final String? label;
+
+  const _WorkerCard({required this.worker, this.label});
 
   @override
   Widget build(BuildContext context) {
@@ -1153,7 +1222,7 @@ class _WorkerCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            label,
+            label ?? context.l10n.bookingAssignedWorker,
             style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w700,
@@ -1250,25 +1319,109 @@ class _InitialsText extends StatelessWidget {
 
 // ── Worker map section ────────────────────────────────────────────────────────
 
-class _WorkerMapSection extends StatelessWidget {
+class _WorkerMapSection extends StatefulWidget {
   final AssignedWorkerEntity worker;
   final double jobLat;
   final double jobLng;
+
+  /// Whether the booking genuinely has coordinates — computed from the raw
+  /// API payload, never from a `lat != 0` sentinel (see
+  /// BookingEntity.hasLocation).
+  final bool hasJobLocation;
 
   const _WorkerMapSection({
     required this.worker,
     required this.jobLat,
     required this.jobLng,
+    required this.hasJobLocation,
   });
 
-  static const _apiKey = String.fromEnvironment('GOOGLE_MAPS_API_KEY');
+  @override
+  State<_WorkerMapSection> createState() => _WorkerMapSectionState();
+}
+
+class _WorkerMapSectionState extends State<_WorkerMapSection> {
+  /// Live marker set, shared with the full-screen page so the Ustaad's
+  /// position keeps updating while it is open.
+  final _markers = ValueNotifier<Set<Marker>>(<Marker>{});
+
+  @override
+  void initState() {
+    super.initState();
+    _rebuildMarkers();
+  }
+
+  @override
+  void didUpdateWidget(covariant _WorkerMapSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _rebuildMarkers();
+  }
+
+  @override
+  void dispose() {
+    _markers.dispose();
+    super.dispose();
+  }
+
+  void _rebuildMarkers() {
+    final next = <Marker>{};
+    if (widget.hasJobLocation) {
+      next.add(
+        Marker(
+          markerId: const MarkerId('job'),
+          position: LatLng(widget.jobLat, widget.jobLng),
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+          infoWindow: InfoWindow(title: context.l10n.bookingJobLocation),
+        ),
+      );
+    }
+    final w = widget.worker;
+    if (w.currentLat != null && w.currentLng != null) {
+      next.add(
+        Marker(
+          markerId: const MarkerId('worker'),
+          position: LatLng(w.currentLat!, w.currentLng!),
+          icon:
+              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
+          infoWindow: InfoWindow(title: w.fullName),
+        ),
+      );
+    }
+    _markers.value = next;
+  }
+
+  LatLng get _cameraTarget => widget.hasJobLocation
+      ? LatLng(widget.jobLat, widget.jobLng)
+      : LatLng(widget.worker.currentLat!, widget.worker.currentLng!);
+
+  void _openFullScreen() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => FullScreenMapPage(
+          title: context.l10n.bookingLiveLocation,
+          markersListenable: _markers,
+          initialTarget: _cameraTarget,
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final worker = widget.worker;
+    final jobLat = widget.jobLat;
+    final jobLng = widget.jobLng;
     final hasLocation = worker.currentLat != null && worker.currentLng != null;
-    final canShowMap = hasLocation && _apiKey.isNotEmpty;
 
-    final distanceM = hasLocation
+    // The map is showable whenever we have SOMETHING real to point at. It no
+    // longer depends on a --dart-define key: the GoogleMap SDK is keyed from
+    // AndroidManifest (via Gradle), the same path every other map in the app
+    // already uses successfully. The previous Static Maps image needed a
+    // separately-enabled API plus its own dart-define, and its errorBuilder
+    // collapsed every failure into "Map preview unavailable".
+    final canShowMap = hasLocation || widget.hasJobLocation;
+
+    final distanceM = hasLocation && widget.hasJobLocation
         ? haversineDistanceMeters(
             worker.currentLat!, worker.currentLng!, jobLat, jobLng)
         : null;
@@ -1291,14 +1444,14 @@ class _WorkerMapSection extends StatelessWidget {
         children: [
           // ── Header ────────────────────────────────────────────────────────
           Padding(
-            padding: const EdgeInsets.fromLTRB(18, 16, 16, 14),
+            padding: const EdgeInsetsDirectional.fromSTEB(18, 16, 16, 14),
             child: Row(
               children: [
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Live Location',
+                    Text(
+                      context.l10n.bookingLiveLocation,
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
@@ -1309,8 +1462,10 @@ class _WorkerMapSection extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       hasLocation
-                          ? 'Tracking ${worker.fullName.split(' ').first}'
-                          : 'Waiting for worker to share location',
+                          ? context.l10n.bookingTrackingWorker(
+                              worker.fullName.split(' ').first,
+                            )
+                          : context.l10n.bookingWaitingForWorkerLocation,
                       style: const TextStyle(
                         fontSize: 11.5,
                         color: _kLight,
@@ -1327,24 +1482,56 @@ class _WorkerMapSection extends StatelessWidget {
 
           // ── Map or Fallback ────────────────────────────────────────────────
           if (canShowMap)
-            _StaticMap(
-              workerLat: worker.currentLat!,
-              workerLng: worker.currentLng!,
-              jobLat: jobLat,
-              jobLng: jobLng,
-              apiKey: _apiKey,
+            SizedBox(
+              height: 190,
+              width: double.infinity,
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: ValueListenableBuilder<Set<Marker>>(
+                      valueListenable: _markers,
+                      builder: (context, markers, _) => GoogleMap(
+                        initialCameraPosition: CameraPosition(
+                          target: _cameraTarget,
+                          zoom: 14,
+                        ),
+                        markers: markers,
+                        // Inline preview: tap-to-expand rather than a
+                        // gesture-capturing mini map inside a scroll view.
+                        zoomControlsEnabled: false,
+                        zoomGesturesEnabled: false,
+                        scrollGesturesEnabled: false,
+                        rotateGesturesEnabled: false,
+                        tiltGesturesEnabled: false,
+                        myLocationButtonEnabled: false,
+                        mapToolbarEnabled: false,
+                        liteModeEnabled: true,
+                      ),
+                    ),
+                  ),
+                  // Bottom-RIGHT so it never covers Google's mandatory
+                  // attribution (bottom-left).
+                  Positioned(
+                    right: 10,
+                    bottom: 10,
+                    child: MapExpandButton(onTap: _openFullScreen),
+                  ),
+                ],
+              ),
             )
           else
+            // Only reachable when neither the booking nor the worker has any
+            // real coordinates — a genuine absence, not a config problem.
             _MapFallback(hasLocation: hasLocation),
 
           // ── Distance bar ──────────────────────────────────────────────────
           if (hasLocation && distanceM != null)
             _DistanceBar(distanceM: distanceM)
           else if (!hasLocation)
-            const Padding(
+            Padding(
               padding: EdgeInsets.fromLTRB(18, 14, 18, 16),
               child: Text(
-                'Live location not available yet',
+                context.l10n.bookingLiveLocationNotAvailable,
                 style: TextStyle(
                   fontSize: 12,
                   color: _kLight,
@@ -1382,8 +1569,8 @@ class _LiveBadge extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 5),
-          const Text(
-            'Live',
+          Text(
+            context.l10n.bookingStatusLive,
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
@@ -1398,79 +1585,6 @@ class _LiveBadge extends StatelessWidget {
 }
 
 // ── Static map ────────────────────────────────────────────────────────────────
-
-class _StaticMap extends StatelessWidget {
-  final double workerLat;
-  final double workerLng;
-  final double jobLat;
-  final double jobLng;
-  final String apiKey;
-
-  const _StaticMap({
-    required this.workerLat,
-    required this.workerLng,
-    required this.jobLat,
-    required this.jobLng,
-    required this.apiKey,
-  });
-
-  String get _mapUrl {
-    // Use `visible` to auto-fit both markers — more robust than manual center+zoom.
-    final wLat = workerLat.toStringAsFixed(6);
-    final wLng = workerLng.toStringAsFixed(6);
-    final jLat = jobLat.toStringAsFixed(6);
-    final jLng = jobLng.toStringAsFixed(6);
-
-    // Styled markers: filled blue circle for worker, red pin for job.
-    final workerMarker = 'color:0x1B5E4B%7Csize:mid%7Clabel:W%7C$wLat,$wLng';
-    final jobMarker = 'color:0xDC2626%7Csize:mid%7Clabel:J%7C$jLat,$jLng';
-
-    // Clean map styles: hide POI, transit, simplify labels.
-    const styles =
-        '&style=feature:poi%7Cvisibility:off'
-        '&style=feature:transit%7Cvisibility:off'
-        '&style=feature:road%7Celement:labels.icon%7Cvisibility:off'
-        '&style=feature:administrative.neighborhood%7Cvisibility:off';
-
-    return 'https://maps.googleapis.com/maps/api/staticmap'
-        '?visible=$wLat,$wLng'
-        '&visible=$jLat,$jLng'
-        '&size=640x320'
-        '&scale=2'
-        '&maptype=roadmap'
-        '&markers=$workerMarker'
-        '&markers=$jobMarker'
-        '$styles'
-        '&key=$apiKey';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 190,
-      width: double.infinity,
-      child: Image.network(
-        _mapUrl,
-        fit: BoxFit.cover,
-        errorBuilder: (_, _, _) => const _MapFallback(hasLocation: true),
-        loadingBuilder: (_, child, progress) {
-          if (progress == null) return child;
-          return Container(
-            color: const Color(0xFFF1F5F9),
-            child: const Center(
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: _kGreen,
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-// ── Map fallback ──────────────────────────────────────────────────────────────
 
 class _MapFallback extends StatelessWidget {
   final bool hasLocation;
@@ -1503,7 +1617,7 @@ class _MapFallback extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            hasLocation ? 'Map preview unavailable' : 'Location pending',
+            hasLocation ? context.l10n.bookingMapPreviewUnavailable : context.l10n.bookingLocationPending,
             style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,
@@ -1513,8 +1627,8 @@ class _MapFallback extends StatelessWidget {
           const SizedBox(height: 3),
           Text(
             hasLocation
-                ? 'Could not load the map image'
-                : 'Will appear once the worker is en route',
+                ? context.l10n.bookingMapImageLoadFailed
+                : context.l10n.bookingAppearsWhenEnRoute,
             style: const TextStyle(fontSize: 11.5, color: _kLight),
           ),
         ],
@@ -1532,7 +1646,7 @@ class _DistanceBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final label = formatDistance(distanceM);
+    final label = formatDistanceLabel(context.l10n, distanceM);
     final isClose = distanceM < 300;
 
     return Container(
@@ -1574,7 +1688,7 @@ class _DistanceBar extends StatelessWidget {
               ),
               const SizedBox(height: 1),
               Text(
-                isClose ? 'Worker is nearly there' : 'Worker is on the way',
+                isClose ? context.l10n.bookingWorkerNearlyThere : context.l10n.bookingWorkerOnTheWay,
                 style: const TextStyle(
                   fontSize: 11.5,
                   color: _kLight,
@@ -1585,8 +1699,8 @@ class _DistanceBar extends StatelessWidget {
           ),
           const Spacer(),
           // Updated hint
-          const Text(
-            'Live · Updated now',
+          Text(
+            context.l10n.bookingLiveUpdatedNow,
             style: TextStyle(
               fontSize: 10.5,
               color: _kLight,
@@ -1618,8 +1732,8 @@ class _StatusTimelineCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Job Status Timeline',
+          Text(
+            context.l10n.bookingStatusTimeline,
             style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _kDark),
           ),
           const SizedBox(height: 14),
@@ -1651,7 +1765,7 @@ class _StatusTimelineCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          entry.status.displayLabel,
+                          bookingStatusLabel(context.l10n, entry.status),
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
@@ -1702,19 +1816,19 @@ class _MakeLiveAgainCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
               Icon(Icons.hourglass_bottom_rounded, size: 18, color: Color(0xFFEA580C)),
               SizedBox(width: 8),
               Text(
-                'This job expired',
+                context.l10n.bookingJobExpired,
                 style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFFEA580C)),
               ),
             ],
           ),
           const SizedBox(height: 6),
-          const Text(
-            'No worker was hired within 72 hours. Make it live again to keep looking.',
+          Text(
+            context.l10n.bookingExpiredExplanation,
             style: TextStyle(fontSize: 12.5, color: _kGray, height: 1.4),
           ),
           const SizedBox(height: 12),
@@ -1733,7 +1847,7 @@ class _MakeLiveAgainCard extends ConsumerWidget {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(
-                                e is Failure ? e.message : 'Failed to make job live again.',
+                                failureMessage(context.l10n, e, fallback: context.l10n.bookingMakeLiveFailed),
                               ),
                               backgroundColor: const Color(0xFFDC2626),
                               behavior: SnackBarBehavior.floating,
@@ -1756,8 +1870,8 @@ class _MakeLiveAgainCard extends ConsumerWidget {
                       height: 18,
                       child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                     )
-                  : const Text(
-                      'Make Live Again',
+                  : Text(
+                      context.l10n.bookingMakeLiveAgain,
                       style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
                     ),
             ),
@@ -1778,8 +1892,8 @@ class _WorkerCancelledStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final title = workerName != null && workerName!.isNotEmpty
-        ? 'Previous Ustaad cancelled: $workerName'
-        : 'Previous Ustaad cancelled';
+        ? context.l10n.bookingPreviousUstaadCancelledNamed(workerName!)
+        : context.l10n.bookingPreviousUstaadCancelled;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -1840,13 +1954,13 @@ class _WorkerCancelledBookingCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
               Icon(Icons.info_outline_rounded, size: 18, color: Color(0xFFBE123C)),
               SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Ustaad ne job cancel kar di',
+                  context.l10n.bookingUstaadCancelledJob,
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
@@ -1859,7 +1973,7 @@ class _WorkerCancelledBookingCard extends ConsumerWidget {
           if (reason != null && reason.isNotEmpty) ...[
             const SizedBox(height: 6),
             Text(
-              'Reason: $reason',
+              context.l10n.bookingReasonPrefix(reason),
               style: const TextStyle(fontSize: 12.5, color: _kGray, height: 1.4),
             ),
           ],
@@ -1901,9 +2015,7 @@ class _WorkerCancelledBookingCard extends ConsumerWidget {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(
-                                e is Failure
-                                    ? e.message
-                                    : 'Failed to find another Ustaad.',
+                                failureMessage(context.l10n, e, fallback: context.l10n.bookingFindAnotherUstaadFailed),
                               ),
                               backgroundColor: const Color(0xFFDC2626),
                               behavior: SnackBarBehavior.floating,
@@ -1927,8 +2039,8 @@ class _WorkerCancelledBookingCard extends ConsumerWidget {
                       height: 18,
                       child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                     )
-                  : const Text(
-                      'Find Another Ustaad',
+                  : Text(
+                      context.l10n.bookingFindAnotherUstaad,
                       style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
                     ),
             ),
@@ -1957,8 +2069,8 @@ class _StandardServicesCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Selected Services',
+          Text(
+            context.l10n.bookingSelectedServices,
             style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _kDark),
           ),
           const SizedBox(height: 12),
@@ -1970,7 +2082,7 @@ class _StandardServicesCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       item.quantity > 1
-                          ? '${item.nameSnapshot} x${item.quantity}'
+                          ? context.l10n.bookingServiceQuantity(item.nameSnapshot, item.quantity)
                           : item.nameSnapshot,
                       style: const TextStyle(fontSize: 13.5, color: _kDark),
                     ),
@@ -1990,9 +2102,9 @@ class _StandardServicesCard extends StatelessWidget {
           const Divider(height: 20, color: _kBorder),
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'Total',
+                  context.l10n.postJobTotal,
                   style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: _kDark),
                 ),
               ),
@@ -2032,13 +2144,13 @@ class _ChooseUstaadButton extends StatelessWidget {
           color: _kGreen,
           borderRadius: BorderRadius.circular(14),
         ),
-        child: const Row(
+        child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.person_search_rounded, size: 16, color: Colors.white),
             SizedBox(width: 8),
             Text(
-              'Choose Ustaad',
+              context.l10n.bookingChooseUstaad,
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
@@ -2072,13 +2184,13 @@ class _ViewBidsButton extends StatelessWidget {
           color: _kGreen,
           borderRadius: BorderRadius.circular(14),
         ),
-        child: const Row(
+        child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.gavel_rounded, size: 16, color: Colors.white),
             SizedBox(width: 8),
             Text(
-              'See Worker Bids',
+              context.l10n.bookingSeeWorkerBids,
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
@@ -2112,13 +2224,13 @@ class _TrackWorkerButton extends StatelessWidget {
           color: _kGreen,
           borderRadius: BorderRadius.circular(14),
         ),
-        child: const Row(
+        child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.location_on_rounded, size: 16, color: Colors.white),
             SizedBox(width: 8),
             Text(
-              'Track Worker',
+              context.l10n.bookingTrackWorker,
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
@@ -2148,13 +2260,13 @@ class _ReviewWorkerButton extends StatelessWidget {
           color: _kGreen,
           borderRadius: BorderRadius.circular(14),
         ),
-        child: const Row(
+        child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.star_outline_rounded, size: 16, color: Colors.white),
             SizedBox(width: 8),
             Text(
-              'Review Worker',
+              context.l10n.bookingReviewWorker,
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
@@ -2188,11 +2300,11 @@ class _SubmittedReviewCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            children: const [
-              Icon(Icons.star_rounded, size: 16, color: Color(0xFFF59E0B)),
-              SizedBox(width: 6),
+            children: [
+              const Icon(Icons.star_rounded, size: 16, color: Color(0xFFF59E0B)),
+              const SizedBox(width: 6),
               Text(
-                'Your Review',
+                context.l10n.bookingYourReview,
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
@@ -2242,253 +2354,6 @@ class _SubmittedReviewCard extends StatelessWidget {
 /// review yet, and reachable manually via the "Review Worker" button for
 /// any completed booking. Submits through the existing [reviewNotifierProvider]
 /// / review API — no new backend surface.
-class ReviewModal extends ConsumerStatefulWidget {
-  final BookingEntity booking;
-
-  const ReviewModal({super.key, required this.booking});
-
-  @override
-  ConsumerState<ReviewModal> createState() => _ReviewModalState();
-}
-
-class _ReviewModalState extends ConsumerState<ReviewModal> {
-  int _selectedRating = 0;
-  final _commentCtrl = TextEditingController();
-  bool _submitting = false;
-
-  @override
-  void dispose() {
-    _commentCtrl.dispose();
-    super.dispose();
-  }
-
-  Future<void> _submit() async {
-    if (_selectedRating == 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Please select a star rating.'),
-          backgroundColor: const Color(0xFFDC2626),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
-      );
-      return;
-    }
-
-    setState(() => _submitting = true);
-    try {
-      await ref.read(reviewNotifierProvider.notifier).submit(
-            ReviewRequest(
-              bookingId: widget.booking.id,
-              rating: _selectedRating,
-              comment: _commentCtrl.text.trim().isEmpty
-                  ? null
-                  : _commentCtrl.text.trim(),
-            ),
-          );
-      // reviewNotifierProvider.submit already pushes the updated booking
-      // into bookingDetailProvider / bookingsNotifierProvider, so the
-      // booking detail screen refreshes as soon as this modal closes.
-      if (mounted) {
-        Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Review submitted. Thank you!'),
-            backgroundColor: _kGreen,
-            behavior: SnackBarBehavior.floating,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e is Failure ? e.message : 'Failed to submit review.'),
-            backgroundColor: const Color(0xFFDC2626),
-            behavior: SnackBarBehavior.floating,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _submitting = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final worker = widget.booking.assignedWorker;
-
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Worker avatar + name
-            if (worker != null) ...[
-              Container(
-                width: 64,
-                height: 64,
-                alignment: Alignment.center,
-                decoration: const BoxDecoration(
-                  color: _kGreen,
-                  shape: BoxShape.circle,
-                ),
-                child: worker.avatarUrl != null
-                    ? ClipOval(
-                        child: Image.network(
-                          worker.avatarUrl!,
-                          width: 64,
-                          height: 64,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, _, _) => Text(
-                            worker.initials,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 22,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      )
-                    : Text(
-                        worker.initials,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                worker.fullName,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: _kDark,
-                ),
-              ),
-              const SizedBox(height: 4),
-            ],
-            const Text(
-              'How was the service?',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, color: _kGray),
-            ),
-            const SizedBox(height: 14),
-            // Star rating picker
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(
-                5,
-                (i) => GestureDetector(
-                  onTap: () => setState(() => _selectedRating = i + 1),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 3),
-                    child: Icon(
-                      Icons.star_rounded,
-                      size: 34,
-                      color: i < _selectedRating
-                          ? const Color(0xFFF59E0B)
-                          : const Color(0xFFE2E8F0),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 14),
-            // Comment field
-            TextField(
-              controller: _commentCtrl,
-              maxLines: 3,
-              style: const TextStyle(fontSize: 13, color: _kDark),
-              decoration: InputDecoration(
-                hintText: 'Add a comment (optional)...',
-                hintStyle: const TextStyle(fontSize: 13, color: _kLight),
-                filled: true,
-                fillColor: const Color(0xFFF9FAFB),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: _kBorder),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: _kBorder),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: _kGreen),
-                ),
-                contentPadding: const EdgeInsets.all(12),
-              ),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _submitting ? null : _submit,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _kGreen,
-                  disabledBackgroundColor: _kGreen.withValues(alpha: 0.5),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                  elevation: 0,
-                ),
-                child: _submitting
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white),
-                      )
-                    : const Text(
-                        'Submit Review',
-                        style: TextStyle(
-                            fontWeight: FontWeight.w700, fontSize: 14),
-                      ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            SizedBox(
-              width: double.infinity,
-              child: TextButton(
-                onPressed:
-                    _submitting ? null : () => Navigator.of(context).pop(),
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-                child: const Text(
-                  'Later',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                    color: _kGray,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 // ── Action buttons ────────────────────────────────────────────────────────────
 
 class _ActionButtons extends ConsumerWidget {
@@ -2516,7 +2381,7 @@ class _ActionButtons extends ConsumerWidget {
       children: [
         if (showCall) ...[
           _FullBtn(
-            label: 'Call Worker',
+            label: context.l10n.bookingCallWorker,
             icon: Icons.call_rounded,
             color: _kGreen,
             bgColor: const Color(0xFFFFF0EB),
@@ -2532,7 +2397,7 @@ class _ActionButtons extends ConsumerWidget {
         if (showChat && (canEdit || showCancel)) const SizedBox(height: 10),
         if (canEdit)
           _FullBtn(
-            label: 'Edit Booking',
+            label: context.l10n.postJobEditBooking,
             icon: Icons.edit_outlined,
             color: const Color(0xFF1A1A1A),
             bgColor: const Color(0xFFF1F5F9),
@@ -2543,7 +2408,7 @@ class _ActionButtons extends ConsumerWidget {
         if (canEdit && showCancel) const SizedBox(height: 10),
         if (showCancel)
           _FullBtn(
-            label: 'Cancel Booking',
+            label: context.l10n.bookingCancelBooking,
             icon: Icons.close_rounded,
             color: const Color(0xFFDC2626),
             bgColor: const Color(0xFFFFF1F2),
@@ -2560,86 +2425,36 @@ class _ActionButtons extends ConsumerWidget {
     }
   }
 
+  /// Opens the shared Roman Urdu cancellation-reason modal.
+  ///
+  /// Cancellation ELIGIBILITY is unchanged and decided by the caller
+  /// (`booking.canClientCancel`); this only collects the reason.
   Future<void> _confirmCancel(BuildContext context, WidgetRef ref) async {
-    final reasonCtrl = TextEditingController();
-    final confirmed = await showDialog<bool>(
+    await showClientCancelReasonSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: const Text(
-          'Cancel Booking?',
-          style: TextStyle(fontWeight: FontWeight.w700, color: _kDark),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Cancel ${booking.serviceCategory} request ${booking.referenceId}?',
-              style: const TextStyle(color: _kGray, fontSize: 14),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: reasonCtrl,
-              maxLines: 3,
-              decoration: InputDecoration(
-                hintText: 'Reason (required)',
-                filled: true,
-                fillColor: const Color(0xFFF9FAFB),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-                ),
-                contentPadding: const EdgeInsets.all(12),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Keep it',
-                style: TextStyle(color: _kGray)),
+      hasAssignedWorker: booking.assignedWorker != null,
+      onSubmit: (reason) => ref
+          .read(bookingsNotifierProvider.notifier)
+          .cancelBooking(booking.id, reason),
+    ).then((reason) {
+      if (reason == null || !context.mounted) return;
+      context.pop();
+    }).catchError((Object e) {
+      if (!context.mounted) return null;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            failureMessage(context.l10n, e, fallback: context.l10n.bookingCancelFailed),
           ),
-          TextButton(
-            onPressed: () {
-              if (reasonCtrl.text.trim().isEmpty) return;
-              Navigator.pop(ctx, true);
-            },
-            child: const Text(
-              'Yes, cancel',
-              style: TextStyle(
-                color: Color(0xFFDC2626),
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+          backgroundColor: const Color(0xFFDC2626),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
           ),
-        ],
-      ),
-    );
-
-    final reason = reasonCtrl.text.trim();
-    if (confirmed == true && reason.isNotEmpty && context.mounted) {
-      try {
-        await ref
-            .read(bookingsNotifierProvider.notifier)
-            .cancelBooking(booking.id, reason);
-        if (context.mounted) context.pop();
-      } catch (e) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                  e is Failure ? e.message : 'Failed to cancel booking.'),
-              backgroundColor: const Color(0xFFDC2626),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
-            ),
-          );
-        }
-      }
-    }
+        ),
+      );
+      return null;
+    });
   }
 }
 
@@ -2755,8 +2570,8 @@ class _ChatWithWorkerButtonState extends ConsumerState<_ChatWithWorkerButton> {
                 color: _kGreen,
               ),
             const SizedBox(width: 8),
-            const Text(
-              'Chat with Worker',
+            Text(
+              context.l10n.bookingChatWithWorker,
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
@@ -2789,8 +2604,8 @@ class _ErrorScreen extends StatelessWidget {
           icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
           onPressed: () => _goBack(context),
         ),
-        title: const Text(
-          'Booking Details',
+        title: Text(
+          context.l10n.bookingDetailsTitle,
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w700,
@@ -2806,8 +2621,8 @@ class _ErrorScreen extends StatelessWidget {
             children: [
               const Text('\u26a0\ufe0f', style: TextStyle(fontSize: 40)),
               const SizedBox(height: 16),
-              const Text(
-                'Failed to load booking',
+              Text(
+                context.l10n.bookingLoadFailedShort,
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
@@ -2831,8 +2646,8 @@ class _ErrorScreen extends StatelessWidget {
                     color: _kDark,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Text(
-                    'Retry',
+                  child: Text(
+                    context.l10n.commonRetry,
                     style: TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w700,

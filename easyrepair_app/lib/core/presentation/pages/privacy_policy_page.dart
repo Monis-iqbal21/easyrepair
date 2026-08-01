@@ -1,5 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/l10n_extensions.dart';
+import '../widgets/legal_english_only_notice.dart';
+
+/// The page chrome here (app bar, back button, the English-only notice) is
+/// localized like the rest of the app. The document itself is not: the
+/// approved Privacy Policy text stays in English until professionally
+/// translated Urdu and Roman Urdu versions are supplied. See
+/// `docs/legal_translation_exclusions.md`.
 class PrivacyPolicyPage extends StatelessWidget {
   const PrivacyPolicyPage({super.key});
 
@@ -16,9 +24,9 @@ class PrivacyPolicyPage extends StatelessWidget {
               size: 18, color: Color(0xFF1A1A1A)),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: const Text(
-          'Privacy Policy',
-          style: TextStyle(
+        title: Text(
+          context.l10n.settingsPrivacyPolicy,
+          style: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w700,
             color: Color(0xFF1A1A1A),
@@ -28,11 +36,31 @@ class PrivacyPolicyPage extends StatelessWidget {
       ),
       body: const SingleChildScrollView(
         padding: EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-        child: _PolicyContent(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            LegalEnglishOnlyNotice(),
+            SizedBox(height: 16),
+            // The document is English, so it reads left-to-right even when
+            // the rest of the app is mirrored for Urdu.
+            Directionality(
+              textDirection: TextDirection.ltr,
+              child: _PolicyContent(),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
+
+// ── L10N-LEGAL-BODY:START ────────────────────────────────────────────────────
+// Everything below is the approved Privacy Policy text. It is deliberately
+// NOT localized and NOT machine-translated: legal wording needs a
+// professionally approved Urdu / Roman Urdu translation before it can ship in
+// another language. The hard-coded string audit reports this block as
+// Category 5, not as missed migration work.
+// See docs/legal_translation_exclusions.md.
 
 class _PolicyContent extends StatelessWidget {
   const _PolicyContent();
@@ -323,3 +351,4 @@ class _NumberedPoint extends StatelessWidget {
     );
   }
 }
+// ── L10N-LEGAL-BODY:END ──────────────────────────────────────────────────────

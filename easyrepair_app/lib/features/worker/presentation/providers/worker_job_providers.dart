@@ -13,12 +13,7 @@ import 'worker_providers.dart'; // for workerProfileProvider
 enum WorkerJobFilter { all, active, completed, cancelled }
 
 extension WorkerJobFilterX on WorkerJobFilter {
-  String get label => switch (this) {
-        WorkerJobFilter.all => 'All',
-        WorkerJobFilter.active => 'Active',
-        WorkerJobFilter.completed => 'Completed',
-        WorkerJobFilter.cancelled => 'Cancelled',
-      };
+  // Visible wording: workerJobFilterLabel() in presentation/utils/worker_labels.dart.
 
   String? get apiValue => switch (this) {
         WorkerJobFilter.all => null,
@@ -127,13 +122,7 @@ final completeJobProvider =
 
 enum NewJobFilter { all, myBids, notBidYet }
 
-extension NewJobFilterX on NewJobFilter {
-  String get label => switch (this) {
-        NewJobFilter.all => 'Sab Kaam',
-        NewJobFilter.myBids => 'Meri Offers',
-        NewJobFilter.notBidYet => 'Offer nahi bheji',
-      };
-}
+// Visible wording: newJobFilterLabel() in presentation/utils/worker_labels.dart.
 
 /// Fetches PENDING bookings matching the worker's skills via GET /workers/jobs/new.
 /// Auto-refreshes every 30 s while the provider is alive.

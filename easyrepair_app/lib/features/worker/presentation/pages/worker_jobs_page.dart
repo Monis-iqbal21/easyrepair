@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-import '../../../../core/errors/failures.dart';
 import '../../../bookings/domain/entities/booking_entity.dart';
 import '../../../bookings/presentation/providers/booking_providers.dart';
 import '../../../bookings/presentation/widgets/booking_skeleton.dart';
@@ -12,6 +11,10 @@ import '../providers/worker_job_providers.dart';
 import '../providers/worker_providers.dart';
 import '../widgets/onboarding_gate.dart';
 import '../widgets/worker_bottom_nav_bar.dart';
+import '../../../../core/l10n/l10n_extensions.dart';
+import '../../../bookings/presentation/utils/status_labels.dart';
+import '../utils/worker_status_labels.dart';
+import '../../../../core/errors/failure_messages.dart';
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 const _kGreen  = Color(0xFFDB6234);
@@ -78,7 +81,9 @@ class _WorkerJobsPageState extends ConsumerState<WorkerJobsPage>
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
               child: Text(
-                'My Jobs',
+                // Same wording as the Client "My Jobs" screen title. The
+                // bottom-nav tab of the same name stays hard-coded English.
+                context.l10n.clientJobsTitle,
                 style: const TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w800,
@@ -93,12 +98,9 @@ class _WorkerJobsPageState extends ConsumerState<WorkerJobsPage>
             if (!isApproved)
               // Profile incomplete/not approved — nothing meaningful to
               // list or filter yet; never show it as a fetch error.
-              const Expanded(
+              Expanded(
                 child: ProfileIncompleteState(
-                  romanUrdu:
-                      'Apni profile complete karain. Approval ke baad aap apni jobs manage kar sakenge.',
-                  urdu:
-                      'اپنی پروفائل مکمل کریں۔ منظوری کے بعد آپ اپنی jobs manage کر سکیں گے۔',
+                  message: context.l10n.workerCompleteProfileForJobs,
                 ),
               )
             else ...[
@@ -119,9 +121,7 @@ class _WorkerJobsPageState extends ConsumerState<WorkerJobsPage>
                     child: BookingSkeleton(),
                   ),
                   error: (err, _) => _ErrorState(
-                    message: err is Failure
-                        ? err.message
-                        : 'Failed to load jobs. Please try again.',
+                    message: failureMessage(context.l10n, err, fallback: context.l10n.workerJobsLoadFailed),
                     onRetry: notifier.refresh,
                   ),
                   data: (jobs) => jobs.isEmpty
@@ -168,7 +168,7 @@ class _FilterTabs extends StatelessWidget {
             onTap: () => onTap(f),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 180),
-              margin: const EdgeInsets.only(right: 8),
+              margin: const EdgeInsetsDirectional.only(end: 8),
               padding:
                   const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
@@ -179,7 +179,7 @@ class _FilterTabs extends StatelessWidget {
                 ),
               ),
               child: Text(
-                f.label,
+                workerJobFilterLabel(context.l10n, f),
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
@@ -275,9 +275,9 @@ class _JobCard extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Client cancelled this booking',
-                          style: TextStyle(
+                        Text(
+                          context.l10n.workerClientCancelledBooking,
+                          style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
                             color: _kRed,
@@ -431,7 +431,7 @@ class _JobCard extends ConsumerWidget {
                         ),
                         const SizedBox(width: 3),
                         Text(
-                          _fmtDate(job.acceptedAt ?? job.createdAt),
+                          _fmtDate(context, job.acceptedAt ?? job.createdAt),
                           style: const TextStyle(
                             fontSize: 11,
                             color: _kLight,
@@ -498,10 +498,10 @@ class _JobCard extends ConsumerWidget {
     );
   }
 
-  String _fmtDate(DateTime dt) {
+  String _fmtDate(BuildContext context, DateTime dt) {
     final now = DateTime.now();
     if (dt.year == now.year && dt.month == now.month && dt.day == now.day) {
-      return 'Today, ${DateFormat('h:mm a').format(dt)}';
+      return context.l10n.cardTodayAt(DateFormat('h:mm a').format(dt));
     }
     return DateFormat('MMM d, yyyy').format(dt);
   }
@@ -526,15 +526,16 @@ class _InspectionOnlyCompletedBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: const Color(0xFFFDE9BC)),
       ),
-      child: const Row(
+      child: Row(
         children: [
-          Icon(Icons.fact_check_outlined, size: 13, color: Color(0xFFB45309)),
-          SizedBox(width: 6),
+          const Icon(Icons.fact_check_outlined,
+              size: 13, color: Color(0xFFB45309)),
+          const SizedBox(width: 6),
           // Flexible so the label can never overflow, however narrow the card.
           Flexible(
             child: Text(
-              'Sirf Inspection Mukammal Hui',
-              style: TextStyle(
+              context.l10n.workerOnlyInspectionCompleted,
+              style: const TextStyle(
                 fontSize: 11.5,
                 fontWeight: FontWeight.w700,
                 color: Color(0xFFB45309),
@@ -586,7 +587,9 @@ class _CompleteBtn extends ConsumerWidget {
               ),
             const SizedBox(width: 5),
             Text(
-              isLoading ? 'Completing...' : 'Complete',
+              isLoading
+                  ? context.l10n.workerCompleting
+                  : context.l10n.workerComplete,
               style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
@@ -604,19 +607,19 @@ class _CompleteBtn extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: const Text(
-          'Mark as Completed?',
-          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
+        title: Text(
+          context.l10n.workerMarkCompletedTitle,
+          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
         ),
-        content: const Text(
-          'This will close the job and notify the client.',
-          style: TextStyle(color: _kGray, fontSize: 14),
+        content: Text(
+          context.l10n.workerMarkCompletedBody,
+          style: const TextStyle(color: _kGray, fontSize: 14),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel',
-                style: TextStyle(color: _kLight)),
+            child: Text(context.l10n.commonCancel,
+                style: const TextStyle(color: _kLight)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -627,7 +630,7 @@ class _CompleteBtn extends ConsumerWidget {
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10)),
             ),
-            child: const Text('Complete'),
+            child: Text(context.l10n.workerComplete),
           ),
         ],
       ),
@@ -699,7 +702,9 @@ class _StandardActionBtn extends ConsumerWidget {
               Icon(_icon, size: 14, color: Colors.white),
             const SizedBox(width: 5),
             Text(
-              isLoading ? '${action.label}...' : action.label,
+              isLoading
+                  ? '${lifecycleActionLabel(context.l10n, action)}...'
+                  : lifecycleActionLabel(context.l10n, action),
               style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
@@ -718,7 +723,7 @@ class _StandardActionBtn extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(action.successMessage),
+            content: Text(lifecycleActionSuccess(context.l10n, action)),
             backgroundColor: _kGreen,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -729,7 +734,8 @@ class _StandardActionBtn extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e is Failure ? e.message : 'Action failed. Try again.'),
+            content: Text(
+                failureMessage(context.l10n, e, fallback: context.l10n.inspectionActionFailed)),
             backgroundColor: const Color(0xFFDC2626),
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -779,7 +785,7 @@ class _InspectionActionBtn extends ConsumerWidget {
             Icon(_icon, size: 14, color: const Color(0xFFC2541D)),
             const SizedBox(width: 5),
             Text(
-              action.label,
+              inspectionActionLabel(context.l10n, action),
               style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
@@ -820,7 +826,9 @@ class _InspectionActionBtn extends ConsumerWidget {
               Icon(_icon, size: 14, color: Colors.white),
             const SizedBox(width: 5),
             Text(
-              isLoading ? '${action.label}...' : action.label,
+              isLoading
+                  ? '${inspectionActionLabel(context.l10n, action)}...'
+                  : inspectionActionLabel(context.l10n, action),
               style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
@@ -844,7 +852,7 @@ class _InspectionActionBtn extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(action.successMessage),
+            content: Text(inspectionActionSuccess(context.l10n, action)),
             backgroundColor: _kGreen,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -855,7 +863,8 @@ class _InspectionActionBtn extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e is Failure ? e.message : 'Action failed. Try again.'),
+            content: Text(
+                failureMessage(context.l10n, e, fallback: context.l10n.inspectionActionFailed)),
             backgroundColor: const Color(0xFFDC2626),
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -882,7 +891,7 @@ class _StatusChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
-        status.workerLabel,
+        workerJobStatusLabel(context.l10n, status),
         style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w600,
@@ -932,7 +941,7 @@ class _UrgencyPill extends StatelessWidget {
           ),
           const SizedBox(width: 3),
           Text(
-            isUrgent ? 'Urgent' : 'Normal',
+            isUrgent ? context.l10n.postJobUrgent : context.l10n.postJobNormal,
             style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w600,
@@ -951,17 +960,18 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final title = switch (filter) {
-      WorkerJobFilter.active => 'No active jobs',
-      WorkerJobFilter.completed => 'No completed jobs yet',
-      WorkerJobFilter.cancelled => 'No cancelled jobs',
-      WorkerJobFilter.all => 'No jobs assigned yet',
+      WorkerJobFilter.active => l10n.workerNoActiveJobs,
+      WorkerJobFilter.completed => l10n.workerNoCompletedJobs,
+      WorkerJobFilter.cancelled => l10n.workerNoCancelledJobs,
+      WorkerJobFilter.all => l10n.workerNoJobsAssigned,
     };
     final subtitle = switch (filter) {
-      WorkerJobFilter.active => 'New requests will appear here',
-      WorkerJobFilter.completed => 'Completed jobs will show up here',
-      WorkerJobFilter.cancelled => 'Cancelled jobs will show up here',
-      WorkerJobFilter.all => 'Accept a booking request to get started',
+      WorkerJobFilter.active => l10n.workerNewRequestsHere,
+      WorkerJobFilter.completed => l10n.workerCompletedJobsHere,
+      WorkerJobFilter.cancelled => l10n.workerCancelledJobsHere,
+      WorkerJobFilter.all => l10n.workerAcceptToGetStarted,
     };
 
     return Center(
@@ -1018,9 +1028,9 @@ class _RefreshFailedBanner extends StatelessWidget {
       width: double.infinity,
       color: const Color(0xFFFEF3C7),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: const Text(
-        'Could not refresh. Pull to retry.',
-        style: TextStyle(fontSize: 12, color: Color(0xFF92400E)),
+      child: Text(
+        context.l10n.myBookingsRefreshFailed,
+        style: const TextStyle(fontSize: 12, color: Color(0xFF92400E)),
       ),
     );
   }
@@ -1051,9 +1061,9 @@ class _ErrorState extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
-              'Something went wrong',
-              style: TextStyle(
+            Text(
+              context.l10n.myBookingsSomethingWrong,
+              style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
                 color: _kDark,
@@ -1081,9 +1091,9 @@ class _ErrorState extends StatelessWidget {
                   color: _kGreen,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Text(
-                  'Retry',
-                  style: TextStyle(
+                child: Text(
+                  context.l10n.commonRetry,
+                  style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w700,
                     fontSize: 13,

@@ -11,6 +11,9 @@ abstract class ChatRepository {
   Future<Either<Failure, ConversationEntity>> getOrCreateConversationForBooking(
     String bookingId,
   );
+  /// Guarantees the caller's permanent HandyGo Support thread exists.
+  /// Idempotent — repeated calls never create a second conversation.
+  Future<Either<Failure, void>> ensureSupportConversation();
   Future<Either<Failure, List<ConversationEntity>>> getConversations();
   Future<Either<Failure, List<MessageEntity>>> getMessages(
     String conversationId, {

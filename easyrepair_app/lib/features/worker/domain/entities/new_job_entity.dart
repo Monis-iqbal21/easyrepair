@@ -106,16 +106,9 @@ class NewJobEntity {
 
   String get displayTitle => title?.isNotEmpty == true ? title! : category.name;
 
-  String get distanceLabel {
-    if (distanceKm == null) return '';
-    if (distanceKm! < 1) return '${(distanceKm! * 1000).round()} m door';
-    return '${distanceKm!.toStringAsFixed(1)} km door';
-  }
 
-  /// User-facing status label.
-  /// PENDING with no assigned worker → "Live" (open for bids).
-  String get displayStatus {
-    if (status == BookingStatus.pending && workerProfileId == null) return 'Live';
-    return status.workerLabel;
-  }
+  /// True while the job is still open for bids — nobody has taken it yet.
+  /// The user-facing label is built in the presentation layer by
+  /// `newJobStatusLabel`, since what it reads depends on the chosen language.
+  bool get hasAssignedWorker => workerProfileId != null;
 }

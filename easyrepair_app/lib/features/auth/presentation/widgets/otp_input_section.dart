@@ -6,6 +6,7 @@ import 'package:pinput/pinput.dart';
 import 'package:smart_auth/smart_auth.dart';
 
 import 'auth_primary_button.dart';
+import '../../../../core/l10n/l10n_extensions.dart';
 
 const _otpLength = 6;
 const _otpValidity = Duration(minutes: 5);
@@ -157,7 +158,11 @@ class _OtpInputSectionState extends State<OtpInputSection>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Pinput(
+        // The OTP boxes are digits and must fill left-to-right even in Urdu,
+        // otherwise the first digit typed lands in the rightmost box.
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: Pinput(
           length: _otpLength,
           controller: _controller,
           focusNode: _focusNode,
@@ -173,13 +178,14 @@ class _OtpInputSectionState extends State<OtpInputSection>
           onChanged: widget.onChanged,
           onCompleted: widget.onCompleted,
         ),
+        ),
         const SizedBox(height: 16),
         Center(
           child: expired
               ? Column(
                   children: [
-                    const Text(
-                      'Code expire ho gaya hai. Naya code mangwayein.',
+                    Text(
+                      context.l10n.authOtpExpired,
                       textAlign: TextAlign.center,
                       style: TextStyle(color: Color(0xFFEF4444), fontSize: 13),
                     ),
@@ -194,7 +200,7 @@ class _OtpInputSectionState extends State<OtpInputSection>
               : Column(
                   children: [
                     Text(
-                      'Code ${_formatRemaining(_remaining)} mein expire hoga',
+                      context.l10n.authOtpExpiresIn(_formatRemaining(_remaining)),
                       style: const TextStyle(fontSize: 13, color: kAuthGray),
                     ),
                     const SizedBox(height: 8),
@@ -205,7 +211,7 @@ class _OtpInputSectionState extends State<OtpInputSection>
                             onTap: widget.onResend,
                           )
                         : Text(
-                            'Code dobara bhejein (${_resendCooldown.inSeconds - secondsSinceRequest}s)',
+                            context.l10n.authOtpResendCooldown(_resendCooldown.inSeconds - secondsSinceRequest),
                             style: const TextStyle(
                               fontSize: 13,
                               color: kAuthGray,
@@ -241,10 +247,10 @@ class _ResendLink extends StatelessWidget {
     }
     return GestureDetector(
       onTap: enabled ? onTap : null,
-      child: const Padding(
-        padding: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
         child: Text(
-          'Code dobara bhejein',
+          context.l10n.authOtpResend,
           style: TextStyle(
             fontSize: 13.5,
             fontWeight: FontWeight.w700,

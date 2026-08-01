@@ -11,13 +11,16 @@ import '../../../notifications/presentation/providers/notification_providers.dar
 import '../../../../core/presentation/responsive_utils.dart';
 import '../widgets/client_bottom_nav_bar.dart';
 import '../widgets/service_card.dart';
+import '../../../../core/l10n/l10n_extensions.dart';
 
 const _kGreen = Color(0xFFDB6234);
 const _kDark = Color(0xFF1A1A1A);
 const _kGray = Color(0xFF6B7280);
 
-// Fetches current area label (subLocality → locality → "Your Area").
-final _currentAreaProvider = FutureProvider<String>((ref) async {
+// Resolves the current area name, or null when it cannot be determined.
+// The fallback wording lives in the widget — a provider has no BuildContext
+// and must not decide user-facing copy.
+final _currentAreaProvider = FutureProvider<String?>((ref) async {
   try {
     LocationPermission perm = await Geolocator.checkPermission();
     if (perm == LocationPermission.denied) {
@@ -25,7 +28,7 @@ final _currentAreaProvider = FutureProvider<String>((ref) async {
     }
     if (perm == LocationPermission.denied ||
         perm == LocationPermission.deniedForever) {
-      return 'Your Area';
+      return null;
     }
     final pos = await Geolocator.getCurrentPosition(
       locationSettings: const LocationSettings(
@@ -34,15 +37,15 @@ final _currentAreaProvider = FutureProvider<String>((ref) async {
       ),
     );
     final marks = await placemarkFromCoordinates(pos.latitude, pos.longitude);
-    if (marks.isEmpty) return 'Your Area';
+    if (marks.isEmpty) return null;
     final m = marks.first;
     return m.subLocality?.isNotEmpty == true
         ? m.subLocality!
         : m.locality?.isNotEmpty == true
             ? m.locality!
-            : 'Your Area';
+            : null;
   } catch (_) {
-    return 'Your Area';
+    return null;
   }
 });
 
@@ -64,12 +67,14 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage> {
   }
 
   // Fixed homepage sections — display-layer only, no backend/worker impact.
-  static const _kSections = [
+  // Built per call rather than held in a const field, because the headings and
+  // display titles are now localized. backendName values are untouched.
+  List<_SectionData> _sections(BuildContext context) => [
     _SectionData(
-      heading: 'Repairs',
+      heading: context.l10n.clientHomeSectionRepairs,
       items: [
         _HomeServiceItem(
-          displayTitle: 'AC Technician',
+          displayTitle: context.l10n.serviceAcTechnician,
           backendName: 'AC Technician',
           emoji: '❄️',
           bg: Color(0xFFE8F4F8),
@@ -77,7 +82,7 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage> {
           imagePath: 'assets/images/ac.jpg',
         ),
         _HomeServiceItem(
-          displayTitle: 'Electrician',
+          displayTitle: context.l10n.serviceElectrician,
           backendName: 'Electrician',
           emoji: '⚡',
           bg: Color(0xFFFFF8E1),
@@ -85,7 +90,7 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage> {
           imagePath: 'assets/images/electrician.jpg',
         ),
         _HomeServiceItem(
-          displayTitle: 'Plumber',
+          displayTitle: context.l10n.servicePlumber,
           backendName: 'Plumber',
           emoji: '🔧',
           bg: Color(0xFFE8F5E9),
@@ -93,7 +98,7 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage> {
           imagePath: 'assets/images/plumber.jpg',
         ),
         _HomeServiceItem(
-          displayTitle: 'Carpenter',
+          displayTitle: context.l10n.serviceCarpenter,
           backendName: 'Carpenter',
           emoji: '🪚',
           bg: Color(0xFFEFEBE9),
@@ -103,10 +108,10 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage> {
       ],
     ),
     _SectionData(
-      heading: 'Cleaning',
+      heading: context.l10n.clientHomeSectionCleaning,
       items: [
         _HomeServiceItem(
-          displayTitle: 'Deep Cleaning',
+          displayTitle: context.l10n.serviceDeepCleaning,
           backendName: 'Cleaner',
           emoji: '🧹',
           bg: Color(0xFFFFF3E0),
@@ -114,7 +119,7 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage> {
           imagePath: 'assets/images/deepcleaning.png',
         ),
         _HomeServiceItem(
-          displayTitle: 'Pest Control',
+          displayTitle: context.l10n.servicePestControl,
           backendName: 'Pest Control',
           emoji: '🐛',
           bg: Color(0xFFE8F5E9),
@@ -124,10 +129,10 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage> {
       ],
     ),
     _SectionData(
-      heading: 'Painting',
+      heading: context.l10n.clientHomeSectionPainting,
       items: [
         _HomeServiceItem(
-          displayTitle: 'Painter',
+          displayTitle: context.l10n.servicePainter,
           backendName: 'Painter',
           emoji: '🎨',
           bg: Color(0xFFFCE4EC),
@@ -137,10 +142,10 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage> {
       ],
     ),
     _SectionData(
-      heading: 'Outdoor & Vehicle',
+      heading: context.l10n.clientHomeSectionOutdoorVehicle,
       items: [
         _HomeServiceItem(
-          displayTitle: 'Gardening',
+          displayTitle: context.l10n.serviceGardening,
           backendName: 'Gardener',
           emoji: '🌿',
           bg: Color(0xFFE8F5E9),
@@ -148,7 +153,7 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage> {
           imagePath: 'assets/images/gardening.jpg',
         ),
         _HomeServiceItem(
-          displayTitle: 'Car Wash',
+          displayTitle: context.l10n.serviceCarWash,
           backendName: 'Car Wash',
           emoji: '🚗',
           bg: Color(0xFFE3F2FD),
@@ -157,7 +162,7 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage> {
         ),
       ],
     ),
-  ];
+      ];
 
   Widget _buildServiceSections(BuildContext context) {
     void onTap(_HomeServiceItem item) {
@@ -170,7 +175,7 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage> {
 
     if (q.isNotEmpty) {
       final matched = [
-        for (final sec in _kSections)
+        for (final sec in _sections(context))
           for (final item in sec.items)
             if (item.displayTitle.toLowerCase().contains(q) ||
                 item.backendName.toLowerCase().contains(q))
@@ -178,11 +183,11 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage> {
       ];
 
       if (matched.isEmpty) {
-        return const Padding(
+        return Padding(
           padding: EdgeInsets.symmetric(vertical: 32),
           child: Center(
             child: Text(
-              'No services found',
+              context.l10n.clientHomeNoServicesFound,
               style: TextStyle(fontSize: 14, color: Color(0xFF94A3B8)),
             ),
           ),
@@ -190,7 +195,7 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage> {
       }
 
       return _ServiceSection(
-        heading: 'Search Results',
+        heading: context.l10n.clientHomeSearchResults,
         items: matched,
         onItemTap: onTap,
       );
@@ -199,7 +204,7 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        for (final sec in _kSections)
+        for (final sec in _sections(context))
           _ServiceSection(
             heading: sec.heading,
             items: sec.items,
@@ -216,7 +221,7 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage> {
   // preserving the picked category via the same `service=` query param.
   void _showUrgentCategoryPicker(BuildContext context) {
     final availableItems = [
-      for (final sec in _kSections)
+      for (final sec in _sections(context))
         for (final item in sec.items)
           if (kLaunchActiveServiceCategories.contains(item.backendName)) item,
     ];
@@ -248,12 +253,12 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage> {
                   ),
                 ),
               ),
-              const Padding(
+              Padding(
                 padding: EdgeInsets.symmetric(horizontal: 20),
                 child: Align(
-                  alignment: Alignment.centerLeft,
+                  alignment: AlignmentDirectional.centerStart,
                   child: Text(
-                    'Book Urgently',
+                    context.l10n.clientHomeBookUrgently,
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
@@ -263,12 +268,12 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage> {
                 ),
               ),
               const SizedBox(height: 4),
-              const Padding(
+              Padding(
                 padding: EdgeInsets.symmetric(horizontal: 20),
                 child: Align(
-                  alignment: Alignment.centerLeft,
+                  alignment: AlignmentDirectional.centerStart,
                   child: Text(
-                    'Choose a service to get help right away.',
+                    context.l10n.clientHomeChooseServiceHelp,
                     style: TextStyle(fontSize: 13, color: _kGray),
                   ),
                 ),
@@ -370,7 +375,7 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage> {
                     builder: (_, cRef, _) {
                       final area =
                           cRef.watch(_currentAreaProvider).valueOrNull ??
-                          'Your Area';
+                          context.l10n.clientHomeYourArea;
                       return Container(
                         constraints: BoxConstraints(
                           maxWidth: screenWidth * 0.32,
@@ -515,7 +520,7 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage> {
                         children: [
                           if (_searchQuery.isEmpty) ...[
                             Text(
-                              'Hi $firstName 👋',
+                              context.l10n.clientHomeGreeting(firstName),
                               style: TextStyle(
                                 fontSize: rFont(screenWidth, 13, min: 11, max: 14),
                                 fontWeight: FontWeight.w600,
@@ -546,7 +551,7 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage> {
                               ),
                               decoration: InputDecoration(
                                 hintText: _searchQuery.isEmpty
-                                    ? 'Search services...'
+                                    ? context.l10n.clientHomeSearchHint
                                     : null,
                                 hintStyle: TextStyle(
                                   fontSize: rFont(screenWidth, 12, min: 11, max: 13),
@@ -651,7 +656,7 @@ class _MoversPackersCard extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Movers & Packers',
+          context.l10n.serviceMoversPackers,
           style: TextStyle(
             fontSize: rFont(screenWidth, 16, min: 14, max: 18),
             fontWeight: FontWeight.w700,
@@ -740,16 +745,16 @@ class _SeasonalBanner extends StatelessWidget {
               bottom: 0,
               right: 80,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 14, 8, 14),
+                padding: const EdgeInsetsDirectional.fromSTEB(16, 14, 8, 14),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Column(
+                    Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Beat the Karachi Heat ☀️',
+                          context.l10n.clientHomeBeatTheHeat,
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w800,
@@ -759,7 +764,7 @@ class _SeasonalBanner extends StatelessWidget {
                         ),
                         SizedBox(height: 4),
                         Text(
-                          'Get your AC serviced\nbefore it gets worse.',
+                          context.l10n.clientHomeAcServiceBanner,
                           style: TextStyle(
                             fontSize: 11,
                             color: Color(0xFF6B7280),
@@ -777,8 +782,8 @@ class _SeasonalBanner extends StatelessWidget {
                           color: const Color(0xFFDB6234),
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: const Text(
-                          'Book AC Technician',
+                        child: Text(
+                          context.l10n.clientHomeBookAcTechnician,
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
@@ -838,12 +843,12 @@ class _UrgentHelpCard extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           // Text
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Need help now?',
+                  context.l10n.clientHomeNeedHelpNow,
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
@@ -852,7 +857,7 @@ class _UrgentHelpCard extends StatelessWidget {
                 ),
                 SizedBox(height: 2),
                 Text(
-                  'For urgent issues, book instantly.',
+                  context.l10n.clientHomeUrgentSubtitle,
                   style: TextStyle(
                     fontSize: 12,
                     color: Color(0xFF6B7280),
@@ -876,8 +881,8 @@ class _UrgentHelpCard extends StatelessWidget {
                     color: const Color(0xFFDB6234),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: const Text(
-                    'Book Urgently',
+                  child: Text(
+                    context.l10n.clientHomeBookUrgently,
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
@@ -887,7 +892,7 @@ class _UrgentHelpCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 6),
-              const Row(
+              Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
@@ -897,7 +902,7 @@ class _UrgentHelpCard extends StatelessWidget {
                   ),
                   SizedBox(width: 4),
                   Text(
-                    '24/7 Service',
+                    context.l10n.clientHome247Service,
                     style: TextStyle(
                       fontSize: 10.5,
                       fontWeight: FontWeight.w600,
@@ -954,7 +959,7 @@ class _ServiceSection extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         Align(
-          alignment: Alignment.centerLeft,
+          alignment: AlignmentDirectional.centerStart,
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             clipBehavior: Clip.none,
@@ -964,7 +969,7 @@ class _ServiceSection extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: items.map((s) {
                 return Padding(
-                  padding: const EdgeInsets.only(right: spacing),
+                  padding: const EdgeInsetsDirectional.only(end: spacing),
                   child: SizedBox(
                     width: cardW,
                     height: cardH,
@@ -1014,7 +1019,7 @@ class _RecentNotifications extends ConsumerWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Recent',
+                  context.l10n.clientHomeRecent,
                   style: TextStyle(
                     fontSize: rFont(screenWidth, 18, min: 15, max: 21),
                     fontWeight: FontWeight.w700,
@@ -1024,7 +1029,7 @@ class _RecentNotifications extends ConsumerWidget {
                 GestureDetector(
                   onTap: () => context.push('/notifications'),
                   child: Text(
-                    'See all',
+                    context.l10n.clientHomeSeeAll,
                     style: TextStyle(
                       fontSize: rFont(screenWidth, 13, min: 11, max: 15),
                       fontWeight: FontWeight.w500,
@@ -1116,7 +1121,7 @@ class _CompactNotifTile extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                _fmt(n.createdAt),
+                _fmt(context, n.createdAt),
                 style: const TextStyle(
                   fontSize: 11,
                   color: Color(0xFF94A3B8),
@@ -1129,11 +1134,11 @@ class _CompactNotifTile extends StatelessWidget {
     );
   }
 
-  String _fmt(DateTime dt) {
+  String _fmt(BuildContext context, DateTime dt) {
     final diff = DateTime.now().difference(dt);
-    if (diff.inMinutes < 1) return 'Now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m';
-    if (diff.inHours < 24) return '${diff.inHours}h';
+    if (diff.inMinutes < 1) return context.l10n.timeNow;
+    if (diff.inMinutes < 60) return context.l10n.timeMinutesShort(diff.inMinutes);
+    if (diff.inHours < 24) return context.l10n.timeHoursShort(diff.inHours);
     return DateFormat('MMM d').format(dt);
   }
 }

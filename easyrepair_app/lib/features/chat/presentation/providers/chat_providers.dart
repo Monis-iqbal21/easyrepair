@@ -52,6 +52,9 @@ class ChatConversationsNotifier
         updatedAt: c.updatedAt,
         otherParticipant: c.otherParticipant,
         unreadCount: socketUnread ?? c.unreadCount,
+        // A socket update must not silently demote the support thread to an
+        // ordinary chat — it would lose its pin and its avatar.
+        isSupport: c.isSupport,
       );
       upsertConversation(updated);
     });
@@ -62,6 +65,11 @@ class ChatConversationsNotifier
   }
 
   Future<List<ConversationEntity>> _fetch() async {
+    // Repair path only: the backend already ensures this thread on every login,
+    // so this covers users who signed in before support existed. Its failure is
+    // deliberately swallowed — losing the support row for one refresh is far
+    // better than an unusable Chat tab.
+    await ref.read(chatRepositoryProvider).ensureSupportConversation();
     final result = await ref.read(chatRepositoryProvider).getConversations();
     return result.fold((f) => throw f, (list) => list);
   }

@@ -45,11 +45,24 @@ class _AuthTextFieldState extends State<AuthTextField> {
     _obscure = widget.obscureText;
   }
 
+  /// Phone numbers, passwords and email addresses are Latin/numeric values.
+  /// Under Urdu RTL they would render right-aligned with the cursor on the
+  /// wrong side, so these field types stay left-to-right regardless of the
+  /// app language. Ordinary text fields still follow the locale.
+  bool get _forcesLtr =>
+      widget.obscureText ||
+      widget.keyboardType == TextInputType.phone ||
+      widget.keyboardType == TextInputType.number ||
+      widget.keyboardType == TextInputType.emailAddress ||
+      widget.keyboardType == TextInputType.visiblePassword;
+
   @override
   Widget build(BuildContext context) {
     return TextFormField(
       controller: widget.controller,
       obscureText: _obscure,
+      textDirection: _forcesLtr ? TextDirection.ltr : null,
+      textAlign: _forcesLtr ? TextAlign.left : TextAlign.start,
       keyboardType: widget.keyboardType,
       textInputAction: widget.textInputAction,
       onFieldSubmitted: widget.onFieldSubmitted,

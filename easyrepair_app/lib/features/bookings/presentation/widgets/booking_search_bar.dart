@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../../../../core/l10n/l10n_extensions.dart';
 
 class BookingSearchBar extends StatefulWidget {
   final String initialValue;
@@ -71,7 +72,7 @@ class _BookingSearchBarState extends State<BookingSearchBar> {
                 color: Color(0xFF1A1A1A),
               ),
               decoration: InputDecoration(
-                hintText: 'Search bookings, services...',
+                hintText: context.l10n.searchBookingsHint,
                 hintStyle: const TextStyle(
                   fontSize: 13.5,
                   color: Color(0xFF94A3B8),
