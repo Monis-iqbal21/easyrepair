@@ -480,8 +480,8 @@ void main() {
     });
   });
 
-  group('view before check', () {
-    testWidgets('every checkbox starts unchecked and disabled', (tester) async {
+  group('accepting a document', () {
+    testWidgets('every checkbox starts unchecked but is tickable', (tester) async {
       await _pump(tester, FakeWorkerRepository());
 
       for (final title in const [
@@ -491,34 +491,48 @@ void main() {
       ]) {
         final box = _checkboxIn(tester, title);
         expect(box.value, isFalse, reason: '$title started checked');
-        expect(box.onChanged, isNull, reason: '$title was tickable unviewed');
+        // Reading is offered, never enforced.
+        expect(box.onChanged, isNotNull, reason: '$title was not tickable');
       }
       expect(
         find.text('Open and read the agreement before accepting it.'),
-        findsNWidgets(3),
+        findsNothing,
       );
     });
 
-    testWidgets('opening the document enables only that checkbox',
+    testWidgets('a box can be ticked without ever opening the viewer',
+        (tester) async {
+      final repo = FakeWorkerRepository();
+      await _pump(tester, repo);
+
+      await _tap(
+        tester,
+        _checkboxFinderIn('HandyGo Ustaad Service Provider Agreement'),
+      );
+
+      expect(
+        _checkboxIn(tester, 'HandyGo Ustaad Service Provider Agreement').value,
+        isTrue,
+      );
+      // Ticking one row leaves the others alone.
+      expect(
+        _checkboxIn(tester, 'HandyGo Trade-Specific Service Agreement').value,
+        isFalse,
+      );
+      expect(find.byType(AgreementViewerPage), findsNothing);
+    });
+
+    testWidgets('the viewer stays reachable and does not tick anything',
         (tester) async {
       await _pump(tester, FakeWorkerRepository());
 
-      // The first "View Agreement" link belongs to the General agreement.
       await _tap(tester, find.text('View Agreement').first);
       expect(find.byType(AgreementViewerPage), findsOneWidget);
-
-      // Back returns the evidence the viewer captured on a successful render.
       await _back(tester);
 
       expect(
-        _checkboxIn(tester, 'HandyGo Ustaad Service Provider Agreement')
-            .onChanged,
-        isNotNull,
-      );
-      expect(
-        _checkboxIn(tester, 'HandyGo Trade-Specific Service Agreement')
-            .onChanged,
-        isNull,
+        _checkboxIn(tester, 'HandyGo Ustaad Service Provider Agreement').value,
+        isFalse,
       );
     });
 
@@ -536,14 +550,8 @@ void main() {
 
       await _viewAgreementAt(tester, 0);
 
-      // The form was never rebuilt from scratch, so the typed value and the
-      // freshly-viewed evidence both survive.
+      // The form was never rebuilt from scratch, so the typed value survives.
       expect(find.text('Abdul Rehman Khan'), findsOneWidget);
-      expect(
-        _checkboxIn(tester, 'HandyGo Ustaad Service Provider Agreement')
-            .onChanged,
-        isNotNull,
-      );
     });
 
     testWidgets('an agreement that fails to load never counts as viewed',
@@ -721,8 +729,8 @@ void main() {
       );
       expect(
         _checkboxIn(tester, 'HandyGo Trade-Specific Service Agreement').onChanged,
-        isNull,
-        reason: 'the new schedule must be opened again',
+        isNotNull,
+        reason: 'the new schedule must still be acceptable',
       );
       expect(
         _checkboxIn(tester, 'HandyGo Ustaad Service Provider Agreement').value,
@@ -736,6 +744,47 @@ void main() {
         isTrue,
       );
       expect(find.text('Trade: Plumber'), findsOneWidget);
+    });
+  });
+
+  group('the list comes from the backend', () {
+    /// Nothing in the app fixes how many documents there are. Whatever the
+    /// template endpoint returns is what the Ustaad sees and must accept, so
+    /// activating a further document is a backend change alone.
+    testWidgets('renders every returned document, including a fourth',
+        (tester) async {
+      const kFourth = 'CODE_OF_CONDUCT';
+      final repo = FakeWorkerRepository(
+        profile: _profile(
+          fatherName: 'Abdul Rehman Khan',
+          dateOfBirth: '1990-04-12',
+        ),
+        templates: [
+          ..._threeTemplates(),
+          _template(documentType: kFourth, sourceHash: 'hash-conduct'),
+        ],
+      );
+      await _pump(tester, repo);
+
+      expect(find.text('View Agreement'), findsNWidgets(4));
+      expect(find.text('Version 1.0'), findsNWidgets(4));
+
+      // And all four must be accepted before submission is allowed.
+      for (var i = 0; i < 3; i++) {
+        await _tap(
+          tester,
+          _checkboxFinderIn(const [
+            'HandyGo Ustaad Service Provider Agreement',
+            'HandyGo Trade-Specific Service Agreement',
+            'HandyGo Background Verification, EVS Consent aur Ustaad Privacy Notice',
+          ][i]),
+        );
+      }
+      await _tap(tester, find.byType(Checkbox).first); // legal-name confirm
+      await _tap(tester, find.text('Submit for Approval'));
+
+      // The fourth is still untouched, so nothing was sent.
+      expect(repo.lastAgreements, isNull);
     });
   });
 

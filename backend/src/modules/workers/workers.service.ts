@@ -297,14 +297,17 @@ export class WorkersService {
       buffer,
       originalName,
       mimeType,
-      `uploads/worker-documents/${profile.id}/live-selfie`,
+      `uploads/worker-documents/${profile.id}/profile-photo`,
     );
-    await this.workersRepository.updateLiveSelfie(
+    // The one capture becomes both the verification image and the avatar.
+    await this.workersRepository.updateProfilePhoto(
       profile.id,
       uploaded.url,
       uploaded.key,
     );
-    return { liveSelfieUrl: uploaded.url };
+    // `liveSelfieUrl` stays in the response so already-shipped app builds keep
+    // working; `avatarUrl` is additive.
+    return { liveSelfieUrl: uploaded.url, avatarUrl: uploaded.url };
   }
 
   /**

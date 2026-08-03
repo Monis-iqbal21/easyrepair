@@ -616,7 +616,7 @@ class _WorkerConflictBanner extends StatelessWidget {
           const SizedBox(height: 12),
           AuthSecondaryButton(
             label: context.l10n.authButtonUstaadLogin,
-            onPressed: () => context.go('/auth/worker/login'),
+            onPressed: () => context.push('/auth/worker/login'),
           ),
         ],
       ),

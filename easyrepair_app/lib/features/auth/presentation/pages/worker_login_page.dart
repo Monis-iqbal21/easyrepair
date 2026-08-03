@@ -257,7 +257,7 @@ class _WorkerLoginPageState extends ConsumerState<WorkerLoginPage> {
                           Align(
                             alignment: AlignmentDirectional.centerEnd,
                             child: GestureDetector(
-                              onTap: () => context.go('/forgot-password'),
+                              onTap: () => context.push('/forgot-password'),
                               child: Padding(
                                 padding: EdgeInsets.symmetric(vertical: 4),
                                 child: Text(

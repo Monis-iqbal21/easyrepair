@@ -897,5 +897,10 @@
   "agreementDownload": "Download",
   "agreementDownloadInProgress": "Muahida download ho raha hai...",
   "agreementDownloadSaved": "Muahida save ho gaya: {path}",
-  "agreementDownloadFailed": "Muahida download nahi ho saka. Dobara koshish karein."
+  "agreementDownloadFailed": "Muahida download nahi ho saka. Dobara koshish karein.",
+  "workerSubmittedDetails": "Jama karai gayi tafseelat",
+  "workerViewSubmittedDetails": "Jama karai gayi tafseelat dekhein",
+  "workerDetailsReadOnlyNotice": "Aap ki profile manzoor ho chuki hai. Yeh tafseelat lock hain aur tabdeel nahi ki ja sakti.",
+  "workerVerificationStatus": "Tasdeeq ki haalat",
+  "workerMainTrade": "Markazi hunar"
 }

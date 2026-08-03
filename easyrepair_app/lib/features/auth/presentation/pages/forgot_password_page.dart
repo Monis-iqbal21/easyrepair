@@ -157,7 +157,11 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
             behavior: SnackBarBehavior.floating,
           ),
         );
-        context.go('/auth/worker/login');
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go('/auth/worker/login');
+        }
       }
     } finally {
       if (mounted) setState(() => _resetInFlight = false);

@@ -1767,5 +1767,10 @@
       }
     }
   },
-  "agreementDownloadFailed": "Could not download the agreement. Please try again."
+  "agreementDownloadFailed": "Could not download the agreement. Please try again.",
+  "workerSubmittedDetails": "Submitted Details",
+  "workerViewSubmittedDetails": "View Submitted Details",
+  "workerDetailsReadOnlyNotice": "Your profile is approved. These details are locked and cannot be changed.",
+  "workerVerificationStatus": "Verification Status",
+  "workerMainTrade": "Main Trade"
 }

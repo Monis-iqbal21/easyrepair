@@ -22,7 +22,10 @@ class _RoleSelectionPageState extends State<RoleSelectionPage> {
     setState(() => _selected = key);
     await Future<void>.delayed(const Duration(milliseconds: 140));
     if (!mounted) return;
-    context.go(route);
+    // push, not go: `go` replaces the stack, which leaves the destination
+    // with nothing to pop back to - the AppBar arrow does nothing and the
+    // Android Back button closes the app from a mid-flow auth screen.
+    context.push(route);
   }
 
   @override

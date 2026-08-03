@@ -5492,6 +5492,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Could not download the agreement. Please try again.'**
   String get agreementDownloadFailed;
+
+  /// No description provided for @workerSubmittedDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Submitted Details'**
+  String get workerSubmittedDetails;
+
+  /// No description provided for @workerViewSubmittedDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'View Submitted Details'**
+  String get workerViewSubmittedDetails;
+
+  /// No description provided for @workerDetailsReadOnlyNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Your profile is approved. These details are locked and cannot be changed.'**
+  String get workerDetailsReadOnlyNotice;
+
+  /// No description provided for @workerVerificationStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification Status'**
+  String get workerVerificationStatus;
+
+  /// No description provided for @workerMainTrade.
+  ///
+  /// In en, this message translates to:
+  /// **'Main Trade'**
+  String get workerMainTrade;
 }
 
 class _AppLocalizationsDelegate

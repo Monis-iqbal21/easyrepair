@@ -6,7 +6,7 @@ Every literal that `tool/extract_ui_strings.py` finds in a user-visible position
 
 | Category | Meaning | Count |
 |---|---|---|
-| 1 | Dynamic / user / backend content that must remain unchanged | 50 |
+| 1 | Dynamic / user / backend content that must remain unchanged | 51 |
 | 2 | _Retired_ — bottom-navigation labels are translated now | 0 |
 | 3 | Internal technical value, or a fixed name no language changes | 234 |
 | 4 | **Missed app-owned visible text that must be localized** | **0** |
@@ -226,11 +226,11 @@ Category 5 is a product and legal decision, not missed work. The Privacy Policy 
 | `lib/features/auth/presentation/register_screen.dart` | 117 | `Password is required` | 3 | Unreachable legacy scaffold - nothing routes to or imports it |
 | `lib/features/auth/presentation/register_screen.dart` | 120 | `Minimum 6 characters required` | 3 | Unreachable legacy scaffold - nothing routes to or imports it |
 | `lib/features/auth/presentation/register_screen.dart` | 128 | `Create Account` | 3 | Unreachable legacy scaffold - nothing routes to or imports it |
-| `lib/features/auth/presentation/pages/client_forgot_password_page.dart` | 260 | `03XXXXXXXXX` | 3 | Numeric/format mask - identical in every language, stays Latin |
+| `lib/features/auth/presentation/pages/client_forgot_password_page.dart` | 266 | `03XXXXXXXXX` | 3 | Numeric/format mask - identical in every language, stays Latin |
 | `lib/features/auth/presentation/pages/client_otp_auth_page.dart` | 352 | `03XXXXXXXXX` | 3 | Numeric/format mask - identical in every language, stays Latin |
 | `lib/features/auth/presentation/pages/client_otp_auth_page.dart` | 413 | `03XXXXXXXXX` | 3 | Numeric/format mask - identical in every language, stays Latin |
-| `lib/features/auth/presentation/pages/forgot_password_page.dart` | 248 | `03XXXXXXXXX` | 3 | Numeric/format mask - identical in every language, stays Latin |
-| `lib/features/auth/presentation/pages/role_selection_page.dart` | 60 | `Handygo` | 3 | Brand name - never translated |
+| `lib/features/auth/presentation/pages/forgot_password_page.dart` | 252 | `03XXXXXXXXX` | 3 | Numeric/format mask - identical in every language, stays Latin |
+| `lib/features/auth/presentation/pages/role_selection_page.dart` | 63 | `Handygo` | 3 | Brand name - never translated |
 | `lib/features/auth/presentation/pages/worker_login_page.dart` | 200 | `03XXXXXXXXX` | 3 | Numeric/format mask - identical in every language, stays Latin |
 | `lib/features/auth/presentation/pages/worker_otp_register_page.dart` | 221 | `03XXXXXXXXX` | 3 | Numeric/format mask - identical in every language, stays Latin |
 | `lib/features/auth/presentation/widgets/auth_header.dart` | 52 | `Handygo` | 3 | Brand name - never translated |
@@ -424,12 +424,13 @@ Category 5 is a product and legal decision, not missed work. The Privacy Policy 
 | `lib/features/worker/presentation/pages/worker_jobs_page.dart` | 830 | `${inspectionActionLabel(context.l10n, action)}...` | 1 | Already localized — the literal is only a separator |
 | `lib/features/worker/presentation/pages/worker_profile_completion_page.dart` | 45 | `agreement:$documentType` | 3 | Internal error-set key, matched in code and never rendered (// l10n-ignore) |
 | `lib/features/worker/presentation/pages/worker_profile_completion_page.dart` | 147 | `$exp` | 1 | Pure interpolation of dynamic/user/backend data |
-| `lib/features/worker/presentation/pages/worker_profile_completion_page.dart` | 328 | `${date.year.toString().padLeft(4, ` | 1 | Scanner cut this mid-`${...}` interpolation - dynamic content, nothing to translate |
-| `lib/features/worker/presentation/pages/worker_profile_page.dart` | 39 | `worker_avatar_path_$userId` | 3 | Internal identifier (switch case / map key / API parameter) |
-| `lib/features/worker/presentation/pages/worker_profile_page.dart` | 113 | `).first}` | 3 | Filename or URL fragment, not display copy |
-| `lib/features/worker/presentation/pages/worker_profile_page.dart` | 113 | `.${url.split(` | 3 | Filename or URL fragment, not display copy |
-| `lib/features/worker/presentation/pages/worker_profile_page.dart` | 113 | `.jpg` | 3 | Filename or URL fragment, not display copy |
-| `lib/features/worker/presentation/pages/worker_profile_page.dart` | 165 | `avatar.jpg` | 3 | Filename or URL fragment, not display copy |
+| `lib/features/worker/presentation/pages/worker_profile_completion_page.dart` | 334 | `${date.year.toString().padLeft(4, ` | 1 | Scanner cut this mid-`${...}` interpolation - dynamic content, nothing to translate |
+| `lib/features/worker/presentation/pages/worker_profile_details_page.dart` | 112 | `$experience` | 1 | Pure interpolation of dynamic/user/backend data |
+| `lib/features/worker/presentation/pages/worker_profile_page.dart` | 40 | `worker_avatar_path_$userId` | 3 | Internal identifier (switch case / map key / API parameter) |
+| `lib/features/worker/presentation/pages/worker_profile_page.dart` | 114 | `).first}` | 3 | Filename or URL fragment, not display copy |
+| `lib/features/worker/presentation/pages/worker_profile_page.dart` | 114 | `.${url.split(` | 3 | Filename or URL fragment, not display copy |
+| `lib/features/worker/presentation/pages/worker_profile_page.dart` | 114 | `.jpg` | 3 | Filename or URL fragment, not display copy |
+| `lib/features/worker/presentation/pages/worker_profile_page.dart` | 166 | `avatar.jpg` | 3 | Filename or URL fragment, not display copy |
 | `lib/features/worker/presentation/pages/worker_reviews_page.dart` | 175 | `$maxRating` | 1 | Pure interpolation of dynamic/user/backend data |
 | `lib/features/worker/presentation/pages/worker_reviews_page.dart` | 176 | `$minRating` | 1 | Pure interpolation of dynamic/user/backend data |
 | `lib/features/worker/presentation/providers/worker_providers.dart` | 140 | `initial online sync` | 3 | Sync reason sent to the /workers/location API, never displayed |

@@ -335,14 +335,29 @@ export class WorkersRepository {
     });
   }
 
-  async updateLiveSelfie(
+  /**
+   * The Ustaad's profile photo is also their identity-verification image.
+   *
+   * One capture, one uploaded object, written to both column pairs: the
+   * verification columns keep the evidence the agreement flow and admin
+   * review already read, and the avatar columns make it the picture shown
+   * everywhere else. Nothing is uploaded or stored twice, and profiles
+   * captured before this still work - they simply have no avatar set until
+   * they upload again.
+   */
+  async updateProfilePhoto(
     workerProfileId: string,
     url: string,
     storageKey: string,
   ): Promise<void> {
     await this.prisma.workerProfile.update({
       where: { id: workerProfileId },
-      data: { liveSelfieUrl: url, liveSelfieStorageKey: storageKey },
+      data: {
+        liveSelfieUrl: url,
+        liveSelfieStorageKey: storageKey,
+        avatarUrl: url,
+        avatarStorageKey: storageKey,
+      },
     });
   }
 

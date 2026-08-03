@@ -22,6 +22,7 @@ import '../../../../core/presentation/pages/terms_conditions_page.dart';
 import '../pages/worker_reviews_page.dart';
 import '../pages/earning_history_page.dart';
 import '../pages/worker_agreements_page.dart';
+import '../pages/worker_profile_details_page.dart';
 import '../providers/worker_providers.dart';
 import '../providers/worker_review_providers.dart';
 import '../widgets/worker_bottom_nav_bar.dart';
@@ -585,6 +586,32 @@ class _ProfileApprovalCard extends ConsumerWidget {
             Text(
               reason,
               style: const TextStyle(fontSize: 12.5, color: Color(0xFF6B7280), height: 1.4),
+            ),
+          ],
+          if (status == 'APPROVED') ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const WorkerProfileDetailsPage(),
+                  ),
+                ),
+                icon: const Icon(Icons.badge_outlined, size: 18),
+                label: Text(
+                  context.l10n.workerViewSubmittedDetails,
+                  style: const TextStyle(
+                      fontSize: 13.5, fontWeight: FontWeight.w700),
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: _kOrange,
+                  side: const BorderSide(color: _kOrange),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
             ),
           ],
           if (status != 'APPROVED') ...[

@@ -3080,4 +3080,20 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get agreementDownloadFailed =>
       'Could not download the agreement. Please try again.';
+
+  @override
+  String get workerSubmittedDetails => 'Submitted Details';
+
+  @override
+  String get workerViewSubmittedDetails => 'View Submitted Details';
+
+  @override
+  String get workerDetailsReadOnlyNotice =>
+      'Your profile is approved. These details are locked and cannot be changed.';
+
+  @override
+  String get workerVerificationStatus => 'Verification Status';
+
+  @override
+  String get workerMainTrade => 'Main Trade';
 }

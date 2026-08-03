@@ -897,5 +897,10 @@
   "agreementDownload": "ڈاؤن لوڈ",
   "agreementDownloadInProgress": "معاہدہ ڈاؤن لوڈ ہو رہا ہے...",
   "agreementDownloadSaved": "معاہدہ محفوظ ہو گیا: {path}",
-  "agreementDownloadFailed": "معاہدہ ڈاؤن لوڈ نہیں ہو سکا۔ براہِ کرم دوبارہ کوشش کریں۔"
+  "agreementDownloadFailed": "معاہدہ ڈاؤن لوڈ نہیں ہو سکا۔ براہِ کرم دوبارہ کوشش کریں۔",
+  "workerSubmittedDetails": "جمع کرائی گئی تفصیلات",
+  "workerViewSubmittedDetails": "جمع کرائی گئی تفصیلات دیکھیں",
+  "workerDetailsReadOnlyNotice": "آپ کی پروفائل منظور ہو چکی ہے۔ یہ تفصیلات مقفل ہیں اور تبدیل نہیں کی جا سکتیں۔",
+  "workerVerificationStatus": "تصدیق کی حالت",
+  "workerMainTrade": "مرکزی ہنر"
 }

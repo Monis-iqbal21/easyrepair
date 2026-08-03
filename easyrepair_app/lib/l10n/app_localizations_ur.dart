@@ -3013,6 +3013,22 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get agreementDownloadFailed =>
       'معاہدہ ڈاؤن لوڈ نہیں ہو سکا۔ براہِ کرم دوبارہ کوشش کریں۔';
+
+  @override
+  String get workerSubmittedDetails => 'جمع کرائی گئی تفصیلات';
+
+  @override
+  String get workerViewSubmittedDetails => 'جمع کرائی گئی تفصیلات دیکھیں';
+
+  @override
+  String get workerDetailsReadOnlyNotice =>
+      'آپ کی پروفائل منظور ہو چکی ہے۔ یہ تفصیلات مقفل ہیں اور تبدیل نہیں کی جا سکتیں۔';
+
+  @override
+  String get workerVerificationStatus => 'تصدیق کی حالت';
+
+  @override
+  String get workerMainTrade => 'مرکزی ہنر';
 }
 
 /// The translations for Urdu, using the Latin script (`ur_Latn`).
@@ -6062,4 +6078,20 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   @override
   String get agreementDownloadFailed =>
       'Muahida download nahi ho saka. Dobara koshish karein.';
+
+  @override
+  String get workerSubmittedDetails => 'Jama karai gayi tafseelat';
+
+  @override
+  String get workerViewSubmittedDetails => 'Jama karai gayi tafseelat dekhein';
+
+  @override
+  String get workerDetailsReadOnlyNotice =>
+      'Aap ki profile manzoor ho chuki hai. Yeh tafseelat lock hain aur tabdeel nahi ki ja sakti.';
+
+  @override
+  String get workerVerificationStatus => 'Tasdeeq ki haalat';
+
+  @override
+  String get workerMainTrade => 'Markazi hunar';
 }

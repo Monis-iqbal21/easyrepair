@@ -198,13 +198,16 @@ class _WorkerProfileCompletionPageState
   }
 
   void _setAccepted(AgreementTemplateEntity template, bool value) {
-    final viewed = _evidenceFor(template);
-    // Structurally unreachable — the checkbox is disabled until viewed — but
-    // asserted here too, because this is the gate the whole flow rests on.
-    if (viewed == null) return;
+    // Opening the viewer is optional. When the Ustaad ticks a row they have
+    // not opened, the evidence is built from the template they were shown —
+    // the same documentType/version/sourceHash/locale/trade the backend
+    // seals — with the tick itself as the timestamp. Viewing first simply
+    // means that timestamp is the earlier moment the document was rendered.
+    final existing =
+        _evidenceFor(template) ?? template.evidenceViewedAt(DateTime.now());
     setState(() {
       _evidence[template.documentType] =
-          viewed.copyWith(checkboxAccepted: value);
+          existing.copyWith(checkboxAccepted: value);
       if (value) {
         _missingFields.remove(_agreementFieldKey(template.documentType));
       }
@@ -267,9 +270,12 @@ class _WorkerProfileCompletionPageState
   Future<void> _pickAndUpload(
     Future<String?> Function(File file) uploader,
     void Function(bool) setUploading,
-    String fieldKey,
-  ) async {
-    final source = await _chooseImageSource();
+    String fieldKey, {
+    ImageSource? forceSource,
+  }) async {
+    // The profile photo doubles as the identity-verification image, so it is
+    // taken with the camera rather than picked from the gallery.
+    final source = forceSource ?? await _chooseImageSource();
     if (source == null || !mounted) return;
 
     final picked = await _picker.pickImage(
@@ -366,10 +372,14 @@ class _WorkerProfileCompletionPageState
     }
     if (!_legalNameConfirmed) missing.add(_kFieldLegalNameConfirmed);
 
-    // All three documents must be loaded, viewed and ticked. A missing
-    // template (unsupported trade, failed load) counts as missing too, so
-    // submission is blocked rather than sent with two agreements.
-    for (final documentType in kUstaadDocumentTypes) {
+    // Every document the backend returned must be ticked, plus the trade
+    // schedule whenever it is absent — an unsupported trade blocks
+    // submission rather than sending one agreement fewer.
+    final required = <String>{
+      ...templates.map((t) => t.documentType),
+      kUstaadTradeAgreement,
+    };
+    for (final documentType in required) {
       AgreementTemplateEntity? template;
       for (final t in templates) {
         if (t.documentType == documentType) template = t;
@@ -437,10 +447,10 @@ class _WorkerProfileCompletionPageState
       return;
     }
 
-    // Exactly three evidence objects, in the canonical order.
+    // One evidence object per document the backend served, in its order.
     final evidence = <AgreementEvidence>[];
-    for (final documentType in kUstaadDocumentTypes) {
-      final stored = _evidence[documentType];
+    for (final template in templates) {
+      final stored = _evidence[template.documentType];
       if (stored != null) evidence.add(stored);
     }
 
@@ -640,7 +650,7 @@ class _WorkerProfileCompletionPageState
                 ),
                 const SizedBox(height: 10),
                 _DocumentTile(
-                  label: context.l10n.workerLiveSelfie,
+                  label: context.l10n.profilePhotoTitle,
                   imageUrl: profile.liveSelfieUrl,
                   uploading: _uploadingSelfie,
                   editable: editable,
@@ -649,6 +659,7 @@ class _WorkerProfileCompletionPageState
                     (f) => ref.read(profileCompletionNotifierProvider.notifier).uploadLiveSelfie(f),
                     (v) => _uploadingSelfie = v,
                     _kFieldLiveSelfie,
+                    forceSource: ImageSource.camera,
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -667,8 +678,10 @@ class _WorkerProfileCompletionPageState
                 ),
                 const SizedBox(height: 4),
 
-                // Exactly three rows, derived from kUstaadDocumentTypes so a
-                // Customer agreement can never appear here.
+                // One row per document the backend returned, in its order.
+                // Nothing here assumes how many there are, so a newly
+                // activated document or version appears without an app
+                // release.
                 ...templatesAsync.when(
                   loading: () => const [
                     Padding(
@@ -690,8 +703,14 @@ class _WorkerProfileCompletionPageState
                     ),
                   ],
                   data: (loaded) => [
-                    for (final documentType in kUstaadDocumentTypes)
-                      _agreementRow(loaded, documentType, editable),
+                    for (final template in loaded)
+                      _agreementRow(loaded, template.documentType, editable),
+                    // The backend omits the trade schedule when the Ustaad's
+                    // trade has none. That must block submission rather than
+                    // quietly show one row fewer.
+                    if (loaded.isNotEmpty &&
+                        !loaded.any((t) => t.documentType == kUstaadTradeAgreement))
+                      _agreementRow(loaded, kUstaadTradeAgreement, editable),
                   ],
                 ),
                 const SizedBox(height: 24),
@@ -768,9 +787,9 @@ class _WorkerProfileCompletionPageState
 
 // ── Agreement row ────────────────────────────────────────────────────────────
 
-/// One of the three documents: title, version, language, trade, a required
-/// marker, a View link and a checkbox that stays disabled until the exact
-/// document has actually been opened and rendered.
+/// One returned document: title, version, language, trade, a required marker,
+/// an optional View link and the acceptance checkbox. The checkbox is
+/// independent of the viewer - reading is offered, not enforced.
 class _AgreementRow extends StatelessWidget {
   final AgreementTemplateEntity template;
   final bool viewed;
@@ -909,9 +928,10 @@ class _AgreementRow extends StatelessWidget {
                   side: hasError
                       ? const BorderSide(color: _kRed, width: 1.4)
                       : null,
-                  // Disabled until the exact document has been opened AND
-                  // rendered. This is the view-before-check gate.
-                  onChanged: (enabled && viewed)
+                  // Ticking is the Ustaad's own act - opening the viewer is
+                  // offered, never required. The row still records which exact
+                  // document/version/hash was accepted.
+                  onChanged: enabled
                       ? (v) => onChanged(v ?? false)
                       : null,
                   materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -926,17 +946,10 @@ class _AgreementRow extends StatelessWidget {
                       l10n.agreementAcceptCheckbox,
                       style: TextStyle(
                         fontSize: 12.5,
-                        color: viewed ? _kDark : _kLight,
+                        color: _kDark,
                         height: 1.4,
                       ),
                     ),
-                    if (!viewed) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        l10n.agreementViewBeforeAccepting,
-                        style: const TextStyle(fontSize: 11, color: _kGray),
-                      ),
-                    ],
                     if (hasError) ...[
                       const SizedBox(height: 2),
                       Text(

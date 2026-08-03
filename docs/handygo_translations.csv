@@ -923,3 +923,8 @@ agreementDownload,Uncategorised,Download,ڈاؤن لوڈ,Download,
 agreementDownloadInProgress,Uncategorised,Downloading agreement...,معاہدہ ڈاؤن لوڈ ہو رہا ہے...,Muahida download ho raha hai...,
 agreementDownloadSaved,Uncategorised,Agreement saved to {path},معاہدہ محفوظ ہو گیا: {path},Muahida save ho gaya: {path},Placeholders: {path} | {path} is a file system path and is never translated.
 agreementDownloadFailed,Uncategorised,Could not download the agreement. Please try again.,معاہدہ ڈاؤن لوڈ نہیں ہو سکا۔ براہِ کرم دوبارہ کوشش کریں۔,Muahida download nahi ho saka. Dobara koshish karein.,
+workerSubmittedDetails,Ustaad,Submitted Details,جمع کرائی گئی تفصیلات,Jama karai gayi tafseelat,
+workerViewSubmittedDetails,Ustaad,View Submitted Details,جمع کرائی گئی تفصیلات دیکھیں,Jama karai gayi tafseelat dekhein,
+workerDetailsReadOnlyNotice,Ustaad,Your profile is approved. These details are locked and cannot be changed.,آپ کی پروفائل منظور ہو چکی ہے۔ یہ تفصیلات مقفل ہیں اور تبدیل نہیں کی جا سکتیں۔,Aap ki profile manzoor ho chuki hai. Yeh tafseelat lock hain aur tabdeel nahi ki ja sakti.,
+workerVerificationStatus,Ustaad,Verification Status,تصدیق کی حالت,Tasdeeq ki haalat,
+workerMainTrade,Ustaad,Main Trade,مرکزی ہنر,Markazi hunar,

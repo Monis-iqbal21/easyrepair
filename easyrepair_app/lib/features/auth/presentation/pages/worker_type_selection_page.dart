@@ -23,7 +23,9 @@ class _WorkerTypeSelectionPageState extends State<WorkerTypeSelectionPage> {
     setState(() => _selected = key);
     await Future<void>.delayed(const Duration(milliseconds: 140));
     if (!mounted) return;
-    context.go(route);
+    // push, not go - see RoleSelectionPage._select. Each auth step must stay
+    // on the stack so Back returns to the exact preceding screen.
+    context.push(route);
   }
 
   @override

@@ -162,7 +162,13 @@ class _ClientForgotPasswordPageState
             behavior: SnackBarBehavior.floating,
           ),
         );
-        context.go('/auth/client');
+        // Return to whatever opened this screen. `go` here would rebuild
+        // the stack and strand the user with no way back.
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go('/auth/client');
+        }
       }
     } finally {
       if (mounted) setState(() => _resetInFlight = false);
