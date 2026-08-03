@@ -1,10 +1,12 @@
-import {
+﻿import {
   Injectable,
   NotFoundException,
   ForbiddenException,
   BadRequestException,
   ConflictException,
   Logger,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
@@ -46,10 +48,10 @@ import { deriveInspectionFeePaid } from '../../common/utils/inspection-fee.util'
 import { JobBroadcastService } from '../matching/job-broadcast.service';
 import { JobCompletionNotifierService } from '../matching/job-completion-notifier.service';
 
-/** 72 hours in milliseconds — auto-expiry window for PENDING bookings, all lanes. */
+/** 72 hours in milliseconds â€” auto-expiry window for PENDING bookings, all lanes. */
 const BOOKING_EXPIRY_MS = 72 * 60 * 60 * 1000;
 
-/** Max time to wait on the Bull/Redis queue before giving up — expiry scheduling must never hang the request. */
+/** Max time to wait on the Bull/Redis queue before giving up â€” expiry scheduling must never hang the request. */
 const EXPIRY_QUEUE_TIMEOUT_MS = 1800;
 
 @Injectable()
@@ -60,6 +62,7 @@ export class BookingsService {
     private readonly bookingsRepository: BookingsRepository,
     private readonly storageService: StorageService,
     private readonly notificationsService: NotificationsService,
+    @Inject(forwardRef(() => ChatService))
     private readonly chatService: ChatService,
     @InjectQueue(BOOKINGS_QUEUE) private readonly bookingsQueue: Queue,
     // Both live in the leaf MatchingModule so WorkersService can share them
@@ -101,7 +104,7 @@ export class BookingsService {
       `[createBooking] categoryId=${category.id} name=${category.name}`,
     );
 
-    // Reject missing or zero coordinates — every booking must have a real location.
+    // Reject missing or zero coordinates â€” every booking must have a real location.
     if (
       dto.latitude === undefined ||
       dto.longitude === undefined ||
@@ -120,12 +123,12 @@ export class BookingsService {
       );
     }
 
-    // Only meaningful for URGENT bookings — ignore any urgentWindow sent
+    // Only meaningful for URGENT bookings â€” ignore any urgentWindow sent
     // alongside a NORMAL booking so stored data never contradicts urgency.
     const urgentWindow: UrgentWindow | undefined =
       dto.urgency === BookingUrgency.URGENT ? dto.urgentWindow : undefined;
 
-    // Lane defaults to BIDDING when omitted — older app builds that don't
+    // Lane defaults to BIDDING when omitted â€” older app builds that don't
     // send `lane` at all keep exercising the existing bidding flow unchanged.
     const lane: BookingLane = dto.lane ?? BookingLane.BIDDING;
 
@@ -249,7 +252,7 @@ export class BookingsService {
   }
 
   /**
-   * GET /bookings/pending-reviews — completed work units awaiting this
+   * GET /bookings/pending-reviews â€” completed work units awaiting this
    * client's review, newest first. The app treats this as authoritative:
    * a booking is only dropped from its review queue once it stops appearing
    * here, so a dismissed, failed or missed prompt is always re-offered.
@@ -287,7 +290,7 @@ export class BookingsService {
 
     // Client can cancel up through ACCEPTED (worker hired but not yet on the
     // way). Once the worker marks EN_ROUTE or later, the client can no
-    // longer cancel — matches BookingEntity.canClientCancel on the Flutter side.
+    // longer cancel â€” matches BookingEntity.canClientCancel on the Flutter side.
     const clientCancellableStatuses: BookingStatus[] = [
       BookingStatus.PENDING,
       BookingStatus.ACCEPTED,
@@ -305,7 +308,7 @@ export class BookingsService {
       'CLIENT',
     );
 
-    // Booking is no longer PENDING — cancel its auto-expiry job. Fire-and-forget.
+    // Booking is no longer PENDING â€” cancel its auto-expiry job. Fire-and-forget.
     void this._cancelExpiry(bookingId).catch((err) => {
       this.logger.warn(
         `[expiry] cancelExpiry failed for bookingId=${bookingId}: ${(err as Error)?.message}`,
@@ -410,7 +413,7 @@ export class BookingsService {
       );
     }
 
-    // Only meaningful for URGENT bookings — if the effective urgency is/becomes
+    // Only meaningful for URGENT bookings â€” if the effective urgency is/becomes
     // NORMAL, clear urgentWindow so stored data never contradicts urgency.
     // undefined here means "leave the stored value untouched".
     const urgentWindow: UrgentWindow | null | undefined =
@@ -570,7 +573,7 @@ export class BookingsService {
       workerProfileId: booking.workerProfileId,
     });
 
-    // Notify worker of the new review — Roman Urdu, all lanes. Uses the
+    // Notify worker of the new review â€” Roman Urdu, all lanes. Uses the
     // client's name when available, falling back to a generic term rather
     // than ever showing a blank/undefined name.
     if (updated.workerProfile?.userId) {
@@ -596,7 +599,7 @@ export class BookingsService {
     return this._toDto(updated);
   }
 
-  // ── Attachment endpoints ──────────────────────────────────────────────────
+  // â”€â”€ Attachment endpoints â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   async uploadAttachment(
     userId: string,
@@ -697,7 +700,7 @@ export class BookingsService {
     await this.storageService.deleteByUrl(attachment.url);
   }
 
-  // ── Nearby workers + assignment ───────────────────────────────────────────
+  // â”€â”€ Nearby workers + assignment â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   /**
    * Return workers who are online, near the booking location, and skilled in
@@ -776,7 +779,7 @@ export class BookingsService {
     // Re-broadcast while the client is on the discovery screen. Per-live-cycle
     // dedup means this is a no-op for anyone already notified at creation; it
     // exists so a worker who only just became eligible is still reached.
-    // Fire-and-forget — must never block the response.
+    // Fire-and-forget â€” must never block the response.
     void this.jobBroadcastService.broadcastJob(bookingId);
 
     return {
@@ -789,20 +792,20 @@ export class BookingsService {
 
   /**
    * Single shared source of truth for "may this client open a chat with
-   * this worker, in the context of this booking" — reused by ChatService
+   * this worker, in the context of this booking" â€” reused by ChatService
    * for both pre-assignment (available-worker list) and post-completion
    * chat, replacing what used to be several inconsistent/absent checks.
    *
    * A client may chat with a worker for a booking they own when the worker
    * is any of:
-   *   1. The currently (or formerly — cancellation/completion never clears
+   *   1. The currently (or formerly â€” cancellation/completion never clears
    *      this field) assigned worker.
-   *   2. The original INSPECTION-lane inspector — preserved permanently even
+   *   2. The original INSPECTION-lane inspector â€” preserved permanently even
    *      after a different worker is later hired for the repair.
    *   3. A genuinely eligible candidate for a still-open (PENDING) booking:
    *      a bidder (BIDDING lane, or a reopened "Find Other Ustaad" job), or
    *      a worker present in the nearby-worker result (STANDARD/ordinary
-   *      INSPECTION) — i.e. exactly the set already shown to the client,
+   *      INSPECTION) â€” i.e. exactly the set already shown to the client,
    *      never an arbitrary worker id.
    *
    * Throws NotFoundException / ForbiddenException when disallowed.
@@ -918,7 +921,7 @@ export class BookingsService {
         'This worker has not completed their profile yet and cannot be hired.',
       );
     }
-    // Common (non-race) case: worker visibly already busy — give the
+    // Common (non-race) case: worker visibly already busy â€” give the
     // friendly message immediately rather than waiting for the transactional
     // guard below (which remains the authoritative check for genuine races).
     if (worker.currentlyWorking) {
@@ -941,7 +944,7 @@ export class BookingsService {
           : (booking.standardServicePriceSnapshot ?? undefined)
         : (booking.inspectionFeeSnapshot ?? undefined);
 
-    // Commission is computed on this same amount at assignment time — for
+    // Commission is computed on this same amount at assignment time â€” for
     // STANDARD it's the final labour/service total; for INSPECTION it's the
     // visit fee (only overwritten later if the customer accepts a repair
     // quote, see setInspectionRepairPrice).
@@ -965,7 +968,7 @@ export class BookingsService {
       throw err;
     }
 
-    // Booking is no longer PENDING — cancel its auto-expiry job. Fire-and-forget.
+    // Booking is no longer PENDING â€” cancel its auto-expiry job. Fire-and-forget.
     void this._cancelExpiry(bookingId).catch((err) => {
       this.logger.warn(
         `[expiry] cancelExpiry failed for bookingId=${bookingId}: ${(err as Error)?.message}`,
@@ -1000,7 +1003,7 @@ export class BookingsService {
     return this._toDto(updated);
   }
 
-  // ── Lifecycle endpoints (assigned worker only) ────────────────────────────
+  // â”€â”€ Lifecycle endpoints (assigned worker only) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   /** Resolve and authorize: booking exists, caller is the assigned worker. */
   private async _authorizeAssignedWorker(
@@ -1020,7 +1023,7 @@ export class BookingsService {
     return booking;
   }
 
-  /** POST /bookings/:id/on-my-way — ACCEPTED → EN_ROUTE. */
+  /** POST /bookings/:id/on-my-way â€” ACCEPTED â†’ EN_ROUTE. */
   async markOnMyWay(
     userId: string,
     bookingId: string,
@@ -1052,7 +1055,7 @@ export class BookingsService {
     return this._toDto(updated);
   }
 
-  /** POST /bookings/:id/arrived — EN_ROUTE → ARRIVED. */
+  /** POST /bookings/:id/arrived â€” EN_ROUTE â†’ ARRIVED. */
   async markArrived(
     userId: string,
     bookingId: string,
@@ -1084,7 +1087,7 @@ export class BookingsService {
     return this._toDto(updated);
   }
 
-  /** POST /bookings/:id/start — ARRIVED → IN_PROGRESS. */
+  /** POST /bookings/:id/start â€” ARRIVED â†’ IN_PROGRESS. */
   async startJob(
     userId: string,
     bookingId: string,
@@ -1117,7 +1120,7 @@ export class BookingsService {
   }
 
   /**
-   * POST /bookings/:id/complete — completes an active job.
+   * POST /bookings/:id/complete â€” completes an active job.
    * Backward compatible: accepts ACCEPTED, EN_ROUTE, ARRIVED, or IN_PROGRESS
    * as the starting status (older app builds / the legacy
    * /workers/jobs/:id/complete endpoint could complete directly from
@@ -1131,7 +1134,7 @@ export class BookingsService {
 
     // INSPECTION lane: worker cannot complete without submitting a report,
     // and cannot complete while the client hasn't decided or has already
-    // closed the job after inspection (that path completes automatically —
+    // closed the job after inspection (that path completes automatically â€”
     // see completeAfterInspectionClose). STANDARD/BIDDING are unaffected.
     if (booking.lane === BookingLane.INSPECTION) {
       if (booking.status !== BookingStatus.IN_PROGRESS) {
@@ -1156,10 +1159,10 @@ export class BookingsService {
         );
       }
       // ACCEPTED_REPAIR (rehired inspector) and FIND_OTHER_USTAAD (a
-      // different repair worker hired via bidding — see acceptBid, which
+      // different repair worker hired via bidding â€” see acceptBid, which
       // never touches decisionStatus, so it stays FIND_OTHER_USTAAD for the
       // rest of this booking's lifecycle) both fall through to normal
-      // completion below — the assigned-worker check above already ensures
+      // completion below â€” the assigned-worker check above already ensures
       // only whoever is actually hired right now can complete it.
     }
 
@@ -1182,7 +1185,7 @@ export class BookingsService {
       workerProfile!.id,
     );
 
-    // Single shared, deduplicated completion notice — see
+    // Single shared, deduplicated completion notice â€” see
     // JobCompletionNotifierService. Every completion path routes here so the
     // client can only ever receive one `booking.completed` per work unit.
     void this.jobCompletionNotifier.notifyClientJobCompleted(
@@ -1212,7 +1215,7 @@ export class BookingsService {
 
   /**
    * Completes an INSPECTION booking on the client's behalf when they choose
-   * "Close After Inspection" — the final amount is the inspection fee only,
+   * "Close After Inspection" â€” the final amount is the inspection fee only,
    * no worker action required. Called by InspectionReportsService after it
    * has already authorized the client and validated the report/decision
    * state; this method re-checks lane/status defensively and performs the
@@ -1267,7 +1270,7 @@ export class BookingsService {
   /**
    * INSPECTION lane: called by InspectionReportsService when the client
    * accepts the repair quote. The inspection fee is waived once repair
-   * continues — the confirmed final amount becomes the repair quote only,
+   * continues â€” the confirmed final amount becomes the repair quote only,
    * replacing the placeholder `inspectionFeeSnapshot` that was set as
    * `finalPrice` at assignment time. Does NOT add the inspection fee to the
    * repair quote; the two are never combined.
@@ -1277,7 +1280,7 @@ export class BookingsService {
     repairQuoteTotal: number,
     labourCost: number,
   ): Promise<void> {
-    // Commission is 18% of labourCost ONLY — repairQuoteTotal (the customer's
+    // Commission is 18% of labourCost ONLY â€” repairQuoteTotal (the customer's
     // payable amount) includes parts, which must never be commissioned or
     // counted toward the worker's earning.
     const platformFee = calculatePlatformFee(labourCost);
@@ -1294,7 +1297,7 @@ export class BookingsService {
    * (kept forever on the inspector for stats/earnings/My Jobs), releases the
    * inspector, and spawns a new linked BIDDING-lane child booking for the
    * repair. Idempotent: a retry/double-tap resolves to the already-created
-   * child booking and returns the same id as a success — notification
+   * child booking and returns the same id as a success â€” notification
    * delivery is re-attempted on that path too (the per-worker
    * wasAlreadyNotified dedup guard prevents duplicates).
    *
@@ -1332,7 +1335,7 @@ export class BookingsService {
           );
         });
         void this.jobBroadcastService.broadcastJob(childId);
-        // The client's inspection work unit is now complete — prompt them to
+        // The client's inspection work unit is now complete â€” prompt them to
         // review the ORIGINAL inspecting Ustaad (never the child booking).
         void this.jobCompletionNotifier.notifyClientJobCompleted(
           params.originalBookingId,
@@ -1342,7 +1345,7 @@ export class BookingsService {
         return childId;
       }
       case 'ALREADY_DONE': {
-        // Idempotent replay — re-attempt delivery in case the first request
+        // Idempotent replay â€” re-attempt delivery in case the first request
         // died after commit; per-cycle dedup guarantees no worker is pushed
         // twice for the same live cycle.
         const childId = result.childBooking.id;
@@ -1442,11 +1445,11 @@ export class BookingsService {
   }
 
   /**
-   * POST /bookings/:id/worker-cancel — worker cancels an assigned job.
-   * Allowed only while status is ACCEPTED, EN_ROUTE, or ARRIVED — once
+   * POST /bookings/:id/worker-cancel â€” worker cancels an assigned job.
+   * Allowed only while status is ACCEPTED, EN_ROUTE, or ARRIVED â€” once
    * IN_PROGRESS (work/inspection actually started), cancellation is no
    * longer available for any lane. Terminally cancels the booking (status
-   * CANCELLED) rather than returning it to PENDING — it must never silently
+   * CANCELLED) rather than returning it to PENDING â€” it must never silently
    * reappear in New Jobs for another worker to pick up; the client
    * separately triggers reopening (see reopenAfterWorkerCancellation).
    */
@@ -1492,7 +1495,7 @@ export class BookingsService {
       });
     }
 
-    // Cancelling released this worker's `currentlyWorking` flag — they are
+    // Cancelling released this worker's `currentlyWorking` flag â€” they are
     // free again, so surface any still-open nearby job to them now.
     if (workerProfile?.id) {
       void this.jobBroadcastService.matchOpenJobsForWorker(workerProfile.id, {
@@ -1504,7 +1507,7 @@ export class BookingsService {
   }
 
   /**
-   * POST /bookings/:id/reopen-after-cancellation — client action, taken
+   * POST /bookings/:id/reopen-after-cancellation â€” client action, taken
    * after a worker-cancelled booking, to find/hire another worker for the
    * same booking. Only valid while status is CANCELLED with
    * cancelledByRole WORKER (guards against double-reopening and against
@@ -1512,7 +1515,7 @@ export class BookingsService {
    * worker; STANDARD/INSPECTION-without-report clients continue via the
    * existing nearby-worker discovery screen, BIDDING/INSPECTION-with-report
    * get a fresh nearby-worker notification push so other Ustaads can bid
-   * again — mirroring how each lane is notified on first creation.
+   * again â€” mirroring how each lane is notified on first creation.
    */
   async reopenAfterWorkerCancellation(
     userId: string,
@@ -1536,7 +1539,7 @@ export class BookingsService {
       );
     }
     // workerProfileId is deliberately left set after a worker cancellation
-    // (so the cancelling worker still sees it in their own history) — that
+    // (so the cancelling worker still sees it in their own history) â€” that
     // is exactly who must now be excluded from being rehired.
     const cancelledWorkerProfileId = booking.workerProfileId;
     if (!cancelledWorkerProfileId) {
@@ -1561,7 +1564,7 @@ export class BookingsService {
       );
     });
 
-    // The booking is live again, and reopening reset `liveStartedAt` — which
+    // The booking is live again, and reopening reset `liveStartedAt` â€” which
     // starts a NEW broadcast cycle, so eligible workers notified during the
     // previous cycle are reachable once more (exactly once). The cancelling
     // worker is excluded by the exclusion row the reopen just wrote.
@@ -1571,7 +1574,7 @@ export class BookingsService {
   }
 
   /**
-   * PATCH /bookings/:id/relist — client "Make Live Again" on an EXPIRED
+   * PATCH /bookings/:id/relist â€” client "Make Live Again" on an EXPIRED
    * booking. Resets the 72h window and reschedules the expiry job. Existing
    * worker exclusions are left untouched (kept keyed by bookingId).
    */
@@ -1619,14 +1622,14 @@ export class BookingsService {
       entityId: bookingId,
     });
 
-    // Relisting reset `liveStartedAt`, opening a new broadcast cycle — every
+    // Relisting reset `liveStartedAt`, opening a new broadcast cycle â€” every
     // currently-eligible nearby Ustaad may be notified once more.
     void this.jobBroadcastService.broadcastJob(bookingId);
 
     return this._toDto(updated);
   }
 
-  // ── Expiry job management ─────────────────────────────────────────────────
+  // â”€â”€ Expiry job management â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   /**
    * Schedule (or reschedule) the 72h auto-expiry BullMQ job for a booking.
@@ -1658,7 +1661,7 @@ export class BookingsService {
     await this._withQueueTimeout(work(), `scheduleExpiry(${bookingId})`);
   }
 
-  /** Cancel any pending auto-expiry job — call whenever a booking leaves PENDING. */
+  /** Cancel any pending auto-expiry job â€” call whenever a booking leaves PENDING. */
   private async _cancelExpiry(bookingId: string): Promise<void> {
     const work = async () => {
       const jobId = `expire-${bookingId}`;
@@ -1698,7 +1701,7 @@ export class BookingsService {
     });
   }
 
-  // ── Nearby-worker broadcast ───────────────────────────────────────────────
+  // â”€â”€ Nearby-worker broadcast â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   //
   // The three former per-lane fan-outs (_notifyWorkersListedForStandardJob,
   // _notifyNearbyWorkersForBidding, _notifyNearbyWorkersForPostInspectionBidding)
@@ -1706,7 +1709,7 @@ export class BookingsService {
   // leaf MatchingModule and shares its final eligibility decision with the New
   // Jobs feed so notification reach and feed visibility cannot drift.
 
-  // ── Private helpers ────────────────────────────────────────────────────────
+  // â”€â”€ Private helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   private _resolveAttachmentType(mimeType: string): AttachmentType {
     if (mimeType.startsWith('image/')) return AttachmentType.IMAGE;
@@ -1742,8 +1745,8 @@ export class BookingsService {
         }
       : null;
 
-    // The inspecting worker lives on this booking's own report, or — for a
-    // linked repair booking spawned by "Find Other Ustaad" — on the source
+    // The inspecting worker lives on this booking's own report, or â€” for a
+    // linked repair booking spawned by "Find Other Ustaad" â€” on the source
     // inspection booking's report.
     const iwp =
       booking.inspectionReport?.workerProfile ??
@@ -1807,7 +1810,7 @@ export class BookingsService {
       createdAt: e.createdAt.toISOString(),
     }));
 
-    // Most recent exclusion reason/name — drives the client's "Previous
+    // Most recent exclusion reason/name â€” drives the client's "Previous
     // Ustaad [name] cancelled: [reason]" strip while the booking is back in
     // choose-worker state.
     const lastWorkerCancellationReason = workerExclusions[0]?.reason ?? null;
@@ -1866,10 +1869,12 @@ export class BookingsService {
         booking.inspectionReport?.createdAt.toISOString() ?? null,
       sourceInspectionBookingId: booking.sourceInspectionBookingId ?? null,
       linkedRepairBookingId: booking.repairBooking?.id ?? null,
-      // Derived from the ORIGINAL inspection work unit reaching COMPLETED —
+      // Derived from the ORIGINAL inspection work unit reaching COMPLETED â€”
       // never from paymentStatus (a dead column), the existence of a report,
       // or the linked repair's own status. See inspection-fee.util.ts.
       inspectionFeePaid: deriveInspectionFeePaid(booking),
     };
   }
 }
+
+
