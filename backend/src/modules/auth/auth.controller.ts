@@ -6,6 +6,7 @@ import {
   Delete,
   Body,
   Ip,
+  Req,
   HttpCode,
   HttpStatus,
   UseGuards,
@@ -14,7 +15,9 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { Request } from 'express';
 import { AuthService } from './auth.service';
+import { maskPhone } from '../../common/utils/phone.util';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
@@ -82,8 +85,23 @@ export class AuthController {
   /** POST /auth/otp/request — public, purpose-scoped OTP for the SMS flows below. */
   @Post('otp/request')
   @HttpCode(HttpStatus.OK)
-  requestOtp(@Body() dto: RequestOtpDto, @Ip() ip: string) {
-    return this.authService.requestOtp(dto.phone, dto.purpose, ip);
+  requestOtp(@Body() dto: RequestOtpDto, @Req() req: Request) {
+    // TEMPORARY DIAGNOSTIC — remove once the proxy/IP behaviour is confirmed
+    // in production. `req.ip` is what the per-IP abuse cap buckets on; when
+    // `trust proxy` is working it should differ per handset and match the
+    // first entry of x-forwarded-for. Identical values across two devices
+    // means the proxy is still being seen as the client.
+    //
+    // Deliberately carries no OTP and no full phone number.
+    const forwarded = req.headers['x-forwarded-for'];
+    console.log('[OTP IP CHECK]', {
+      ip: req.ip,
+      forwardedFor: forwarded,
+      phone: maskPhone(dto.phone),
+      purpose: dto.purpose,
+    });
+
+    return this.authService.requestOtp(dto.phone, dto.purpose, req.ip ?? '');
   }
 
   /**

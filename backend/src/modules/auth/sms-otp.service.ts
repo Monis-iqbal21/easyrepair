@@ -1,10 +1,33 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
-/** `+9233****427` — never log a full phone number alongside SMS activity. */
-function maskPhone(e164Phone: string): string {
-  if (e164Phone.length <= 8) return '****';
-  return `${e164Phone.slice(0, 5)}****${e164Phone.slice(-3)}`;
+import { maskPhone } from '../../common/utils/phone.util';
+
+/** How long a code stays valid, quoted in the SMS the Ustaad receives. */
+export const OTP_VALIDITY_MINUTES = 5;
+
+/**
+ * The production OTP message.
+ *
+ * Roman Urdu is the language HandyGo's Ustaads and clients actually read, and
+ * it is the one message every number receives — there is no per-user locale on
+ * the OTP request (the endpoint is public and pre-account, so there is no
+ * profile to read a language from, and adding a locale parameter would be a
+ * breaking API change for shipped app builds). The English wording is kept
+ * beside it so the two stay in sync if a locale ever is introduced.
+ *
+ * English: Your HandyGo verification code is {otp}. It expires in {minutes}
+ * minutes. Do not share this code with anyone.
+ */
+export function otpMessage(
+  otp: string,
+  minutes: number = OTP_VALIDITY_MINUTES,
+): string {
+  return (
+    `Aap ka HandyGo verification code ${otp} hai. ` +
+    `Yeh ${minutes} minute mein expire ho jayega. ` +
+    `Yeh code kisi ke saath share na karein.`
+  );
 }
 
 @Injectable()
@@ -33,7 +56,7 @@ export class SmsOtpService {
   async sendOtp(e164Phone: string, otp: string): Promise<boolean> {
     if (!this.isConfigured) return false;
 
-    const message = `HandyGo verification code: ${otp}. Ye code 5 minute mein expire hoga. Kisi ke saath share na karein.`;
+    const message = otpMessage(otp);
 
     const url = new URL(this.apiUrl!);
     url.searchParams.set('apikey', this.apiKey!);

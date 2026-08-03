@@ -11,7 +11,9 @@ describe('AuthService — SMS OTP login/registration', () => {
   let chatService: any;
   let service: AuthService;
 
-  const IP = '10.0.0.1';
+  // A public address: 10.0.0.1 is a private/proxy-side address, which the
+  // service deliberately refuses to rate-limit on (see isUsableClientIp).
+  const IP = '203.0.113.9';
   const PHONE_RAW = '03378372427';
   const PHONE_NORMALIZED = '+923378372427';
 
@@ -49,7 +51,8 @@ describe('AuthService — SMS OTP login/registration', () => {
       countRecentAuthOtpByIp: jest.fn().mockResolvedValue(0),
       mostRecentAuthOtp: jest.fn().mockResolvedValue(null),
       invalidatePreviousAuthOtps: jest.fn().mockResolvedValue(undefined),
-      createAuthOtp: jest.fn().mockResolvedValue(undefined),
+      createAuthOtp: jest.fn().mockResolvedValue('otp-row-1'),
+      deleteAuthOtp: jest.fn().mockResolvedValue(undefined),
       findActiveAuthOtp: jest.fn().mockResolvedValue(null),
       consumeAuthOtp: jest.fn().mockResolvedValue(undefined),
       incrementAuthOtpAttempts: jest.fn().mockResolvedValue(undefined),
@@ -120,7 +123,7 @@ describe('AuthService — SMS OTP login/registration', () => {
     });
 
     it('enforces the IP rate limit', async () => {
-      repository.countRecentAuthOtpByIp.mockResolvedValue(10);
+      repository.countRecentAuthOtpByIp.mockResolvedValue(60);
       await expect(
         service.requestOtp(PHONE_RAW, AuthOtpPurpose.CLIENT_LOGIN_REGISTER, IP),
       ).rejects.toMatchObject({ response: { error: 'OTP_RATE_LIMITED' } });

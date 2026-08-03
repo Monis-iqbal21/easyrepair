@@ -298,8 +298,18 @@ export class AuthRepository {
     otpHash: string;
     expiresAt: Date;
     requestIp: string | null;
-  }): Promise<void> {
-    await this.prisma.authOtp.create({ data });
+  }): Promise<string> {
+    const created = await this.prisma.authOtp.create({ data });
+    return created.id;
+  }
+
+  /**
+   * Removes an OTP row that was written but whose SMS the provider never
+   * accepted. A code the Ustaad cannot possibly have received must not sit
+   * there consuming their resend cooldown and per-phone quota.
+   */
+  async deleteAuthOtp(id: string): Promise<void> {
+    await this.prisma.authOtp.deleteMany({ where: { id } });
   }
 
   async findActiveAuthOtp(

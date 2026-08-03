@@ -28,14 +28,43 @@ import { ForgotPasswordResetDto } from './dto/forgot-password-reset.dto';
 import {
   normalizePakistaniPhone,
   phoneLookupVariants,
+  maskPhone,
 } from '../../common/utils/phone.util';
 
 const OTP_EXPIRY_MS = 5 * 60 * 1000;
 const OTP_RESEND_COOLDOWN_MS = 60 * 1000;
 const OTP_MAX_ATTEMPTS = 5;
 const OTP_MAX_PER_PHONE_PER_WINDOW = 3;
-const OTP_MAX_PER_IP_PER_WINDOW = 10;
+/**
+ * Abuse backstop only — the per-phone cap above is the precise control.
+ *
+ * Pakistani mobile carriers put large numbers of subscribers behind CGNAT, so
+ * many unrelated Ustaads legitimately share one public IP. A cap tight enough
+ * to be a per-user limit would lock those users out of registering at all.
+ */
+const OTP_MAX_PER_IP_PER_WINDOW = 60;
 const OTP_RATE_WINDOW_MS = 30 * 60 * 1000;
+
+/**
+ * Whether [ip] identifies a single caller well enough to rate-limit on.
+ *
+ * Behind a proxy the socket address is the load balancer's, which is the same
+ * for every user on the platform — counting those into one bucket turns a
+ * per-IP abuse cap into a global outage. `trust proxy` in main.ts is what
+ * makes the real client address available; this is the belt to that braces,
+ * so a future proxy misconfiguration degrades to "per-phone limits only"
+ * instead of locking out every Ustaad at once.
+ */
+function isUsableClientIp(ip: string | null | undefined): boolean {
+  if (!ip) return false;
+  const bare = ip.replace(/^::ffff:/, '').trim();
+  if (!bare || bare === '::1' || bare === '127.0.0.1') return false;
+  if (/^10\./.test(bare)) return false;
+  if (/^192\.168\./.test(bare)) return false;
+  if (/^172\.(1[6-9]|2[0-9]|3[01])\./.test(bare)) return false;
+  if (/^fc00:|^fd00:/i.test(bare)) return false;
+  return true;
+}
 
 @Injectable()
 export class AuthService {
@@ -353,7 +382,9 @@ export class AuthService {
       since,
     );
     if (recentCount >= 3) {
-      this.logger.warn(`Password-reset OTP rate limit hit for ${normalized}`);
+      this.logger.warn(
+        `Password-reset OTP rate limit hit for ${maskPhone(normalized)}`,
+      );
       return safeResponse;
     }
 
@@ -390,11 +421,15 @@ export class AuthService {
     if (this.smsOtp.isConfigured) {
       const sent = await this.smsOtp.sendOtp(normalized, otp);
       if (!sent) {
-        this.logger.warn(`Password-reset SMS OTP send failed for ${normalized}`);
+        this.logger.warn(
+          `Password-reset SMS OTP send failed for ${maskPhone(normalized)}`,
+        );
         if (options.surfaceSmsFailure) throw sendFailureError;
       }
     } else if (process.env.NODE_ENV !== 'production') {
-      this.logger.log(`[DEV OTP] phone=${normalized} code=${otp}`);
+      this.logger.log(
+        `[DEV OTP] phone=${maskPhone(normalized)} code=***${otp.slice(-2)}`,
+      );
     } else {
       this.logger.warn(
         'SMS OTP not configured — forgot password OTP not sent',
@@ -509,9 +544,12 @@ export class AuthService {
     }
 
     const since = new Date(Date.now() - OTP_RATE_WINDOW_MS);
+    const trackableIp = isUsableClientIp(ip) ? ip : null;
     const [byPhone, byIp] = await Promise.all([
       this.authRepository.countRecentAuthOtpByPhone(normalized, purpose, since),
-      this.authRepository.countRecentAuthOtpByIp(ip, since),
+      trackableIp
+        ? this.authRepository.countRecentAuthOtpByIp(trackableIp, since)
+        : Promise.resolve(0),
     ]);
     if (byPhone >= OTP_MAX_PER_PHONE_PER_WINDOW || byIp >= OTP_MAX_PER_IP_PER_WINDOW) {
       throw new BadRequestException({
@@ -539,24 +577,31 @@ export class AuthService {
     const expiresAt = new Date(Date.now() + OTP_EXPIRY_MS);
 
     await this.authRepository.invalidatePreviousAuthOtps(normalized, purpose);
-    await this.authRepository.createAuthOtp({
+    const otpId = await this.authRepository.createAuthOtp({
       phone: normalized,
       purpose,
       otpHash,
       expiresAt,
-      requestIp: ip || null,
+      requestIp: trackableIp,
     });
 
     if (this.smsOtp.isConfigured) {
       const sent = await this.smsOtp.sendOtp(normalized, otp);
       if (!sent) {
+        // The Ustaad never got this code, so it must not sit there burning
+        // their 60s resend cooldown and their 3-per-30-minutes quota. Without
+        // this, three provider hiccups lock a real user out for half an hour
+        // over codes that were never delivered.
+        await this.authRepository.deleteAuthOtp(otpId).catch(() => undefined);
         throw new ServiceUnavailableException({
           message: 'SMS bhejne mein masla hua. Dobara koshish karein.',
           error: 'SMS_SEND_FAILED',
         });
       }
     } else if (process.env.NODE_ENV !== 'production') {
-      this.logger.log(`[DEV OTP] phone=${normalized} purpose=${purpose} code=${otp}`);
+      this.logger.log(
+        `[DEV OTP] phone=${maskPhone(normalized)} purpose=${purpose} code=***${otp.slice(-2)}`,
+      );
     } else {
       throw new ServiceUnavailableException({
         message: 'SMS bhejne mein masla hua. Dobara koshish karein.',

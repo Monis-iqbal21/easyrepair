@@ -25,6 +25,18 @@ export function normalizePakistaniPhone(raw: string): string | null {
 }
 
 /**
+ * `+9233****427` — the only shape a phone number may take in a log line.
+ *
+ * Enough to correlate a support report with a log entry, never enough to
+ * reconstruct the subscriber's number from log access alone.
+ */
+export function maskPhone(phone: string): string {
+  if (!phone) return '****';
+  if (phone.length <= 8) return '****';
+  return `${phone.slice(0, 5)}****${phone.slice(-3)}`;
+}
+
+/**
  * Every historical format a phone number stored before this normalization was
  * introduced could plausibly be sitting in the `phone` column as — used to
  * find existing accounts regardless of which format they were created with,
