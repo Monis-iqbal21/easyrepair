@@ -157,6 +157,23 @@ export class AgreementSourceUnavailableError extends Error {
 const TEXT_CACHE = new Map<string, string>();
 
 /**
+ * The canonical form of an approved document.
+ *
+ * A legal document is defined by its characters, not by the line-ending
+ * convention of whichever machine checked it out. Git rewrites `.txt` to CRLF
+ * on a Windows checkout (and a UTF-8 BOM can survive an editor round-trip),
+ * either of which changes the bytes without changing a single word — and would
+ * make the SHA-256 guard below fire on a completely clean tree.
+ *
+ * Normalising here means the pinned hash, the text shown to the Ustaad, and the
+ * `sourceHash` sealed into the acceptance record are identical on every
+ * platform. The hashes in this file were pinned against this LF form.
+ */
+function canonicalise(text: string): string {
+  return text.replace(/^﻿/, '').replace(/\r\n/g, '\n');
+}
+
+/**
  * The exact approved text for one document-language(-trade) version.
  *
  * Verifies the file still hashes to what the registry pinned at ingestion,
@@ -189,7 +206,9 @@ export function loadSourceText(
   const key = sourceKey(documentType, locale, trade);
   let text = TEXT_CACHE.get(key);
   if (text == null) {
-    text = readFileSync(path.join(DOCUMENTS_DIR, descriptor.file), 'utf8');
+    text = canonicalise(
+      readFileSync(path.join(DOCUMENTS_DIR, descriptor.file), 'utf8'),
+    );
     TEXT_CACHE.set(key, text);
   }
 

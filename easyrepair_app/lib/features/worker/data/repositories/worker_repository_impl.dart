@@ -17,6 +17,8 @@ import '../../domain/entities/agreement_template_entity.dart';
 import '../../domain/entities/earning_history_entity.dart';
 import '../../domain/repositories/worker_repository.dart';
 import '../datasources/worker_remote_datasource.dart';
+import '../models/agreement_template_model.dart'
+    show AgreementResponseFormatException;
 
 class WorkerRepositoryImpl implements WorkerRepository {
   final WorkerRemoteDatasource _datasource;
@@ -76,6 +78,8 @@ class WorkerRepositoryImpl implements WorkerRepository {
       return Right(models.map((m) => m.toEntity()).toList());
     } on DioException catch (e) {
       return Left(dioExceptionToFailure(e));
+    } on AgreementResponseFormatException catch (e) {
+      return Left(_malformedAgreementFailure(e));
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
@@ -89,9 +93,20 @@ class WorkerRepositoryImpl implements WorkerRepository {
       return Right(models.map((m) => m.toEntity()).toList());
     } on DioException catch (e) {
       return Left(dioExceptionToFailure(e));
+    } on AgreementResponseFormatException catch (e) {
+      return Left(_malformedAgreementFailure(e));
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
+  }
+
+  /// A malformed agreement payload is a broken API contract, not something the
+  /// Ustaad did. The [Failure] carries no message, so the screen renders its
+  /// own localized "Agreements could not be loaded." wording, while the exact
+  /// missing field goes to the log and to `diagnostic` for support.
+  Failure _malformedAgreementFailure(AgreementResponseFormatException e) {
+    debugPrint('[WorkerRepository] $e');
+    return ServerFailure('', diagnostic: e.toString());
   }
 
   @override

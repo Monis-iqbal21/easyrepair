@@ -1,0 +1,12 @@
+# The approved legal source documents are hash-pinned in
+# agreement-source.registry.ts, and every acceptance record seals that hash as
+# immutable evidence.
+#
+# A CRLF checkout changes the bytes without changing a word, which would make
+# the tamper guard fire on a clean tree. Pin these to LF everywhere so the
+# working copy always matches the form the hashes were computed against.
+#
+# The loader canonicalises line endings as well — this keeps the file on disk
+# honest, that keeps the system correct if anything else ever rewrites it.
+*.txt text eol=lf
+INGEST_MANIFEST.json text eol=lf

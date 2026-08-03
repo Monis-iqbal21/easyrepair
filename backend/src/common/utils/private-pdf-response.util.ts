@@ -33,8 +33,16 @@ export function sendPrivatePdf(res: Response, pdf: PrivatePdfPayload): void {
  * Strips anything that could break out of the quoted filename or escape a
  * directory. Defensive only — callers already build the name from a generated
  * acceptance id.
+ *
+ * Traversal segments are collapsed rather than just having their separators
+ * replaced: turning `../../x` into `-..-x` removes the slashes but leaves a
+ * name a client could still mishandle when saving it.
  */
 export function safeFileName(name: string): string {
-  const cleaned = name.replace(/[^A-Za-z0-9._-]/g, '-').replace(/^\.+/, '');
+  const cleaned = name
+    .replace(/[^A-Za-z0-9._-]/g, '-')
+    // Any run of dots collapses to one, so `..` can never survive.
+    .replace(/\.{2,}/g, '.')
+    .replace(/^[.-]+/, '');
   return cleaned || 'document.pdf';
 }

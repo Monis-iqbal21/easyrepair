@@ -8,7 +8,7 @@ Every literal that `tool/extract_ui_strings.py` finds in a user-visible position
 |---|---|---|
 | 1 | Dynamic / user / backend content that must remain unchanged | 50 |
 | 2 | _Retired_ — bottom-navigation labels are translated now | 0 |
-| 3 | Internal technical value, or a fixed name no language changes | 236 |
+| 3 | Internal technical value, or a fixed name no language changes | 234 |
 | 4 | **Missed app-owned visible text that must be localized** | **0** |
 | 5 | Approved English-only legal document content awaiting professional translation | 64 |
 
@@ -403,12 +403,10 @@ Category 5 is a product and legal decision, not missed work. The Privacy Policy 
 | `lib/features/client/presentation/widgets/service_data.dart` | 245 | `Keep Your Home Running` | 3 | Unreachable legacy scaffold - nothing routes to or imports it |
 | `lib/features/client/presentation/widgets/service_data.dart` | 248 | `Gardening` | 3 | Unreachable legacy scaffold - nothing routes to or imports it |
 | `lib/features/client/presentation/widgets/service_data.dart` | 256 | `Car Wash` | 3 | Unreachable legacy scaffold - nothing routes to or imports it |
-| `lib/features/worker/data/models/agreement_template_model.dart` | 32 | `ur_Latn` | 3 | BCP-47 locale subtag / persisted settings value, not display copy |
-| `lib/features/worker/data/models/agreement_template_model.dart` | 38 | `ur_Latn` | 3 | BCP-47 locale subtag / persisted settings value, not display copy |
-| `lib/features/worker/data/models/agreement_template_model.dart` | 88 | `ur_Latn` | 3 | BCP-47 locale subtag / persisted settings value, not display copy |
+| `lib/features/worker/data/models/agreement_template_model.dart` | 21 | `Malformed $resource response: "$field" is missing or not a string. ` | 3 | Developer diagnostic carried in Failure.diagnostic, never shown (// l10n-ignore) |
 | `lib/features/worker/data/models/earning_history_model.dart` | 24 | `Service` | 3 | Data-layer default for a backend free-text field |
 | `lib/features/worker/data/models/worker_review_model.dart` | 27 | `Service` | 3 | Data-layer default for a backend free-text field |
-| `lib/features/worker/data/repositories/worker_repository_impl.dart` | 161 | `ur_Latn` | 3 | BCP-47 locale subtag / persisted settings value, not display copy |
+| `lib/features/worker/data/repositories/worker_repository_impl.dart` | 176 | `ur_Latn` | 3 | BCP-47 locale subtag / persisted settings value, not display copy |
 | `lib/features/worker/domain/entities/new_job_entity.dart` | 28 | `$firstName $lastName` | 1 | Pure interpolation of dynamic/user/backend data |
 | `lib/features/worker/presentation/pages/inspection_report_form_page.dart` | 726 | `$m:$s` | 1 | Pure interpolation of dynamic/user/backend data |
 | `lib/features/worker/presentation/pages/worker_bid_page.dart` | 421 | `${job.addressLine}, ${job.city}` | 1 | Pure interpolation of dynamic/user/backend data |
