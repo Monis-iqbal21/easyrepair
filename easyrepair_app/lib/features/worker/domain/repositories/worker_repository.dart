@@ -20,19 +20,34 @@ abstract class WorkerRepository {
     String? fullLegalName,
     String? residentialAddress,
     String? cnicNumber,
+    String? fatherName,
+    String? dateOfBirth,
+    String? emergencyContact,
     int? experienceYears,
     bool? legalNameConfirmed,
-    bool? generalAgreementAccepted,
-    bool? tradeAgreementAccepted,
   });
 
   Future<Either<Failure, String>> uploadCnicFront(File file);
   Future<Either<Failure, String>> uploadCnicBack(File file);
   Future<Either<Failure, String>> uploadLiveSelfie(File file);
-  Future<Either<Failure, void>> submitProfileForReview();
 
-  /// Exact text/version of the agreements the worker is about to accept.
-  Future<Either<Failure, List<AgreementTemplateEntity>>> getAgreementTemplates();
+  /// Seals the three acceptance records and submits the profile for review.
+  /// [agreements] must carry exactly one evidence object per Ustaad document.
+  Future<Either<Failure, List<AcceptedAgreementEntity>>> submitProfileForReview({
+    required String submissionAttemptId,
+    required List<AgreementEvidence> agreements,
+  });
+
+  /// All three agreements the worker must read, in [appLocale].
+  Future<Either<Failure, List<AgreementTemplateEntity>>> getAgreementTemplates({
+    required String appLocale,
+  });
+
+  /// The worker's own sealed acceptance records.
+  Future<Either<Failure, List<AcceptedAgreementEntity>>> getMyAgreements();
+
+  /// The accepted PDF bytes for one of the worker's own acceptances.
+  Future<Either<Failure, List<int>>> downloadAgreementPdf(String acceptanceId);
 
   Future<Either<Failure, AvailabilityStatus>> updateAvailability({
     required AvailabilityStatus status,

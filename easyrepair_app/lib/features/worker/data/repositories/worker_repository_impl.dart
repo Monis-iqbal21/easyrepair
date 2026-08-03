@@ -40,20 +40,22 @@ class WorkerRepositoryImpl implements WorkerRepository {
     String? fullLegalName,
     String? residentialAddress,
     String? cnicNumber,
+    String? fatherName,
+    String? dateOfBirth,
+    String? emergencyContact,
     int? experienceYears,
     bool? legalNameConfirmed,
-    bool? generalAgreementAccepted,
-    bool? tradeAgreementAccepted,
   }) async {
     try {
       await _datasource.updateProfileCompletion(
         fullLegalName: fullLegalName,
         residentialAddress: residentialAddress,
         cnicNumber: cnicNumber,
+        fatherName: fatherName,
+        dateOfBirth: dateOfBirth,
+        emergencyContact: emergencyContact,
         experienceYears: experienceYears,
         legalNameConfirmed: legalNameConfirmed,
-        generalAgreementAccepted: generalAgreementAccepted,
-        tradeAgreementAccepted: tradeAgreementAccepted,
       );
       return const Right(null);
     } on DioException catch (e) {
@@ -64,11 +66,40 @@ class WorkerRepositoryImpl implements WorkerRepository {
   }
 
   @override
-  Future<Either<Failure, List<AgreementTemplateEntity>>>
-      getAgreementTemplates() async {
+  Future<Either<Failure, List<AgreementTemplateEntity>>> getAgreementTemplates({
+    required String appLocale,
+  }) async {
     try {
-      final models = await _datasource.getAgreementTemplates();
+      final models = await _datasource.getAgreementTemplates(
+        locale: appLocale,
+      );
       return Right(models.map((m) => m.toEntity()).toList());
+    } on DioException catch (e) {
+      return Left(dioExceptionToFailure(e));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<AcceptedAgreementEntity>>>
+      getMyAgreements() async {
+    try {
+      final models = await _datasource.getMyAgreements();
+      return Right(models.map((m) => m.toEntity()).toList());
+    } on DioException catch (e) {
+      return Left(dioExceptionToFailure(e));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<int>>> downloadAgreementPdf(
+    String acceptanceId,
+  ) async {
+    try {
+      return Right(await _datasource.downloadAgreementPdf(acceptanceId));
     } on DioException catch (e) {
       return Left(dioExceptionToFailure(e));
     } catch (e) {
@@ -110,10 +141,31 @@ class WorkerRepositoryImpl implements WorkerRepository {
   }
 
   @override
-  Future<Either<Failure, void>> submitProfileForReview() async {
+  Future<Either<Failure, List<AcceptedAgreementEntity>>> submitProfileForReview({
+    required String submissionAttemptId,
+    required List<AgreementEvidence> agreements,
+  }) async {
     try {
-      await _datasource.submitProfileForReview();
-      return const Right(null);
+      final summaries = await _datasource.submitProfileForReview(
+        submissionAttemptId: submissionAttemptId,
+        agreements: agreements.map((e) => e.toJson()).toList(),
+      );
+      return Right(
+        summaries.map((json) {
+          return AcceptedAgreementEntity(
+            id: json['id'] as String? ?? '',
+            acceptanceId: json['acceptanceId'] as String?,
+            documentType: json['documentType'] as String?,
+            title: json['title'] as String? ?? '',
+            version: json['version'] as String? ?? '',
+            agreementLocale: json['agreementLocale'] as String? ?? 'ur_Latn',
+            applicableTrade: json['applicableTrade'] as String?,
+            acceptedAt:
+                DateTime.tryParse(json['acceptedAt'] as String? ?? '') ??
+                    DateTime.now(),
+          );
+        }).toList(),
+      );
     } on DioException catch (e) {
       return Left(dioExceptionToFailure(e));
     } catch (e) {

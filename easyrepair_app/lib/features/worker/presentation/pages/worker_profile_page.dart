@@ -21,6 +21,7 @@ import '../../../../core/presentation/pages/privacy_policy_page.dart';
 import '../../../../core/presentation/pages/terms_conditions_page.dart';
 import '../pages/worker_reviews_page.dart';
 import '../pages/earning_history_page.dart';
+import '../pages/worker_agreements_page.dart';
 import '../providers/worker_providers.dart';
 import '../providers/worker_review_providers.dart';
 import '../widgets/worker_bottom_nav_bar.dart';
@@ -415,6 +416,17 @@ class _WorkerProfilePageState extends ConsumerState<WorkerProfilePage> {
                     const SizedBox(height: 10),
                     _SettingsCard(
                       items: [
+                        // The Ustaad's own permanently accepted agreements —
+                        // view and download, scoped to their account only.
+                        _SettingsItem(
+                          icon: Icons.gavel_rounded,
+                          label: context.l10n.workerAcceptedAgreementsTitle,
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const WorkerAgreementsPage(),
+                            ),
+                          ),
+                        ),
                         _SettingsItem(
                           icon: Icons.shield_outlined,
                           label: context.l10n.settingsPrivacyPolicy,

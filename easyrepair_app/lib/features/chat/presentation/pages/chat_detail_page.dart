@@ -24,13 +24,21 @@ import 'chat_list_page.dart' show kSupportAvatarAsset;
 
 class ChatDetailPage extends ConsumerStatefulWidget {
   final String conversationId;
-  /// Route to navigate to when back is pressed and there's nothing to pop.
-  final String? backRoute;
+
+  /// Where to land when back is pressed and there is genuinely nothing to pop
+  /// — i.e. a notification or deep link opened this conversation directly, so
+  /// no originating screen exists.
+  ///
+  /// This is a fallback, never a destination: when the conversation was pushed
+  /// from another screen, back pops to that screen and this is not consulted.
+  /// It was previously named `backRoute` and applied unconditionally, which is
+  /// what sent every conversation back to the Chats tab.
+  final String? fallbackRoute;
 
   const ChatDetailPage({
     super.key,
     required this.conversationId,
-    this.backRoute,
+    this.fallbackRoute,
   });
 
   @override
@@ -689,19 +697,41 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
     final participant = conversation?.otherParticipant;
     final isSupport = conversation?.isSupport ?? false;
 
-    // Always go to the explicit back route when one is provided.
-    // Using canPop() as primary check breaks notification-opened pages
-    // (no history stack) — they would exit the app instead of going to chat list.
+    // A conversation is opened from many places — the Chats tab, the workers
+    // list, an Ustaad's detail page, a booking, a job — so back must return to
+    // whichever of those pushed it. That is exactly what popping does, so the
+    // normal pop is left alone rather than being redirected anywhere.
+    //
+    // The one case with nothing to pop is a notification or deep link that
+    // cold-starts the app straight into a conversation. Only there does
+    // [fallbackRoute] apply, so the user lands on the conversation list
+    // instead of the app closing.
+    //
+    // The Navigator is asked, not GoRouter. PopScope is a Navigator mechanism
+    // and the Navigator is the one that knows the true stack — including pages
+    // pushed imperatively with MaterialPageRoute, which GoRouter's match list
+    // does not contain (the workers list and Ustaad map are pushed that way).
+    // It also keeps this page usable without a GoRouter ancestor, since this
+    // runs on every build.
+    //
+    // Popping through the Navigator still keeps GoRouter in step: its
+    // onPopPageWithRouteMatch callback fires for any removal of one of its
+    // pages and updates the match list.
+    final canPop = Navigator.canPop(context);
+
     void handleBack() {
-      if (widget.backRoute != null) {
-        context.go(widget.backRoute!);
-      } else if (context.canPop()) {
-        context.pop();
+      if (canPop) {
+        Navigator.pop(context);
+      } else if (widget.fallbackRoute != null) {
+        context.go(widget.fallbackRoute!);
       }
     }
 
     return PopScope(
-      canPop: false,
+      // True whenever real history exists, so the Android system back button
+      // and the browser back button are handled by the framework and are not
+      // intercepted at all.
+      canPop: canPop,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) handleBack();
       },

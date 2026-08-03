@@ -8,9 +8,13 @@ import 'package:pinput/pinput.dart';
 
 import '../../support/l10n_test_app.dart';
 
-/// Urdu flips the interface right-to-left, but a handful of values are Latin or
-/// numeric and become unusable when mirrored. These must stay left-to-right
-/// inside an otherwise RTL screen.
+/// HandyGo is never mirrored — the whole interface is left-to-right in every
+/// language (see locale_switching_test.dart). These fields go further and pin
+/// their *own* direction rather than inheriting it, so a Latin or numeric value
+/// stays readable even if the ambient direction were ever to change again.
+///
+/// That belt-and-braces matters: the app-wide pin lives in one delegate, and
+/// a phone number or OTP rendered right-to-left is not a cosmetic bug.
 
 Future<TextField> _pumpField(
   WidgetTester tester, {
@@ -36,11 +40,11 @@ Future<TextField> _pumpField(
 
 void main() {
   group('inputs that must stay LTR under Urdu', () {
-    testWidgets('the page around them really is RTL', (tester) async {
+    testWidgets('the page around them is LTR even in Urdu', (tester) async {
       await _pumpField(tester, keyboardType: TextInputType.phone);
 
       final scaffold = tester.element(find.byType(Scaffold));
-      expect(Directionality.of(scaffold), TextDirection.rtl);
+      expect(Directionality.of(scaffold), TextDirection.ltr);
     });
 
     testWidgets('phone number field', (tester) async {

@@ -20,4 +20,11 @@ export class ConversationResponseDto {
   otherParticipant: ConversationParticipantDto;
   /** Messages sent by others in this conversation that the caller hasn't seen yet */
   unreadCount: number;
+  /**
+   * True for the user's single HandyGo Support thread. Derived from the
+   * support system user being one of the participants — there is no schema
+   * discriminator. The app pins this conversation to the top of the Chat tab
+   * and renders the bundled HandyGo logo as its avatar.
+   */
+  isSupport?: boolean;
 }

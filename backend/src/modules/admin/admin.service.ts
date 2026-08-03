@@ -3,21 +3,40 @@ import { FaceMatchStatus, TrainingStatus } from '@prisma/client';
 import { AdminRepository, WorkerProfileAdminView } from './admin.repository';
 import { PendingWorkerResponseDto } from './dto/pending-worker-response.dto';
 import { AdminStatsResponseDto } from './dto/admin-stats-response.dto';
-import { AgreementsService } from '../agreements/agreements.service';
+import { UstaadAgreementAccessService } from '../agreements/ustaad-agreement-access.service';
 import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class AdminService {
   constructor(
     private readonly adminRepository: AdminRepository,
-    private readonly agreementsService: AgreementsService,
+    private readonly ustaadAgreementAccess: UstaadAgreementAccessService,
     private readonly notificationsService: NotificationsService,
   ) {}
 
-  /** GET /admin/workers/:id/agreements — permanent acceptance records + PDF URLs. */
+  /**
+   * GET /admin/workers/:id/agreements
+   * Permanent acceptance records with their full evidence (acceptance id,
+   * language, trade, and the source/accepted/PDF hashes). Metadata only — the
+   * storage URL is never returned; downloads go through the endpoint below.
+   * Customer documents are excluded at the query level.
+   */
   async getWorkerAgreements(workerProfileId: string) {
     await this._ensureExists(workerProfileId);
-    return this.agreementsService.listAcceptancesForWorker(workerProfileId);
+    return this.ustaadAgreementAccess.listForWorker(workerProfileId);
+  }
+
+  /**
+   * GET /admin/workers/:id/agreements/:acceptanceId/download
+   * The accepted PDF bytes. Scoped to the worker in the path, so a mistyped or
+   * guessed id belonging to a different Ustaad is rejected rather than served.
+   */
+  async downloadWorkerAgreement(
+    workerProfileId: string,
+    acceptanceId: string,
+  ) {
+    await this._ensureExists(workerProfileId);
+    return this.ustaadAgreementAccess.getPdf(acceptanceId, workerProfileId);
   }
 
   /** GET /admin/workers/pending — worker profiles submitted and awaiting review. */

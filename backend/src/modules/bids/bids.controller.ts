@@ -38,7 +38,12 @@ export class BidsController {
     @Param('id') bookingId: string,
     @Body() dto: CreateBidDto,
   ): Promise<BidWithRelations> {
-    return this.bidsService.createBid(user.id, bookingId, dto.amount, dto.message);
+    return this.bidsService.createBid(
+      user.id,
+      bookingId,
+      dto.amount,
+      dto.message,
+    );
   }
 
   /**
@@ -96,10 +101,7 @@ export class BidsController {
   @Post('bids/:id/accept')
   @Roles(Role.CLIENT)
   @HttpCode(HttpStatus.OK)
-  acceptBid(
-    @CurrentUser() user: { id: string },
-    @Param('id') bidId: string,
-  ) {
+  acceptBid(@CurrentUser() user: { id: string }, @Param('id') bidId: string) {
     return this.bidsService.acceptBid(user.id, bidId);
   }
 }

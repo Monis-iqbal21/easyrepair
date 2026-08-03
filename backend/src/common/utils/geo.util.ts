@@ -11,7 +11,9 @@ export function haversineKm(
   const dLng = _deg2rad(lng2 - lng1);
   const a =
     Math.sin(dLat / 2) ** 2 +
-    Math.cos(_deg2rad(lat1)) * Math.cos(_deg2rad(lat2)) * Math.sin(dLng / 2) ** 2;
+    Math.cos(_deg2rad(lat1)) *
+      Math.cos(_deg2rad(lat2)) *
+      Math.sin(dLng / 2) ** 2;
   return +(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))).toFixed(2);
 }
 

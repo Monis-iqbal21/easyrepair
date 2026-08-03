@@ -213,3 +213,77 @@ describe('WorkersRepository.getJobStats / getEarningsHistory narrowing', () => {
     expect(history[0].grossTotal).toBe(3000);
   });
 });
+
+/**
+ * The Home dashboard's "Active Job" card and the activeJobs stat must agree
+ * on what "active" means. They used to be written out separately and
+ * findOngoingJob omitted ARRIVED, so an Ustaad who had tapped "Arrived"
+ * disappeared from the dashboard while still showing under My Jobs.
+ */
+describe('WorkersRepository.findOngoingJob', () => {
+  let prisma: any;
+  let repo: WorkersRepository;
+
+  beforeEach(() => {
+    prisma = {
+      booking: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        count: jest.fn().mockResolvedValue(0),
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+      inspectionReport: {
+        count: jest.fn().mockResolvedValue(0),
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+    };
+    repo = new WorkersRepository(prisma);
+  });
+
+  it('treats every assigned-but-unfinished status as active, including ARRIVED', async () => {
+    await repo.findOngoingJob('worker-1');
+
+    const where = prisma.booking.findFirst.mock.calls[0][0].where;
+    expect(where.workerProfileId).toBe('worker-1');
+    expect([...where.status.in].sort()).toEqual(
+      ['ACCEPTED', 'ARRIVED', 'EN_ROUTE', 'IN_PROGRESS'].sort(),
+    );
+  });
+
+  it('never surfaces a finished or abandoned job', async () => {
+    await repo.findOngoingJob('worker-1');
+
+    const statuses: string[] = prisma.booking.findFirst.mock.calls[0][0].where
+      .status.in;
+    for (const terminal of ['COMPLETED', 'CANCELLED', 'REJECTED', 'EXPIRED', 'PENDING']) {
+      expect(statuses).not.toContain(terminal);
+    }
+  });
+
+  it('is lane-agnostic, so inspection and rehired assignments surface too', async () => {
+    await repo.findOngoingJob('worker-1');
+
+    const where = prisma.booking.findFirst.mock.calls[0][0].where;
+    expect(where).not.toHaveProperty('lane');
+    expect(where).not.toHaveProperty('sourceInspectionBookingId');
+  });
+
+  it('agrees with the activeJobs stat on the definition of active', async () => {
+    await repo.findOngoingJob('worker-1');
+    const dashboard: string[] = prisma.booking.findFirst.mock.calls[0][0].where
+      .status.in;
+
+    prisma.booking.count.mockClear();
+    await repo.getJobStats('worker-1');
+    const statCall = prisma.booking.count.mock.calls.find(
+      (c: any[]) =>
+        Array.isArray(c[0]?.where?.status?.in) &&
+        c[0].where.status.in.includes('IN_PROGRESS') &&
+        !c[0].where.status.in.includes('COMPLETED'),
+    );
+
+    expect(statCall).toBeDefined();
+    expect([...statCall![0].where.status.in].sort()).toEqual(
+      [...dashboard].sort(),
+    );
+  });
+});

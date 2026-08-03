@@ -36,12 +36,12 @@ enum AppLocale {
         AppLocale.romanUrdu => 'Roman Urdu',
       };
 
-  /// Only Urdu script is right-to-left. Roman Urdu is Latin script and must
-  /// stay left-to-right.
-  TextDirection get textDirection => switch (this) {
-        AppLocale.urdu => TextDirection.rtl,
-        AppLocale.english || AppLocale.romanUrdu => TextDirection.ltr,
-      };
+  /// HandyGo never mirrors its interface: the layout is left-to-right in all
+  /// three languages, and Urdu changes the words only. Enforced app-wide by
+  /// `AlwaysLtrWidgetsLocalizationsDelegate`, which pins the ambient
+  /// `Directionality`; this getter exists so nothing has to re-derive the
+  /// answer per-locale and accidentally reintroduce RTL.
+  TextDirection get textDirection => TextDirection.ltr;
 
   /// Reads a persisted value, falling back to English for anything unknown
   /// (missing key, corrupted value, or a language removed in a later release).

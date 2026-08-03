@@ -1,0 +1,343 @@
+HANDYGO TRADE-SPECIFIC SERVICE
+                    AGREEMENTS
+
+Document Version: 1.0
+Effective Date: Ustaad ke sign ya electronic acceptance ki tareekh
+Website: www.handygo.ai
+
+COMPANY DETAILS
+
+Company: HandyGo (Private) Limited
+Registration/CUIN Number: 0346585
+Registered Office: 13th Floor, Nacon House, Din Mohammad Wafai Road,
+Civil Lines, Karachi 74000
+Legal Email: legal@handygo.ai
+Support Email: support@handygo.ai
+Support Number: 0332-0219006
+
+ZAROORI ACCEPTANCE RULE
+
+Har Trade-Specific Agreement, General Ustaad Service Provider
+Agreement se alag document hai.
+
+App mein:
+
+   ● Har trade ka apna title aur version hoga;
+   ● Complete document parhne aur download karne ka option hoga;
+   ● Checkbox pehle se selected nahi hoga;
+   ● Har acceptance ka alag Unique Acceptance ID hoga;
+   ● Accepted document ka complete snapshot aur hash save hoga;
+   ● Ustaad ko acceptance PDF download karne ka option diya jayega.
+
+Agar Ustaad ek se zyada trades ke liye approved ho to usay har trade ka:
+   ● Required assessment separately complete karna hoga;
+   ● Trade Agreement separately accept karna hoga.
+
+Ek trade ki acceptance doosre trade mein kaam karne ki permission nahi
+deti.
+
+COMMON TRADE-SPECIFIC TERMS
+
+Yeh common terms Electrician, Plumber, AC Technician aur Carpenter ke
+har Trade-Specific Agreement par apply hongi.
+
+1. GENERAL AGREEMENT KE SAATH TALLUQ
+
+1.1 Yeh Trade-Specific Service Agreement, General Ustaad Service
+Provider Agreement ka additional hissa hai.
+1.2 General Agreement ki tamam applicable conditions continue rahengi.
+1.3 Jahan is Trade Agreement mein safety, scope ya competence ki zyada
+specific condition di gayi ho, wahan woh specific condition follow hogi.
+
+2. SIRF APPROVED SERVICES
+
+2.1 Ustaad sirf woh individual service tags perform karega jo uske
+HandyGo account par enabled hon.
+2.2 Service approval in cheezon par based ho sakti hai:
+
+   ● Documented skills;
+   ● Experience;
+   ● Training aur assessment;
+
+   ● Required tools;
+   ● Testing equipment;
+   ● PPE;
+   ● Background verification;
+   ● Service-specific conditions.
+
+2.3 Account par enable na hone wali service perform nahi ki jayegi.
+
+3. POORE TRADE KI AUTOMATIC PERMISSION NAHI
+
+3.1 Sirf Electrician, Plumber, AC Technician ya Carpenter ke taur par
+approval milne ka matlab yeh nahi ke Ustaad us trade ka har installation,
+repair, diagnosis ya specialist kaam kar sakta hai.
+
+3.2 Har service ki permission account par enabled service tag ke mutabiq
+hogi.
+
+4. TECHNICAL AUR LEGAL REQUIREMENTS
+
+Ustaad applicable situation mein yeh requirements follow karega:
+
+   ● Pakistan aur Sindh ke applicable qawaneen;
+   ● Regulator aur utility requirements;
+   ● Building aur society rules;
+   ● Manufacturer ki instructions;
+   ● Equipment ki safe ratings;
+   ● Active HandyGo Service Catalog;
+   ● Customer-approved booking scope;
+   ● HandyGo Trade Academy requirements;
+   ● General SOPs;
+   ● Incorporated HandyGo policies.
+
+5. COMPETENCE, TOOLS AUR PPE
+
+5.1 Ustaad koi service accept nahi karega jab uske paas required:
+
+   ● Assessed skill;
+   ● Safe tools;
+   ● Testing equipment;
+   ● PPE;
+   ● Transport;
+   ● Safe access arrangement;
+   ● Required helper ya team
+
+available na ho.
+
+5.2 Customer ki urgency unsafe tool, missing PPE ya out-of-skill work ko
+allowed nahi banati.
+
+6. STOP-WORK RULE
+
+Ustaad kaam rokega, decline karega ya HandyGo ko escalate karega agar:
+
+   ● Safe isolation confirm na ho;
+   ● Job approved service tag se bahar ho;
+   ● Required tools ya PPE available na hon;
+   ● Customer unsafe ya illegal shortcut kahe;
+   ● Unexpected serious hazard samne aaye;
+   ● Scope mein important tabdeeli ho;
+   ● Kaam safe tareeqe se perform na kiya ja sake.
+
+7. CUSTOMER KI APPROVAL
+
+Customer ki recorded approval aur jahan required ho Operations approval
+ke baghair yeh kaam nahi hoga:
+
+   ● Additional trade work;
+   ● Extra part ya material;
+   ● Additional service;
+   ● Opening ya demolition;
+   ● Specialist equipment;
+   ● Equipment rental;
+   ● Revised price;
+   ● Different specification;
+   ● Scope increase.
+
+8. EVIDENCE AUR TESTING
+
+8.1 Ustaad sirf service area ki minimum necessary photos, videos aur
+evidence record karega.
+
+8.2 Ustaad apni approved competence ke andar required final checks
+karega.
+
+8.3 Yeh serious violations hain:
+
+   ● Fake test;
+   ● Fake meter reading;
+   ● Fake calibration;
+   ● Fake diagnosis;
+   ● Fake photo;
+   ● Fake completion record;
+   ● Jhooti technical report.
+
+9. HIGHER-RISK SERVICE ACCESS
+
+9.1 Zyada technical ya safety risk wali service tabhi enable hogi jab
+Ustaad:
+
+   ● Applicable assessment pass kare;
+   ● Specialist tools rakhta ho;
+   ● Required PPE rakhta ho;
+   ● Required certificate ya credential provide kare;
+   ● Service tag ke liye explicit approval hasil kare.
+9.2 Higher-risk service approval policy ya incident ke mutabiq dobara
+assess ki ja sakti hai.
+
+10. CROSS-TRADE WORK
+
+10.1 Agar job mein kisi doosre trade ka kaam required ho to Ustaad
+andazay ya hidden helper ke through woh kaam nahi karega.
+10.2 Har required trade skill separately approved honi chahiye.
+10.3 Doosre trade ka kaam official HandyGo coordination ke through
+karwaya jayega.
+
+SCHEDULE E — ELECTRICIAN
+TRADE-SPECIFIC AGREEMENT
+
+E1. AAM APPROVED SERVICES
+
+Account par enabled service tags ke mutabiq approved work mein yeh
+shamil ho sakta hai:
+
+   ● Residential fan ki same-type installation ya replacement;
+   ● Light ki installation ya replacement;
+   ● Switch ki installation ya replacement;
+   ● Socket ki installation ya replacement;
+
+   ● Fixture ki same-type fitting ya replacement;
+   ● Bijli band karke simple inspection;
+   ● Accessible aur low-complexity termination correction.
+
+Yeh examples automatic permission nahi hain. Final permission account ke
+enabled service tags ke mutabiq hogi.
+
+E2. ADDITIONAL APPROVAL YA SPECIALIST
+COORDINATION
+
+In services ke liye explicit service approval ya authorized specialist
+coordination required hogi:
+
+   ● Distribution board ka kaam;
+   ● Breaker ya circuit configuration;
+   ● Chhupe hue electrical fault ki investigation;
+   ● High-load connection;
+   ● Earthing-related work;
+   ● Generator interface;
+   ● Inverter interface;
+   ● Solar interface;
+   ● Pump electrical interface;
+   ● Naya electrical circuit;
+   ● Live ya energized diagnostic exposure.
+
+E3. PROHIBITED YA REFER KIYE JANE WALE KAAM
+
+Separate specialist approval ke baghair Ustaad yeh kaam nahi karega:
+
+   ● Utility meter ka kaam;
+   ● Sealed electrical equipment kholna;
+   ● Service line ka kaam;
+   ● Electric pole ya transformer ka kaam;
+
+   ● Illegal electrical connection;
+   ● Meter bypass;
+   ● Safety ya protective device bypass;
+   ● High-voltage work;
+   ● Industrial three-phase work;
+   ● Fire-damaged electrical system;
+   ● Flooded ya wet energized system;
+   ● Structurally damaged electrical system;
+   ● Approved survey aur design ke baghair full-home rewiring;
+   ● Approved survey aur design ke baghair major load design;
+   ● Aisa kaam jahan electrical isolation identify, control aur verify na ki ja
+
+       sake.
+
+E4. MANDATORY SAFETY CONTROLS
+
+   ● Default tareeqa bijli band karke kaam karna hai.
+   ● Bijli ko ghalti se dobara on hone se roka jayega.
+   ● Suitable testing equipment se condition verify ki jayegi.
+   ● Damaged tester use nahi hoga.
+   ● Damaged probes use nahi hongi.
+   ● Damaged insulation wala tool use nahi hoga.
+   ● Wrongly rated tool use nahi hoga.
+   ● Pani, burning smell, smoke, sparks/arcing, melted insulation ya
+
+       uncontrolled backfeed par kaam foran roka jayega.
+   ● Customer ke kehne par oversized fuse ya breaker nahi lagaya
+
+       jayega.
+   ● Direct connection ya bypass connection nahi ki jayegi.
+
+E5. QUALITY CLOSURE
+
+Kaam complete karne se pehle:
+
+   ● Connections secure hon;
+   ● Terminals secure hon;
+   ● Exposed copper na chhora jaye;
+   ● Loose connection na rahe;
+   ● Bypass na rahe;
+   ● Compatible aur correctly rated components use hon;
+   ● Covers aur enclosures dobara properly lagaye jayen;
+   ● Applicable functional aur safety observation ki jaye;
+   ● Customer ko work aur important safety information samjhayi jaye.
+
+E6. ELECTRICIAN ACCEPTANCE RECORD
+
+Document Title: HandyGo Electrician Trade-Specific Service Agreement
+Document Version: 1.0
+Effective Date: Sign ya electronic acceptance ki tareekh
+
+Ustaad ka Legal Naam: ____________________________________
+
+Ustaad Account ID: _______________________________________
+
+CNIC Number: ____________________________________________
+
+Registered Mobile Number: _________________________________
+
+Approved Electrician Service Tags: _________________________
+
+Electrician Ustaad confirm karta hai:
+
+□ Maine complete Electrician Trade-Specific Service Agreement parha aur
+review kiya hai.
+
+□ Main sirf apne account par enabled Electrician service tags perform
+karunga.
+
+□ Main unsafe ya out-of-scope electrical work rokunga.
+
+□ Main samajhta hoon ke mere enabled service tags se bahar electrical
+work ke liye separate assessment, approval ya specialist coordination
+required hogi.
+□ Main samajhta hoon ke ek doosre trade ki approval mujhe electrical work
+ki permission nahi deti.
+□ Main is Agreement ko apne registered HandyGo account ke through
+electronically accept karta hoon.
+Electronic Acceptance Date/Time: ___________________________
+Unique Acceptance ID: ___________________________________
+Document Snapshot/Hash Reference: ________________________
+Device/Session/IP Reference: ______________________________
+Accepted Agreement/PDF Ustaad ko available ki gayi: □ Haan □ Nahi
+
+ELECTRONIC ACCEPTANCE
+REQUIREMENTS
+
+Har accepted Trade-Specific Agreement ke record mein yeh information
+save ki jayegi:
+
+   ● Ustaad ka complete legal naam;
+   ● CNIC Number;
+   ● Registered mobile number;
+   ● Ustaad Account ID;
+   ● Exact trade document title;
+   ● Document version;
+   ● Complete document snapshot;
+   ● Document hash;
+   ● Acceptance ki exact date aur time;
+   ● Unique Acceptance ID;
+   ● Device aur session information;
+   ● IP reference, jahan lawful ho;
+   ● Checkbox/action record;
+   ● CNIC front/back aur live selfie verification reference.
+
+Accepted document version overwrite nahi ki jayegi.
+
+Material change ki surat mein:
+
+   ● Naya document version issue hoga;
+   ● Ustaad ko complete updated document diya jayega;
+   ● Fresh electronic acceptance li jayegi.
+
+Acceptance PDF mein yeh statement diya ja sakta hai:
+
+“Yeh Trade-Specific Service Agreement Ustaad ne HandyGo
+application ke through electronically accept kiya.”
+
+END OF HANDYGO TRADE-SPECIFIC
+SERVICE AGREEMENTS

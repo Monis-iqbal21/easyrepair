@@ -4,6 +4,8 @@ import { ConfigService } from '@nestjs/config';
 import { ChatController } from './chat.controller';
 import { ChatGateway } from './chat.gateway';
 import { ChatService } from './chat.service';
+import { SupportController } from './support.controller';
+import { SupportUserService } from './support-user.service';
 import { ChatRepository } from './chat.repository';
 import { StorageModule } from '../storage/storage.module';
 import { NotificationsModule } from '../notifications/notifications.module';
@@ -29,8 +31,8 @@ import { BookingsModule } from '../bookings/bookings.module';
       }),
     }),
   ],
-  controllers: [ChatController],
-  providers: [ChatService, ChatRepository, ChatGateway],
-  exports: [ChatService, ChatGateway],
+  controllers: [ChatController, SupportController],
+  providers: [ChatService, ChatRepository, ChatGateway, SupportUserService],
+  exports: [ChatService, ChatGateway, SupportUserService],
 })
 export class ChatModule {}

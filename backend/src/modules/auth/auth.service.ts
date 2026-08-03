@@ -16,6 +16,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { AuthOtpPurpose, Prisma, Role } from '@prisma/client';
 import { AuthRepository } from './auth.repository';
 import { StorageService } from '../storage/storage.service';
+import { isSupportPhone } from '../../common/utils/support-identity.util';
+import { ChatService } from '../chat/chat.service';
 import { SmsOtpService } from './sms-otp.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -45,7 +47,26 @@ export class AuthService {
     private readonly config: ConfigService,
     private readonly storageService: StorageService,
     private readonly smsOtp: SmsOtpService,
+    private readonly chatService: ChatService,
   ) {}
+
+  /**
+   * Refuses any authentication attempt for the "HandyGo Support" system
+   * account.
+   *
+   * That account exists only to own support conversations and to be the
+   * sender of admin replies — it is provisioned without credentials and must
+   * never be signable-in through ANY path (password login, OTP request, OTP
+   * verification, or password reset). The message is deliberately the same
+   * generic one used for unknown numbers so the reserved number cannot be
+   * probed.
+   */
+  private _assertNotSupportAccount(phone: string): void {
+    const supportPhone = this.config.get<string>('support.userPhone');
+    if (isSupportPhone(phone, supportPhone)) {
+      throw new UnauthorizedException('Invalid phone number');
+    }
+  }
 
   private _normalizePhone(phone: string): string {
     // Forgot-password's DTO already enforces the Pakistani-mobile shape, so
@@ -67,6 +88,7 @@ export class AuthService {
   }
 
   async register(dto: RegisterDto): Promise<AuthResponseDto> {
+    this._assertNotSupportAccount(dto.phone);
     const existing = await this.authRepository.findUserByPhone(dto.phone);
     if (existing) {
       throw new ConflictException('Phone number is already registered');
@@ -97,6 +119,7 @@ export class AuthService {
   }
 
   async login(dto: LoginDto): Promise<AuthResponseDto> {
+    this._assertNotSupportAccount(dto.phone);
     const user = await this.authRepository.findUserByPhone(dto.phone);
     if (!user || user.deletedAt !== null) {
       throw new UnauthorizedException('Invalid phone number or password');
@@ -226,6 +249,12 @@ export class AuthService {
       expiresAt,
     );
 
+    // Every successful login/registration funnels through here, so this is
+    // the one place that guarantees a support thread exists from the very
+    // first session. Idempotent (DB-enforced), CLIENT/WORKER only, and
+    // fire-and-forget with its own internal catch — it can never fail auth.
+    void this.chatService.ensureSupportConversation(userId, role);
+
     return {
       accessToken,
       refreshToken,
@@ -261,6 +290,7 @@ export class AuthService {
   async forgotPasswordRequest(
     dto: ForgotPasswordRequestDto,
   ): Promise<{ message: string; expiresAt: string }> {
+    this._assertNotSupportAccount(dto.phone);
     return this._passwordResetRequestForRole(dto.phone, Role.WORKER, {
       surfaceSmsFailure: false,
     });
@@ -278,6 +308,7 @@ export class AuthService {
   async clientForgotPasswordRequest(
     dto: ForgotPasswordRequestDto,
   ): Promise<{ message: string; expiresAt: string }> {
+    this._assertNotSupportAccount(dto.phone);
     return this._passwordResetRequestForRole(dto.phone, Role.CLIENT, {
       surfaceSmsFailure: true,
     });
@@ -377,6 +408,7 @@ export class AuthService {
   async forgotPasswordReset(
     dto: ForgotPasswordResetDto,
   ): Promise<{ message: string }> {
+    this._assertNotSupportAccount(dto.phone);
     const normalized = this._normalizePhone(dto.phone);
     const invalidError = new UnauthorizedException(
       'Invalid or expired reset code.',
@@ -467,6 +499,7 @@ export class AuthService {
     purpose: AuthOtpPurpose,
     ip: string,
   ): Promise<{ expiresAt: string }> {
+    this._assertNotSupportAccount(rawPhone);
     const normalized = normalizePakistaniPhone(rawPhone);
     if (!normalized) {
       throw new BadRequestException({
@@ -586,6 +619,7 @@ export class AuthService {
     rawPhone: string,
     otp: string,
   ): Promise<AuthResponseDto> {
+    this._assertNotSupportAccount(rawPhone);
     const normalized = normalizePakistaniPhone(rawPhone);
     if (!normalized) {
       throw new BadRequestException({
@@ -674,6 +708,7 @@ export class AuthService {
   async checkClientPhoneStatus(
     rawPhone: string,
   ): Promise<{ status: 'CLIENT' | 'WORKER' | 'NEW' }> {
+    this._assertNotSupportAccount(rawPhone);
     const normalized = normalizePakistaniPhone(rawPhone);
     if (!normalized) {
       throw new BadRequestException({
@@ -693,6 +728,7 @@ export class AuthService {
     rawPhone: string,
     password: string,
   ): Promise<AuthResponseDto> {
+    this._assertNotSupportAccount(rawPhone);
     const normalized = normalizePakistaniPhone(rawPhone);
     if (!normalized) {
       throw new BadRequestException({
@@ -747,6 +783,7 @@ export class AuthService {
     rawPhone: string,
     password: string,
   ): Promise<AuthResponseDto> {
+    this._assertNotSupportAccount(rawPhone);
     const normalized = normalizePakistaniPhone(rawPhone);
     if (!normalized) {
       throw new BadRequestException({
@@ -819,6 +856,7 @@ export class AuthService {
     password: string,
     categoryId: string,
   ): Promise<AuthResponseDto> {
+    this._assertNotSupportAccount(rawPhone);
     const normalized = normalizePakistaniPhone(rawPhone);
     if (!normalized) {
       throw new BadRequestException({
@@ -883,6 +921,7 @@ export class AuthService {
 
   /** POST /auth/worker/otp-login — existing Ustaad, OTP instead of password. */
   async workerOtpLogin(rawPhone: string, otp: string): Promise<AuthResponseDto> {
+    this._assertNotSupportAccount(rawPhone);
     const normalized = normalizePakistaniPhone(rawPhone);
     if (!normalized) {
       throw new BadRequestException({

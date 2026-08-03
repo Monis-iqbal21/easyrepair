@@ -33,6 +33,28 @@ export default () => ({
     feePercent: parseInt(process.env.PLATFORM_FEE_PERCENT || '10', 10),
   },
   usePostgis: process.env.USE_POSTGIS === 'true',
+  support: {
+    /**
+     * Reserved phone identifying the single "HandyGo Support" system user.
+     * This account is provisioned on demand and can never be logged into —
+     * see SupportUserService.
+     */
+    userPhone: process.env.SUPPORT_USER_PHONE || '+920000000000',
+    displayName: process.env.SUPPORT_DISPLAY_NAME || 'HandyGo Support',
+  },
+  matching: {
+    /**
+     * Radius (km) from a booking's pinned location within which an eligible
+     * Ustaad may be notified about it and see it in New Jobs. Single source
+     * of truth for every lane — see job-eligibility.util.ts.
+     */
+    radiusKm: parseFloat(process.env.MATCH_RADIUS_KM || '7'),
+    /** Per-worker cooldown (seconds) for location-driven re-matching. */
+    locationCooldownSeconds: parseInt(
+      process.env.MATCH_LOCATION_COOLDOWN_SECONDS || '60',
+      10,
+    ),
+  },
   whatsapp: {
     token: process.env.WHATSAPP_TOKEN,
     phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID,

@@ -1,0 +1,53 @@
+{
+  "generatedFrom": "approved PDFs",
+  "documents": [
+    {
+      "documentType": "USTAAD_SERVICE_PROVIDER_AGREEMENT",
+      "trade": null,
+      "locale": "ur_Latn",
+      "file": "USTAAD_SERVICE_PROVIDER_AGREEMENT.ur_Latn.txt",
+      "bytes": 38447,
+      "sha256": "d9fa07a224991b43524d34b5277e6842c6b40896f12f696438d693a550207cc6"
+    },
+    {
+      "documentType": "BACKGROUND_VERIFICATION_EVS_PRIVACY_NOTICE",
+      "trade": null,
+      "locale": "ur_Latn",
+      "file": "BACKGROUND_VERIFICATION_EVS_PRIVACY_NOTICE.ur_Latn.txt",
+      "bytes": 30372,
+      "sha256": "26a18cfeddc1916cc89ee8d32027d638973bca4bf6081ad60e9ff7800f2caf25"
+    },
+    {
+      "documentType": "TRADE_SPECIFIC_SERVICE_AGREEMENT",
+      "trade": "ELECTRICIAN",
+      "locale": "ur_Latn",
+      "file": "TRADE_SPECIFIC_SERVICE_AGREEMENT.ELECTRICIAN.ur_Latn.txt",
+      "bytes": 10793,
+      "sha256": "0375cd931ccc6fc2d8311bae7ae313e22fd98082be594d72642c5fdeb789703d"
+    },
+    {
+      "documentType": "TRADE_SPECIFIC_SERVICE_AGREEMENT",
+      "trade": "PLUMBER",
+      "locale": "ur_Latn",
+      "file": "TRADE_SPECIFIC_SERVICE_AGREEMENT.PLUMBER.ur_Latn.txt",
+      "bytes": 11033,
+      "sha256": "a45cf2051cf0bf5978770fdfdf0bd8b634b67ef495f854e6c9f21d3f5ca4a9cc"
+    },
+    {
+      "documentType": "TRADE_SPECIFIC_SERVICE_AGREEMENT",
+      "trade": "AC_TECHNICIAN",
+      "locale": "ur_Latn",
+      "file": "TRADE_SPECIFIC_SERVICE_AGREEMENT.AC_TECHNICIAN.ur_Latn.txt",
+      "bytes": 11595,
+      "sha256": "d6e3dd996ff65dba899d39bb46206e5b62af497559e68fa28643a3d11a8cc734"
+    },
+    {
+      "documentType": "TRADE_SPECIFIC_SERVICE_AGREEMENT",
+      "trade": "CARPENTER",
+      "locale": "ur_Latn",
+      "file": "TRADE_SPECIFIC_SERVICE_AGREEMENT.CARPENTER.ur_Latn.txt",
+      "bytes": 10901,
+      "sha256": "32fdbdb9fb39806222725b5c1f1b1e3ae3f41bd3316ad1c3eed2078c618c82af"
+    }
+  ]
+}

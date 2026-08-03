@@ -39,7 +39,10 @@ export class AgreementsService {
     categoryId: string | null,
   ): Promise<AgreementTemplateResponseDto[]> {
     const [general, trade] = await Promise.all([
-      this.agreementsRepository.findActiveTemplate(AgreementType.GENERAL_USTAAD, null),
+      this.agreementsRepository.findActiveTemplate(
+        AgreementType.GENERAL_USTAAD,
+        null,
+      ),
       categoryId
         ? this.agreementsRepository.findActiveTemplate(
             AgreementType.TRADE_SPECIFIC,
@@ -78,7 +81,10 @@ export class AgreementsService {
 
     const plan: { type: AgreementType; categoryId: string | null }[] = [
       { type: AgreementType.GENERAL_USTAAD, categoryId: null },
-      { type: AgreementType.TRADE_SPECIFIC, categoryId: input.mainSkillCategoryId },
+      {
+        type: AgreementType.TRADE_SPECIFIC,
+        categoryId: input.mainSkillCategoryId,
+      },
     ];
 
     for (const step of plan) {
@@ -190,9 +196,10 @@ export class AgreementsService {
   async listAcceptancesForWorker(
     workerProfileId: string,
   ): Promise<AgreementAcceptanceResponseDto[]> {
-    const rows = await this.agreementsRepository.findAcceptancesByWorkerProfileId(
-      workerProfileId,
-    );
+    const rows =
+      await this.agreementsRepository.findAcceptancesByWorkerProfileId(
+        workerProfileId,
+      );
     return rows.map((r) => ({
       id: r.id,
       agreementType: r.agreementType,

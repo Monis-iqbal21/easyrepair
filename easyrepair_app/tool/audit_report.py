@@ -4,7 +4,8 @@ Classifies every literal that tool/extract_ui_strings.py reports in a UI
 position into exactly one of five categories:
 
   1. dynamic / user / backend content that must NOT be translated
-  2. protected bottom-navigation English
+  2. retired - the bottom-navigation bars used to be exempt; their labels are
+     translated now, so nothing is classified here any more
   3. internal technical value, or a fixed name no language changes
   4. a missed translation  <- the outstanding work; the audit only passes at 0
   5. approved English-only legal document content awaiting professional
@@ -247,8 +248,12 @@ def classify(
         return 3, "%s (// l10n-ignore)" % ignored_because
     if path in DEAD_FILES:
         return 3, "Unreachable legacy scaffold - nothing routes to or imports it"
-    if "bottom_nav_bar" in path:
-        return 2, "Protected bottom-navigation label, intentionally English"
+    # Category 2 used to exempt the bottom-navigation bars, whose labels were
+    # deliberately English in every language. They are translated now, so there
+    # is no exemption: a visible literal reappearing in a nav bar is a
+    # regression and falls through to the normal rules, which report it as
+    # Category 4. Category 2 is retired rather than renumbered so older reports
+    # stay comparable.
     if value.strip() in BRANDS:
         return 3, "Brand name - never translated"
     if value.strip() in LANGUAGE_ENDONYMS and "displayLabel" in block_ctx:
@@ -341,7 +346,8 @@ def main():
         out.write("| Category | Meaning | Count |\n|---|---|---|\n")
         out.write("| 1 | Dynamic / user / backend content that must remain "
                   "unchanged | %d |\n" % counts[1])
-        out.write("| 2 | Protected bottom-navigation English | %d |\n" % counts[2])
+        out.write("| 2 | _Retired_ — bottom-navigation labels are translated "
+                  "now | %d |\n" % counts[2])
         out.write("| 3 | Internal technical value, or a fixed name no language "
                   "changes | %d |\n" % counts[3])
         out.write("| 4 | **Missed app-owned visible text that must be "

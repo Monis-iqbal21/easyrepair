@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -9,6 +10,8 @@ import '../../domain/entities/worker_profile_entity.dart';
 import '../../domain/entities/agreement_template_entity.dart';
 import '../providers/worker_providers.dart';
 import '../pages/worker_home_page.dart' show showSkillsSheet;
+import '../pages/agreement_viewer_page.dart';
+import '../utils/agreement_labels.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../core/errors/failure_messages.dart';
@@ -26,7 +29,9 @@ const _kGreen = Color(0xFF22C55E);
 // Missing-field keys used by both the validation set and each widget's
 // error lookup — kept as constants so a typo can't silently break a check.
 const _kFieldFullLegalName = 'fullLegalName';
+const _kFieldFatherName = 'fatherName';
 const _kFieldCnicNumber = 'cnicNumber';
+const _kFieldDateOfBirth = 'dateOfBirth';
 const _kFieldMainSkill = 'mainSkill';
 const _kFieldExperienceYears = 'experienceYears';
 const _kFieldResidentialAddress = 'residentialAddress';
@@ -34,8 +39,10 @@ const _kFieldCnicFront = 'cnicFront';
 const _kFieldCnicBack = 'cnicBack';
 const _kFieldLiveSelfie = 'liveSelfie';
 const _kFieldLegalNameConfirmed = 'legalNameConfirmed';
-const _kFieldGeneralAgreement = 'generalAgreement';
-const _kFieldTradeAgreement = 'tradeAgreement';
+
+/// One error key per agreement row, so the right row goes red.
+// l10n-ignore: Internal error-set key, matched in code and never rendered
+String _agreementFieldKey(String documentType) => 'agreement:$documentType';
 
 /// Formats free-typed or pasted input into Pakistan's CNIC layout
 /// (12345-1234567-1) live as the user types. Strips everything but digits
@@ -79,17 +86,36 @@ class _WorkerProfileCompletionPageState
 
   final _picker = ImagePicker();
   final _fullLegalNameCtrl = TextEditingController();
+  final _fatherNameCtrl = TextEditingController();
   final _cnicNumberCtrl = TextEditingController();
   final _residentialAddressCtrl = TextEditingController();
   final _experienceYearsCtrl = TextEditingController();
+  final _emergencyContactCtrl = TextEditingController();
+
+  /// ISO calendar date (yyyy-MM-dd), which is exactly what the backend stores
+  /// and what the legal document prints — no timezone can shift it by a day.
+  String? _dateOfBirth;
 
   bool _legalNameConfirmed = false;
-  bool _generalAgreementAccepted = false;
-  bool _tradeAgreementAccepted = false;
   bool _prefilled = false;
   bool _uploadingCnicFront = false;
   bool _uploadingCnicBack = false;
   bool _uploadingSelfie = false;
+  bool _submitting = false;
+
+  /// Per-document proof that THIS exact agreement was opened, plus whether the
+  /// box was then ticked. Keyed by documentType, so each of the three carries
+  /// its own independent state.
+  ///
+  /// Nothing is reconciled when the trade changes: an entry is only honoured
+  /// while it still `matches` the currently-loaded template, so a new trade
+  /// schedule (different hash/trade) silently invalidates just its own row and
+  /// leaves the General and EVS acceptances alone.
+  final Map<String, AgreementEvidence> _evidence = {};
+
+  /// Generated once for the whole submit attempt, so a retry after a timeout
+  /// returns the SAME three sealed records instead of creating a second set.
+  String? _submissionAttemptId;
 
   /// Populated only after a failed Submit attempt — drives the red
   /// borders/helper text below. Cleared per-field as the worker fixes each
@@ -99,9 +125,11 @@ class _WorkerProfileCompletionPageState
   @override
   void dispose() {
     _fullLegalNameCtrl.dispose();
+    _fatherNameCtrl.dispose();
     _cnicNumberCtrl.dispose();
     _residentialAddressCtrl.dispose();
     _experienceYearsCtrl.dispose();
+    _emergencyContactCtrl.dispose();
     super.dispose();
   }
 
@@ -109,13 +137,18 @@ class _WorkerProfileCompletionPageState
     if (_prefilled) return;
     _prefilled = true;
     _fullLegalNameCtrl.text = profile.fullLegalName ?? '';
+    _fatherNameCtrl.text = profile.fatherName ?? '';
     _cnicNumberCtrl.text = profile.cnicNumber ?? '';
     _residentialAddressCtrl.text = profile.residentialAddress ?? '';
-    final exp = profile.skills.isNotEmpty ? profile.skills.first.yearsExperience : null;
+    _emergencyContactCtrl.text = profile.emergencyContact ?? '';
+    _dateOfBirth = profile.dateOfBirth;
+    final exp =
+        profile.skills.isNotEmpty ? profile.skills.first.yearsExperience : null;
     _experienceYearsCtrl.text = exp != null ? '$exp' : '';
     _legalNameConfirmed = profile.legalNameConfirmedAt != null;
-    _generalAgreementAccepted = profile.generalAgreementAcceptedAt != null;
-    _tradeAgreementAccepted = profile.tradeAgreementAcceptedAt != null;
+    // Agreement acceptance is deliberately NOT prefilled from the profile.
+    // The old two date columns are not evidence that this Ustaad read the
+    // current documents, so every submission starts from an unchecked box.
   }
 
   bool _isEditable(String onboardingStatus) =>
@@ -126,6 +159,59 @@ class _WorkerProfileCompletionPageState
       setState(() => _missingFields.remove(field));
     }
   }
+
+  // ── Agreement state (derived, never reconciled) ───────────────────────────
+
+  /// The stored evidence for [template], but only while it still describes it.
+  /// A version, hash, language or trade change makes the stored entry stale,
+  /// which is what forces the Ustaad to open and accept that document again.
+  AgreementEvidence? _evidenceFor(AgreementTemplateEntity template) {
+    final stored = _evidence[template.documentType];
+    if (stored == null || !stored.matches(template)) return null;
+    return stored;
+  }
+
+  bool _isViewed(AgreementTemplateEntity t) => _evidenceFor(t) != null;
+
+  bool _isAccepted(AgreementTemplateEntity t) =>
+      _evidenceFor(t)?.checkboxAccepted ?? false;
+
+  /// True when this row was viewed against a document that has since changed —
+  /// the "your trade changed, open it again" case.
+  bool _isStale(AgreementTemplateEntity t) =>
+      _evidence[t.documentType] != null && _evidenceFor(t) == null;
+
+  Future<void> _openAgreement(AgreementTemplateEntity template) async {
+    final result = await Navigator.of(context).push<AgreementEvidence>(
+      MaterialPageRoute(
+        builder: (_) => AgreementViewerPage(documentType: template.documentType),
+      ),
+    );
+    if (!mounted) return;
+    // Null means the viewer never rendered the document (load failed, or an
+    // unsupported trade). That must NOT unlock the checkbox.
+    if (result == null) return;
+    setState(() {
+      _evidence[template.documentType] = result;
+      _missingFields.remove(_agreementFieldKey(template.documentType));
+    });
+  }
+
+  void _setAccepted(AgreementTemplateEntity template, bool value) {
+    final viewed = _evidenceFor(template);
+    // Structurally unreachable — the checkbox is disabled until viewed — but
+    // asserted here too, because this is the gate the whole flow rests on.
+    if (viewed == null) return;
+    setState(() {
+      _evidence[template.documentType] =
+          viewed.copyWith(checkboxAccepted: value);
+      if (value) {
+        _missingFields.remove(_agreementFieldKey(template.documentType));
+      }
+    });
+  }
+
+  // ── Images ────────────────────────────────────────────────────────────────
 
   /// Bottom sheet letting the worker choose Camera or Gallery for a document
   /// photo. Camera is listed first for all three (Live Selfie should
@@ -213,14 +299,55 @@ class _WorkerProfileCompletionPageState
     }
   }
 
-  /// Computes every missing/invalid field against the current form + already
-  /// -uploaded documents. Returns an empty set when everything required is
-  /// present and valid.
-  Set<String> _computeMissingFields(WorkerProfileEntity profile) {
+  // ── Date of birth ─────────────────────────────────────────────────────────
+
+  Future<void> _pickDateOfBirth() async {
+    final today = DateTime.now();
+    final initial = _parsedDateOfBirth ?? DateTime(today.year - 25, 1, 1);
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: DateTime(1930),
+      // A date of birth can never be in the future, so the picker cannot
+      // offer one — the backend rejects it too.
+      lastDate: today,
+    );
+    if (picked == null || !mounted) return;
+    setState(() {
+      _dateOfBirth = _formatIsoDate(picked);
+      _missingFields.remove(_kFieldDateOfBirth);
+    });
+  }
+
+  DateTime? get _parsedDateOfBirth {
+    final value = _dateOfBirth;
+    if (value == null || value.isEmpty) return null;
+    return DateTime.tryParse(value);
+  }
+
+  static String _formatIsoDate(DateTime date) =>
+      '${date.year.toString().padLeft(4, '0')}-'
+      '${date.month.toString().padLeft(2, '0')}-'
+      '${date.day.toString().padLeft(2, '0')}';
+
+  // ── Validation & submit ───────────────────────────────────────────────────
+
+  /// Computes every missing/invalid field against the current form, the
+  /// already-uploaded documents, and the three agreements. Returns an empty
+  /// set when everything required is present and valid.
+  Set<String> _computeMissingFields(
+    WorkerProfileEntity profile,
+    List<AgreementTemplateEntity> templates,
+  ) {
     final missing = <String>{};
     if (_fullLegalNameCtrl.text.trim().isEmpty) missing.add(_kFieldFullLegalName);
+    if (_fatherNameCtrl.text.trim().isEmpty) missing.add(_kFieldFatherName);
     if (!_cnicPattern.hasMatch(_cnicNumberCtrl.text.trim())) {
       missing.add(_kFieldCnicNumber);
+    }
+    final dob = _parsedDateOfBirth;
+    if (dob == null || dob.isAfter(DateTime.now())) {
+      missing.add(_kFieldDateOfBirth);
     }
     if (profile.skills.isEmpty) missing.add(_kFieldMainSkill);
     final years = int.tryParse(_experienceYearsCtrl.text.trim());
@@ -238,19 +365,50 @@ class _WorkerProfileCompletionPageState
       missing.add(_kFieldLiveSelfie);
     }
     if (!_legalNameConfirmed) missing.add(_kFieldLegalNameConfirmed);
-    if (!_generalAgreementAccepted) missing.add(_kFieldGeneralAgreement);
-    if (!_tradeAgreementAccepted) missing.add(_kFieldTradeAgreement);
+
+    // All three documents must be loaded, viewed and ticked. A missing
+    // template (unsupported trade, failed load) counts as missing too, so
+    // submission is blocked rather than sent with two agreements.
+    for (final documentType in kUstaadDocumentTypes) {
+      AgreementTemplateEntity? template;
+      for (final t in templates) {
+        if (t.documentType == documentType) template = t;
+      }
+      if (template == null || !_isAccepted(template)) {
+        missing.add(_agreementFieldKey(documentType));
+      }
+    }
+    // Emergency contact is deliberately absent: the EVS document prints a
+    // controlled "Not applicable" for it.
     return missing;
   }
 
-  Future<void> _submit(WorkerProfileEntity profile) async {
-    final missing = _computeMissingFields(profile);
+  /// One id per submit attempt. Reused across retries of the same attempt so
+  /// the backend's idempotency key resolves to the same three records.
+  String _attemptId() {
+    return _submissionAttemptId ??= 'sub-'
+        '${DateTime.now().toUtc().microsecondsSinceEpoch.toRadixString(36)}-'
+        '${Random().nextInt(0x7fffffff).toRadixString(36)}';
+  }
+
+  Future<void> _submit(
+    WorkerProfileEntity profile,
+    List<AgreementTemplateEntity> templates,
+  ) async {
+    if (_submitting) return; // hard guard against a double tap
+
+    final missing = _computeMissingFields(profile, templates);
     setState(() => _missingFields = missing);
 
     if (missing.isNotEmpty) {
+      final agreementsMissing = missing.any((f) => f.startsWith('agreement:'));
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(context.l10n.workerCompleteHighlightedFields),
+          content: Text(
+            agreementsMissing && missing.length == 1
+                ? context.l10n.agreementsAllThreeRequired
+                : context.l10n.workerCompleteHighlightedFields,
+          ),
           backgroundColor: _kRed,
           behavior: SnackBarBehavior.floating,
         ),
@@ -258,25 +416,44 @@ class _WorkerProfileCompletionPageState
       return;
     }
 
+    setState(() => _submitting = true);
     final years = int.parse(_experienceYearsCtrl.text.trim());
     final notifier = ref.read(profileCompletionNotifierProvider.notifier);
+
     final saved = await notifier.save(
       fullLegalName: _fullLegalNameCtrl.text.trim(),
+      fatherName: _fatherNameCtrl.text.trim(),
       cnicNumber: _cnicNumberCtrl.text.trim(),
+      dateOfBirth: _dateOfBirth,
       residentialAddress: _residentialAddressCtrl.text.trim(),
+      emergencyContact: _emergencyContactCtrl.text.trim(),
       experienceYears: years,
       legalNameConfirmed: _legalNameConfirmed,
-      generalAgreementAccepted: _generalAgreementAccepted,
-      tradeAgreementAccepted: _tradeAgreementAccepted,
     );
-    if (!mounted || !saved) {
-      if (mounted) _showError(context.l10n.workerProfileSaveFailed);
+    if (!mounted) return;
+    if (!saved) {
+      setState(() => _submitting = false);
+      _showError(context.l10n.workerProfileSaveFailed);
       return;
     }
 
-    final submitted = await notifier.submit();
+    // Exactly three evidence objects, in the canonical order.
+    final evidence = <AgreementEvidence>[];
+    for (final documentType in kUstaadDocumentTypes) {
+      final stored = _evidence[documentType];
+      if (stored != null) evidence.add(stored);
+    }
+
+    final accepted = await notifier.submit(
+      submissionAttemptId: _attemptId(),
+      agreements: evidence,
+    );
     if (!mounted) return;
-    if (submitted) {
+    setState(() => _submitting = false);
+
+    if (accepted != null) {
+      // A fresh attempt id next time; this one is spent.
+      _submissionAttemptId = null;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(context.l10n.workerProfileSubmitted),
@@ -285,6 +462,9 @@ class _WorkerProfileCompletionPageState
         ),
       );
     } else {
+      // Form data and still-valid agreement state are untouched — only a
+      // document the backend says changed becomes stale, and that is decided
+      // by the template reload, not here.
       _showError(context.l10n.workerCompleteAllRequired);
     }
   }
@@ -303,15 +483,11 @@ class _WorkerProfileCompletionPageState
   @override
   Widget build(BuildContext context) {
     final profileAsync = ref.watch(workerProfileProvider);
-    final isSaving = ref.watch(profileCompletionNotifierProvider).isLoading;
     final templatesAsync = ref.watch(agreementTemplatesProvider);
-    final templates = templatesAsync.asData?.value ?? const <AgreementTemplateEntity>[];
-    AgreementTemplateEntity? findTemplate(bool general) {
-      for (final t in templates) {
-        if (general ? t.isGeneral : t.isTrade) return t;
-      }
-      return null;
-    }
+    final templates =
+        templatesAsync.asData?.value ?? const <AgreementTemplateEntity>[];
+    final busy = _submitting ||
+        ref.watch(profileCompletionNotifierProvider).isLoading;
 
     return Scaffold(
       backgroundColor: _kBg,
@@ -356,6 +532,17 @@ class _WorkerProfileCompletionPageState
                 ),
                 const SizedBox(height: 16),
 
+                _SectionLabel(context.l10n.workerFatherName),
+                _TextInput(
+                  controller: _fatherNameCtrl,
+                  hint: context.l10n.workerLegalNameHint,
+                  enabled: editable,
+                  hasError: _missingFields.contains(_kFieldFatherName),
+                  errorText: context.l10n.workerFatherNameRequired,
+                  onChanged: (_) => _clearFieldError(_kFieldFatherName),
+                ),
+                const SizedBox(height: 16),
+
                 _SectionLabel(context.l10n.workerCnicNumber),
                 _TextInput(
                   controller: _cnicNumberCtrl,
@@ -366,6 +553,17 @@ class _WorkerProfileCompletionPageState
                   hasError: _missingFields.contains(_kFieldCnicNumber),
                   errorText: context.l10n.workerCnicInvalid,
                   onChanged: (_) => _clearFieldError(_kFieldCnicNumber),
+                ),
+                const SizedBox(height: 16),
+
+                _SectionLabel(context.l10n.workerDateOfBirth),
+                _DateInput(
+                  value: _dateOfBirth,
+                  hint: context.l10n.workerDateOfBirthHint,
+                  enabled: editable,
+                  hasError: _missingFields.contains(_kFieldDateOfBirth),
+                  errorText: context.l10n.workerDateOfBirthRequired,
+                  onTap: _pickDateOfBirth,
                 ),
                 const SizedBox(height: 16),
 
@@ -402,6 +600,14 @@ class _WorkerProfileCompletionPageState
                   hasError: _missingFields.contains(_kFieldResidentialAddress),
                   errorText: context.l10n.workerResidentialAddressRequired,
                   onChanged: (_) => _clearFieldError(_kFieldResidentialAddress),
+                ),
+                const SizedBox(height: 16),
+
+                _SectionLabel(context.l10n.workerEmergencyContact),
+                _TextInput(
+                  controller: _emergencyContactCtrl,
+                  hint: context.l10n.workerEmergencyContactHint,
+                  enabled: editable,
                 ),
                 const SizedBox(height: 20),
 
@@ -459,37 +665,34 @@ class _WorkerProfileCompletionPageState
                     if (v) _clearFieldError(_kFieldLegalNameConfirmed);
                   },
                 ),
-                _AgreementCheckbox(
-                  value: _generalAgreementAccepted,
-                  enabled: editable,
-                  hasError: _missingFields.contains(_kFieldGeneralAgreement),
-                  // Whole sentence per variant — never a translated fragment
-                  // glued onto a version number.
-                  label: findTemplate(true) != null
-                      ? context.l10n.workerAcceptGeneralAgreementVersioned(
-                          findTemplate(true)!.version)
-                      : context.l10n.workerAcceptGeneralAgreement,
-                  linkLabel: context.l10n.workerViewAgreement,
-                  onViewTap: () => _showAgreement(context, findTemplate(true)),
-                  onChanged: (v) {
-                    setState(() => _generalAgreementAccepted = v);
-                    if (v) _clearFieldError(_kFieldGeneralAgreement);
-                  },
-                ),
-                _AgreementCheckbox(
-                  value: _tradeAgreementAccepted,
-                  enabled: editable,
-                  hasError: _missingFields.contains(_kFieldTradeAgreement),
-                  label: findTemplate(false) != null
-                      ? context.l10n.workerAcceptTradeAgreementVersioned(
-                          findTemplate(false)!.version)
-                      : context.l10n.workerAcceptTradeAgreement,
-                  linkLabel: context.l10n.workerViewAgreement,
-                  onViewTap: () => _showAgreement(context, findTemplate(false)),
-                  onChanged: (v) {
-                    setState(() => _tradeAgreementAccepted = v);
-                    if (v) _clearFieldError(_kFieldTradeAgreement);
-                  },
+                const SizedBox(height: 4),
+
+                // Exactly three rows, derived from kUstaadDocumentTypes so a
+                // Customer agreement can never appear here.
+                ...templatesAsync.when(
+                  loading: () => const [
+                    Padding(
+                      padding: EdgeInsets.symmetric(vertical: 16),
+                      child: Center(
+                        child: CircularProgressIndicator(color: _kOrange),
+                      ),
+                    ),
+                  ],
+                  error: (err, _) => [
+                    _AgreementsError(
+                      message: failureMessage(
+                        context.l10n,
+                        err,
+                        fallback: context.l10n.agreementsLoadFailed,
+                      ),
+                      onRetry: () =>
+                          ref.invalidate(agreementTemplatesProvider),
+                    ),
+                  ],
+                  data: (loaded) => [
+                    for (final documentType in kUstaadDocumentTypes)
+                      _agreementRow(loaded, documentType, editable),
+                  ],
                 ),
                 const SizedBox(height: 24),
 
@@ -497,7 +700,8 @@ class _WorkerProfileCompletionPageState
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: isSaving ? null : () => _submit(profile),
+                      onPressed:
+                          busy ? null : () => _submit(profile, templates),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _kOrange,
                         foregroundColor: Colors.white,
@@ -507,7 +711,7 @@ class _WorkerProfileCompletionPageState
                           borderRadius: BorderRadius.circular(14),
                         ),
                       ),
-                      child: isSaving
+                      child: busy
                           ? const SizedBox(
                               height: 20,
                               width: 20,
@@ -531,52 +735,295 @@ class _WorkerProfileCompletionPageState
     );
   }
 
-  /// Shows the exact text/version of the agreement the worker is about to
-  /// accept. [template] is null while still loading (no active template
-  /// fetched yet, e.g. before a main skill is selected for the trade
-  /// agreement) — shown as a friendly notice rather than a blank dialog.
-  void _showAgreement(BuildContext context, AgreementTemplateEntity? template) {
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          // template.title is the backend's own agreement title — shown as-is.
-          template?.title ?? context.l10n.workerAgreementFallbackTitle,
-          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+  Widget _agreementRow(
+    List<AgreementTemplateEntity> loaded,
+    String documentType,
+    bool editable,
+  ) {
+    AgreementTemplateEntity? template;
+    for (final t in loaded) {
+      if (t.documentType == documentType) template = t;
+    }
+    final fieldKey = _agreementFieldKey(documentType);
+
+    if (template == null) {
+      // The trade has no approved schedule. Blocked, never substituted.
+      return _AgreementUnavailableRow(
+        hasError: _missingFields.contains(fieldKey),
+      );
+    }
+
+    return _AgreementRow(
+      template: template,
+      viewed: _isViewed(template),
+      accepted: _isAccepted(template),
+      stale: _isStale(template),
+      enabled: editable,
+      hasError: _missingFields.contains(fieldKey),
+      onView: () => _openAgreement(template!),
+      onChanged: (v) => _setAccepted(template!, v),
+    );
+  }
+}
+
+// ── Agreement row ────────────────────────────────────────────────────────────
+
+/// One of the three documents: title, version, language, trade, a required
+/// marker, a View link and a checkbox that stays disabled until the exact
+/// document has actually been opened and rendered.
+class _AgreementRow extends StatelessWidget {
+  final AgreementTemplateEntity template;
+  final bool viewed;
+  final bool accepted;
+  final bool stale;
+  final bool enabled;
+  final bool hasError;
+  final VoidCallback onView;
+  final ValueChanged<bool> onChanged;
+
+  const _AgreementRow({
+    required this.template,
+    required this.viewed,
+    required this.accepted,
+    required this.stale,
+    required this.enabled,
+    required this.hasError,
+    required this.onView,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: hasError ? _kRed : _kBorder,
+          width: hasError ? 1.4 : 1,
         ),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: SingleChildScrollView(
-            child: template != null
-                ? Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        context.l10n.workerAgreementVersion(template.version),
-                        style: const TextStyle(
-                          color: _kOrange,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                // Backend-authored agreement title — shown as-is.
+                child: Text(
+                  template.title,
+                  style: const TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w700,
+                    color: _kDark,
+                    height: 1.35,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF5E8E0),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  l10n.workerDocumentRequired,
+                  style: const TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w700,
+                    color: _kOrange,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            l10n.workerAgreementVersion(template.version),
+            style: const TextStyle(fontSize: 11.5, color: _kGray),
+          ),
+          Text(
+            l10n.agreementLanguageChip(
+              agreementLocaleLabel(l10n, template.agreementLocale),
+            ),
+            style: const TextStyle(fontSize: 11.5, color: _kGray),
+          ),
+          if (template.applicableTrade != null)
+            Text(
+              l10n.agreementTradeChip(
+                tradeLabel(l10n, template.applicableTrade!),
+              ),
+              style: const TextStyle(fontSize: 11.5, color: _kGray),
+            ),
+          if (stale) ...[
+            const SizedBox(height: 6),
+            Text(
+              l10n.agreementTradeChangedReopen,
+              style: const TextStyle(
+                fontSize: 11.5,
+                color: Color(0xFFB45309),
+                height: 1.4,
+              ),
+            ),
+          ],
+          const SizedBox(height: 8),
+          GestureDetector(
+            onTap: onView,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.menu_book_outlined, size: 15, color: _kOrange),
+                const SizedBox(width: 6),
+                Text(
+                  l10n.workerViewAgreement,
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: _kOrange,
+                  ),
+                ),
+                if (viewed) ...[
+                  const SizedBox(width: 6),
+                  const Icon(Icons.check_circle_rounded,
+                      size: 14, color: _kGreen),
+                ],
+              ],
+            ),
+          ),
+          const Divider(height: 20, color: _kBorder),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 22,
+                height: 22,
+                child: Checkbox(
+                  value: accepted,
+                  activeColor: _kOrange,
+                  side: hasError
+                      ? const BorderSide(color: _kRed, width: 1.4)
+                      : null,
+                  // Disabled until the exact document has been opened AND
+                  // rendered. This is the view-before-check gate.
+                  onChanged: (enabled && viewed)
+                      ? (v) => onChanged(v ?? false)
+                      : null,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.agreementAcceptCheckbox,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: viewed ? _kDark : _kLight,
+                        height: 1.4,
                       ),
-                      const SizedBox(height: 10),
+                    ),
+                    if (!viewed) ...[
+                      const SizedBox(height: 2),
                       Text(
-                        template.contentText,
-                        style: const TextStyle(color: _kDark, fontSize: 13, height: 1.5),
+                        l10n.agreementViewBeforeAccepting,
+                        style: const TextStyle(fontSize: 11, color: _kGray),
                       ),
                     ],
-                  )
-                : Text(
-                    context.l10n.workerAgreementSelectSkillFirst,
-                    style: const TextStyle(color: _kGray, fontSize: 13.5),
-                  ),
+                    if (hasError) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        l10n.agreementAcceptRequired,
+                        style: const TextStyle(fontSize: 11.5, color: _kRed),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Shown in place of the trade row when the selected trade has no approved
+/// schedule. Deliberately offers no way forward — never another trade's text.
+class _AgreementUnavailableRow extends StatelessWidget {
+  final bool hasError;
+  const _AgreementUnavailableRow({required this.hasError});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: hasError ? _kRed : _kBorder,
+          width: hasError ? 1.4 : 1,
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(context.l10n.workerCloseDialog),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.info_outline_rounded, size: 18, color: _kRed),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              context.l10n.agreementUnavailableForTrade,
+              style: const TextStyle(fontSize: 12.5, color: _kGray, height: 1.45),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AgreementsError extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+  const _AgreementsError({required this.message, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _kBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            message,
+            style: const TextStyle(fontSize: 12.5, color: _kGray, height: 1.45),
+          ),
+          const SizedBox(height: 8),
+          GestureDetector(
+            onTap: onRetry,
+            child: Text(
+              context.l10n.commonRetry,
+              style: const TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+                color: _kOrange,
+              ),
+            ),
           ),
         ],
       ),
@@ -753,6 +1200,72 @@ class _TextInput extends StatelessWidget {
   }
 }
 
+/// Date of birth. Tapping opens the platform date picker, whose lastDate is
+/// today — a future date is not selectable, and the backend rejects one too.
+class _DateInput extends StatelessWidget {
+  final String? value;
+  final String hint;
+  final bool enabled;
+  final bool hasError;
+  final String errorText;
+  final VoidCallback onTap;
+
+  const _DateInput({
+    required this.value,
+    required this.hint,
+    required this.enabled,
+    required this.hasError,
+    required this.errorText,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final hasValue = value != null && value!.isNotEmpty;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        GestureDetector(
+          onTap: enabled ? onTap : null,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            decoration: BoxDecoration(
+              color: enabled ? Colors.white : const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: hasError ? _kRed : _kBorder,
+                width: hasError ? 1.4 : 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    // An ISO date needs no translation and must not be
+                    // reformatted per language — it is what the legal
+                    // document prints.
+                    hasValue ? value! : hint,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: hasValue ? _kDark : _kLight,
+                    ),
+                  ),
+                ),
+                const Icon(Icons.calendar_today_outlined,
+                    size: 16, color: _kLight),
+              ],
+            ),
+          ),
+        ),
+        if (hasError) ...[
+          const SizedBox(height: 4),
+          Text(errorText, style: const TextStyle(fontSize: 11.5, color: _kRed)),
+        ],
+      ],
+    );
+  }
+}
+
 class _MainSkillRow extends StatelessWidget {
   final String? skillName;
   final bool editable;
@@ -899,13 +1412,14 @@ class _DocumentTile extends StatelessWidget {
   }
 }
 
+/// The plain "I confirm…" checkbox (legal-name confirmation). The three
+/// agreement rows use [_AgreementRow] instead, because they carry a
+/// view-before-check gate this one does not need.
 class _AgreementCheckbox extends StatelessWidget {
   final bool value;
   final bool enabled;
   final bool hasError;
   final String label;
-  final String? linkLabel;
-  final VoidCallback? onViewTap;
   final ValueChanged<bool> onChanged;
 
   const _AgreementCheckbox({
@@ -914,8 +1428,6 @@ class _AgreementCheckbox extends StatelessWidget {
     required this.label,
     required this.onChanged,
     this.hasError = false,
-    this.linkLabel,
-    this.onViewTap,
   });
 
   @override
@@ -945,21 +1457,6 @@ class _AgreementCheckbox extends StatelessWidget {
                   label,
                   style: const TextStyle(fontSize: 13, color: _kDark, height: 1.4),
                 ),
-                if (linkLabel != null && onViewTap != null)
-                  GestureDetector(
-                    onTap: onViewTap,
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: 2),
-                      child: Text(
-                        linkLabel!,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: _kOrange,
-                        ),
-                      ),
-                    ),
-                  ),
                 if (hasError) ...[
                   const SizedBox(height: 2),
                   Text(

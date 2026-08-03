@@ -27,9 +27,10 @@ export function getNotificationTemplate(
     case NOTIFICATION_KEYS.BID_RECEIVED:
       return {
         title: 'New offer received',
-        body: params?.workerName && params?.amount
-          ? `${params.workerName} sent you an offer for PKR ${params.amount}`
-          : 'A worker sent you an offer. Tap to view.',
+        body:
+          params?.workerName && params?.amount
+            ? `${params.workerName} sent you an offer for PKR ${params.amount}`
+            : 'A worker sent you an offer. Tap to view.',
       };
     case NOTIFICATION_KEYS.BID_ACCEPTED:
       return {

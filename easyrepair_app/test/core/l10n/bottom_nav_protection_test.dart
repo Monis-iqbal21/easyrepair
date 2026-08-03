@@ -1,17 +1,38 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:handygo_app/core/l10n/app_locale.dart';
-import 'package:handygo_app/core/l10n/l10n_config.dart';
 import 'package:handygo_app/features/client/presentation/widgets/client_bottom_nav_bar.dart';
 import 'package:handygo_app/features/worker/presentation/widgets/worker_bottom_nav_bar.dart';
+import 'package:handygo_app/l10n/app_localizations.dart';
 
-/// The navigation bars are explicitly excluded from localization. These labels
-/// must read identically in English, Urdu and Roman Urdu.
-const clientTabs = ['Home', 'Bookings', 'Chats', 'Profile'];
-const workerTabs = ['Home', 'New Jobs', 'My Jobs', 'Chat', 'Profile'];
+import '../../support/l10n_test_app.dart';
+
+/// The navigation bars are translated, but their *layout* is not negotiable:
+/// tab order, icons and reading direction must be identical in English, Urdu
+/// and Roman Urdu. Urdu RTL must never flip Home away from the left edge —
+/// muscle memory for a tab bar is positional, not linguistic.
+///
+/// Labels are asserted against the generated AppLocalizations rather than
+/// against literals, so this file only needs editing when a tab is added,
+/// removed or reordered — not every time a translation is reworded.
+
+/// The label lookups each bar uses, in on-screen order.
+List<String> clientTabs(AppLocalizations l) => [
+      l.navHome,
+      l.navBookings,
+      l.navChats,
+      l.clientProfileTitle,
+    ];
+
+List<String> workerTabs(AppLocalizations l) => [
+      l.navHome,
+      l.workerNewJobsTitle,
+      l.clientJobsTitle,
+      l.chatTitleFallback,
+      l.clientProfileTitle,
+    ];
 
 Future<void> _pumpNav(
   WidgetTester tester,
@@ -19,13 +40,7 @@ Future<void> _pumpNav(
   AppLocale locale,
 ) async {
   await tester.pumpWidget(
-    MaterialApp(
-      locale: locale.locale,
-      supportedLocales: appSupportedLocales,
-      localizationsDelegates: appLocalizationsDelegates,
-      localeResolutionCallback: (_, _) => locale.locale,
-      home: Scaffold(bottomNavigationBar: navBar),
-    ),
+    localizedApp(Scaffold(bottomNavigationBar: navBar), locale: locale),
   );
   await tester.pumpAndSettle();
 }
@@ -52,175 +67,93 @@ List<IconData> _icons(WidgetTester tester) {
       .toList();
 }
 
+Future<AppLocalizations> _l10nFor(AppLocale locale) =>
+    AppLocalizations.delegate.load(locale.locale);
+
 void main() {
-  group('Client bottom navigation is unaffected by language', () {
-    for (final locale in AppLocale.values) {
-      testWidgets('labels stay English in ${locale.storageValue}', (
-        tester,
-      ) async {
-        await _pumpNav(tester, const ClientBottomNavBar(currentIndex: 0), locale);
-
-        for (final label in clientTabs) {
-          expect(find.text(label), findsOneWidget);
-        }
-      });
-
-      testWidgets('tab order is unchanged in ${locale.storageValue}', (
-        tester,
-      ) async {
-        await _pumpNav(tester, const ClientBottomNavBar(currentIndex: 0), locale);
-
-        expect(_labelsInVisualOrder(tester), clientTabs);
-      });
-
-      testWidgets('renders left-to-right in ${locale.storageValue}', (
-        tester,
-      ) async {
-        await _pumpNav(tester, const ClientBottomNavBar(currentIndex: 0), locale);
-
-        final navContext = tester.element(find.text('Home'));
-        expect(Directionality.of(navContext), TextDirection.ltr);
-      });
-    }
-
-    testWidgets('icons are identical across all three languages', (
-      tester,
-    ) async {
-      final byLocale = <String, List<IconData>>{};
+  for (final (name, barBuilder, tabsFor) in <(
+    String,
+    Widget Function(),
+    List<String> Function(AppLocalizations),
+  )>[
+    ('Client', () => const ClientBottomNavBar(currentIndex: 0), clientTabs),
+    ('Ustaad', () => const WorkerBottomNavBar(currentIndex: 0), workerTabs),
+  ]) {
+    group('$name bottom navigation', () {
       for (final locale in AppLocale.values) {
-        await _pumpNav(
+        testWidgets('labels are translated in ${locale.storageValue}', (
           tester,
-          const ClientBottomNavBar(currentIndex: 0),
-          locale,
-        );
-        byLocale[locale.storageValue] = _icons(tester);
+        ) async {
+          final l10n = await _l10nFor(locale);
+          await _pumpNav(tester, barBuilder(), locale);
+
+          for (final label in tabsFor(l10n)) {
+            expect(find.text(label), findsOneWidget, reason: 'missing: $label');
+          }
+        });
+
+        testWidgets('tab order is unchanged in ${locale.storageValue}', (
+          tester,
+        ) async {
+          final l10n = await _l10nFor(locale);
+          await _pumpNav(tester, barBuilder(), locale);
+
+          // Left-to-right on screen, in the same sequence in every language.
+          expect(_labelsInVisualOrder(tester), tabsFor(l10n));
+        });
+
+        testWidgets('renders left-to-right in ${locale.storageValue}', (
+          tester,
+        ) async {
+          final l10n = await _l10nFor(locale);
+          await _pumpNav(tester, barBuilder(), locale);
+
+          final navContext = tester.element(find.text(tabsFor(l10n).first));
+          expect(Directionality.of(navContext), TextDirection.ltr);
+        });
       }
 
-      expect(byLocale['ur'], byLocale['en']);
-      expect(byLocale['ur_Latn'], byLocale['en']);
-      expect(byLocale['en']!.length, clientTabs.length);
-    });
-  });
-
-  group('Ustaad bottom navigation is unaffected by language', () {
-    for (final locale in AppLocale.values) {
-      testWidgets('labels stay English in ${locale.storageValue}', (
+      testWidgets('icons are identical across all three languages', (
         tester,
       ) async {
-        await _pumpNav(tester, const WorkerBottomNavBar(currentIndex: 0), locale);
+        final byLocale = <String, List<IconData>>{};
+        for (final locale in AppLocale.values) {
+          await _pumpNav(tester, barBuilder(), locale);
+          byLocale[locale.storageValue] = _icons(tester);
+        }
 
-        for (final label in workerTabs) {
-          expect(find.text(label), findsOneWidget);
+        expect(byLocale['ur'], byLocale['en']);
+        expect(byLocale['ur_Latn'], byLocale['en']);
+        final l10n = await _l10nFor(AppLocale.english);
+        expect(byLocale['en']!.length, tabsFor(l10n).length);
+      });
+
+      testWidgets('Urdu actually changes the wording', (tester) async {
+        // Guards against a bar that consults localization but was wired to
+        // keys carrying the same text in every language — which would satisfy
+        // every assertion above while still shipping English to Urdu readers.
+        final en = tabsFor(await _l10nFor(AppLocale.english));
+        final ur = tabsFor(await _l10nFor(AppLocale.urdu));
+
+        expect(ur, isNot(en));
+        final urduScript = RegExp(r'[؀-ۿ]');
+        for (final label in ur) {
+          expect(
+            urduScript.hasMatch(label),
+            isTrue,
+            reason: 'not Urdu script: $label',
+          );
         }
       });
-
-      testWidgets('tab order is unchanged in ${locale.storageValue}', (
-        tester,
-      ) async {
-        await _pumpNav(tester, const WorkerBottomNavBar(currentIndex: 0), locale);
-
-        expect(_labelsInVisualOrder(tester), workerTabs);
-      });
-
-      testWidgets('renders left-to-right in ${locale.storageValue}', (
-        tester,
-      ) async {
-        await _pumpNav(tester, const WorkerBottomNavBar(currentIndex: 0), locale);
-
-        final navContext = tester.element(find.text('My Jobs'));
-        expect(Directionality.of(navContext), TextDirection.ltr);
-      });
-    }
-
-    testWidgets('icons are identical across all three languages', (
-      tester,
-    ) async {
-      final byLocale = <String, List<IconData>>{};
-      for (final locale in AppLocale.values) {
-        await _pumpNav(
-          tester,
-          const WorkerBottomNavBar(currentIndex: 0),
-          locale,
-        );
-        byLocale[locale.storageValue] = _icons(tester);
-      }
-
-      expect(byLocale['ur'], byLocale['en']);
-      expect(byLocale['ur_Latn'], byLocale['en']);
-      expect(byLocale['en']!.length, workerTabs.length);
     });
-  });
+  }
 
-  test('no navigation label was moved into a translation file', () {
-    // A label leaking into an ARB is the first step towards it being
-    // translated, so the ARBs are checked directly.
-    //
-    // Only the distinctive multi-word labels are scanned: single common words
-    // like "Chat" or "Home" legitimately appear as screen titles elsewhere, and
-    // flagging those would be a false positive. The single words are covered
-    // instead by the render assertions above and the source scan below, which
-    // together prove the bar itself never consults a translation.
-    final distinctiveLabels = {...clientTabs, ...workerTabs}
-        .where((label) => label.contains(' '))
-        .toSet();
-    expect(distinctiveLabels, isNotEmpty);
-
-    // Keys whose English legitimately reads the same as a tab label but which
-    // belong to a different surface. The bars themselves consult no
-    // localization at all (asserted below), so a shared phrase elsewhere
-    // cannot reach them.
-    const allowed = {
-      'clientJobsTitle': 'My Jobs', // AppBar title of the Client Jobs page
-      'workerNewJobsTitle': 'New Jobs', // Worker New Jobs page title
-    };
-
-    for (final name in ['app_en.arb', 'app_ur.arb', 'app_ur_Latn.arb']) {
-      final arb = jsonDecode(File('lib/l10n/$name').readAsStringSync())
-          as Map<String, dynamic>;
-      final offenders = arb.entries
-          .where((e) => !e.key.startsWith('@'))
-          .where((e) => distinctiveLabels.contains(e.value))
-          .where((e) => !allowed.containsKey(e.key))
-          .map((e) => '${e.key} = "${e.value}"')
-          .toList();
-
-      expect(
-        offenders,
-        isEmpty,
-        reason: 'Bottom-navigation labels must not be translated. Found in '
-            '$name: $offenders',
-      );
-    }
-  });
-
-  test('no ARB key is named as if it belonged to the navigation bar', () {
-    for (final name in ['app_en.arb', 'app_ur.arb', 'app_ur_Latn.arb']) {
-      final arb = jsonDecode(File('lib/l10n/$name').readAsStringSync())
-          as Map<String, dynamic>;
-      final navKeys = arb.keys
-          .where((k) => !k.startsWith('@'))
-          .where((k) {
-            final lower = k.toLowerCase();
-            return lower.contains('bottomnav') || lower.contains('navlabel');
-          })
-          .toList();
-
-      expect(
-        navKeys,
-        isEmpty,
-        reason: 'Navigation labels must stay hard-coded, not live in $name',
-      );
-    }
-  });
-
-  test('the nav bar sources contain no localization lookup', () {
+  test('the nav bars pin themselves left-to-right', () {
     for (final path in [
       'lib/features/client/presentation/widgets/client_bottom_nav_bar.dart',
       'lib/features/worker/presentation/widgets/worker_bottom_nav_bar.dart',
     ]) {
       final source = File(path).readAsStringSync();
-      expect(source, isNot(contains('context.l10n')));
-      expect(source, isNot(contains('AppLocalizations')));
       expect(
         source,
         contains('TextDirection.ltr'),

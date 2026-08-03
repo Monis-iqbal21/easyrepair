@@ -69,6 +69,20 @@ export class BookingsController {
     return this.bookingsService.getClientBookings(user.id);
   }
 
+  /**
+   * GET /bookings/pending-reviews — completed bookings this client still owes
+   * a review for. The app's source of truth for "a review is pending", so a
+   * missed completion push never permanently loses the prompt.
+   *
+   * MUST stay declared above `@Get(':id')`, which would otherwise match
+   * "pending-reviews" as a booking id.
+   */
+  @Get('pending-reviews')
+  @Roles(Role.CLIENT)
+  getPendingReviews(@CurrentUser() user: { id: string }) {
+    return this.bookingsService.getPendingReviews(user.id);
+  }
+
   /** GET /bookings/:id — fetch a single booking by id */
   @Get(':id')
   @Roles(Role.CLIENT)

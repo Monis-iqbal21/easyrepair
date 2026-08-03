@@ -148,6 +148,9 @@ export const BOOKING_INCLUDE = {
   sourceInspectionBooking: {
     select: {
       id: true,
+      // Required by deriveInspectionFeePaid: the fee's paid/not-paid status
+      // is owned by the ORIGINAL inspection work unit, never by this repair.
+      status: true,
       inspectionReport: {
         select: {
           decisionStatus: true,
@@ -339,6 +342,29 @@ export class BookingsRepository {
     return this.prisma.booking.findMany({
       where: { clientProfileId },
       orderBy: { createdAt: 'desc' },
+      include: BOOKING_INCLUDE,
+    });
+  }
+
+  /**
+   * Completed bookings this client still owes a review for — the backend
+   * source of truth behind GET /bookings/pending-reviews. A booking leaves
+   * this list only once its Review row exists, which is what lets the app
+   * keep re-offering a postponed or failed review without ever duplicating
+   * one. `workerProfileId: not null` mirrors submitReview's own guard: a
+   * booking with no assigned Ustaad has nobody to review.
+   */
+  async findPendingReviewBookingsByClientProfileId(
+    clientProfileId: string,
+  ): Promise<BookingWithRelations[]> {
+    return this.prisma.booking.findMany({
+      where: {
+        clientProfileId,
+        status: BookingStatus.COMPLETED,
+        workerProfileId: { not: null },
+        review: { is: null },
+      },
+      orderBy: { completedAt: 'desc' },
       include: BOOKING_INCLUDE,
     });
   }

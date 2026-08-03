@@ -127,11 +127,11 @@ class _ReportBody extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (report.issueFound != null && report.issueFound!.isNotEmpty)
-                    _row('Issue found', report.issueFound!),
+                    _row(context.l10n.inspectionRowIssueFound, report.issueFound!),
                   if (report.recommendedRepair != null && report.recommendedRepair!.isNotEmpty)
-                    _row('Recommended repair', report.recommendedRepair!),
+                    _row(context.l10n.inspFormRecommendedRepair, report.recommendedRepair!),
                   if (report.notes != null && report.notes!.isNotEmpty)
-                    _row('Notes', report.notes!, isLast: true),
+                    _row(context.l10n.inspectionRowNotes, report.notes!, isLast: true),
                 ],
               ),
             ),
@@ -247,8 +247,8 @@ class _ReportBody extends ConsumerWidget {
               decoration: BoxDecoration(color: _kPrimaryLight, borderRadius: BorderRadius.circular(16)),
               child: Column(
                 children: [
-                  _summaryLine('Parts total', report.partsTotal!),
-                  _summaryLine('Labour', report.labourCost!),
+                  _summaryLine(context.l10n.inspFormPartsTotal, report.partsTotal!),
+                  _summaryLine(context.l10n.inspFormLabour, report.labourCost!),
                   const Padding(
                     padding: EdgeInsets.symmetric(vertical: 8),
                     child: Divider(height: 1),
@@ -525,13 +525,13 @@ class _DecisionBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final (text, color) = switch (decisionStatus) {
       InspectionDecisionStatus.pendingClientDecision =>
-        ('Report submitted — awaiting decision', _kPrimary),
+        (context.l10n.inspectionBadgeAwaitingDecision, _kPrimary),
       InspectionDecisionStatus.acceptedRepair =>
-        ('Quote accepted — repair in progress', _kSuccess),
+        (context.l10n.inspectionBadgeQuoteAccepted, _kSuccess),
       InspectionDecisionStatus.closedAfterInspection =>
-        ('Closed after inspection', const Color(0xFF2563EB)),
+        (context.l10n.trackStepClosedAfterInspection, const Color(0xFF2563EB)),
       InspectionDecisionStatus.findOtherUstaad =>
-        ('Finding another Ustaad — open for bidding', const Color(0xFFB45309)),
+        (context.l10n.inspectionBadgeFindingAnother, const Color(0xFFB45309)),
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

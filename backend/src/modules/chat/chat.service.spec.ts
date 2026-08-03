@@ -6,6 +6,7 @@ describe('ChatService.getOrCreateConversation', () => {
   let storageService: any;
   let notificationsService: any;
   let bookingsService: any;
+  let supportUserService: any;
   let service: ChatService;
 
   const WORKER_USER = { userId: 'worker-user-1' };
@@ -47,11 +48,17 @@ describe('ChatService.getOrCreateConversation', () => {
     bookingsService = {
       assertClientCanChatWithWorker: jest.fn().mockResolvedValue(undefined),
     };
+    supportUserService = {
+      getSupportUserId: jest.fn().mockResolvedValue('support-user-id'),
+      displayName: 'HandyGo Support',
+      isSupportPhone: jest.fn().mockReturnValue(false),
+    };
     service = new ChatService(
       chatRepository,
       storageService,
       notificationsService,
       bookingsService,
+      supportUserService,
     );
   });
 
@@ -154,6 +161,8 @@ describe('BookingsService.assertClientCanChatWithWorker', () => {
       notificationsService,
       chatService,
       bookingsQueue,
+      { broadcastJob: jest.fn(), matchOpenJobsForWorker: jest.fn() } as any,
+      { notifyClientJobCompleted: jest.fn() } as any,
     );
   });
 

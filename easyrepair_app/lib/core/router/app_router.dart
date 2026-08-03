@@ -119,7 +119,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/client/chat/:id',
         builder: (_, state) => ChatDetailPage(
           conversationId: state.pathParameters['id']!,
-          backRoute: '/client/chat',
+          // Only used when a notification or deep link opened the conversation
+          // with no history behind it; otherwise back pops to whatever pushed
+          // it (workers list, Ustaad detail, booking detail, Chats tab).
+          fallbackRoute: '/client/chat',
         ),
       ),
       GoRoute(
@@ -169,7 +172,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/worker/chat/:id',
         builder: (_, state) => ChatDetailPage(
           conversationId: state.pathParameters['id']!,
-          backRoute: '/worker/chat',
+          // Only used when a notification or deep link opened the conversation
+          // with no history behind it; otherwise back pops to whatever pushed
+          // it (job detail, new jobs, bid page, Chats tab).
+          fallbackRoute: '/worker/chat',
         ),
       ),
       GoRoute(

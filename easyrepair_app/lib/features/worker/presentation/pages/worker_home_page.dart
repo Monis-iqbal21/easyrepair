@@ -15,6 +15,7 @@ import '../../domain/entities/category_entity.dart';
 import '../../domain/entities/worker_review_entity.dart';
 import '../providers/worker_providers.dart';
 import '../providers/worker_review_providers.dart';
+import '../utils/worker_status_labels.dart';
 import '../widgets/worker_bottom_nav_bar.dart';
 import '../widgets/profile_completion_modal.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
@@ -909,7 +910,13 @@ class _ActiveJobCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final statusLabel = _statusLabel(context, job.status, job.lane);
+    // A booking whose status is ACCEPTED has been *assigned* to this Ustaad,
+    // whichever lane it came from — direct standard hire, inspection, or an
+    // accepted bid. "Accepted" used to be shown here for the non-inspection
+    // lanes only because this card carried its own copy of the mapping; the
+    // shared helper is the same one My Jobs and the client app already use,
+    // so the wording can no longer differ between screens.
+    final statusLabel = ongoingJobStatusLabel(context.l10n, job.status);
     final statusColor = _statusColor(job.status);
 
     return GestureDetector(
@@ -1045,29 +1052,6 @@ class _ActiveJobCard extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  /// [status] and [lane] are raw backend tokens and stay untouched — only the
-  /// words shown on the card are translated. An unrecognised status is echoed
-  /// back verbatim rather than machine-translated.
-  String _statusLabel(BuildContext context, String status, String lane) {
-    final l10n = context.l10n;
-    // Inspection jobs are only ever "assigned" for a look, not truly
-    // "accepted" work yet (the Ustaad still has to inspect before any repair
-    // is agreed) — Standard/Bidding keep their existing "Accepted" wording.
-    if (status.toUpperCase() == 'ACCEPTED' && lane.toUpperCase() == 'INSPECTION') {
-      return l10n.bookingStatusAssigned;
-    }
-    switch (status.toUpperCase()) {
-      case 'ACCEPTED':
-        return l10n.bidStatusAccepted;
-      case 'EN_ROUTE':
-        return l10n.jobStatusEnRoute;
-      case 'IN_PROGRESS':
-        return l10n.jobStatusInProgress;
-      default:
-        return status;
-    }
   }
 
   Color _statusColor(String status) {

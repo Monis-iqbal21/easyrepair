@@ -166,7 +166,7 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
       }
       if (perm == LocationPermission.denied ||
           perm == LocationPermission.deniedForever) {
-        if (mounted) _showSnack('Location permission denied.');
+        if (mounted) _showSnack(context.l10n.workerLocationPermissionDenied);
         return;
       }
       final pos = await Geolocator.getCurrentPosition(
@@ -179,7 +179,7 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
       _moveMap(latlng);
       await _resolveAndSet(latlng);
     } catch (_) {
-      if (mounted) _showSnack('Could not get current location.');
+      if (mounted) _showSnack(context.l10n.locationCurrentFailed);
     } finally {
       if (mounted) setState(() => _gpsLoading = false);
     }
@@ -335,7 +335,7 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
       );
       final result = res.data['result'] as Map?;
       if (result == null) {
-        if (mounted) _showSnack('Could not resolve selected location.');
+        if (mounted) _showSnack(context.l10n.locationResolveFailed);
         return;
       }
       final loc    = result['geometry']['location'] as Map;
@@ -347,7 +347,7 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
           '${prediction.mainText}, ${prediction.secondaryText}';
 
       if (!_isInKarachi(latlng)) {
-        if (mounted) _showSnack('Location is outside the Karachi service area.');
+        if (mounted) _showSnack(context.l10n.locationOutsideKarachi);
         return;
       }
 
@@ -364,7 +364,7 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
       });
       _moveMap(latlng);
     } catch (_) {
-      if (mounted) _showSnack('Could not resolve selected location.');
+      if (mounted) _showSnack(context.l10n.locationResolveFailed);
     } finally {
       if (mounted) setState(() => _searching = false);
     }

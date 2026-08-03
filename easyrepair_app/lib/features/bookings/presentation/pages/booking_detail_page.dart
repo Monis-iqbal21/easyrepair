@@ -379,10 +379,22 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
                   const SizedBox(height: 16),
                 ],
 
-                // INSPECTION lane: "View Inspection Report" opens the
-                // dedicated report page (not shown inline here).
-                if (booking.lane == BookingLane.inspection &&
-                    booking.assignedWorker != null)
+                // "View Inspection Report" opens the dedicated report page
+                // (not shown inline here).
+                //
+                // The report belongs to the BOOKING, not to whoever is
+                // currently hired, so this deliberately does not require an
+                // assigned worker: after "Find Other Ustaad" the booking sits
+                // unassigned while the client picks a replacement, and it used
+                // to lose its report for that whole window. A linked repair
+                // booking is BIDDING-lane with a sourceInspectionBookingId and
+                // carries no report row of its own — the backend resolves it
+                // back to the source inspection booking, so passing either id
+                // works.
+                //
+                // Safe to offer unconditionally for these shapes: the button
+                // renders nothing until a report actually exists.
+                if (booking.hasInspectionReportToShow)
                   ViewInspectionReportButton(
                     bookingId: booking.id,
                     route: '/client/booking/${booking.id}/inspection-report',
@@ -1031,6 +1043,18 @@ class _PricingCard extends StatelessWidget {
         booking.inspectionFeeSnapshot != null;
     final hasWorkCharge = showInspectionBreakdown && booking.finalPrice != null;
 
+    // The amount actually agreed with the hired Ustaad, which for a BIDDING
+    // or rehired job lives in acceptedBidAmount and is NOT estimatedPrice.
+    // Track Worker has always shown this ("Hired at Rs X"); this page showed
+    // only the client's original estimate, so the two disagreed. Restricted to
+    // live assigned bookings because once completed the Final Price row (or
+    // the inspection breakdown above it) is already the authoritative figure.
+    final agreedPrice = booking.agreedPrice;
+    final showAgreedPrice = !isCompleted &&
+        booking.assignedWorker != null &&
+        agreedPrice != null &&
+        agreedPrice != booking.estimatedPrice;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1063,14 +1087,38 @@ class _PricingCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
-                    color: isCompleted ? _kLight : _kDark,
-                    decoration: isCompleted && booking.finalPrice != null
-                        ? TextDecoration.lineThrough
-                        : null,
+                    // Superseded once a real amount exists — struck through so
+                    // the estimate is never mistaken for what will be paid.
+                    color: isCompleted || showAgreedPrice ? _kLight : _kDark,
+                    decoration:
+                        (isCompleted && booking.finalPrice != null) ||
+                                showAgreedPrice
+                            ? TextDecoration.lineThrough
+                            : null,
                   ),
                 ),
               ],
             ),
+          if (showAgreedPrice) ...[
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  context.l10n.bookingAgreedPrice,
+                  style: TextStyle(fontSize: 13, color: _kGray),
+                ),
+                Text(
+                  formatPkr(agreedPrice),
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: _kDark,
+                  ),
+                ),
+              ],
+            ),
+          ],
           if (showInspectionBreakdown) ...[
             const SizedBox(height: 8),
             Row(

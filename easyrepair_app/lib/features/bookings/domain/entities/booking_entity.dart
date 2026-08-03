@@ -248,6 +248,31 @@ extension BookingInspectionLifecycleX on BookingEntity {
           inspectionDecisionStatus == InspectionDecisionStatus.findOtherUstaad) ||
       (lane == BookingLane.bidding && sourceInspectionBookingId != null);
 
+  /// The price actually agreed with the hired Ustaad, in precedence order.
+  ///
+  /// [acceptedBidAmount] wins because on a BIDDING job (including a rehire
+  /// after "Find Other Ustaad") it is the only field holding what the client
+  /// actually agreed to — [estimatedPrice] is still the client's original
+  /// guess. Booking Details used to read estimated/final directly and so
+  /// disagreed with Track Worker, which already applied this order. Both now
+  /// read this one getter, so the two screens cannot show different numbers.
+  ///
+  /// Null when nothing has been agreed or estimated yet.
+  double? get agreedPrice => acceptedBidAmount ?? finalPrice ?? estimatedPrice;
+
+  /// True when this booking can have an inspection report worth offering —
+  /// either it IS the inspection booking, or it is the linked repair booking
+  /// that descends from one.
+  ///
+  /// Deliberately independent of who is currently assigned: the report belongs
+  /// to the booking and must survive "Find Other Ustaad" and any number of
+  /// subsequent re-hires, including the window where nobody is assigned at
+  /// all. This only decides whether it is worth *asking* for the report —
+  /// whether one exists is answered by the backend, and the button renders
+  /// nothing when it does not.
+  bool get hasInspectionReportToShow =>
+      lane == BookingLane.inspection || sourceInspectionBookingId != null;
+
   /// Worker "My Jobs" card: this completed entry represents inspection work
   /// only — the repair was opened to other Ustaads — so it must be labelled
   /// "Sirf Inspection Mukammal Hui" and never look like a completed repair.

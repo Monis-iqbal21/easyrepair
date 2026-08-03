@@ -8,12 +8,17 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { MessageType, Role } from '@prisma/client';
-import { ChatRepository, ConversationWithParticipants } from './chat.repository';
+import {
+  ChatRepository,
+  ConversationWithParticipants,
+} from './chat.repository';
 import { ConversationResponseDto } from './dto/conversation-response.dto';
 import { MessageResponseDto } from './dto/message-response.dto';
+import { SupportConversationDto } from './dto/support-conversation-response.dto';
 import { StorageService } from '../storage/storage.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { BookingsService } from '../bookings/bookings.service';
+import { SupportUserService } from './support-user.service';
 
 @Injectable()
 export class ChatService {
@@ -25,6 +30,7 @@ export class ChatService {
     private readonly notificationsService: NotificationsService,
     @Inject(forwardRef(() => BookingsService))
     private readonly bookingsService: BookingsService,
+    private readonly supportUserService: SupportUserService,
   ) {}
 
   // ── Conversations ─────────────────────────────────────────────────────────
@@ -59,8 +65,16 @@ export class ChatService {
       workerUserId,
     );
     if (existing) {
-      const unreadCount = await this.chatRepository.countUnread(existing.id, clientUserId);
-      return this._toConversationDto(existing, clientUserId, Role.CLIENT, unreadCount);
+      const unreadCount = await this.chatRepository.countUnread(
+        existing.id,
+        clientUserId,
+      );
+      return this._toConversationDto(
+        existing,
+        clientUserId,
+        Role.CLIENT,
+        unreadCount,
+      );
     }
 
     // No existing conversation — enforce the full eligibility gate before
@@ -98,10 +112,11 @@ export class ChatService {
       await this.chatRepository.findBookingForChatEligibility(bookingId);
     if (!booking) throw new NotFoundException('Booking not found');
 
-    if (booking.workerProfile && booking.workerProfile.userId !== workerUserId) {
-      throw new ForbiddenException(
-        'This job is assigned to another worker.',
-      );
+    if (
+      booking.workerProfile &&
+      booking.workerProfile.userId !== workerUserId
+    ) {
+      throw new ForbiddenException('This job is assigned to another worker.');
     }
 
     const clientUserId = booking.clientProfile.userId;
@@ -111,8 +126,16 @@ export class ChatService {
       workerUserId,
     );
     if (existing) {
-      const unreadCount = await this.chatRepository.countUnread(existing.id, workerUserId);
-      return this._toConversationDto(existing, workerUserId, Role.WORKER, unreadCount);
+      const unreadCount = await this.chatRepository.countUnread(
+        existing.id,
+        workerUserId,
+      );
+      return this._toConversationDto(
+        existing,
+        workerUserId,
+        Role.WORKER,
+        unreadCount,
+      );
     }
 
     const created = await this.chatRepository.createConversation({
@@ -170,16 +193,236 @@ export class ChatService {
     userId: string,
     role: Role,
   ): Promise<ConversationResponseDto[]> {
-    const conversations = await this.chatRepository.findConversationsByUserId(
-      userId,
-      role,
-    );
+    // Self-healing for accounts that predate the support feature: the Chat
+    // tab is the one place every user reliably visits, and this is idempotent.
+    await this.ensureSupportConversation(userId, role);
+
+    const [conversations, supportUserId] = await Promise.all([
+      this.chatRepository.findConversationsByUserId(userId, role),
+      this.supportUserService.getSupportUserId().catch(() => null),
+    ]);
+
     return Promise.all(
       conversations.map(async (c) => {
         const unreadCount = await this.chatRepository.countUnread(c.id, userId);
-        return this._toConversationDto(c, userId, role, unreadCount);
+        const isSupport =
+          supportUserId != null && this._isSupportConversation(c, supportUserId);
+        return this._toConversationDto(c, userId, role, unreadCount, isSupport);
       }),
     );
+  }
+
+  // ── HandyGo Support ───────────────────────────────────────────────────────
+
+  /**
+   * Idempotently ensure this user has their one HandyGo Support conversation.
+   *
+   * Safe to call on every login, registration, app resume and Chat-tab load:
+   * uniqueness is owned by the DB (`@@unique([clientUserId, workerUserId])`),
+   * and `createConversation` already resolves the P2002 race by returning the
+   * winning row — so concurrent calls can only ever yield ONE conversation.
+   *
+   * Only CLIENT and WORKER get a support thread. ADMIN (which includes the
+   * support system account itself) is excluded: support must never open a
+   * conversation with itself, and admins reach users through the inbox.
+   *
+   * The support user takes the opposite participant slot, so each real user's
+   * own id always lands in the slot `findConversationsByUserId` queries for
+   * their role — a client in `clientUserId`, a worker in `workerUserId`.
+   *
+   * Never throws: a support-thread failure must not break login.
+   */
+  async ensureSupportConversation(
+    userId: string,
+    role: Role,
+  ): Promise<ConversationWithParticipants | null> {
+    try {
+      if (role !== Role.CLIENT && role !== Role.WORKER) return null;
+
+      const supportUserId = await this.supportUserService.getSupportUserId();
+      // Belt and braces: the support account is ADMIN so the check above
+      // already excludes it, but never let it pair with itself.
+      if (userId === supportUserId) return null;
+
+      const clientUserId = role === Role.CLIENT ? userId : supportUserId;
+      const workerUserId = role === Role.CLIENT ? supportUserId : userId;
+
+      const existing = await this.chatRepository.findConversation(
+        clientUserId,
+        workerUserId,
+      );
+      if (existing) return existing;
+
+      return await this.chatRepository.createConversation({
+        clientUserId,
+        workerUserId,
+        createdByUserId: userId,
+      });
+    } catch (err) {
+      this.logger.warn(
+        `[ensureSupportConversation] failed for userId=${userId}: ${(err as Error)?.message}`,
+      );
+      return null;
+    }
+  }
+
+  /** True when the support system user is one of the two participants. */
+  private _isSupportConversation(
+    c: ConversationWithParticipants,
+    supportUserId: string,
+  ): boolean {
+    return (
+      c.clientUserId === supportUserId || c.workerUserId === supportUserId
+    );
+  }
+
+  // ── Admin support inbox ───────────────────────────────────────────────────
+  //
+  // Authorization for these lives in SupportController's SUPPORT_ROLES guard,
+  // so granting a future SUPPORT role access is a one-line change there.
+
+  /** Support threads for the inbox, newest activity first. */
+  async listSupportConversations(options: {
+    query?: string;
+    take?: number;
+    cursor?: string;
+  }): Promise<SupportConversationDto[]> {
+    const supportUserId = await this.supportUserService.getSupportUserId();
+    const conversations = await this.chatRepository.findSupportConversations(
+      supportUserId,
+      options,
+    );
+
+    return Promise.all(
+      conversations.map(async (c) => {
+        // The requester is whichever side ISN'T support.
+        const requesterUserId =
+          c.clientUserId === supportUserId ? c.workerUserId : c.clientUserId;
+        const isWorkerRequester = c.clientUserId === supportUserId;
+        const profile = isWorkerRequester
+          ? c.workerUser.workerProfile
+          : c.clientUser.clientProfile;
+
+        return {
+          id: c.id,
+          requesterUserId,
+          // Lets the inbox show "Client" vs "Ustaad" at a glance.
+          requesterType: isWorkerRequester ? Role.WORKER : Role.CLIENT,
+          requesterName:
+            [profile?.firstName, profile?.lastName]
+              .filter(Boolean)
+              .join(' ') || 'User',
+          requesterAvatarUrl: profile?.avatarUrl ?? null,
+          lastMessageAt: c.lastMessageAt?.toISOString() ?? null,
+          lastMessagePreview: c.lastMessagePreview ?? null,
+          // Unread from the SUPPORT side — i.e. what the admin still owes.
+          unreadCount: await this.chatRepository.countUnread(
+            c.id,
+            supportUserId,
+          ),
+          createdAt: c.createdAt.toISOString(),
+        };
+      }),
+    );
+  }
+
+  /** Messages in a support thread, for the inbox. */
+  async getSupportMessages(
+    conversationId: string,
+    limit = 50,
+    before?: string,
+  ): Promise<MessageResponseDto[]> {
+    await this._assertSupportConversation(conversationId);
+    const messages = await this.chatRepository.findMessages(
+      conversationId,
+      limit,
+      before,
+    );
+    return messages.map((m) => this._toMessageDto(m));
+  }
+
+  /**
+   * Admin reply. Sent AS the shared support identity, not as the individual
+   * admin, so the user always sees one consistent "HandyGo Support" and can
+   * never message a specific admin back.
+   */
+  async sendSupportReply(
+    conversationId: string,
+    text: string,
+  ): Promise<MessageResponseDto> {
+    if (!text?.trim()) throw new BadRequestException('Message cannot be empty');
+    await this._assertSupportConversation(conversationId);
+
+    const supportUserId = await this.supportUserService.getSupportUserId();
+    const message = await this.chatRepository.createMessage({
+      conversationId,
+      senderUserId: supportUserId,
+      senderRole: Role.ADMIN,
+      text: text.trim(),
+    });
+    return this._toMessageDto(message);
+  }
+
+  /** Marks the requester's messages as seen once an admin opens the thread. */
+  async markSupportConversationRead(conversationId: string): Promise<number> {
+    await this._assertSupportConversation(conversationId);
+    const supportUserId = await this.supportUserService.getSupportUserId();
+    return this.chatRepository.markAllSeenFrom(conversationId, supportUserId);
+  }
+
+  /** Minimal, deliberately non-sensitive requester detail for the inbox. */
+  async getSupportRequesterInfo(conversationId: string) {
+    const conversation = await this._assertSupportConversation(conversationId);
+    const supportUserId = await this.supportUserService.getSupportUserId();
+    const requesterUserId =
+      conversation.clientUserId === supportUserId
+        ? conversation.workerUserId
+        : conversation.clientUserId;
+
+    const user = await this.chatRepository.findUserSummary(requesterUserId);
+    if (!user) throw new NotFoundException('User not found');
+
+    const profile = user.clientProfile ?? user.workerProfile;
+    return {
+      userId: user.id,
+      role: user.role,
+      name:
+        [profile?.firstName, profile?.lastName].filter(Boolean).join(' ') ||
+        'User',
+      avatarUrl: profile?.avatarUrl ?? null,
+      phone: user.phone,
+      memberSince: user.createdAt.toISOString(),
+    };
+  }
+
+  /** The conversation must genuinely be a support thread. */
+  private async _assertSupportConversation(
+    conversationId: string,
+  ): Promise<ConversationWithParticipants> {
+    const conversation =
+      await this.chatRepository.findConversationById(conversationId);
+    if (!conversation) throw new NotFoundException('Conversation not found');
+
+    const supportUserId = await this.supportUserService.getSupportUserId();
+    if (!this._isSupportConversation(conversation, supportUserId)) {
+      // Stops the admin endpoints being used to read ordinary booking chats.
+      throw new ForbiddenException('Not a support conversation');
+    }
+    return conversation;
+  }
+
+  /** The support user's id — used by the gateway for room routing. */
+  async getSupportUserId(): Promise<string> {
+    return this.supportUserService.getSupportUserId();
+  }
+
+  /** Whether a conversation id is a support thread (for socket fan-out). */
+  async isSupportConversationId(conversationId: string): Promise<boolean> {
+    const conversation =
+      await this.chatRepository.findConversationById(conversationId);
+    if (!conversation) return false;
+    const supportUserId = await this.supportUserService.getSupportUserId();
+    return this._isSupportConversation(conversation, supportUserId);
   }
 
   // ── Messages ──────────────────────────────────────────────────────────────
@@ -323,7 +566,9 @@ export class ChatService {
     if (!conversation) throw new NotFoundException('Conversation not found');
     this._assertParticipant(conversation, userId);
 
-    const voiceMime = fileMimeType || (originalName.endsWith('.m4a') ? 'audio/x-m4a' : 'audio/mp4');
+    const voiceMime =
+      fileMimeType ||
+      (originalName.endsWith('.m4a') ? 'audio/x-m4a' : 'audio/mp4');
     const uploaded = await this.storageService.uploadFile(
       buffer,
       originalName,
@@ -477,7 +722,8 @@ export class ChatService {
     const isParticipant =
       conversation.clientUserId === userId ||
       conversation.workerUserId === userId;
-    if (!isParticipant) throw new ForbiddenException('Not a conversation participant');
+    if (!isParticipant)
+      throw new ForbiddenException('Not a conversation participant');
   }
 
   /** Return the display name of the sender for push notification titles. */
@@ -499,9 +745,22 @@ export class ChatService {
     callerId: string,
     callerRole: Role,
     unreadCount = 0,
+    isSupport = false,
   ): ConversationResponseDto {
-    // Build otherParticipant from the opposite side's user record
-    const otherParticipant =
+    // The support account has neither a clientProfile nor a workerProfile
+    // (deliberately — that keeps it out of every matching query), so the
+    // normal profile lookup below would yield empty strings. Name it here
+    // instead; the app renders the bundled HandyGo logo for the avatar.
+    const otherParticipant = isSupport
+      ? {
+          userId:
+            c.clientUserId === callerId ? c.workerUserId : c.clientUserId,
+          firstName: this.supportUserService.displayName,
+          lastName: '',
+          avatarUrl: null,
+          rating: null,
+        }
+      : // Build otherParticipant from the opposite side's user record
       callerRole === Role.CLIENT
         ? {
             userId: c.workerUserId,
@@ -529,6 +788,7 @@ export class ChatService {
       updatedAt: c.updatedAt.toISOString(),
       otherParticipant,
       unreadCount,
+      isSupport,
     };
   }
 

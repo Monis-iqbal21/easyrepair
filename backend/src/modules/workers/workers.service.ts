@@ -6,12 +6,7 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
-import {
-  AvailabilityStatus,
-  BookingStatus,
-  Prisma,
-  AgreementType,
-} from '@prisma/client';
+import { AvailabilityStatus, BookingStatus, Prisma } from '@prisma/client';
 import { Queue } from 'bull';
 import {
   WorkerJobWithRelations,
@@ -20,7 +15,17 @@ import {
 } from './workers.repository';
 import { NotificationsService } from '../notifications/notifications.service';
 import { StorageService } from '../storage/storage.service';
-import { AgreementsService } from '../agreements/agreements.service';
+import {
+  UstaadTemplateService,
+  UnsupportedTradeError,
+} from '../agreements/ustaad-template.service';
+import {
+  AgreementAcceptanceEvidence,
+  AgreementSubmissionError,
+  UstaadAcceptanceService,
+} from '../agreements/ustaad-acceptance.service';
+import { UstaadAgreementAccessService } from '../agreements/ustaad-agreement-access.service';
+import { SubmitProfileCompletionDto } from './dto/submit-profile-completion.dto';
 import { UpdateAvailabilityDto } from './dto/update-availability.dto';
 import {
   AUTO_OFFLINE_JOB,
@@ -31,6 +36,10 @@ import { UpdateSkillsDto } from './dto/update-skills.dto';
 import { UpdateLocationDto } from './dto/update-location.dto';
 import { UpdateProfileCompletionDto } from './dto/update-profile-completion.dto';
 import { haversineKm } from '../../common/utils/geo.util';
+import { JobBroadcastService } from '../matching/job-broadcast.service';
+import { JobCompletionNotifierService } from '../matching/job-completion-notifier.service';
+import { LOCATION_FRESHNESS_MS } from '../../common/utils/job-eligibility.util';
+import { deriveInspectionFeePaid } from '../../common/utils/inspection-fee.util';
 import {
   WorkerJobAttachmentDto,
   WorkerJobResponseDto,
@@ -54,8 +63,16 @@ export class WorkersService {
     private readonly workersRepository: WorkersRepository,
     private readonly notificationsService: NotificationsService,
     private readonly storageService: StorageService,
-    private readonly agreementsService: AgreementsService,
+    // The three-document Ustaad agreement flow: what to read, what to seal,
+    // and what the Ustaad may later list/download.
+    private readonly ustaadTemplateService: UstaadTemplateService,
+    private readonly ustaadAcceptanceService: UstaadAcceptanceService,
+    private readonly ustaadAgreementAccess: UstaadAgreementAccessService,
     @InjectQueue(WORKERS_QUEUE) private readonly autoOfflineQueue: Queue,
+    // Both live in the leaf MatchingModule — WorkersService and
+    // BookingsService share them without importing each other.
+    private readonly jobBroadcastService: JobBroadcastService,
+    private readonly jobCompletionNotifier: JobCompletionNotifierService,
   ) {}
 
   // ── Avatar upload ────────────────────────────────────────────────────────
@@ -110,51 +127,29 @@ export class WorkersService {
       data.residentialAddress = dto.residentialAddress;
     }
     if (dto.cnicNumber !== undefined) data.cnicNumber = dto.cnicNumber;
+    if (dto.fatherName !== undefined) data.fatherName = dto.fatherName;
+    if (dto.dateOfBirth !== undefined) {
+      // A future date of birth is never a typo worth persisting onto a legal
+      // document, so it is rejected here as well as in the app.
+      const parsed = new Date(`${dto.dateOfBirth}T00:00:00.000Z`);
+      if (Number.isNaN(parsed.getTime()) || parsed.getTime() > Date.now()) {
+        throw new BadRequestException(
+          'Date of birth must be a valid past date.',
+        );
+      }
+      data.dateOfBirth = dto.dateOfBirth;
+    }
+    if (dto.emergencyContact !== undefined) {
+      // Blank means "cleared", which the EVS document prints as the controlled
+      // "Not applicable" rather than leaving a hole.
+      data.emergencyContact = dto.emergencyContact.trim() || null;
+    }
     if (dto.legalNameConfirmed !== undefined) {
       data.legalNameConfirmedAt = dto.legalNameConfirmed ? new Date() : null;
     }
-    if (dto.generalAgreementAccepted !== undefined) {
-      if (dto.generalAgreementAccepted) {
-        const template = await this.agreementsService.getActiveTemplate(
-          AgreementType.GENERAL_USTAAD,
-          null,
-        );
-        if (!template) {
-          throw new BadRequestException(
-            'General Ustaad Agreement is not available right now. Please try again later.',
-          );
-        }
-        data.generalAgreementAcceptedAt = new Date();
-        data.generalAgreementVersion = template.version;
-      } else {
-        data.generalAgreementAcceptedAt = null;
-        data.generalAgreementVersion = null;
-      }
-    }
-    if (dto.tradeAgreementAccepted !== undefined) {
-      if (dto.tradeAgreementAccepted) {
-        const categoryId = profile.skills[0]?.category.id;
-        if (!categoryId) {
-          throw new BadRequestException(
-            'Select your main skill before accepting the trade agreement.',
-          );
-        }
-        const template = await this.agreementsService.getActiveTemplate(
-          AgreementType.TRADE_SPECIFIC,
-          categoryId,
-        );
-        if (!template) {
-          throw new BadRequestException(
-            'Trade-specific agreement is not available right now. Please try again later.',
-          );
-        }
-        data.tradeAgreementAcceptedAt = new Date();
-        data.tradeAgreementVersion = template.version;
-      } else {
-        data.tradeAgreementAcceptedAt = null;
-        data.tradeAgreementVersion = null;
-      }
-    }
+    // Agreement acceptance is deliberately NOT patchable here. It is created
+    // only by submitProfileForReview, from per-document evidence validated
+    // against the exact version/hash/locale/trade the server loaded.
 
     if (dto.experienceYears !== undefined) {
       await this.workersRepository.updateSkillExperience(
@@ -186,26 +181,58 @@ export class WorkersService {
 
   /**
    * GET /workers/profile-completion/agreement-templates
-   * The exact text/version of the General (+ Trade, once a skill is picked)
-   * agreement the worker is about to accept — powers the "View Agreement"
-   * screen shown before the checkbox is ticked.
+   *
+   * The exact text/version/hash of ALL THREE documents this Ustaad must read
+   * before any checkbox can be ticked. [appLocale] is the language the app is
+   * currently showing; the approved legal body is returned in the language it
+   * genuinely exists in, with `legalLanguageNoticeRequired` telling the app to
+   * explain the difference rather than translating the contract.
+   *
+   * The Customer document is structurally unreachable here.
    */
-  async getAgreementTemplates(userId: string) {
+  async getAgreementTemplates(userId: string, appLocale: string) {
     const profile = await this.workersRepository.findByUserId(userId);
     if (!profile) throw new NotFoundException('Worker profile not found');
-    const categoryId = profile.skills[0]?.category.id ?? null;
-    return this.agreementsService.getTemplatesForWorker(categoryId);
+    const mainSkillName = profile.skills[0]?.category.name ?? null;
+    try {
+      return this.ustaadTemplateService.getTemplatesForWorker(
+        mainSkillName,
+        appLocale,
+      );
+    } catch (err) {
+      if (err instanceof UnsupportedTradeError) {
+        // Never substitute another trade's schedule — block instead.
+        throw new AgreementSubmissionError(
+          'UNSUPPORTED_TRADE',
+          'No approved trade agreement exists for this trade yet.',
+          { mainTrade: err.mainTrade },
+        );
+      }
+      throw err;
+    }
   }
 
   /**
    * GET /workers/profile-completion/agreements
-   * Owner-only list of this worker's own permanent acceptance records
-   * (with downloadable PDF URLs). Never exposed to clients or other workers.
+   * Owner-only list of this worker's own permanent acceptance records. Metadata
+   * only — the stored PDF URL is never part of the response; downloads go
+   * through the authenticated endpoint below.
    */
   async getMyAgreementAcceptances(userId: string) {
     const profile = await this.workersRepository.findByUserId(userId);
     if (!profile) throw new NotFoundException('Worker profile not found');
-    return this.agreementsService.listAcceptancesForWorker(profile.id);
+    return this.ustaadAgreementAccess.listForWorker(profile.id);
+  }
+
+  /**
+   * GET /workers/profile-completion/agreements/:acceptanceId/download
+   * The accepted PDF bytes, scoped to the caller's own profile. Another
+   * worker's acceptance id is rejected rather than served.
+   */
+  async downloadMyAgreement(userId: string, acceptanceId: string) {
+    const profile = await this.workersRepository.findByUserId(userId);
+    if (!profile) throw new NotFoundException('Worker profile not found');
+    return this.ustaadAgreementAccess.getPdf(acceptanceId, profile.id);
   }
 
   async uploadCnicFront(
@@ -281,62 +308,150 @@ export class WorkersService {
   }
 
   /**
-   * Validate every required field is present, create the two permanent
-   * AgreementAcceptance audit records (GENERAL_USTAAD + TRADE_SPECIFIC), then
-   * move the profile into SUBMITTED_FOR_REVIEW. Throws a single
-   * BadRequestException listing every missing field so the Flutter form can
-   * highlight all of them at once.
+   * The profile fields that must exist before the three legal documents can be
+   * generated. Keys are the exact names the Flutter form highlights on, so a
+   * structured rejection can point at the right input rather than a sentence.
+   */
+  private _missingProfileFields(profile: WorkerProfileWithSkills): string[] {
+    const missing: string[] = [];
+    if (!profile.fullLegalName) missing.push('fullLegalName');
+    if (!profile.fatherName) missing.push('fatherName');
+    if (!profile.dateOfBirth) missing.push('dateOfBirth');
+    if (!profile.residentialAddress) missing.push('residentialAddress');
+    if (!profile.cnicNumber) missing.push('cnicNumber');
+    if (profile.skills.length !== 1) missing.push('mainSkill');
+    if (!profile.cnicFrontUrl) missing.push('cnicFront');
+    if (!profile.cnicBackUrl) missing.push('cnicBack');
+    if (!profile.liveSelfieUrl) missing.push('liveSelfie');
+    if (!profile.legalNameConfirmedAt) missing.push('legalNameConfirmed');
+    // emergencyContact is deliberately absent: the EVS document prints a
+    // controlled "Not applicable" for it, so it is genuinely optional.
+    return missing;
+  }
+
+  /**
+   * The active version of the general and trade documents for a main skill,
+   * used only to keep the two legacy admin-facing version columns meaningful.
+   * Returns nulls for an unsupported trade — acceptAll rejects that case
+   * properly, so this never has to decide the outcome.
+   */
+  private getTemplateVersions(mainSkillName: string): {
+    general: string | null;
+    trade: string | null;
+  } {
+    try {
+      const templates = this.ustaadTemplateService.getTemplatesForWorker(
+        mainSkillName,
+        'ur_Latn',
+      );
+      return {
+        general:
+          templates.find(
+            (t) => t.documentType === 'USTAAD_SERVICE_PROVIDER_AGREEMENT',
+          )?.version ?? null,
+        trade:
+          templates.find(
+            (t) => t.documentType === 'TRADE_SPECIFIC_SERVICE_AGREEMENT',
+          )?.version ?? null,
+      };
+    } catch {
+      return { general: null, trade: null };
+    }
+  }
+
+  /**
+   * Validate every required field, seal the THREE immutable Ustaad agreement
+   * acceptances, and move the profile to SUBMITTED_FOR_REVIEW — all three
+   * inserts and the profile update in ONE Prisma transaction, so a profile can
+   * never be marked submitted without complete legal evidence behind it.
+   *
+   * Nothing about the Ustaad's identity is taken from [dto]. Legal name, CNIC,
+   * father's name, date of birth, phone, trade, acceptance ids, timestamps and
+   * hashes are all resolved from the authenticated profile and the server.
+   * The app only says which document it showed, and that the box was ticked.
    */
   async submitProfileForReview(
     userId: string,
     userPhone: string,
     ipAddress: string | null,
     deviceInfo: string | null,
+    dto: SubmitProfileCompletionDto,
   ) {
     const profile = await this.workersRepository.findByUserId(userId);
     if (!profile) throw new NotFoundException('Worker profile not found');
     this._assertProfileEditable(profile.onboardingStatus);
 
-    const missing: string[] = [];
-    if (!profile.fullLegalName) missing.push('Full legal name');
-    if (!profile.residentialAddress) missing.push('Residential address');
-    if (!profile.cnicNumber) missing.push('CNIC number');
-    if (profile.skills.length !== 1) missing.push('Main skill');
-    if (!profile.cnicFrontUrl) missing.push('CNIC front image');
-    if (!profile.cnicBackUrl) missing.push('CNIC back image');
-    if (!profile.liveSelfieUrl) missing.push('Live selfie');
-    if (!profile.legalNameConfirmedAt) missing.push('Legal name confirmation');
-    if (!profile.generalAgreementAcceptedAt)
-      missing.push('General Ustaad Agreement');
-    if (!profile.tradeAgreementAcceptedAt)
-      missing.push('Trade-specific Agreement');
-
+    const missing = this._missingProfileFields(profile);
     if (missing.length > 0) {
-      throw new BadRequestException(
-        `Please complete the following before submitting: ${missing.join(', ')}.`,
+      throw new AgreementSubmissionError(
+        'MISSING_PROFILE_DATA',
+        'Some required profile information is missing.',
+        { missingFields: missing },
       );
     }
 
-    // Permanent legal audit trail — never overwritten, never deleted. Safe to
-    // re-run: acceptAgreementsOnSubmit reuses any acceptance already recorded
-    // against the currently-active template version instead of duplicating it.
-    await this.agreementsService.acceptAgreementsOnSubmit({
+    const acceptedAt = new Date();
+
+    // Versions for the two legacy admin-facing columns, resolved from the
+    // server's own registry — never from the request body.
+    const templates = this.getTemplateVersions(profile.skills[0].category.name);
+
+    const summaries = await this.ustaadAcceptanceService.acceptAll({
       workerProfileId: profile.id,
       userId,
-      fullLegalName: profile.fullLegalName!,
-      cnicNumber: profile.cnicNumber!,
-      mobile: userPhone,
-      mainSkillCategoryId: profile.skills[0].category.id,
-      mainSkillName: profile.skills[0].category.name,
+      fullLegalName: profile.fullLegalName,
+      fatherName: profile.fatherName,
+      cnicNumber: profile.cnicNumber,
+      dateOfBirth: profile.dateOfBirth,
+      residentialAddress: profile.residentialAddress,
+      registeredMobile: userPhone,
+      mainSkillCategoryName: profile.skills[0].category.name,
+      // The Ustaad's approved tags are their single main skill today; the
+      // schedule prints the list, so it stays a list here.
+      approvedServiceTags: profile.skills.map((s) => s.category.name),
+      emergencyContact: profile.emergencyContact,
+      // Set once a background check is actually raised with a provider.
+      verificationProvider: null,
+      verificationRequestDate: null,
+      verificationRequestReference: null,
       cnicFrontUrl: profile.cnicFrontUrl,
       cnicBackUrl: profile.cnicBackUrl,
       liveSelfieUrl: profile.liveSelfieUrl,
       ipAddress,
       deviceInfo,
+      submissionAttemptId: dto.submissionAttemptId,
+      evidence: dto.agreements as unknown as AgreementAcceptanceEvidence[],
+      // Applied inside the same transaction as the three inserts.
+      profileCompletionUpdate: {
+        onboardingStatus: 'SUBMITTED_FOR_REVIEW',
+        submittedForReviewAt: acceptedAt,
+        // Kept in sync for the admin list, which still reads these two dates.
+        // They are now a projection of the acceptance records, never the
+        // source of truth for whether the agreements were accepted.
+        generalAgreementAcceptedAt: acceptedAt,
+        tradeAgreementAcceptedAt: acceptedAt,
+        generalAgreementVersion: templates.general,
+        tradeAgreementVersion: templates.trade,
+        // Clear stale reasons from a previous review cycle.
+        changesRequiredReason: null,
+        rejectionReason: null,
+      },
     });
 
-    const updated = await this.workersRepository.submitForReview(profile.id);
-    return this._toProfileCompletionDto(updated);
+    const updated = await this.workersRepository.findByUserId(userId);
+    return {
+      ...this._toProfileCompletionDto(updated!),
+      acceptedAgreements: summaries.map((s) => ({
+        id: s.id,
+        acceptanceId: s.acceptanceId,
+        documentType: s.documentType,
+        title: s.title,
+        version: s.version,
+        agreementLocale: s.agreementLocale,
+        applicableTrade: s.applicableTrade,
+        acceptedAt: s.acceptedAt,
+      })),
+    };
   }
 
   private _toProfileCompletionDto(profile: WorkerProfileWithSkills) {
@@ -345,6 +460,9 @@ export class WorkersService {
       fullLegalName: profile.fullLegalName,
       residentialAddress: profile.residentialAddress,
       cnicNumber: profile.cnicNumber,
+      fatherName: profile.fatherName,
+      dateOfBirth: profile.dateOfBirth,
+      emergencyContact: profile.emergencyContact,
       cnicFrontUrl: profile.cnicFrontUrl,
       cnicBackUrl: profile.cnicBackUrl,
       liveSelfieUrl: profile.liveSelfieUrl,
@@ -409,6 +527,9 @@ export class WorkersService {
       fullLegalName: profile.fullLegalName,
       residentialAddress: profile.residentialAddress,
       cnicNumber: profile.cnicNumber,
+      fatherName: profile.fatherName,
+      dateOfBirth: profile.dateOfBirth,
+      emergencyContact: profile.emergencyContact,
       cnicFrontUrl: profile.cnicFrontUrl,
       cnicBackUrl: profile.cnicBackUrl,
       liveSelfieUrl: profile.liveSelfieUrl,
@@ -492,6 +613,18 @@ export class WorkersService {
       dto.status,
     );
 
+    // A genuine transition into ONLINE is late discovery: surface every
+    // still-open nearby job to this Ustaad now. Bypasses the location
+    // cooldown because this is a real state change, not a heartbeat.
+    if (
+      dto.status === AvailabilityStatus.ONLINE &&
+      previousStatus !== AvailabilityStatus.ONLINE
+    ) {
+      void this.jobBroadcastService.matchOpenJobsForWorker(profile.id, {
+        bypassCooldown: true,
+      });
+    }
+
     return result;
   }
 
@@ -569,11 +702,29 @@ export class WorkersService {
     if (!profile) {
       throw new NotFoundException('Worker profile not found');
     }
+
+    // Captured BEFORE the write: a worker whose GPS had gone stale was
+    // invisible to matching, so this ping makes them newly eligible — that is
+    // a real state change and skips the cooldown, unlike a routine heartbeat.
+    const wasStale =
+      !profile.locationUpdatedAt ||
+      Date.now() - profile.locationUpdatedAt.getTime() > LOCATION_FRESHNESS_MS;
+
     await this.workersRepository.updateLocationOnly(
       profile.id,
       dto.lat,
       dto.lng,
     );
+
+    // Only ONLINE workers are matchable, and updateLocationOnly no-ops for
+    // everyone else, so there is nothing to re-match for them either.
+    if (profile.availabilityStatus !== AvailabilityStatus.ONLINE) return;
+
+    // Fire-and-forget; throttled by a per-worker Redis cooldown so a frequent
+    // heartbeat cannot trigger a re-scan on every ping.
+    void this.jobBroadcastService.matchOpenJobsForWorker(profile.id, {
+      bypassCooldown: wasStale,
+    });
   }
 
   /**
@@ -759,21 +910,21 @@ export class WorkersService {
       profile.id,
     );
 
-    // Notify client that the job is complete
-    if (updated.clientProfile?.userId) {
-      void this.notificationsService.notify({
-        userId: updated.clientProfile.userId,
-        eventKey: 'booking.completed',
-        title: 'Job Completed',
-        body: 'Your worker has completed the job. Please leave a review.',
-        bookingId,
-        route: `/client/booking/${bookingId}`,
-        actorUserId: userId,
-        actorRole: 'WORKER',
-        entityType: 'booking',
-        entityId: bookingId,
-      });
-    }
+    // Single shared, deduplicated completion notice (Roman Urdu) — the same
+    // helper BookingsService.completeJob uses, so the two overlapping
+    // completion endpoints can only ever produce one `booking.completed`.
+    // Lives in the leaf MatchingModule, so neither service imports the other.
+    void this.jobCompletionNotifier.notifyClientJobCompleted(
+      bookingId,
+      'NORMAL',
+      { userId, role: 'WORKER' },
+    );
+
+    // This worker just became free — surface any still-open nearby job to
+    // them right away rather than waiting for their next poll.
+    void this.jobBroadcastService.matchOpenJobsForWorker(profile.id, {
+      bypassCooldown: true,
+    });
 
     return this._toJobDto(updated, profile.id);
   }
@@ -1046,6 +1197,9 @@ export class WorkersService {
       // Linked repair booking spawned by "Find Other Ustaad" — lets the
       // worker app resolve the source inspection's (price-sanitized) report.
       sourceInspectionBookingId: job.sourceInspectionBookingId ?? null,
+      // Same single rule the client sees — owned by the original inspection
+      // work unit, never by this repair booking. See inspection-fee.util.ts.
+      inspectionFeePaid: deriveInspectionFeePaid(job),
     };
   }
 

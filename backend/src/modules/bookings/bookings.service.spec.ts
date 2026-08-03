@@ -15,6 +15,8 @@ describe('BookingsService.submitReview', () => {
   let notificationsService: any;
   let chatService: any;
   let bookingsQueue: any;
+  let jobBroadcastService: any;
+  let jobCompletionNotifier: any;
   let service: BookingsService;
 
   const CLIENT_PROFILE = {
@@ -99,12 +101,23 @@ describe('BookingsService.submitReview', () => {
     notificationsService = { notify: jest.fn().mockResolvedValue(undefined) };
     chatService = {};
     bookingsQueue = { getJob: jest.fn(), add: jest.fn() };
+    jobBroadcastService = {
+      matchRadiusKm: 7,
+      broadcastJob: jest.fn().mockResolvedValue(undefined),
+      matchOpenJobsForWorker: jest.fn().mockResolvedValue(undefined),
+      reconcileVisibleJobs: jest.fn(),
+    };
+    jobCompletionNotifier = {
+      notifyClientJobCompleted: jest.fn().mockResolvedValue(undefined),
+    };
     service = new BookingsService(
       bookingsRepository,
       storageService,
       notificationsService,
       chatService,
       bookingsQueue,
+      jobBroadcastService,
+      jobCompletionNotifier,
     );
   });
 
@@ -170,6 +183,8 @@ describe('BookingsService.workerCancelBooking', () => {
   let notificationsService: any;
   let chatService: any;
   let bookingsQueue: any;
+  let jobBroadcastService: any;
+  let jobCompletionNotifier: any;
   let service: BookingsService;
 
   function makeAssignedBooking(status: string) {
@@ -248,12 +263,23 @@ describe('BookingsService.workerCancelBooking', () => {
     notificationsService = { notify: jest.fn().mockResolvedValue(undefined) };
     chatService = {};
     bookingsQueue = { getJob: jest.fn(), add: jest.fn() };
+    jobBroadcastService = {
+      matchRadiusKm: 7,
+      broadcastJob: jest.fn().mockResolvedValue(undefined),
+      matchOpenJobsForWorker: jest.fn().mockResolvedValue(undefined),
+      reconcileVisibleJobs: jest.fn(),
+    };
+    jobCompletionNotifier = {
+      notifyClientJobCompleted: jest.fn().mockResolvedValue(undefined),
+    };
     service = new BookingsService(
       bookingsRepository,
       storageService,
       notificationsService,
       chatService,
       bookingsQueue,
+      jobBroadcastService,
+      jobCompletionNotifier,
     );
   });
 
@@ -337,6 +363,8 @@ describe('BookingsService.closeInspectionAndOpenRepairBidding', () => {
   let notificationsService: any;
   let chatService: any;
   let bookingsQueue: any;
+  let jobBroadcastService: any;
+  let jobCompletionNotifier: any;
   let service: BookingsService;
 
   const PARAMS = {
@@ -369,12 +397,23 @@ describe('BookingsService.closeInspectionAndOpenRepairBidding', () => {
     };
     chatService = {};
     bookingsQueue = { getJob: jest.fn(), add: jest.fn() };
+    jobBroadcastService = {
+      matchRadiusKm: 7,
+      broadcastJob: jest.fn().mockResolvedValue(undefined),
+      matchOpenJobsForWorker: jest.fn().mockResolvedValue(undefined),
+      reconcileVisibleJobs: jest.fn(),
+    };
+    jobCompletionNotifier = {
+      notifyClientJobCompleted: jest.fn().mockResolvedValue(undefined),
+    };
     service = new BookingsService(
       bookingsRepository,
       storageService,
       notificationsService,
       chatService,
       bookingsQueue,
+      jobBroadcastService,
+      jobCompletionNotifier,
     );
   });
 
@@ -398,70 +437,50 @@ describe('BookingsService.closeInspectionAndOpenRepairBidding', () => {
     );
   });
 
-  // #8/#10 — nearby-worker push targets the CHILD booking, uses the wide
-  // BIDDING radius ladder, and always excludes the original inspector.
-  it('notifies eligible nearby workers about the CHILD booking, wide BIDDING ladder, inspector excluded', async () => {
-    bookingsRepository.findNearbyWorkers.mockResolvedValue({
-      workers: [{ id: 'worker-2' }, { id: 'worker-3' }],
-    });
-    bookingsRepository.findUserIdsByWorkerProfileIds.mockResolvedValue(
-      new Map([
-        ['worker-2', 'worker-2-user'],
-        ['worker-3', 'worker-3-user'],
-      ]),
-    );
-
+  // The broadcast targets the CHILD booking and runs through the single
+  // JobBroadcastService path (which owns eligibility + per-cycle dedup).
+  it('broadcasts the CHILD booking to nearby workers via the shared broadcast path', async () => {
     await service.closeInspectionAndOpenRepairBidding(PARAMS);
     await flushPromises();
 
-    expect(bookingsRepository.findNearbyWorkers).toHaveBeenCalledWith(
-      expect.objectContaining({
-        categoryId: 'cat-1',
-        lat: 24.86,
-        lng: 67.0,
-        lane: BookingLane.BIDDING,
-        excludedWorkerIds: ['worker-1'],
-      }),
-    );
-    expect(notificationsService.notify).toHaveBeenCalledTimes(2);
-    for (const call of notificationsService.notify.mock.calls) {
-      expect(call[0].bookingId).toBe('child-1');
-      expect(call[0].route).toBe('/worker/job/child-1');
-      expect(call[0].eventKey).toBe(
-        'booking.inspection.find_other_ustaad_available',
-      );
-    }
+    expect(jobBroadcastService.broadcastJob).toHaveBeenCalledTimes(1);
+    expect(jobBroadcastService.broadcastJob).toHaveBeenCalledWith('child-1');
   });
 
-  // #6 — idempotent replay: same id returned as a success, notification
-  // delivery re-attempted, per-worker dedup prevents duplicates.
-  it('ALREADY_DONE replay returns the same child id as a success and re-attempts dedup-guarded notification', async () => {
+  // The completed work unit is the ORIGINAL inspection — that is what the
+  // client must be prompted to review, never the child repair booking.
+  it('sends the completion notice for the ORIGINAL inspection booking, not the child', async () => {
+    await service.closeInspectionAndOpenRepairBidding(PARAMS);
+    await flushPromises();
+
+    expect(
+      jobCompletionNotifier.notifyClientJobCompleted,
+    ).toHaveBeenCalledTimes(1);
+    expect(jobCompletionNotifier.notifyClientJobCompleted).toHaveBeenCalledWith(
+      'booking-1',
+      'INSPECTION_BEFORE_SWITCH',
+      expect.objectContaining({ role: 'CLIENT' }),
+    );
+  });
+
+  // #6 — idempotent replay: same id returned as a success, and delivery is
+  // re-attempted (the underlying dedup makes repeats harmless).
+  it('ALREADY_DONE replay returns the same child id and re-attempts delivery', async () => {
     bookingsRepository.closeInspectionAndOpenRepairBidding.mockResolvedValue({
       outcome: 'ALREADY_DONE',
       childBooking: { id: 'child-1' },
     });
-    bookingsRepository.findNearbyWorkers.mockResolvedValue({
-      workers: [{ id: 'worker-2' }],
-    });
-    bookingsRepository.findUserIdsByWorkerProfileIds.mockResolvedValue(
-      new Map([['worker-2', 'worker-2-user']]),
-    );
 
     const childId = await service.closeInspectionAndOpenRepairBidding(PARAMS);
     await flushPromises();
 
     expect(childId).toBe('child-1');
-    // Delivery is re-attempted (covers a first request that died before
-    // pushing)...
-    expect(bookingsRepository.findNearbyWorkers).toHaveBeenCalledTimes(1);
-    expect(notificationsService.notify).toHaveBeenCalledTimes(1);
-
-    // ...but a worker already notified for this booking/event is skipped.
-    notificationsService.notify.mockClear();
-    notificationsService.wasAlreadyNotified.mockResolvedValue(true);
-    await service.closeInspectionAndOpenRepairBidding(PARAMS);
-    await flushPromises();
-    expect(notificationsService.notify).not.toHaveBeenCalled();
+    expect(jobBroadcastService.broadcastJob).toHaveBeenCalledWith('child-1');
+    expect(jobCompletionNotifier.notifyClientJobCompleted).toHaveBeenCalledWith(
+      'booking-1',
+      'INSPECTION_BEFORE_SWITCH',
+      expect.objectContaining({ role: 'CLIENT' }),
+    );
   });
 
   it('rejects a genuinely different decision (CONFLICTING_DECISION) with the standard already-decided error', async () => {
@@ -473,7 +492,10 @@ describe('BookingsService.closeInspectionAndOpenRepairBidding', () => {
     await expect(
       service.closeInspectionAndOpenRepairBidding(PARAMS),
     ).rejects.toThrow('This report has already been decided (ACCEPTED_REPAIR).');
-    expect(notificationsService.notify).not.toHaveBeenCalled();
+    expect(jobBroadcastService.broadcastJob).not.toHaveBeenCalled();
+    expect(
+      jobCompletionNotifier.notifyClientJobCompleted,
+    ).not.toHaveBeenCalled();
   });
 
   it('surfaces a controlled INSPECTION_LINK_MISSING integrity error instead of creating duplicate data', async () => {
@@ -496,7 +518,10 @@ describe('BookingsService.closeInspectionAndOpenRepairBidding', () => {
     await expect(
       service.closeInspectionAndOpenRepairBidding(PARAMS),
     ).rejects.toBeInstanceOf(ConflictException);
-    expect(notificationsService.notify).not.toHaveBeenCalled();
+    expect(jobBroadcastService.broadcastJob).not.toHaveBeenCalled();
+    expect(
+      jobCompletionNotifier.notifyClientJobCompleted,
+    ).not.toHaveBeenCalled();
   });
 });
 
@@ -506,6 +531,8 @@ describe('BookingsService.rehireInspectingWorker (INSPECTOR_BUSY)', () => {
   let notificationsService: any;
   let chatService: any;
   let bookingsQueue: any;
+  let jobBroadcastService: any;
+  let jobCompletionNotifier: any;
   let service: BookingsService;
 
   function makeAssignedChildBooking() {
@@ -589,12 +616,23 @@ describe('BookingsService.rehireInspectingWorker (INSPECTOR_BUSY)', () => {
       ensureConversationForBooking: jest.fn().mockResolvedValue(undefined),
     };
     bookingsQueue = { getJob: jest.fn(), add: jest.fn() };
+    jobBroadcastService = {
+      matchRadiusKm: 7,
+      broadcastJob: jest.fn().mockResolvedValue(undefined),
+      matchOpenJobsForWorker: jest.fn().mockResolvedValue(undefined),
+      reconcileVisibleJobs: jest.fn(),
+    };
+    jobCompletionNotifier = {
+      notifyClientJobCompleted: jest.fn().mockResolvedValue(undefined),
+    };
     service = new BookingsService(
       bookingsRepository,
       storageService,
       notificationsService,
       chatService,
       bookingsQueue,
+      jobBroadcastService,
+      jobCompletionNotifier,
     );
   });
 
@@ -690,6 +728,8 @@ describe('BookingsService.reopenAfterWorkerCancellation', () => {
   let notificationsService: any;
   let chatService: any;
   let bookingsQueue: any;
+  let jobBroadcastService: any;
+  let jobCompletionNotifier: any;
   let service: BookingsService;
 
   function makeCancelledBooking(overrides: Partial<any> = {}) {
@@ -783,12 +823,23 @@ describe('BookingsService.reopenAfterWorkerCancellation', () => {
     };
     chatService = {};
     bookingsQueue = { getJob: jest.fn(), add: jest.fn() };
+    jobBroadcastService = {
+      matchRadiusKm: 7,
+      broadcastJob: jest.fn().mockResolvedValue(undefined),
+      matchOpenJobsForWorker: jest.fn().mockResolvedValue(undefined),
+      reconcileVisibleJobs: jest.fn(),
+    };
+    jobCompletionNotifier = {
+      notifyClientJobCompleted: jest.fn().mockResolvedValue(undefined),
+    };
     service = new BookingsService(
       bookingsRepository,
       storageService,
       notificationsService,
       chatService,
       bookingsQueue,
+      jobBroadcastService,
+      jobCompletionNotifier,
     );
   });
 
@@ -824,85 +875,40 @@ describe('BookingsService.reopenAfterWorkerCancellation', () => {
     );
   });
 
-  it('does not proactively notify for a STANDARD reopen (client re-enters the discovery screen instead)', async () => {
+  // Reopening resets `liveStartedAt`, which starts a NEW broadcast cycle —
+  // so every lane re-broadcasts once, including workers notified during the
+  // previous cycle. Per-lane conditionals are gone: one path, every lane.
+  it.each([['STANDARD'], ['BIDDING'], ['INSPECTION']])(
+    're-broadcasts a reopened %s booking through the shared broadcast path',
+    async (lane) => {
+      bookingsRepository.findBookingById.mockResolvedValue(
+        makeCancelledBooking({ lane }),
+      );
+      bookingsRepository.reopenAfterWorkerCancellation.mockResolvedValue(
+        makeReopenedBooking({ lane }),
+      );
+
+      await service.reopenAfterWorkerCancellation('client-user-1', 'booking-1');
+      await flushPromises();
+
+      expect(jobBroadcastService.broadcastJob).toHaveBeenCalledTimes(1);
+      expect(jobBroadcastService.broadcastJob).toHaveBeenCalledWith('booking-1');
+    },
+  );
+
+  // The cancelling worker is kept out by the exclusion row the reopen writes,
+  // not by a special-case argument at the call site.
+  it('relies on the booking exclusion (not a call-site argument) to keep the cancelling worker out', async () => {
     await service.reopenAfterWorkerCancellation('client-user-1', 'booking-1');
     await flushPromises();
 
-    expect(bookingsRepository.findNearbyWorkers).not.toHaveBeenCalled();
-  });
-
-  it('proactively notifies nearby workers for a BIDDING reopen', async () => {
-    bookingsRepository.findBookingById.mockResolvedValue(
-      makeCancelledBooking({ lane: 'BIDDING' }),
+    expect(bookingsRepository.reopenAfterWorkerCancellation).toHaveBeenCalledWith(
+      'booking-1',
+      'worker-1',
+      'Vehicle broke down',
+      expect.any(Date),
+      expect.any(Date),
     );
-    bookingsRepository.reopenAfterWorkerCancellation.mockResolvedValue(
-      makeReopenedBooking({ lane: 'BIDDING' }),
-    );
-    bookingsRepository.findNearbyWorkers.mockResolvedValue({
-      workers: [{ id: 'worker-2' }],
-    });
-    bookingsRepository.findUserIdsByWorkerProfileIds.mockResolvedValue(
-      new Map([['worker-2', 'worker-2-user']]),
-    );
-
-    await service.reopenAfterWorkerCancellation('client-user-1', 'booking-1');
-    await flushPromises();
-
-    expect(bookingsRepository.findNearbyWorkers).toHaveBeenCalledWith(
-      expect.objectContaining({ lane: 'BIDDING' }),
-    );
-    expect(notificationsService.notify).toHaveBeenCalledTimes(1);
-    expect(notificationsService.notify.mock.calls[0][0].userId).toBe(
-      'worker-2-user',
-    );
-  });
-
-  it('proactively notifies nearby workers, excluding the cancelling worker, for a reopened INSPECTION with an existing report', async () => {
-    bookingsRepository.findBookingById.mockResolvedValue(
-      makeCancelledBooking({
-        lane: 'INSPECTION',
-        inspectionReport: { decisionStatus: 'ACCEPTED_REPAIR' },
-      }),
-    );
-    bookingsRepository.reopenAfterWorkerCancellation.mockResolvedValue(
-      makeReopenedBooking({
-        lane: 'INSPECTION',
-        inspectionReport: {
-          decisionStatus: 'FIND_OTHER_USTAAD',
-          createdAt: new Date(),
-        },
-      }),
-    );
-    bookingsRepository.findNearbyWorkers.mockResolvedValue({
-      workers: [{ id: 'worker-3' }],
-    });
-    bookingsRepository.findUserIdsByWorkerProfileIds.mockResolvedValue(
-      new Map([['worker-3', 'worker-3-user']]),
-    );
-
-    await service.reopenAfterWorkerCancellation('client-user-1', 'booking-1');
-    await flushPromises();
-
-    expect(bookingsRepository.findNearbyWorkers).toHaveBeenCalledWith(
-      expect.objectContaining({
-        lane: 'BIDDING',
-        excludedWorkerIds: ['worker-1'],
-      }),
-    );
-    expect(notificationsService.notify).toHaveBeenCalledTimes(1);
-  });
-
-  it('does not proactively notify for a reopened INSPECTION with no report yet (client re-enters the discovery screen instead)', async () => {
-    bookingsRepository.findBookingById.mockResolvedValue(
-      makeCancelledBooking({ lane: 'INSPECTION', inspectionReport: null }),
-    );
-    bookingsRepository.reopenAfterWorkerCancellation.mockResolvedValue(
-      makeReopenedBooking({ lane: 'INSPECTION', inspectionReport: null }),
-    );
-
-    await service.reopenAfterWorkerCancellation('client-user-1', 'booking-1');
-    await flushPromises();
-
-    expect(bookingsRepository.findNearbyWorkers).not.toHaveBeenCalled();
+    expect(jobBroadcastService.broadcastJob).toHaveBeenCalledWith('booking-1');
   });
 });

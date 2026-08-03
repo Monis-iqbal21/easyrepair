@@ -55,6 +55,14 @@ class WorkerProfileEntity {
   final String? fullLegalName;
   final String? residentialAddress;
   final String? cnicNumber;
+  /// Father's name as per CNIC — required by the EVS Consent document.
+  final String? fatherName;
+  /// Date of birth as per CNIC, kept as the ISO calendar date (yyyy-MM-dd)
+  /// the Ustaad entered so no timezone can shift it by a day.
+  final String? dateOfBirth;
+  /// Optional "Name, +92…" — the EVS document prints a controlled
+  /// "Not applicable" when it is absent.
+  final String? emergencyContact;
   final String? cnicFrontUrl;
   final String? cnicBackUrl;
   final String? liveSelfieUrl;
@@ -91,6 +99,9 @@ class WorkerProfileEntity {
     this.fullLegalName,
     this.residentialAddress,
     this.cnicNumber,
+    this.fatherName,
+    this.dateOfBirth,
+    this.emergencyContact,
     this.cnicFrontUrl,
     this.cnicBackUrl,
     this.liveSelfieUrl,
@@ -140,6 +151,9 @@ class WorkerProfileEntity {
       fullLegalName: fullLegalName,
       residentialAddress: residentialAddress,
       cnicNumber: cnicNumber,
+      fatherName: fatherName,
+      dateOfBirth: dateOfBirth,
+      emergencyContact: emergencyContact,
       cnicFrontUrl: cnicFrontUrl,
       cnicBackUrl: cnicBackUrl,
       liveSelfieUrl: liveSelfieUrl,

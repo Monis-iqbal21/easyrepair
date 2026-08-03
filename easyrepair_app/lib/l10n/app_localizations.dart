@@ -3996,7 +3996,7 @@ abstract class AppLocalizations {
   /// No description provided for @inspFormPartNameHint.
   ///
   /// In en, this message translates to:
-  /// **'e.g. Gas refill'**
+  /// **'e.g. the part or material used'**
   String get inspFormPartNameHint;
 
   /// No description provided for @inspFormWarrantyHint.
@@ -4587,30 +4587,6 @@ abstract class AppLocalizations {
   /// **'I confirm my legal name matches my CNIC.'**
   String get workerConfirmLegalName;
 
-  /// No description provided for @workerAcceptGeneralAgreement.
-  ///
-  /// In en, this message translates to:
-  /// **'I accept the General Ustaad Agreement.'**
-  String get workerAcceptGeneralAgreement;
-
-  /// {version} is the backend agreement version and stays Latin in every language.
-  ///
-  /// In en, this message translates to:
-  /// **'I accept the General Ustaad Agreement (v{version}).'**
-  String workerAcceptGeneralAgreementVersioned(String version);
-
-  /// No description provided for @workerAcceptTradeAgreement.
-  ///
-  /// In en, this message translates to:
-  /// **'I accept the Trade-specific Agreement.'**
-  String get workerAcceptTradeAgreement;
-
-  /// {version} is the backend agreement version and stays Latin in every language.
-  ///
-  /// In en, this message translates to:
-  /// **'I accept the Trade-specific Agreement (v{version}).'**
-  String workerAcceptTradeAgreementVersioned(String version);
-
   /// No description provided for @workerViewAgreement.
   ///
   /// In en, this message translates to:
@@ -4629,29 +4605,11 @@ abstract class AppLocalizations {
   /// **'Submit for Approval'**
   String get workerSubmitForApproval;
 
-  /// No description provided for @workerAgreementFallbackTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Agreement'**
-  String get workerAgreementFallbackTitle;
-
   /// {version} is the backend agreement version and stays Latin in every language.
   ///
   /// In en, this message translates to:
   /// **'Version {version}'**
   String workerAgreementVersion(String version);
-
-  /// No description provided for @workerAgreementSelectSkillFirst.
-  ///
-  /// In en, this message translates to:
-  /// **'Select your main skill first to load this agreement.'**
-  String get workerAgreementSelectSkillFirst;
-
-  /// No description provided for @workerCloseDialog.
-  ///
-  /// In en, this message translates to:
-  /// **'Close'**
-  String get workerCloseDialog;
 
   /// No description provided for @workerOnboardingSubmitted.
   ///
@@ -4704,7 +4662,7 @@ abstract class AppLocalizations {
   /// Issue-example hint shown when the booking's service category has no hint of its own.
   ///
   /// In en, this message translates to:
-  /// **'e.g. Gas leak — a refill is needed'**
+  /// **'e.g. describe what you found'**
   String get inspHintFallback;
 
   /// No description provided for @bidAmountRequired.
@@ -5006,6 +4964,534 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Job'**
   String get workerBidJobFallbackTitle;
+
+  /// Bottom-navigation tab: the home screen. Client and Ustaad share it.
+  ///
+  /// In en, this message translates to:
+  /// **'Home'**
+  String get navHome;
+
+  /// Bottom-navigation tab: the client's bookings list.
+  ///
+  /// In en, this message translates to:
+  /// **'Bookings'**
+  String get navBookings;
+
+  /// Bottom-navigation tab: the client's conversation list.
+  ///
+  /// In en, this message translates to:
+  /// **'Chats'**
+  String get navChats;
+
+  /// Row label above what the Ustaad found during the inspection
+  ///
+  /// In en, this message translates to:
+  /// **'Issue found'**
+  String get inspectionRowIssueFound;
+
+  /// Row label above the Ustaad's free-text notes on the report
+  ///
+  /// In en, this message translates to:
+  /// **'Notes'**
+  String get inspectionRowNotes;
+
+  /// Status badge on the inspection report while the client has not decided
+  ///
+  /// In en, this message translates to:
+  /// **'Report submitted — awaiting decision'**
+  String get inspectionBadgeAwaitingDecision;
+
+  /// Status badge on the inspection report once the repair quote was accepted
+  ///
+  /// In en, this message translates to:
+  /// **'Quote accepted — repair in progress'**
+  String get inspectionBadgeQuoteAccepted;
+
+  /// Status badge on the inspection report after the client chose to re-open bidding
+  ///
+  /// In en, this message translates to:
+  /// **'Finding another Ustaad — open for bidding'**
+  String get inspectionBadgeFindingAnother;
+
+  /// Status strip when the job closed after inspection and the fee amount is known
+  ///
+  /// In en, this message translates to:
+  /// **'Closed after inspection — client pays inspection fee only: {fee}'**
+  String inspStripClosedFeeOnlyWithAmount(String fee);
+
+  /// Same strip when no fee snapshot is available to show
+  ///
+  /// In en, this message translates to:
+  /// **'Closed after inspection — client pays inspection fee only.'**
+  String get inspStripClosedFeeOnly;
+
+  /// Status strip once an inspection-lane repair finished
+  ///
+  /// In en, this message translates to:
+  /// **'Repair completed — inspection fee waived.'**
+  String get inspStripRepairCompletedFeeWaived;
+
+  /// Status strip while the accepted repair is being carried out
+  ///
+  /// In en, this message translates to:
+  /// **'Quote accepted — inspection fee waived. Repair in progress.'**
+  String get inspStripQuoteAcceptedFeeWaived;
+
+  /// Status strip once the Ustaad submitted the report and the client must decide
+  ///
+  /// In en, this message translates to:
+  /// **'Inspection report submitted — review quote to continue repair or close after inspection.'**
+  String get inspStripReportSubmitted;
+
+  /// Status strip once an Ustaad is assigned to the inspection
+  ///
+  /// In en, this message translates to:
+  /// **'Ustaad hired'**
+  String get inspStripUstaadHired;
+
+  /// Status strip while the inspection is still pending an Ustaad
+  ///
+  /// In en, this message translates to:
+  /// **'Inspection booked — choose an Ustaad'**
+  String get inspStripBookedChooseUstaad;
+
+  /// Stat chip on an Ustaad card: their cancellation rate
+  ///
+  /// In en, this message translates to:
+  /// **'{rate}% cancel'**
+  String chooseChipCancelRate(int rate);
+
+  /// Shown when the GPS button fails to resolve a position
+  ///
+  /// In en, this message translates to:
+  /// **'Could not get current location.'**
+  String get locationCurrentFailed;
+
+  /// Shown when a search result cannot be turned into coordinates
+  ///
+  /// In en, this message translates to:
+  /// **'Could not resolve selected location.'**
+  String get locationResolveFailed;
+
+  /// Shown when the picked point falls outside the serviceable area
+  ///
+  /// In en, this message translates to:
+  /// **'Location is outside the Karachi service area.'**
+  String get locationOutsideKarachi;
+
+  /// Rejects an attached video that is longer than the allowed duration
+  ///
+  /// In en, this message translates to:
+  /// **'Video must be {seconds} seconds or shorter.'**
+  String postJobVideoTooLong(int seconds);
+
+  /// Shown when reading the device location fails on the post-job form
+  ///
+  /// In en, this message translates to:
+  /// **'Could not retrieve location. Please try again.'**
+  String get postJobLocationRetrieveFailed;
+
+  /// Validation: no booking lane was picked
+  ///
+  /// In en, this message translates to:
+  /// **'Select an option to continue.'**
+  String get postJobSelectOption;
+
+  /// Validation: the job description is too short
+  ///
+  /// In en, this message translates to:
+  /// **'Please describe what needs fixing.'**
+  String get postJobDescribeIssue;
+
+  /// Validation: the standard lane needs at least one service ticked
+  ///
+  /// In en, this message translates to:
+  /// **'Please select at least one standard service.'**
+  String get postJobSelectStandardService;
+
+  /// Validation: no time slot was picked for a scheduled booking
+  ///
+  /// In en, this message translates to:
+  /// **'Please select an arrival window.'**
+  String get postJobSelectArrivalWindow;
+
+  /// Validation: no window was picked for an urgent booking
+  ///
+  /// In en, this message translates to:
+  /// **'Please select an urgency window.'**
+  String get postJobSelectUrgencyWindow;
+
+  /// Validation: the address field is empty on final submit
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your address.'**
+  String get postJobEnterAddress;
+
+  /// Validation: the address step cannot be left without an address
+  ///
+  /// In en, this message translates to:
+  /// **'Add your service address to continue.'**
+  String get postJobAddAddressToContinue;
+
+  /// Note under the urgent option explaining what happens on submit
+  ///
+  /// In en, this message translates to:
+  /// **'Nearby Ustaads are notified right away.'**
+  String get postJobNearbyNotifiedNow;
+
+  /// Shown when tapping the inspection lane on a category that does not offer it
+  ///
+  /// In en, this message translates to:
+  /// **'Inspection is not available for this service.'**
+  String get postJobInspectionNotAvailable;
+
+  /// Inspection explainer, step 1
+  ///
+  /// In en, this message translates to:
+  /// **'The Ustaad comes and checks it himself'**
+  String get postJobInspectionHeroStep1;
+
+  /// Inspection explainer, step 2
+  ///
+  /// In en, this message translates to:
+  /// **'The rate is agreed before any work starts.'**
+  String get postJobInspectionHeroStep2;
+
+  /// Inspection explainer, step 3
+  ///
+  /// In en, this message translates to:
+  /// **'Go ahead if you like the quote, otherwise just pay the inspection fee.'**
+  String get postJobInspectionHeroStep3;
+
+  /// Note under the standard-lane price summary
+  ///
+  /// In en, this message translates to:
+  /// **'Total amount is final — no bidding. You choose your Ustaad in the next step.'**
+  String get postJobStandardTotalFinal;
+
+  /// "How inspection works" card, step 1
+  ///
+  /// In en, this message translates to:
+  /// **'The inspection fee is fixed.'**
+  String get postJobHowInspectionStep1;
+
+  /// "How inspection works" card, step 2
+  ///
+  /// In en, this message translates to:
+  /// **'Ustaad visits, finds the problem, and gives you a fixed repair quote in the app.'**
+  String get postJobHowInspectionStep2;
+
+  /// "How inspection works" card, step 3
+  ///
+  /// In en, this message translates to:
+  /// **'Accept his quote and continue, or get bids from other Ustaads — your choice.'**
+  String get postJobHowInspectionStep3;
+
+  /// Cancellation reason label. The stored value is fixed in ClientCancelReason.
+  ///
+  /// In en, this message translates to:
+  /// **'I no longer need the service'**
+  String get cancelReasonNoLongerNeeded;
+
+  /// Cancellation reason label. The stored value is fixed in ClientCancelReason.
+  ///
+  /// In en, this message translates to:
+  /// **'I booked it by mistake'**
+  String get cancelReasonBookedByMistake;
+
+  /// Cancellation reason label. The stored value is fixed in ClientCancelReason.
+  ///
+  /// In en, this message translates to:
+  /// **'The problem sorted itself out'**
+  String get cancelReasonProblemSolved;
+
+  /// Cancellation reason label. The stored value is fixed in ClientCancelReason.
+  ///
+  /// In en, this message translates to:
+  /// **'The time or date does not suit me'**
+  String get cancelReasonTimingNotSuitable;
+
+  /// Cancellation reason label. The stored value is fixed in ClientCancelReason.
+  ///
+  /// In en, this message translates to:
+  /// **'The price or budget does not suit me'**
+  String get cancelReasonPriceNotSuitable;
+
+  /// Cancellation reason label, shown only when an Ustaad is assigned.
+  ///
+  /// In en, this message translates to:
+  /// **'I cannot reach the Ustaad'**
+  String get cancelReasonCannotReachUstaad;
+
+  /// Cancellation reason label, shown only when an Ustaad is assigned.
+  ///
+  /// In en, this message translates to:
+  /// **'The Ustaad is running very late'**
+  String get cancelReasonUstaadRunningLate;
+
+  /// Free-text cancellation reason sentinel; picking it reveals a text field.
+  ///
+  /// In en, this message translates to:
+  /// **'Another reason'**
+  String get cancelReasonOther;
+
+  /// Booking details: the amount agreed with the hired Ustaad, matching the figure Track Worker shows
+  ///
+  /// In en, this message translates to:
+  /// **'Agreed Price'**
+  String get bookingAgreedPrice;
+
+  /// Recommended-repair example for Electrician bookings
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. replace the MCB and redo the socket wiring'**
+  String get inspRepairHintElectrical;
+
+  /// Recommended-repair example for Plumber bookings
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. replace the leaking pipe and fit a new valve'**
+  String get inspRepairHintPlumbing;
+
+  /// Recommended-repair example for AC Technician bookings
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. refill the gas and replace the capacitor'**
+  String get inspRepairHintAc;
+
+  /// Recommended-repair example for Carpenter bookings
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. replace the hinges and straighten the door frame'**
+  String get inspRepairHintCarpentry;
+
+  /// Recommended-repair example for Painter bookings
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. apply putty and primer, then two coats of emulsion'**
+  String get inspRepairHintPainting;
+
+  /// Trade-neutral recommended-repair example for a category with no tailored hint
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. what work is needed to fix it'**
+  String get inspRepairHintFallback;
+
+  /// Part-name example for Electrician bookings
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. MCB, switch, socket'**
+  String get inspPartHintElectrical;
+
+  /// Part-name example for Plumber bookings
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. pipe, valve, tap'**
+  String get inspPartHintPlumbing;
+
+  /// Part-name example for AC Technician bookings
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. gas refill, capacitor, compressor'**
+  String get inspPartHintAc;
+
+  /// Part-name example for Carpenter bookings
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. hinges, plywood, door frame'**
+  String get inspPartHintCarpentry;
+
+  /// Part-name example for Painter bookings
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. primer, putty, emulsion'**
+  String get inspPartHintPainting;
+
+  /// Issue example for Painter bookings
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. paint is peeling, damp patch on the wall...'**
+  String get inspHintPainting;
+
+  /// No description provided for @agreementViewerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Agreement'**
+  String get agreementViewerTitle;
+
+  /// No description provided for @agreementLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load the agreement. Please try again.'**
+  String get agreementLoadFailed;
+
+  /// No description provided for @agreementUnavailableForTrade.
+  ///
+  /// In en, this message translates to:
+  /// **'No approved agreement is available for your selected trade yet. Please contact HandyGo support.'**
+  String get agreementUnavailableForTrade;
+
+  /// {language} is a localized language name, e.g. Roman Urdu.
+  ///
+  /// In en, this message translates to:
+  /// **'Agreement Language: {language}'**
+  String agreementLanguageChip(String language);
+
+  /// {trade} is a localized trade name, e.g. Electrician.
+  ///
+  /// In en, this message translates to:
+  /// **'Trade: {trade}'**
+  String agreementTradeChip(String trade);
+
+  /// No description provided for @agreementLanguageNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'This approved legal agreement is currently available in Roman Urdu.'**
+  String get agreementLanguageNotice;
+
+  /// No description provided for @agreementLanguageRomanUrdu.
+  ///
+  /// In en, this message translates to:
+  /// **'Roman Urdu'**
+  String get agreementLanguageRomanUrdu;
+
+  /// No description provided for @agreementLanguageEnglish.
+  ///
+  /// In en, this message translates to:
+  /// **'English'**
+  String get agreementLanguageEnglish;
+
+  /// No description provided for @agreementLanguageUrdu.
+  ///
+  /// In en, this message translates to:
+  /// **'Urdu'**
+  String get agreementLanguageUrdu;
+
+  /// No description provided for @agreementAcceptCheckbox.
+  ///
+  /// In en, this message translates to:
+  /// **'I have read and accept this agreement.'**
+  String get agreementAcceptCheckbox;
+
+  /// No description provided for @agreementViewBeforeAccepting.
+  ///
+  /// In en, this message translates to:
+  /// **'Open and read the agreement before accepting it.'**
+  String get agreementViewBeforeAccepting;
+
+  /// No description provided for @agreementAcceptRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'This agreement must be accepted.'**
+  String get agreementAcceptRequired;
+
+  /// No description provided for @agreementTradeChangedReopen.
+  ///
+  /// In en, this message translates to:
+  /// **'Your main trade changed. Open and accept the trade agreement again.'**
+  String get agreementTradeChangedReopen;
+
+  /// No description provided for @agreementsLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Agreements could not be loaded.'**
+  String get agreementsLoadFailed;
+
+  /// No description provided for @agreementsAllThreeRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Open and accept all three agreements before submitting.'**
+  String get agreementsAllThreeRequired;
+
+  /// No description provided for @workerFatherName.
+  ///
+  /// In en, this message translates to:
+  /// **'Father\'s Name'**
+  String get workerFatherName;
+
+  /// No description provided for @workerFatherNameRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Father\'s name is required.'**
+  String get workerFatherNameRequired;
+
+  /// No description provided for @workerDateOfBirth.
+  ///
+  /// In en, this message translates to:
+  /// **'Date of Birth'**
+  String get workerDateOfBirth;
+
+  /// No description provided for @workerDateOfBirthHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Select your date of birth'**
+  String get workerDateOfBirthHint;
+
+  /// No description provided for @workerDateOfBirthRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Date of birth is required.'**
+  String get workerDateOfBirthRequired;
+
+  /// No description provided for @workerEmergencyContact.
+  ///
+  /// In en, this message translates to:
+  /// **'Emergency Contact (optional)'**
+  String get workerEmergencyContact;
+
+  /// No description provided for @workerEmergencyContactHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Name and phone number'**
+  String get workerEmergencyContactHint;
+
+  /// No description provided for @workerAcceptedAgreementsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'My Agreements'**
+  String get workerAcceptedAgreementsTitle;
+
+  /// No description provided for @workerAcceptedAgreementsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'You have not accepted any agreements yet.'**
+  String get workerAcceptedAgreementsEmpty;
+
+  /// {date} is an already-formatted date.
+  ///
+  /// In en, this message translates to:
+  /// **'Accepted on {date}'**
+  String agreementAcceptedOn(String date);
+
+  /// {id} is the backend acceptance identifier and is never translated.
+  ///
+  /// In en, this message translates to:
+  /// **'Acceptance ID: {id}'**
+  String agreementAcceptanceId(String id);
+
+  /// No description provided for @agreementDownload.
+  ///
+  /// In en, this message translates to:
+  /// **'Download'**
+  String get agreementDownload;
+
+  /// No description provided for @agreementDownloadInProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading agreement...'**
+  String get agreementDownloadInProgress;
+
+  /// {path} is a file system path and is never translated.
+  ///
+  /// In en, this message translates to:
+  /// **'Agreement saved to {path}'**
+  String agreementDownloadSaved(String path);
+
+  /// No description provided for @agreementDownloadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not download the agreement. Please try again.'**
+  String get agreementDownloadFailed;
 }
 
 class _AppLocalizationsDelegate

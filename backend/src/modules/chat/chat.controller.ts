@@ -45,6 +45,31 @@ export class ChatController {
    * existing one if it already exists (idempotent).
    * Body: { workerProfileId, bookingId }
    */
+  /**
+   * POST /chat/conversations/support — idempotently ensure the caller's one
+   * HandyGo Support conversation exists.
+   *
+   * Safe to call repeatedly (login, registration, app resume, Chat-tab load):
+   * uniqueness is owned by the DB, so concurrent calls still yield exactly
+   * one conversation. CLIENT and WORKER only — the service ignores any other
+   * role, so an ADMIN (including the support account itself) never gets one.
+   *
+   * Declared ABOVE `@Post('conversations')` so the literal path is matched
+   * before any parameterised sibling.
+   */
+  @Post('conversations/support')
+  @Roles(AppRole.CLIENT, AppRole.WORKER)
+  @HttpCode(HttpStatus.OK)
+  async ensureSupportConversation(
+    @CurrentUser() user: { id: string; role: string },
+  ) {
+    await this.chatService.ensureSupportConversation(
+      user.id,
+      user.role as Role,
+    );
+    return { success: true };
+  }
+
   @Post('conversations')
   @Roles(AppRole.CLIENT)
   @HttpCode(HttpStatus.OK)
@@ -282,7 +307,11 @@ export class ChatController {
     @Param('id') id: string,
     @Param('messageId') messageId: string,
   ) {
-    const message = await this.chatService.deleteMessage(user.id, id, messageId);
+    const message = await this.chatService.deleteMessage(
+      user.id,
+      id,
+      messageId,
+    );
     void this.chatGateway.broadcastMessageDeleted(id, {
       messageId: message.id,
       deletedAt: message.deletedAt!,

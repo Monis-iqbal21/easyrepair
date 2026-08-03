@@ -7,8 +7,11 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  Res,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { AdminService } from './admin.service';
+import { sendPrivatePdf } from '../../common/utils/private-pdf-response.util';
 import {
   RejectWorkerDto,
   RequestChangesDto,
@@ -95,11 +98,30 @@ export class AdminController {
 
   /**
    * GET /admin/workers/:workerProfileId/agreements
-   * Permanent legal audit records (General + Trade) with downloadable PDF
-   * URLs. Admin-only — never exposed on any client/worker-facing endpoint.
+   * The three permanent legal audit records with their full evidence
+   * (acceptance id, accepted language, trade, and the source/accepted/PDF
+   * hashes). Admin-only, Customer documents excluded, no storage URL returned.
    */
   @Get(':workerProfileId/agreements')
   getWorkerAgreements(@Param('workerProfileId') workerProfileId: string) {
     return this.adminService.getWorkerAgreements(workerProfileId);
+  }
+
+  /**
+   * GET /admin/workers/:workerProfileId/agreements/:acceptanceId/download
+   * Streams one accepted PDF through this authenticated admin endpoint. The
+   * acceptance must belong to the worker in the path.
+   */
+  @Get(':workerProfileId/agreements/:acceptanceId/download')
+  async downloadWorkerAgreement(
+    @Param('workerProfileId') workerProfileId: string,
+    @Param('acceptanceId') acceptanceId: string,
+    @Res() res: Response,
+  ) {
+    const pdf = await this.adminService.downloadWorkerAgreement(
+      workerProfileId,
+      acceptanceId,
+    );
+    sendPrivatePdf(res, pdf);
   }
 }

@@ -10,13 +10,22 @@ const CONVERSATION_INCLUDE = {
   clientUser: {
     select: {
       id: true,
-      clientProfile: { select: { firstName: true, lastName: true, avatarUrl: true } },
+      clientProfile: {
+        select: { firstName: true, lastName: true, avatarUrl: true },
+      },
     },
   },
   workerUser: {
     select: {
       id: true,
-      workerProfile: { select: { firstName: true, lastName: true, avatarUrl: true, rating: true } },
+      workerProfile: {
+        select: {
+          firstName: true,
+          lastName: true,
+          avatarUrl: true,
+          rating: true,
+        },
+      },
     },
   },
 } satisfies Prisma.ConversationInclude;
@@ -114,6 +123,107 @@ export class ChatRepository {
     });
   }
 
+  /**
+   * All support conversations, for the admin inbox.
+   *
+   * A conversation is a support thread iff the support system user is one of
+   * its two participants — derived, so no schema discriminator is needed.
+   * [query] matches the counterpart's name (never the message bodies).
+   */
+  async findSupportConversations(
+    supportUserId: string,
+    options: { query?: string; take?: number; cursor?: string } = {},
+  ): Promise<ConversationWithParticipants[]> {
+    const nameFilter = options.query?.trim();
+    const matchesName: Prisma.ConversationWhereInput | undefined = nameFilter
+      ? {
+          OR: [
+            {
+              clientUser: {
+                clientProfile: {
+                  OR: [
+                    { firstName: { contains: nameFilter, mode: 'insensitive' } },
+                    { lastName: { contains: nameFilter, mode: 'insensitive' } },
+                  ],
+                },
+              },
+            },
+            {
+              workerUser: {
+                workerProfile: {
+                  OR: [
+                    { firstName: { contains: nameFilter, mode: 'insensitive' } },
+                    { lastName: { contains: nameFilter, mode: 'insensitive' } },
+                  ],
+                },
+              },
+            },
+            { clientUser: { phone: { contains: nameFilter } } },
+            { workerUser: { phone: { contains: nameFilter } } },
+          ],
+        }
+      : undefined;
+
+    return this.prisma.conversation.findMany({
+      where: {
+        AND: [
+          {
+            OR: [
+              { clientUserId: supportUserId },
+              { workerUserId: supportUserId },
+            ],
+          },
+          ...(matchesName ? [matchesName] : []),
+        ],
+      },
+      include: CONVERSATION_INCLUDE,
+      orderBy: [
+        { lastMessageAt: { sort: 'desc', nulls: 'last' } },
+        { createdAt: 'desc' },
+      ],
+      take: options.take ?? 50,
+      ...(options.cursor
+        ? { cursor: { id: options.cursor }, skip: 1 }
+        : {}),
+    });
+  }
+
+  /** Marks every inbound message in a conversation as seen, in one write. */
+  async markAllSeenFrom(
+    conversationId: string,
+    readerUserId: string,
+  ): Promise<number> {
+    const res = await this.prisma.message.updateMany({
+      where: {
+        conversationId,
+        senderUserId: { not: readerUserId },
+        seenAt: null,
+        deletedAt: null,
+      },
+      data: { seenAt: new Date() },
+    });
+    return res.count;
+  }
+
+  /** Minimal, deliberately non-sensitive detail about a support requester. */
+  async findUserSummary(userId: string) {
+    return this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        role: true,
+        phone: true,
+        createdAt: true,
+        clientProfile: {
+          select: { firstName: true, lastName: true, avatarUrl: true },
+        },
+        workerProfile: {
+          select: { firstName: true, lastName: true, avatarUrl: true },
+        },
+      },
+    });
+  }
+
   // ── Messages ──────────────────────────────────────────────────────────────
 
   /**
@@ -184,11 +294,7 @@ export class ChatRepository {
    * Return messages in a conversation, newest first (client reverses for display).
    * Default page size: 50.
    */
-  async findMessages(
-    conversationId: string,
-    limit = 50,
-    before?: string,
-  ) {
+  async findMessages(conversationId: string, limit = 50, before?: string) {
     return this.prisma.message.findMany({
       where: {
         conversationId,
@@ -204,7 +310,10 @@ export class ChatRepository {
    * Count messages in a conversation that were sent by others and not yet seen
    * by the given user.  Used to populate the unreadCount field in conversation lists.
    */
-  async countUnread(conversationId: string, currentUserId: string): Promise<number> {
+  async countUnread(
+    conversationId: string,
+    currentUserId: string,
+  ): Promise<number> {
     return this.prisma.message.count({
       where: {
         conversationId,

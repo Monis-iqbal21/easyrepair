@@ -763,7 +763,9 @@ class _StatusCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final worker = booking.assignedWorker;
     final firstName = worker?.firstName ?? context.l10n.trackWorkerLabel;
-    final price = booking.acceptedBidAmount ?? booking.finalPrice ?? booking.estimatedPrice;
+    // Shared with Booking Details' "Agreed Price" row — see
+    // BookingEntity.agreedPrice.
+    final price = booking.agreedPrice;
 
     return Container(
       width: double.infinity,

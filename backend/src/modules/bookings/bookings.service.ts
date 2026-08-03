@@ -42,6 +42,9 @@ import { StorageService } from '../storage/storage.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ChatService } from '../chat/chat.service';
 import { calculatePlatformFee } from '../../common/utils/commission.util';
+import { deriveInspectionFeePaid } from '../../common/utils/inspection-fee.util';
+import { JobBroadcastService } from '../matching/job-broadcast.service';
+import { JobCompletionNotifierService } from '../matching/job-completion-notifier.service';
 
 /** 72 hours in milliseconds — auto-expiry window for PENDING bookings, all lanes. */
 const BOOKING_EXPIRY_MS = 72 * 60 * 60 * 1000;
@@ -59,6 +62,10 @@ export class BookingsService {
     private readonly notificationsService: NotificationsService,
     private readonly chatService: ChatService,
     @InjectQueue(BOOKINGS_QUEUE) private readonly bookingsQueue: Queue,
+    // Both live in the leaf MatchingModule so WorkersService can share them
+    // without the two services importing each other.
+    private readonly jobBroadcastService: JobBroadcastService,
+    private readonly jobCompletionNotifier: JobCompletionNotifierService,
   ) {}
 
   async createBooking(
@@ -213,16 +220,10 @@ export class BookingsService {
       );
     });
 
-    // BIDDING has no direct-assign step — push nearby eligible workers
-    // immediately so they can bid in real time instead of only polling.
-    if (lane === BookingLane.BIDDING) {
-      void this._notifyNearbyWorkersForBidding(
-        booking.id,
-        category.id,
-        dto.latitude,
-        dto.longitude,
-      );
-    }
+    // Every lane broadcasts the moment the job goes live, so nearby eligible
+    // Ustaads learn about it without polling. Per-live-cycle dedup makes a
+    // later re-broadcast (e.g. the STANDARD discovery screen) a no-op.
+    void this.jobBroadcastService.broadcastJob(booking.id);
 
     return this._toDto(booking);
   }
@@ -244,6 +245,24 @@ export class BookingsService {
     this.logger.log(
       `[getClientBookings] clientProfileId=${profile.id} count=${bookings.length}`,
     );
+    return bookings.map((b) => this._toDto(b));
+  }
+
+  /**
+   * GET /bookings/pending-reviews — completed work units awaiting this
+   * client's review, newest first. The app treats this as authoritative:
+   * a booking is only dropped from its review queue once it stops appearing
+   * here, so a dismissed, failed or missed prompt is always re-offered.
+   */
+  async getPendingReviews(userId: string): Promise<BookingResponseDto[]> {
+    const profile =
+      await this.bookingsRepository.findClientProfileByUserId(userId);
+    if (!profile) throw new ForbiddenException('Client profile not found');
+
+    const bookings =
+      await this.bookingsRepository.findPendingReviewBookingsByClientProfileId(
+        profile.id,
+      );
     return bookings.map((b) => this._toDto(b));
   }
 
@@ -754,11 +773,11 @@ export class BookingsService {
       recommended: w.recommended,
     }));
 
-    // STANDARD lane: notify each listed worker (deduped) that they've been
-    // suggested for this job. Fire-and-forget — must never block the response.
-    if (booking.lane === BookingLane.STANDARD) {
-      void this._notifyWorkersListedForStandardJob(bookingId, workerDtos);
-    }
+    // Re-broadcast while the client is on the discovery screen. Per-live-cycle
+    // dedup means this is a no-op for anyone already notified at creation; it
+    // exists so a worker who only just became eligible is still reached.
+    // Fire-and-forget — must never block the response.
+    void this.jobBroadcastService.broadcastJob(bookingId);
 
     return {
       workers: workerDtos,
@@ -1163,21 +1182,16 @@ export class BookingsService {
       workerProfile!.id,
     );
 
-    if (updated.clientProfile?.userId) {
-      void this.notificationsService.notify({
-        userId: updated.clientProfile.userId,
-        eventKey: 'booking.completed',
-        title: 'Job Completed',
-        body: 'Aap ka kaam complete ho gaya hai. Barah-e-karam review dein.',
-        bookingId,
-        route: `/client/booking/${bookingId}`,
-        actorUserId: userId,
-        actorRole: 'WORKER',
-        entityType: 'booking',
-        entityId: bookingId,
-      });
-    }
-    // Also notify the worker so both sides get an in-app banner/push.
+    // Single shared, deduplicated completion notice — see
+    // JobCompletionNotifierService. Every completion path routes here so the
+    // client can only ever receive one `booking.completed` per work unit.
+    void this.jobCompletionNotifier.notifyClientJobCompleted(
+      bookingId,
+      'NORMAL',
+      { userId, role: 'WORKER' },
+    );
+
+    // The worker's own confirmation is a different audience and stays inline.
     if (updated.workerProfile?.userId) {
       void this.notificationsService.notify({
         userId: updated.workerProfile.userId,
@@ -1228,19 +1242,11 @@ export class BookingsService {
       booking.workerProfileId,
     );
 
-    if (updated.clientProfile?.userId) {
-      void this.notificationsService.notify({
-        userId: updated.clientProfile.userId,
-        eventKey: 'booking.completed',
-        title: 'Job Completed',
-        body: 'Inspection close ho gayi hai. Barah-e-karam review dein.',
-        bookingId,
-        route: `/client/booking/${bookingId}`,
-        actorRole: 'CLIENT',
-        entityType: 'booking',
-        entityId: bookingId,
-      });
-    }
+    void this.jobCompletionNotifier.notifyClientJobCompleted(
+      bookingId,
+      'NORMAL',
+      { role: 'CLIENT' },
+    );
     if (updated.workerProfile?.userId) {
       void this.notificationsService.notify({
         userId: updated.workerProfile.userId,
@@ -1325,26 +1331,26 @@ export class BookingsService {
             `[expiry] scheduleExpiry failed for bookingId=${childId}: ${(err as Error)?.message}`,
           );
         });
-        void this._notifyNearbyWorkersForPostInspectionBidding(
-          childId,
-          params.categoryId,
-          params.latitude,
-          params.longitude,
-          params.inspectingWorkerProfileId,
+        void this.jobBroadcastService.broadcastJob(childId);
+        // The client's inspection work unit is now complete — prompt them to
+        // review the ORIGINAL inspecting Ustaad (never the child booking).
+        void this.jobCompletionNotifier.notifyClientJobCompleted(
+          params.originalBookingId,
+          'INSPECTION_BEFORE_SWITCH',
+          { role: 'CLIENT' },
         );
         return childId;
       }
       case 'ALREADY_DONE': {
-        // Idempotent replay — re-attempt notification delivery in case the
-        // first request failed after commit; wasAlreadyNotified guarantees
-        // no worker is ever pushed twice for the same job.
+        // Idempotent replay — re-attempt delivery in case the first request
+        // died after commit; per-cycle dedup guarantees no worker is pushed
+        // twice for the same live cycle.
         const childId = result.childBooking.id;
-        void this._notifyNearbyWorkersForPostInspectionBidding(
-          childId,
-          params.categoryId,
-          params.latitude,
-          params.longitude,
-          params.inspectingWorkerProfileId,
+        void this.jobBroadcastService.broadcastJob(childId);
+        void this.jobCompletionNotifier.notifyClientJobCompleted(
+          params.originalBookingId,
+          'INSPECTION_BEFORE_SWITCH',
+          { role: 'CLIENT' },
         );
         return childId;
       }
@@ -1475,14 +1481,22 @@ export class BookingsService {
       void this.notificationsService.notify({
         userId: updated.clientProfile.userId,
         eventKey: 'booking.cancelled.by_worker',
-        title: 'Worker Cancelled',
-        body: `Ustaad cancelled: ${reason}`,
+        title: 'Kaam Cancel Ho Gaya',
+        body: `Ustaad ne kaam cancel kar diya: ${reason}`,
         bookingId,
         route: `/client/booking/${bookingId}`,
         actorUserId: userId,
         actorRole: 'WORKER',
         entityType: 'booking',
         entityId: bookingId,
+      });
+    }
+
+    // Cancelling released this worker's `currentlyWorking` flag — they are
+    // free again, so surface any still-open nearby job to them now.
+    if (workerProfile?.id) {
+      void this.jobBroadcastService.matchOpenJobsForWorker(workerProfile.id, {
+        bypassCooldown: true,
       });
     }
 
@@ -1547,28 +1561,11 @@ export class BookingsService {
       );
     });
 
-    // BIDDING and reopened-INSPECTION are open-for-bidding states — push
-    // nearby eligible workers immediately, same as on first creation/first
-    // "Find Other Ustaad". STANDARD (and INSPECTION with no report yet)
-    // rely on the client re-entering the existing nearby-worker discovery
-    // screen, which already notifies listed STANDARD workers as a side
-    // effect (see getNearbyWorkers/_notifyWorkersListedForStandardJob).
-    if (updated.lane === BookingLane.BIDDING) {
-      void this._notifyNearbyWorkersForBidding(
-        bookingId,
-        updated.categoryId,
-        updated.latitude,
-        updated.longitude,
-      );
-    } else if (updated.lane === BookingLane.INSPECTION && updated.inspectionReport) {
-      void this._notifyNearbyWorkersForPostInspectionBidding(
-        bookingId,
-        updated.categoryId,
-        updated.latitude,
-        updated.longitude,
-        cancelledWorkerProfileId,
-      );
-    }
+    // The booking is live again, and reopening reset `liveStartedAt` — which
+    // starts a NEW broadcast cycle, so eligible workers notified during the
+    // previous cycle are reachable once more (exactly once). The cancelling
+    // worker is excluded by the exclusion row the reopen just wrote.
+    void this.jobBroadcastService.broadcastJob(bookingId);
 
     return this._toDto(updated);
   }
@@ -1621,6 +1618,10 @@ export class BookingsService {
       entityType: 'booking',
       entityId: bookingId,
     });
+
+    // Relisting reset `liveStartedAt`, opening a new broadcast cycle — every
+    // currently-eligible nearby Ustaad may be notified once more.
+    void this.jobBroadcastService.broadcastJob(bookingId);
 
     return this._toDto(updated);
   }
@@ -1697,189 +1698,13 @@ export class BookingsService {
     });
   }
 
-  // ── Worker-listed notification (STANDARD lane) ────────────────────────────
-
-  /**
-   * Notify each worker returned by a STANDARD-lane nearby-workers search that
-   * they've been suggested to a client, with push + in-app banner. Deduped
-   * per booking/worker pair via the notifications table so repeated polling
-   * of the nearby-workers endpoint never spams the same worker twice for the
-   * same booking. Never throws — fire-and-forget from the caller.
-   */
-  private async _notifyWorkersListedForStandardJob(
-    bookingId: string,
-    workers: NearbyWorkerDto[],
-  ): Promise<void> {
-    if (workers.length === 0) return;
-    try {
-      const userIdByWorkerId =
-        await this.bookingsRepository.findUserIdsByWorkerProfileIds(
-          workers.map((w) => w.id),
-        );
-
-      const eventKey = 'booking.standard.worker_listed';
-      for (const w of workers) {
-        const userId = userIdByWorkerId.get(w.id);
-        if (!userId) continue;
-
-        const alreadyNotified =
-          await this.notificationsService.wasAlreadyNotified(
-            userId,
-            bookingId,
-            eventKey,
-          );
-        if (alreadyNotified) continue;
-
-        void this.notificationsService.notify({
-          userId,
-          eventKey,
-          title: 'Naya standard kaam',
-          body: 'Aap ko ek Standard job ke liye client ko suggest kiya ja raha hai.',
-          bookingId,
-          route: `/worker/jobs/${bookingId}`,
-          entityType: 'booking',
-          entityId: bookingId,
-        });
-      }
-    } catch (err) {
-      this.logger.warn(
-        `[worker-listed] notify failed for bookingId=${bookingId}: ${(err as Error)?.message}`,
-      );
-    }
-  }
-
-  /**
-   * BIDDING lane has no direct-assign step — workers otherwise only
-   * discover these jobs by polling "New Jobs". This pushes an immediate
-   * notification to nearby eligible workers (online, approved, active,
-   * available, matching category, within radius — same criteria as
-   * findNearbyWorkers everywhere else) right when the booking is created,
-   * so they can bid in real time. Deduped per booking/worker pair via the
-   * notifications table, same pattern as _notifyWorkersListedForStandardJob.
-   * Fire-and-forget — must never block or fail booking creation.
-   */
-  private async _notifyNearbyWorkersForBidding(
-    bookingId: string,
-    categoryId: string,
-    lat: number,
-    lng: number,
-  ): Promise<void> {
-    try {
-      const { workers } = await this.bookingsRepository.findNearbyWorkers({
-        categoryId,
-        lat,
-        lng,
-        lane: BookingLane.BIDDING,
-      });
-      if (workers.length === 0) return;
-
-      const userIdByWorkerId =
-        await this.bookingsRepository.findUserIdsByWorkerProfileIds(
-          workers.map((w) => w.id),
-        );
-
-      const eventKey = 'booking.bidding.available';
-      for (const w of workers) {
-        const userId = userIdByWorkerId.get(w.id);
-        if (!userId) continue;
-
-        const alreadyNotified =
-          await this.notificationsService.wasAlreadyNotified(
-            userId,
-            bookingId,
-            eventKey,
-          );
-        if (alreadyNotified) continue;
-
-        void this.notificationsService.notify({
-          userId,
-          eventKey,
-          title: 'Naya bidding kaam available hai',
-          body: 'Qareebi customer ne kaam post kiya hai. Apni offer bhejein.',
-          bookingId,
-          route: `/worker/jobs/${bookingId}`,
-          entityType: 'booking',
-          entityId: bookingId,
-        });
-      }
-    } catch (err) {
-      this.logger.warn(
-        `[bidding-notify] failed for bookingId=${bookingId}: ${(err as Error)?.message}`,
-      );
-    }
-  }
-
-  /**
-   * INSPECTION lane, third outcome ("Find Other Ustaad"): pushes nearby
-   * eligible workers once the booking reopens for bidding. Same eligibility
-   * criteria as findNearbyWorkers everywhere else (online, approved, active,
-   * available, matching category, within radius), explicitly excludes the
-   * inspecting worker via excludedWorkerIds, and never includes the
-   * inspecting worker's quoted price, exact address/coordinates, or
-   * customer phone. Deduped per booking/worker pair, same pattern as the
-   * other nearby-worker notifiers. Fire-and-forget.
-   *
-   * Deliberately passes lane: BIDDING (not INSPECTION) to findNearbyWorkers —
-   * a reopened job is no longer a direct-assign fixed-fee job, it behaves
-   * like a bidding job for worker-matching purposes. Passing INSPECTION here
-   * made findNearbyWorkers use the tight 5→7km "direct-assign" radius ladder
-   * instead of the wide legacy ladder (up to 20km), silently under-reaching
-   * eligible workers — inspection-bidder-eligibility.util.ts's
-   * MAX_INSPECTION_BID_RADIUS_KM=20 (used by New Jobs listing and bid
-   * eligibility) was never actually matched by this notification search.
-   */
-  private async _notifyNearbyWorkersForPostInspectionBidding(
-    bookingId: string,
-    categoryId: string,
-    lat: number,
-    lng: number,
-    excludeWorkerProfileId: string,
-  ): Promise<void> {
-    try {
-      const { workers } = await this.bookingsRepository.findNearbyWorkers({
-        categoryId,
-        lat,
-        lng,
-        lane: BookingLane.BIDDING,
-        excludedWorkerIds: [excludeWorkerProfileId],
-      });
-      if (workers.length === 0) return;
-
-      const userIdByWorkerId =
-        await this.bookingsRepository.findUserIdsByWorkerProfileIds(
-          workers.map((w) => w.id),
-        );
-
-      const eventKey = 'booking.inspection.find_other_ustaad_available';
-      for (const w of workers) {
-        const userId = userIdByWorkerId.get(w.id);
-        if (!userId) continue;
-
-        const alreadyNotified =
-          await this.notificationsService.wasAlreadyNotified(
-            userId,
-            bookingId,
-            eventKey,
-          );
-        if (alreadyNotified) continue;
-
-        void this.notificationsService.notify({
-          userId,
-          eventKey,
-          title: 'Naya Inspection Wala Kaam',
-          body: 'Inspection report dekh kar apni price bid karein.',
-          bookingId,
-          route: `/worker/job/${bookingId}`,
-          entityType: 'booking',
-          entityId: bookingId,
-        });
-      }
-    } catch (err) {
-      this.logger.warn(
-        `[find-other-ustaad-notify] failed for bookingId=${bookingId}: ${(err as Error)?.message}`,
-      );
-    }
-  }
+  // ── Nearby-worker broadcast ───────────────────────────────────────────────
+  //
+  // The three former per-lane fan-outs (_notifyWorkersListedForStandardJob,
+  // _notifyNearbyWorkersForBidding, _notifyNearbyWorkersForPostInspectionBidding)
+  // have been replaced by JobBroadcastService.broadcastJob, which lives in the
+  // leaf MatchingModule and shares its final eligibility decision with the New
+  // Jobs feed so notification reach and feed visibility cannot drift.
 
   // ── Private helpers ────────────────────────────────────────────────────────
 
@@ -2041,6 +1866,10 @@ export class BookingsService {
         booking.inspectionReport?.createdAt.toISOString() ?? null,
       sourceInspectionBookingId: booking.sourceInspectionBookingId ?? null,
       linkedRepairBookingId: booking.repairBooking?.id ?? null,
+      // Derived from the ORIGINAL inspection work unit reaching COMPLETED —
+      // never from paymentStatus (a dead column), the existence of a report,
+      // or the linked repair's own status. See inspection-fee.util.ts.
+      inspectionFeePaid: deriveInspectionFeePaid(booking),
     };
   }
 }

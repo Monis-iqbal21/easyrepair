@@ -22,9 +22,10 @@ import { WorkerUnavailableError } from '../../common/errors/worker-unavailable.e
 import { haversineKm } from '../../common/utils/geo.util';
 import { calculatePlatformFee } from '../../common/utils/commission.util';
 import {
-  assertEligibleForInspectionBidding,
-  isEligibleForInspectionBidding,
-} from '../../common/utils/inspection-bidder-eligibility.util';
+  assertEligibleForJob,
+  isEligibleForJob,
+} from '../../common/utils/job-eligibility.util';
+import { JobBroadcastService } from '../matching/job-broadcast.service';
 
 /** Rebid/update cooldown, measured off the bid row's own updatedAt. Server-time authoritative. */
 const BID_COOLDOWN_SECONDS = 60;
@@ -37,6 +38,9 @@ export class BidsService {
     private readonly bidsRepository: BidsRepository,
     private readonly notificationsService: NotificationsService,
     private readonly chatService: ChatService,
+    // Leaf MatchingModule — supplies the shared match radius and the
+    // reconciliation used to recover pushes missed while the app was closed.
+    private readonly jobBroadcastService: JobBroadcastService,
   ) {}
 
   // ── Worker: submit or re-submit bid (upsert with 1-minute cooldown) ────────
@@ -79,20 +83,16 @@ export class BidsService {
         'Bidding is not available for this booking.',
       );
     }
-    if (postInspection.isOpen) {
-      // Post-inspection repair jobs (old-style reopened inspections AND
-      // new-style linked BIDDING children) enforce the full approved/active/
-      // profile-completed/online/category/radius/fresh-GPS gate (same
-      // standard as the nearby-worker notification pipeline), plus exclusion
-      // of the original inspecting worker. Normal BIDDING lane deliberately
-      // stays more permissive (workers may browse/bid while offline/distant)
-      // — this gate is scoped to post-inspection jobs only.
-      assertEligibleForInspectionBidding(
-        workerProfile,
-        booking,
-        postInspection.inspectorWorkerProfileId,
-      );
-    }
+
+    // Every biddable job — Direct Bidding AND post-inspection repair jobs
+    // alike — goes through the one central matcher. The inspector exclusion
+    // is an extra layer, never a substitute: a Direct-Bidding job (no
+    // InspectionReport, inspectorWorkerProfileId null) is still radius,
+    // online, freshness, busy and open/unassigned checked.
+    assertEligibleForJob(workerProfile, booking, {
+      radiusKm: this.jobBroadcastService.matchRadiusKm,
+      inspectingWorkerProfileId: postInspection.inspectorWorkerProfileId,
+    });
 
     const existing = await this.bidsRepository.findExistingBid(
       bookingId,
@@ -204,13 +204,10 @@ export class BidsService {
     );
     if (fullBooking) {
       const postInspection = this._postInspectionBiddingContext(fullBooking);
-      if (postInspection.isOpen) {
-        assertEligibleForInspectionBidding(
-          workerProfile,
-          fullBooking,
-          postInspection.inspectorWorkerProfileId,
-        );
-      }
+      assertEligibleForJob(workerProfile, fullBooking, {
+        radiusKm: this.jobBroadcastService.matchRadiusKm,
+        inspectingWorkerProfileId: postInspection.inspectorWorkerProfileId,
+      });
     }
 
     // Same 60s cooldown as the POST re-submit path in createBid, keyed off
@@ -504,25 +501,28 @@ export class BidsService {
       categoryIds,
     );
 
-    // Post-inspection repair jobs — old-style reopened (FIND_OTHER_USTAAD)
-    // inspections AND new-style linked BIDDING children — are hidden from a
-    // worker's New Jobs feed if they wouldn't pass the same eligibility gate
-    // enforced at report-view/bid-create time (offline, out of radius, stale
-    // GPS, or the original inspector themselves). Because this check runs
-    // fresh on every call against the worker's live location/online state, a
-    // worker who enters the radius (or comes online) later sees the still-
-    // open job on their next refresh — visibility is never limited to the
-    // one-time creation push. Normal BIDDING and ordinary Standard/
-    // Inspection jobs are untouched.
-    const bookings = allBookings.filter((b) => {
-      const postInspection = this._postInspectionBiddingContext(b);
-      if (!postInspection.isOpen) return true;
-      return isEligibleForInspectionBidding(
-        workerProfile,
-        b,
-        postInspection.inspectorWorkerProfileId,
-      );
-    });
+    // EVERY lane is matched, not just post-inspection jobs: a live job is
+    // only visible to nearby eligible Ustaads. This is deliberately the same
+    // `isEligibleForJob` call the broadcast fan-out ends on, so notification
+    // reach and feed visibility cannot drift apart.
+    //
+    // Because it re-reads the worker's live availability/coords/freshness on
+    // every request, visibility is fully dynamic: entering the radius or
+    // coming online reveals a still-open job on the next refresh, and leaving
+    // the radius, going offline, going stale or becoming busy removes it —
+    // with no cache and no dependency on whether a push was ever delivered.
+    //
+    // The inspector exclusion is additive only. A Direct-Bidding job has no
+    // InspectionReport and a null inspector id, which means "nobody to
+    // exclude" — it never skips the radius/online/fresh/busy checks.
+    const radiusKm = this.jobBroadcastService.matchRadiusKm;
+    const bookings = allBookings.filter((b) =>
+      isEligibleForJob(workerProfile, b, {
+        radiusKm,
+        inspectingWorkerProfileId:
+          this._postInspectionBiddingContext(b).inspectorWorkerProfileId,
+      }),
+    );
 
     const result = bookings.map((b) => {
       const distanceKm = haversineKm(
@@ -593,6 +593,15 @@ export class BidsService {
         workerProfileId: b.workerProfileId ?? null,
       };
     });
+
+    // Recover notifications missed while the app was closed: reconcile the
+    // jobs this worker can currently see. Fire-and-forget so it can never
+    // slow or fail the feed response, and per-live-cycle dedup means
+    // refreshing repeatedly still yields at most one push per booking.
+    this.jobBroadcastService.reconcileVisibleJobs(
+      workerProfile.id,
+      bookings.map((b) => b.id),
+    );
 
     return result;
   }

@@ -74,6 +74,48 @@ enum TrainingStatus {
 enum AgreementType {
   GENERAL_USTAAD
   TRADE_SPECIFIC
+  /// Background Verification, EVS Consent aur Ustaad Privacy Notice — the
+  /// third document every Ustaad accepts at profile completion.
+  BACKGROUND_VERIFICATION_EVS_PRIVACY_NOTICE
+  /// Registered for a future, separate Customer acceptance flow. MUST NEVER
+  /// be shown to, required from, or accepted by an Ustaad.
+  CUSTOMER_TERMS_BOOKING_RULES_PRIVACY_NOTICE
+}
+
+/// Language of one agreement version. Values mirror the app's existing locale
+/// identifiers (AppLocale.storageValue): en / ur / ur_Latn.
+enum AgreementLocale {
+  EN
+  UR
+  UR_LATN
+}
+
+/// Lifecycle of one document-language version.
+///
+/// Only ACTIVE may be viewed or accepted. PENDING_TRANSLATION means the
+/// variant is expected but its certified legal text does not exist yet — it
+/// can never be shown to an Ustaad or sealed into an acceptance record.
+enum AgreementSourceStatus {
+  ACTIVE
+  PENDING_TRANSLATION
+  DRAFT
+  RETIRED
+}
+
+/// Trades with an approved schedule in the Trade-Specific agreement.
+/// Selected by stable code, never by comparing translated category names.
+enum AgreementTradeCode {
+  ELECTRICIAN
+  PLUMBER
+  AC_TECHNICIAN
+  CARPENTER
+}
+
+/// How an acceptance was captured. Only electronic acceptance through the
+/// HandyGo app is supported today; the enum exists so the record stays
+/// meaningful if a counter-signed paper route is ever added.
+enum AgreementAcceptanceMethod {
+  ELECTRONIC_IN_APP
 }
 
 enum BookingUrgency {
@@ -147,23 +189,23 @@ enum InspectionDecisionStatus {
 }
 
 model User {
-  id           String    @id @default(uuid())
-  phone        String    @unique
-  email        String?   @unique
-  passwordHash String?
-  role         Role
-  isActive     Boolean   @default(true)
-  fcmToken     String?
+  id            String    @id @default(uuid())
+  phone         String    @unique
+  email         String?   @unique
+  passwordHash  String?
+  role          Role
+  isActive      Boolean   @default(true)
+  fcmToken      String?
   /// Whether this phone number has ever completed a real OTP verification.
   /// Defaults to false for every row (including pre-existing accounts) —
   /// deliberately not backfilled for historical OTP-verified accounts (see
   /// migration notes); set true going forward by a successful OTP
   /// login/registration (Client or Worker), never by a password login or
   /// password-based registration.
-  phoneVerified Boolean  @default(false)
-  deletedAt    DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  phoneVerified Boolean   @default(false)
+  deletedAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   clientProfile        ClientProfile?
   workerProfile        WorkerProfile?
@@ -302,6 +344,15 @@ model WorkerProfile {
   /// column with a unique index is safe: Postgres allows multiple NULLs.
   cnicNumber           String? @unique
   residentialAddress   String?
+  /// Father's name as per CNIC. Required by the Background Verification /
+  /// EVS Consent document, which cannot be generated without it.
+  fatherName           String?
+  /// Date of birth as per CNIC, stored as the ISO date the Ustaad entered
+  /// (yyyy-MM-dd). Required by the EVS Consent document.
+  dateOfBirth          String?
+  /// Optional "name, phone" emergency contact. Prints as a controlled
+  /// "Not applicable" in the EVS document when absent.
+  emergencyContact     String?
   cnicFrontUrl         String?
   cnicFrontStorageKey  String?
   cnicBackUrl          String?
@@ -768,9 +819,31 @@ model AgreementTemplate {
   isActive       Boolean          @default(true)
   createdAt      DateTime         @default(now())
 
+  // ── Language / trade / lifecycle ─────────────────────────────────────────
+  // One row per (type, trade, locale). A language variant is a SEPARATE row,
+  // never a column on a shared row, so each language has its own hash and an
+  // acceptance can point at the exact wording that was shown.
+
+  /// Defaults to UR_LATN: every pre-existing row was the Roman Urdu source.
+  locale                 AgreementLocale       @default(UR_LATN)
+  /// Only set for TRADE_SPECIFIC; null for the general and background docs.
+  tradeCode              AgreementTradeCode?
+  /// Only ACTIVE may be viewed or accepted. English/Urdu sit in
+  /// PENDING_TRANSLATION until certified legal text passes parity validation.
+  status                 AgreementSourceStatus @default(ACTIVE)
+  /// Bumped only when clause identifiers/ordering change. Language variants
+  /// of the same legal content share it — this is what parity compares.
+  clauseStructureVersion String                @default("1.0")
+  /// Provenance: the approved PDF this canonical text was ingested from.
+  originalFilename       String?
+  activatedAt            DateTime?
+  retiredAt              DateTime?
+
   acceptances AgreementAcceptance[]
 
+  @@unique([type, tradeCode, locale, version])
   @@index([type, categoryId, isActive])
+  @@index([type, tradeCode, locale, status])
   @@map("agreement_templates")
 }
 
@@ -786,8 +859,10 @@ model AgreementAcceptance {
   workerProfile       WorkerProfile     @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
   userId              String
   user                User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  agreementTemplateId String
-  agreementTemplate   AgreementTemplate @relation(fields: [agreementTemplateId], references: [id], onDelete: Restrict)
+  /// Optional: acceptances created from the file-backed source registry have
+  /// no AgreementTemplate row. Legacy rows keep theirs.
+  agreementTemplateId String?
+  agreementTemplate   AgreementTemplate? @relation(fields: [agreementTemplateId], references: [id], onDelete: Restrict)
 
   // Snapshot of the template at acceptance time (survives template changes).
   agreementType                   AgreementType
@@ -814,6 +889,58 @@ model AgreementAcceptance {
 
   acceptancePdfUrl        String?
   acceptancePdfStorageKey String?
+
+  // ── Language, trade and evidence of exactly what was accepted ────────────
+
+  /// Public, human-quotable acceptance identifier printed on the PDF.
+  /// Server-generated; a client-supplied value is never trusted.
+  acceptanceId String? @unique
+
+  /// The language the Ustaad actually read and accepted. Immutable historical
+  /// evidence — changing the app language later must never rewrite this or
+  /// the accepted PDF.
+  agreementLocale AgreementLocale @default(UR_LATN)
+
+  /// The trade schedule contained in this accepted document. Null for the
+  /// general and background documents.
+  applicableTrade AgreementTradeCode?
+
+  /// SHA-256 of the approved SOURCE text, as pinned by the registry.
+  sourceDocumentHash       String?
+  /// SHA-256 of the personalized ACCEPTED document (source + this Ustaad's
+  /// data). Differs from sourceDocumentHash by construction.
+  acceptedDocumentHash     String?
+  /// SHA-256 of the generated PDF bytes, when it differs from the canonical
+  /// snapshot hash above.
+  acceptedPdfHash          String?
+  /// The exact personalized text that was sealed, kept so the record stays
+  /// provable even if the PDF file is ever lost.
+  acceptedDocumentSnapshot String?
+
+  /// When the Ustaad actually opened this exact document/version/locale.
+  /// Required before the checkbox may be ticked.
+  documentViewedAt   DateTime?
+  acceptanceMethod   AgreementAcceptanceMethod @default(ELECTRONIC_IN_APP)
+  /// When the agreement takes effect — normally the acceptance timestamp.
+  effectiveAt        DateTime?                 @db.Timestamptz(3)
+  /// Set once the generated PDF has been made available to the Ustaad.
+  pdfMadeAvailableAt DateTime?
+
+  // ── Identity snapshot (frozen at acceptance) ─────────────────────────────
+  fatherNameSnapshot             String?
+  dateOfBirthSnapshot            String?
+  addressSnapshot                String?
+  ustaadAccountIdSnapshot        String?
+  emergencyContactSnapshot       String?
+  approvedTradeSnapshot          String?
+  approvedServiceTagsSnapshot    String?
+  verificationProviderSnapshot   String?
+  verificationRequestRefSnapshot String?
+
+  /// Scoped to (worker, documentType, version, locale, trade, attempt) so a
+  /// retried or double-tapped submission returns the same record instead of
+  /// creating a second one.
+  idempotencyKey String? @unique
 
   createdAt DateTime @default(now())
 

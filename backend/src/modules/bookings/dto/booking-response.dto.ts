@@ -150,4 +150,13 @@ export class BookingResponseDto {
    * Other Ustaad" — the linked repair booking opened for bidding.
    */
   linkedRepairBookingId: string | null;
+  /**
+   * Whether the client has paid the inspection fee, derived ONLY from the
+   * original inspection work unit reaching COMPLETED (see
+   * inspection-fee.util.ts). `null` when no inspection is involved.
+   *
+   * Deliberately NOT derived from `paymentStatus`, from the existence of an
+   * InspectionReport, or from the linked repair booking's own status.
+   */
+  inspectionFeePaid: boolean | null;
 }

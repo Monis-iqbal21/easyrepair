@@ -8,10 +8,12 @@ import { NotificationsModule } from '../notifications/notifications.module';
 import { BidsModule } from '../bids/bids.module';
 import { StorageModule } from '../storage/storage.module';
 import { AgreementsModule } from '../agreements/agreements.module';
+import { MatchingModule } from '../matching/matching.module';
 
 @Module({
   imports: [
     NotificationsModule,
+    MatchingModule,
     BidsModule,
     StorageModule,
     AgreementsModule,

@@ -667,7 +667,7 @@ inspFormVoiceNoteHint,Uncategorised,"If writing is difficult, record a voice not
 inspFormRecording,Uncategorised,Recording  {duration},ریکارڈنگ  {duration},Recording  {duration},Placeholders: {duration}
 inspFormStop,Uncategorised,Stop,روکیں,Stop,
 inspFormStartRecording,Uncategorised,Start recording,ریکارڈنگ شروع کریں,Recording shuru karein,
-inspFormPartNameHint,Uncategorised,e.g. Gas refill,مثلاً گیس ری فل,Maslan Gas refill,
+inspFormPartNameHint,Uncategorised,e.g. the part or material used,مثلاً استعمال ہونے والا پرزہ یا سامان,Maslan istemal hone wala purza ya saman,
 inspFormWarrantyHint,Uncategorised,e.g. 7 days,مثلاً 7 دن,Maslan 7 din,
 inspFormRemovePart,Uncategorised,Remove part,پرزہ ہٹائیں,Part hatayein,
 inspFormTotalAmount,Uncategorised,Total amount for the work,کام کی پوری رقم,Kam ki puri raqam,
@@ -766,17 +766,10 @@ workerLiveSelfie,Ustaad,Live Selfie,لائیو سیلفی,Live selfie,
 workerDocumentRequired,Ustaad,Required,ضروری ہے,Zaroori hai,
 workerAgreements,Ustaad,Agreements,معاہدے,Muahiday,
 workerConfirmLegalName,Ustaad,I confirm my legal name matches my CNIC.,میں تصدیق کرتا ہوں کہ میرا قانونی نام میرے شناختی کارڈ کے مطابق ہے۔,Main tasdeeq karta hoon ke mera qanooni naam mere CNIC ke mutabiq hai.,
-workerAcceptGeneralAgreement,Ustaad,I accept the General Ustaad Agreement.,میں جنرل استاد معاہدہ قبول کرتا ہوں۔,Main General Ustaad muahida qabool karta hoon.,
-workerAcceptGeneralAgreementVersioned,Ustaad,I accept the General Ustaad Agreement (v{version}).,میں جنرل استاد معاہدہ (v{version}) قبول کرتا ہوں۔,Main General Ustaad muahida (v{version}) qabool karta hoon.,Placeholders: {version} | {version} is the backend agreement version and stays Latin in every language.
-workerAcceptTradeAgreement,Ustaad,I accept the Trade-specific Agreement.,میں ہنر سے متعلق معاہدہ قبول کرتا ہوں۔,Main hunar se mutaliq muahida qabool karta hoon.,
-workerAcceptTradeAgreementVersioned,Ustaad,I accept the Trade-specific Agreement (v{version}).,میں ہنر سے متعلق معاہدہ (v{version}) قبول کرتا ہوں۔,Main hunar se mutaliq muahida (v{version}) qabool karta hoon.,Placeholders: {version} | {version} is the backend agreement version and stays Latin in every language.
 workerViewAgreement,Ustaad,View Agreement,معاہدہ دیکھیں,Muahida dekhein,
 workerConfirmationRequired,Ustaad,This confirmation is required.,یہ تصدیق ضروری ہے۔,Ye tasdeeq zaroori hai.,
 workerSubmitForApproval,Ustaad,Submit for Approval,منظوری کے لیے بھیجیں,Manzoori ke liye bhejein,
-workerAgreementFallbackTitle,Ustaad,Agreement,معاہدہ,Muahida,
 workerAgreementVersion,Ustaad,Version {version},ورژن {version},Version {version},Placeholders: {version} | {version} is the backend agreement version and stays Latin in every language.
-workerAgreementSelectSkillFirst,Ustaad,Select your main skill first to load this agreement.,یہ معاہدہ دیکھنے کے لیے پہلے اپنا بنیادی ہنر منتخب کریں۔,Ye muahida dekhne ke liye pehle apna buniyadi hunar muntakhab karein.,
-workerCloseDialog,Ustaad,Close,بند کریں,Band karein,
 workerOnboardingSubmitted,Ustaad,Submitted for Review,جائزے کے لیے بھیج دی گئی,Jaizey ke liye bhej di gayi,
 workerOnboardingChangesRequired,Ustaad,Changes Required,تبدیلیاں درکار ہیں,Tabdeeliyan darkar hain,
 workerOnboardingApproved,Ustaad,Approved,منظور شدہ,Manzoor shuda,
@@ -785,7 +778,7 @@ workerRoleBadge,Ustaad,Ustaad,استاد,Ustaad,
 workerMainSkillWithName,Ustaad,Main Skill: {skill},بنیادی ہنر: {skill},Buniyadi hunar: {skill},Placeholders: {skill} | {skill} is the backend category name and is never translated.
 workerNoMainSkillYet,Ustaad,No main skill selected yet,ابھی کوئی بنیادی ہنر منتخب نہیں کیا گیا,Abhi koi buniyadi hunar muntakhab nahi kiya gaya,
 workerProfileApproval,Ustaad,Profile Approval,پروفائل کی منظوری,Profile ki manzoori,
-inspHintFallback,Uncategorised,e.g. Gas leak — a refill is needed,مثلاً گیس لیک ہے — ری فل کرانا ہو گا,Misal: gas leak hai — refill karana ho ga,Issue-example hint shown when the booking's service category has no hint of its own.
+inspHintFallback,Uncategorised,e.g. describe what you found,مثلاً بتائیں آپ کو کیا ملا,Maslan batayein aap ko kya mila,Issue-example hint shown when the booking's service category has no hint of its own.
 bidAmountRequired,Bidding,Please enter a bid amount.,براہِ کرم بولی کی رقم لکھیں۔,Baraye meherbani bid ki raqam likhein.,
 bidAmountRange,Bidding,"Bid amount must be between 100 and 500,000.","بولی کی رقم 100 سے 500,000 کے درمیان ہونی چاہیے۔","Bid ki raqam 100 se 500,000 ke darmiyan honi chahiye.",
 bidSubmitted,Bidding,Bid submitted!,بولی بھیج دی گئی!,Bid bhej di gayi!,
@@ -842,3 +835,91 @@ notificationsBannerFallbackTitle,Notifications,Notification,اطلاع,Notificat
 legalEnglishOnlyNotice,Legal,This legal document is currently available in English only.,یہ قانونی دستاویز فی الحال صرف انگریزی میں دستیاب ہے۔,Yeh qanooni document filhal sirf English mein available hai.,"Shown above the Privacy Policy and Terms bodies, which are approved in English only"
 myBookingsTotalCount,Uncategorised,{count} total,کل {count},Kul {count},Placeholders: {count} | Pill above the bookings list showing how many there are
 workerBidJobFallbackTitle,Ustaad,Job,کام,Kaam,Heading on the bid screen when the job title was not passed through
+navHome,Uncategorised,Home,ہوم,Home,Bottom-navigation tab: the home screen. Client and Ustaad share it.
+navBookings,Uncategorised,Bookings,بکنگز,Bookings,Bottom-navigation tab: the client's bookings list.
+navChats,Uncategorised,Chats,چیٹس,Chats,Bottom-navigation tab: the client's conversation list.
+inspectionRowIssueFound,Inspection flow,Issue found,جو مسئلہ ملا,Jo masla mila,Row label above what the Ustaad found during the inspection
+inspectionRowNotes,Inspection flow,Notes,نوٹس,Notes,Row label above the Ustaad's free-text notes on the report
+inspectionBadgeAwaitingDecision,Inspection flow,Report submitted — awaiting decision,رپورٹ جمع ہو گئی — فیصلے کا انتظار,Report jama ho gayi — faisle ka intezar,Status badge on the inspection report while the client has not decided
+inspectionBadgeQuoteAccepted,Inspection flow,Quote accepted — repair in progress,قیمت منظور — مرمت جاری ہے,Quote manzoor — marammat jari hai,Status badge on the inspection report once the repair quote was accepted
+inspectionBadgeFindingAnother,Inspection flow,Finding another Ustaad — open for bidding,دوسرا استاد تلاش کیا جا رہا ہے — بولی کے لیے کھلا,Doosra Ustaad talash kiya ja raha hai — bidding ke liye khula,Status badge on the inspection report after the client chose to re-open bidding
+inspStripClosedFeeOnlyWithAmount,Uncategorised,Closed after inspection — client pays inspection fee only: {fee},معائنے کے بعد بند — کلائنٹ صرف معائنہ فیس دے گا: {fee},Inspection ke baad band — client sirf inspection fee dega: {fee},Placeholders: {fee} | Status strip when the job closed after inspection and the fee amount is known
+inspStripClosedFeeOnly,Uncategorised,Closed after inspection — client pays inspection fee only.,معائنے کے بعد بند — کلائنٹ صرف معائنہ فیس دے گا۔,Inspection ke baad band — client sirf inspection fee dega.,Same strip when no fee snapshot is available to show
+inspStripRepairCompletedFeeWaived,Uncategorised,Repair completed — inspection fee waived.,مرمت مکمل — معائنہ فیس معاف۔,Marammat mukammal — inspection fee maaf.,Status strip once an inspection-lane repair finished
+inspStripQuoteAcceptedFeeWaived,Uncategorised,Quote accepted — inspection fee waived. Repair in progress.,قیمت منظور — معائنہ فیس معاف۔ مرمت جاری ہے۔,Quote manzoor — inspection fee maaf. Marammat jari hai.,Status strip while the accepted repair is being carried out
+inspStripReportSubmitted,Uncategorised,Inspection report submitted — review quote to continue repair or close after inspection.,معائنہ رپورٹ جمع ہو گئی — مرمت جاری رکھنے کے لیے قیمت دیکھیں یا معائنے کے بعد بند کریں۔,Inspection report jama ho gayi — marammat jari rakhne ke liye quote dekhein ya inspection ke baad band karein.,Status strip once the Ustaad submitted the report and the client must decide
+inspStripUstaadHired,Uncategorised,Ustaad hired,استاد ہائر ہو گیا,Ustaad hire ho gaya,Status strip once an Ustaad is assigned to the inspection
+inspStripBookedChooseUstaad,Uncategorised,Inspection booked — choose an Ustaad,معائنہ بک ہو گیا — استاد منتخب کریں,Inspection book ho gaya — Ustaad chunein,Status strip while the inspection is still pending an Ustaad
+chooseChipCancelRate,Uncategorised,{rate}% cancel,{rate}% منسوخی,{rate}% cancel,Placeholders: {rate} | Stat chip on an Ustaad card: their cancellation rate
+locationCurrentFailed,Uncategorised,Could not get current location.,موجودہ لوکیشن حاصل نہیں ہو سکی۔,Maujooda location hasil nahi ho saki.,Shown when the GPS button fails to resolve a position
+locationResolveFailed,Uncategorised,Could not resolve selected location.,منتخب لوکیشن معلوم نہیں ہو سکی۔,Muntakhib location maloom nahi ho saki.,Shown when a search result cannot be turned into coordinates
+locationOutsideKarachi,Uncategorised,Location is outside the Karachi service area.,یہ لوکیشن کراچی کے سروس ایریا سے باہر ہے۔,Yeh location Karachi ke service area se bahar hai.,Shown when the picked point falls outside the serviceable area
+postJobVideoTooLong,Uncategorised,Video must be {seconds} seconds or shorter.,ویڈیو {seconds} سیکنڈ یا اس سے کم ہونی چاہیے۔,Video {seconds} second ya us se kam honi chahiye.,Placeholders: {seconds} | Rejects an attached video that is longer than the allowed duration
+postJobLocationRetrieveFailed,Uncategorised,Could not retrieve location. Please try again.,لوکیشن حاصل نہیں ہو سکی۔ دوبارہ کوشش کریں۔,Location hasil nahi ho saki. Dobara koshish karein.,Shown when reading the device location fails on the post-job form
+postJobSelectOption,Uncategorised,Select an option to continue.,جاری رکھنے کے لیے ایک آپشن منتخب کریں۔,Jari rakhne ke liye ek option chunein.,Validation: no booking lane was picked
+postJobDescribeIssue,Uncategorised,Please describe what needs fixing.,براہ کرم بتائیں کہ کیا ٹھیک کروانا ہے۔,Baraye meherbani batayein ke kya theek karwana hai.,Validation: the job description is too short
+postJobSelectStandardService,Uncategorised,Please select at least one standard service.,کم از کم ایک اسٹینڈرڈ سروس منتخب کریں۔,Kam az kam ek standard service chunein.,Validation: the standard lane needs at least one service ticked
+postJobSelectArrivalWindow,Uncategorised,Please select an arrival window.,براہ کرم آمد کا وقت منتخب کریں۔,Baraye meherbani aane ka waqt chunein.,Validation: no time slot was picked for a scheduled booking
+postJobSelectUrgencyWindow,Uncategorised,Please select an urgency window.,براہ کرم فوری وقت منتخب کریں۔,Baraye meherbani foran ka waqt chunein.,Validation: no window was picked for an urgent booking
+postJobEnterAddress,Uncategorised,Enter your address.,اپنا پتہ درج کریں۔,Apna pata darj karein.,Validation: the address field is empty on final submit
+postJobAddAddressToContinue,Uncategorised,Add your service address to continue.,جاری رکھنے کے لیے اپنا سروس پتہ شامل کریں۔,Jari rakhne ke liye apna service pata shamil karein.,Validation: the address step cannot be left without an address
+postJobNearbyNotifiedNow,Uncategorised,Nearby Ustaads are notified right away.,قریبی استادوں کو فوراً اطلاع دی جاتی ہے۔,Qareebi Ustaadon ko foran ittila di jati hai.,Note under the urgent option explaining what happens on submit
+postJobInspectionNotAvailable,Uncategorised,Inspection is not available for this service.,اس سروس کے لیے معائنہ دستیاب نہیں ہے۔,Is service ke liye inspection available nahi hai.,Shown when tapping the inspection lane on a category that does not offer it
+postJobInspectionHeroStep1,Uncategorised,The Ustaad comes and checks it himself,استاد آ کر خود چیک کرے گا,Ustaad aa kar khud check karega,"Inspection explainer, step 1"
+postJobInspectionHeroStep2,Uncategorised,The rate is agreed before any work starts.,کام شروع کرنے سے پہلے ریٹ طے ہو جائے گا۔,Kaam shuru karne se pehle rate clear hoga.,"Inspection explainer, step 2"
+postJobInspectionHeroStep3,Uncategorised,"Go ahead if you like the quote, otherwise just pay the inspection fee.",پسند آئے تو کام کروا لیں، ورنہ صرف معائنہ فیس دیں۔,"Pasand aaye to kaam karwa lein, warna sirf inspection fee dein.","Inspection explainer, step 3"
+postJobStandardTotalFinal,Uncategorised,Total amount is final — no bidding. You choose your Ustaad in the next step.,کل رقم حتمی ہے — کوئی بولی نہیں۔ اگلے مرحلے میں آپ استاد منتخب کریں گے۔,Total amount final hai — koi bidding nahi. Aap next step par Ustaad choose karenge.,Note under the standard-lane price summary
+postJobHowInspectionStep1,Uncategorised,The inspection fee is fixed.,معائنہ فیس مقرر ہے۔,Inspection fee fixed hai.,"""How inspection works"" card, step 1"
+postJobHowInspectionStep2,Uncategorised,"Ustaad visits, finds the problem, and gives you a fixed repair quote in the app.",استاد آتا ہے، مسئلہ معلوم کرتا ہے، اور ایپ میں مرمت کی مقررہ قیمت دیتا ہے۔,"Ustaad aata hai, masla maloom karta hai, aur app mein marammat ka fixed quote deta hai.","""How inspection works"" card, step 2"
+postJobHowInspectionStep3,Uncategorised,"Accept his quote and continue, or get bids from other Ustaads — your choice.",اس کی قیمت قبول کر کے جاری رکھیں، یا دوسرے استادوں سے بولیاں لیں — آپ کی مرضی۔,"Uska quote accept kar ke jari rakhein, ya doosre Ustaadon se bids lein — aap ki marzi.","""How inspection works"" card, step 3"
+cancelReasonNoLongerNeeded,Uncategorised,I no longer need the service,اب سروس کی ضرورت نہیں,Ab service ki zarurat nahi,Cancellation reason label. The stored value is fixed in ClientCancelReason.
+cancelReasonBookedByMistake,Uncategorised,I booked it by mistake,بکنگ غلطی سے ہو گئی,Booking ghalti se ho gayi,Cancellation reason label. The stored value is fixed in ClientCancelReason.
+cancelReasonProblemSolved,Uncategorised,The problem sorted itself out,مسئلہ خود حل ہو گیا,Masla khud hal ho gaya,Cancellation reason label. The stored value is fixed in ClientCancelReason.
+cancelReasonTimingNotSuitable,Uncategorised,The time or date does not suit me,وقت یا تاریخ مناسب نہیں,Waqt ya tareekh munasib nahi,Cancellation reason label. The stored value is fixed in ClientCancelReason.
+cancelReasonPriceNotSuitable,Uncategorised,The price or budget does not suit me,قیمت یا بجٹ مناسب نہیں,Qeemat ya budget munasib nahi,Cancellation reason label. The stored value is fixed in ClientCancelReason.
+cancelReasonCannotReachUstaad,Uncategorised,I cannot reach the Ustaad,استاد سے رابطہ نہیں ہو رہا,Ustaad se rabta nahi ho raha,"Cancellation reason label, shown only when an Ustaad is assigned."
+cancelReasonUstaadRunningLate,Uncategorised,The Ustaad is running very late,استاد بہت دیر کر رہا ہے,Ustaad bohat dair kar raha hai,"Cancellation reason label, shown only when an Ustaad is assigned."
+cancelReasonOther,Uncategorised,Another reason,دوسری وجہ,Dusri wajah,Free-text cancellation reason sentinel; picking it reveals a text field.
+bookingAgreedPrice,Bookings,Agreed Price,طے شدہ قیمت,Tay shuda qeemat,"Booking details: the amount agreed with the hired Ustaad, matching the figure Track Worker shows"
+inspRepairHintElectrical,Uncategorised,e.g. replace the MCB and redo the socket wiring,مثلاً ایم سی بی بدلیں اور ساکٹ کی وائرنگ دوبارہ کریں,Maslan MCB badlein aur socket ki wiring dobara karein,Recommended-repair example for Electrician bookings
+inspRepairHintPlumbing,Uncategorised,e.g. replace the leaking pipe and fit a new valve,مثلاً لیک ہوتا پائپ بدلیں اور نیا والو لگائیں,Maslan leak hota pipe badlein aur naya valve lagayein,Recommended-repair example for Plumber bookings
+inspRepairHintAc,Uncategorised,e.g. refill the gas and replace the capacitor,مثلاً گیس بھروائیں اور کیپیسیٹر بدلیں,Maslan gas bharwayein aur capacitor badlein,Recommended-repair example for AC Technician bookings
+inspRepairHintCarpentry,Uncategorised,e.g. replace the hinges and straighten the door frame,مثلاً قبضے بدلیں اور دروازے کا فریم سیدھا کریں,Maslan qabzay badlein aur darwazay ka frame seedha karein,Recommended-repair example for Carpenter bookings
+inspRepairHintPainting,Uncategorised,"e.g. apply putty and primer, then two coats of emulsion",مثلاً پٹی اور پرائمر لگائیں، پھر ایملشن کے دو کوٹ,"Maslan putty aur primer lagayein, phir emulsion ke do coat",Recommended-repair example for Painter bookings
+inspRepairHintFallback,Uncategorised,e.g. what work is needed to fix it,مثلاً اسے ٹھیک کرنے کے لیے کیا کام درکار ہے,Maslan ise theek karne ke liye kya kaam darkar hai,Trade-neutral recommended-repair example for a category with no tailored hint
+inspPartHintElectrical,Uncategorised,"e.g. MCB, switch, socket",مثلاً ایم سی بی، سوئچ، ساکٹ,"Maslan MCB, switch, socket",Part-name example for Electrician bookings
+inspPartHintPlumbing,Uncategorised,"e.g. pipe, valve, tap",مثلاً پائپ، والو، ٹونٹی,"Maslan pipe, valve, tonti",Part-name example for Plumber bookings
+inspPartHintAc,Uncategorised,"e.g. gas refill, capacitor, compressor",مثلاً گیس ری فل، کیپیسیٹر، کمپریسر,"Maslan gas refill, capacitor, compressor",Part-name example for AC Technician bookings
+inspPartHintCarpentry,Uncategorised,"e.g. hinges, plywood, door frame",مثلاً قبضے، پلائی ووڈ، دروازے کا فریم,"Maslan qabzay, plywood, darwazay ka frame",Part-name example for Carpenter bookings
+inspPartHintPainting,Uncategorised,"e.g. primer, putty, emulsion",مثلاً پرائمر، پٹی، ایملشن,"Maslan primer, putty, emulsion",Part-name example for Painter bookings
+inspHintPainting,Uncategorised,"e.g. paint is peeling, damp patch on the wall...",مثلاً پینٹ اکھڑ رہا ہے، دیوار پر سیلن...,"Maslan paint ukhar raha hai, deewar par seelan...",Issue example for Painter bookings
+agreementViewerTitle,Uncategorised,Agreement,معاہدہ,Muahida,
+agreementLoadFailed,Uncategorised,Could not load the agreement. Please try again.,معاہدہ لوڈ نہیں ہو سکا۔ براہِ کرم دوبارہ کوشش کریں۔,Muahida load nahi ho saka. Dobara koshish karein.,
+agreementUnavailableForTrade,Uncategorised,No approved agreement is available for your selected trade yet. Please contact HandyGo support.,آپ کے منتخب کام کے لیے ابھی کوئی منظور شدہ معاہدہ دستیاب نہیں۔ براہِ کرم HandyGo سپورٹ سے رابطہ کریں۔,Aap ke muntakhab kaam ke liye abhi koi manzoor shuda muahida mojood nahi hai. Bara-e-karam HandyGo support se rabta karein.,
+agreementLanguageChip,Uncategorised,Agreement Language: {language},معاہدے کی زبان: {language},Muahide ki zubaan: {language},"Placeholders: {language} | {language} is a localized language name, e.g. Roman Urdu."
+agreementTradeChip,Uncategorised,Trade: {trade},کام: {trade},Kaam: {trade},"Placeholders: {trade} | {trade} is a localized trade name, e.g. Electrician."
+agreementLanguageNotice,Uncategorised,This approved legal agreement is currently available in Roman Urdu.,یہ منظور شدہ قانونی معاہدہ فی الحال صرف رومن اردو میں دستیاب ہے۔,Yeh manzoor shuda legal muahida filhaal sirf Roman Urdu mein mojood hai.,
+agreementLanguageRomanUrdu,Uncategorised,Roman Urdu,رومن اردو,Roman Urdu,
+agreementLanguageEnglish,Uncategorised,English,انگریزی,English,
+agreementLanguageUrdu,Uncategorised,Urdu,اردو,Urdu,
+agreementAcceptCheckbox,Uncategorised,I have read and accept this agreement.,میں نے یہ معاہدہ پڑھ لیا ہے اور اسے قبول کرتا ہوں۔,Main ne yeh muahida parh liya hai aur ise qabool karta hoon.,
+agreementViewBeforeAccepting,Uncategorised,Open and read the agreement before accepting it.,قبول کرنے سے پہلے معاہدہ کھول کر پڑھیں۔,Qabool karne se pehle muahida khol kar parhein.,
+agreementAcceptRequired,Uncategorised,This agreement must be accepted.,یہ معاہدہ قبول کرنا لازمی ہے۔,Yeh muahida qabool karna lazmi hai.,
+agreementTradeChangedReopen,Uncategorised,Your main trade changed. Open and accept the trade agreement again.,آپ کا مرکزی کام تبدیل ہو گیا ہے۔ کام سے متعلق معاہدہ دوبارہ کھول کر قبول کریں۔,Aap ka main kaam tabdeel ho gaya hai. Trade wala muahida dobara khol kar qabool karein.,
+agreementsLoadFailed,Uncategorised,Agreements could not be loaded.,معاہدے لوڈ نہیں ہو سکے۔,Muahide load nahi ho sake.,
+agreementsAllThreeRequired,Uncategorised,Open and accept all three agreements before submitting.,جمع کرانے سے پہلے تینوں معاہدے کھول کر قبول کریں۔,Submit karne se pehle teenon muahide khol kar qabool karein.,
+workerFatherName,Ustaad,Father's Name,والد کا نام,Walid ka naam,
+workerFatherNameRequired,Ustaad,Father's name is required.,والد کا نام لازمی ہے۔,Walid ka naam lazmi hai.,
+workerDateOfBirth,Ustaad,Date of Birth,تاریخِ پیدائش,Tareekh-e-Paidaish,
+workerDateOfBirthHint,Ustaad,Select your date of birth,اپنی تاریخِ پیدائش منتخب کریں,Apni tareekh-e-paidaish muntakhab karein,
+workerDateOfBirthRequired,Ustaad,Date of birth is required.,تاریخِ پیدائش لازمی ہے۔,Tareekh-e-paidaish lazmi hai.,
+workerEmergencyContact,Ustaad,Emergency Contact (optional),ہنگامی رابطہ (اختیاری),Emergency Contact (ikhtiyari),
+workerEmergencyContactHint,Ustaad,Name and phone number,نام اور فون نمبر,Naam aur phone number,
+workerAcceptedAgreementsTitle,Ustaad,My Agreements,میرے معاہدے,Mere Muahide,
+workerAcceptedAgreementsEmpty,Ustaad,You have not accepted any agreements yet.,آپ نے ابھی تک کوئی معاہدہ قبول نہیں کیا۔,Aap ne abhi tak koi muahida qabool nahi kiya.,
+agreementAcceptedOn,Uncategorised,Accepted on {date},قبول کیا گیا: {date},Qabool kiya gaya: {date},Placeholders: {date} | {date} is an already-formatted date.
+agreementAcceptanceId,Uncategorised,Acceptance ID: {id},ایکسیپٹنس آئی ڈی: {id},Acceptance ID: {id},Placeholders: {id} | {id} is the backend acceptance identifier and is never translated.
+agreementDownload,Uncategorised,Download,ڈاؤن لوڈ,Download,
+agreementDownloadInProgress,Uncategorised,Downloading agreement...,معاہدہ ڈاؤن لوڈ ہو رہا ہے...,Muahida download ho raha hai...,
+agreementDownloadSaved,Uncategorised,Agreement saved to {path},معاہدہ محفوظ ہو گیا: {path},Muahida save ho gaya: {path},Placeholders: {path} | {path} is a file system path and is never translated.
+agreementDownloadFailed,Uncategorised,Could not download the agreement. Please try again.,معاہدہ ڈاؤن لوڈ نہیں ہو سکا۔ براہِ کرم دوبارہ کوشش کریں۔,Muahida download nahi ho saka. Dobara koshish karein.,

@@ -7,6 +7,7 @@ import 'package:fpdart/fpdart.dart';
 import 'package:geolocator/geolocator.dart';
 
 import '../../../../core/errors/failures.dart';
+import '../../../../core/l10n/locale_provider.dart';
 import '../../data/repositories/worker_repository_impl.dart';
 import '../../domain/entities/worker_profile_entity.dart';
 import '../../domain/entities/worker_skill_entity.dart';
@@ -581,15 +582,28 @@ final categoriesProvider = FutureProvider<List<CategoryEntity>>((ref) async {
   return result.fold((f) => throw f, (categories) => categories);
 });
 
-/// Exact text/version of the agreements the worker is about to accept —
-/// powers the profile-completion "View Agreement" screen. Re-fetched
-/// whenever workerProfileProvider changes (e.g. after picking a main skill)
-/// so the Trade-specific template appears as soon as it becomes relevant.
+/// The three agreements the Ustaad must read, in the app's current language.
+///
+/// Re-fetched whenever the profile changes (picking a different main skill
+/// must load that trade's schedule, never keep the previous one) and whenever
+/// the app language changes (the language notice depends on it).
 final agreementTemplatesProvider =
     FutureProvider<List<AgreementTemplateEntity>>((ref) async {
   ref.watch(workerProfileProvider);
-  final result = await ref.read(workerRepositoryProvider).getAgreementTemplates();
+  final locale = ref.watch(localeProvider);
+  final result = await ref
+      .read(workerRepositoryProvider)
+      .getAgreementTemplates(appLocale: locale.storageValue);
   return result.fold((f) => throw f, (templates) => templates);
+});
+
+/// The Ustaad's own sealed acceptance records — the Legal section on the
+/// Worker Profile page. Immutable history: changing the app language never
+/// rewrites what is in here.
+final myAgreementsProvider =
+    FutureProvider<List<AcceptedAgreementEntity>>((ref) async {
+  final result = await ref.read(workerRepositoryProvider).getMyAgreements();
+  return result.fold((f) => throw f, (records) => records);
 });
 
 // ── Selected skill ids for the skills sheet ───────────────────────────────────
@@ -616,20 +630,22 @@ class ProfileCompletionNotifier extends AsyncNotifier<void> {
     String? fullLegalName,
     String? residentialAddress,
     String? cnicNumber,
+    String? fatherName,
+    String? dateOfBirth,
+    String? emergencyContact,
     int? experienceYears,
     bool? legalNameConfirmed,
-    bool? generalAgreementAccepted,
-    bool? tradeAgreementAccepted,
   }) async {
     state = const AsyncLoading();
     final result = await ref.read(workerRepositoryProvider).updateProfileCompletion(
           fullLegalName: fullLegalName,
           residentialAddress: residentialAddress,
           cnicNumber: cnicNumber,
+          fatherName: fatherName,
+          dateOfBirth: dateOfBirth,
+          emergencyContact: emergencyContact,
           experienceYears: experienceYears,
           legalNameConfirmed: legalNameConfirmed,
-          generalAgreementAccepted: generalAgreementAccepted,
-          tradeAgreementAccepted: tradeAgreementAccepted,
         );
     return result.fold(
       (failure) {
@@ -676,22 +692,51 @@ class ProfileCompletionNotifier extends AsyncNotifier<void> {
     );
   }
 
-  /// Validates all required fields server-side and moves the profile to
-  /// SUBMITTED_FOR_REVIEW. On failure, state.error carries the Failure whose
-  /// message lists exactly which fields are still missing.
-  Future<bool> submit() async {
+  /// Seals the three acceptance records and moves the profile to
+  /// SUBMITTED_FOR_REVIEW.
+  ///
+  /// [submissionAttemptId] is generated once per attempt, so a retry after a
+  /// timeout returns the SAME three records instead of creating a second set.
+  /// Returns null (leaving the Failure in state.error) when the backend
+  /// rejected the submission.
+  Future<List<AcceptedAgreementEntity>?> submit({
+    required String submissionAttemptId,
+    required List<AgreementEvidence> agreements,
+  }) async {
     state = const AsyncLoading();
-    final result = await ref.read(workerRepositoryProvider).submitProfileForReview();
+    final result =
+        await ref.read(workerRepositoryProvider).submitProfileForReview(
+              submissionAttemptId: submissionAttemptId,
+              agreements: agreements,
+            );
     return result.fold(
       (failure) {
         state = AsyncError(failure, StackTrace.current);
-        return false;
+        return null;
       },
-      (_) async {
+      (accepted) {
         state = const AsyncData(null);
-        await ref.read(workerProfileProvider.notifier).silentRefresh();
-        return true;
+        // Fire-and-forget: the caller navigates on the returned summaries, and
+        // the Legal section reloads behind it.
+        ref.read(workerProfileProvider.notifier).silentRefresh();
+        ref.invalidate(myAgreementsProvider);
+        return accepted;
       },
+    );
+  }
+
+  /// Fetches one of the worker's own accepted PDFs through the authenticated
+  /// endpoint. Returns null (Failure in state.error) if it could not be read.
+  Future<List<int>?> downloadAgreement(String acceptanceId) async {
+    final result = await ref
+        .read(workerRepositoryProvider)
+        .downloadAgreementPdf(acceptanceId);
+    return result.fold(
+      (failure) {
+        state = AsyncError(failure, StackTrace.current);
+        return null;
+      },
+      (bytes) => bytes,
     );
   }
 }

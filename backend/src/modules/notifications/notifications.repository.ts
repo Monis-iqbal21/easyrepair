@@ -95,6 +95,31 @@ export class NotificationsRepository {
   }
 
   /**
+   * Same triple as existsForBookingAndUser, but scoped to the booking's
+   * CURRENT live cycle via [since] (its `liveStartedAt`).
+   *
+   * The unbounded variant above permanently silences a worker for a booking,
+   * which is wrong for broadcasts: a booking that is later reopened (worker
+   * cancelled) or relisted ("Make Live Again") starts a genuinely new live
+   * window and its previously-notified eligible workers must be reachable
+   * again. Scoping to `createdAt >= liveStartedAt` gives exactly one
+   * notification per worker per booking PER CYCLE — so leaving and re-entering
+   * the radius within one cycle still never re-notifies.
+   */
+  async existsForBookingAndUserSince(
+    userId: string,
+    bookingId: string,
+    eventKey: string,
+    since: Date,
+  ): Promise<boolean> {
+    const found = await this.prisma.notification.findFirst({
+      where: { userId, bookingId, eventKey, createdAt: { gte: since } },
+      select: { id: true },
+    });
+    return found !== null;
+  }
+
+  /**
    * Check whether this exact eventKey/entityId/userId notification was sent
    * within the last [sinceMs] — used to guard non-booking events (e.g. admin
    * onboarding actions) against accidental duplicates from a rapid

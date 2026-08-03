@@ -1,0 +1,893 @@
+HANDYGO BACKGROUND VERIFICATION,
+EVS CONSENT AUR USTAAD PRIVACY
+NOTICE
+
+Document Version: 1.0
+Effective Date: Ustaad ke sign ya electronic acceptance ki tareekh
+Website: www.handygo.ai
+
+COMPANY DETAILS
+
+Company: HandyGo (Private) Limited
+Registration/CUIN Number: 0346585
+Registered Office: 13th Floor, Nacon House, Din Mohammad Wafai Road, Civil Lines, Karachi
+74000
+Legal aur Privacy Email: legal@handygo.ai
+Support Email: support@handygo.ai
+Support Number: 0332-0219006
+
+Is document mein “HandyGo”, “Company”, “hum” ya “hamara” se murad HandyGo (Private)
+Limited hai.
+
+“Ustaad”, “Applicant” ya “aap” se murad woh shakhs hai jo HandyGo par Service Provider ke
+taur par registration, verification ya activation ke liye apply karta hai.
+
+PART A — BACKGROUND VERIFICATION
+AUR EVS CONSENT
+
+1. CONSENT KA MAQSAD
+
+Is consent ke through Ustaad, HandyGo aur uske approved verification provider ko ijazat deta
+hai ke woh:
+
+    ● Ustaad ki identity verify karein;
+
+    ● Sindh Police Employee Verification System (EVS), CPLC ya kisi approved equivalent
+         process ke through background-verification result hasil karein;
+
+    ● Onboarding aur activation eligibility check karein;
+    ● Customer aur Ustaad safety controls maintain karein;
+    ● Fraud, impersonation aur account sharing prevent karein;
+    ● Zaroorat par periodic reverification karein;
+    ● Serious identity, safety, fraud ya legal concern ka review karein.
+
+2. APPLICANT KI INFORMATION
+
+CNIC ke mutabiq poora legal naam: ___________________________
+Walid ka naam: ___________________________________________
+CNIC Number: ____________________________________________
+Date of Birth: ____________________________________________
+Current Residential Address: _______________________________
+
+Registered Mobile Number: _________________________________
+Ustaad Account ID: ________________________________________
+Main Trade: ______________________________________________
+Emergency Contact: _______________________________________
+
+3. KONSI INFORMATION VERIFICATION KE LIYE USE HO
+SAKTI HAI
+
+Verification aur applicable provider requirements ke mutabiq yeh information process ki ja sakti
+hai:
+
+    ● CNIC ki front aur back images;
+    ● CNIC par maujood identity details;
+    ● Current live selfie ya profile photograph;
+    ● Approved face comparison, jahan applicable ho;
+    ● Mobile number;
+
+    ● Current address;
+    ● Emergency-contact details;
+    ● Applicant ke declarations;
+    ● Supporting documents;
+    ● Verification request aur reference number;
+    ● Verification provider ka response;
+    ● Police EVS, CPLC ya approved equivalent clearance/status;
+    ● Duplicate-account indicators;
+    ● Account-security indicators;
+    ● Identity-risk indicators;
+    ● Reverification history.
+
+Routine verification ke liye HandyGo unnecessary political, religious, medical, family, financial
+ya unrelated personal information request nahi karega.
+
+4. INFORMATION KIN MAQSADON KE LIYE USE HOGI
+
+Verification information sirf in approved purposes ke liye use ki jayegi:
+
+    ● Identity aur account verify karna;
+    ● Onboarding aur activation eligibility decide karna;
+    ● Customer aur Ustaad safety aur trust controls;
+    ● Fraud aur impersonation prevent karna;
+    ● Account sharing prevent karna;
+    ● CNIC expiry ya information change par reverification;
+    ● Serious identity, safety, fraud ya legal concern investigate karna;
+    ● Applicable law ya lawful authority ki request comply karna;
+    ● Complaint, incident ya legal dispute handle karna;
+    ● HandyGo platform aur Customers ko material risk se protect karna.
+
+Yeh information:
+
+    ● Unrelated marketing ke liye use nahi hogi;
+    ● Advertisers ko sell nahi ki jayegi;
+    ● Customer leads ya commercial data product ke taur par nahi bechi jayegi.
+
+5. VERIFICATION PROVIDER AUR INFORMATION
+SHARING
+
+Verification in mein se applicable process ke through ki ja sakti hai:
+
+    ● Sindh Police Employee Verification System (EVS);
+    ● CPLC;
+    ● Ya HandyGo ka approved lawful equivalent verification provider.
+
+Applicable provider aur request ki details verification record mein save ki jayengi.
+
+Verification Provider/Agency: _______________________________
+
+Request Date: _____________________________________________
+
+Verification Request Reference: ____________________________
+
+Minimum necessary information in recipients ke saath share ho sakti hai:
+
+    ● Approved verification provider;
+    ● Authorized HandyGo Admin staff;
+    ● Authorized Operations staff;
+    ● Authorized Legal ya Privacy staff;
+    ● Applicable police, court, regulator ya lawful authority.
+
+Verification provider ko HandyGo ki taraf se unrelated marketing ya unauthorized resale ki
+permission nahi hogi.
+
+Full CNIC aur detailed background-verification records Customers, trainers, general staff ya
+public profiles ko nahi dikhaye jayenge.
+
+6. “VERIFICATION IN PROCESS” STATUS
+
+6.1 Ustaad registration, documents aur onboarding process complete kar sakta hai jab
+verification request pending ho.
+
+6.2 Pending verification ke dauran profile par “Verification in Process” show kiya ja sakta hai.
+
+6.3 Required clearance aur final authorized activation se pehle Ustaad:
+
+    ● Customer bookings receive nahi karega;
+    ● Bookings accept nahi karega;
+    ● Customer ke ghar ya property par service perform nahi karega.
+
+6.4 Normal operational target approximately 2–3 working days bataya ja sakta hai, lekin yeh
+guaranteed processing time nahi hai.
+
+6.5 Processing time in wajah se barh sakta hai:
+
+    ● Provider ka delayed response;
+    ● Data mismatch;
+    ● Incorrect ya unclear document;
+    ● Public holiday;
+    ● System availability;
+    ● Additional manual review;
+    ● Authority ya provider ki requirement.
+
+7. VERIFICATION RESULT KA HANDLING
+
+Possible internal result categories yeh ho sakti hain:
+
+    ● Clear / Background Cleared
+    ● Pending
+    ● Information ya Document Correction Required
+    ● Unclear / Manual Review Required
+    ● Adverse Result / Manual Review Required
+    ● Unable to Verify
+
+7.1 Pending, unclear, unable-to-verify ya adverse result ki detailed sensitive history public profile
+par display nahi ki jayegi.
+
+7.2 Detailed information sirf authorized personnel access karenge.
+
+7.3 Final activation ke liye required verification result aur internal onboarding review complete
+hona zaroori hai.
+
+7.4 Identity mismatch, unclear information ya adverse information par account:
+
+    ● Manual Review;
+    ● Temporary Hold;
+    ● Additional Documentation;
+    ● Ya lawful investigation
+
+mein ja sakta hai.
+
+7.5 Jahan reasonable aur qanoonan allowed ho, Ustaad ko factual identity mismatch explain ya
+correct karne aur supporting documents provide karne ka mauqa diya jayega.
+
+7.6 Urgent safety, fraud, legal ya evidence-preservation concern ki surat mein HandyGo foran
+temporary protective restriction laga sakta hai.
+
+7.7 Temporary restriction ya verification hold ka matlab automatic final guilt nahi hai.
+
+7.8 Consent ya verification complete hone se activation ki guarantee nahi milti. Final activation
+complete onboarding, skills, training, documents, verification aur authorized HandyGo approval
+ke subject hai.
+
+8. USTAAD KI DECLARATIONS
+
+Ustaad confirm karta hai ke:
+
+    ● Submit ki gayi identity usi ki apni hai;
+    ● CNIC usi ka hai;
+    ● Selfie aur photograph usi ki hain;
+    ● Account sirf woh personally use karega;
+    ● Submitted documents true, current aur complete hain;
+    ● Usne kisi aur ka CNIC ya identity use nahi ki;
+    ● Usne forged ya fake clearance provide nahi ki;
+    ● Usne koi material identity, impersonation ya fraud fact jaan boojh kar nahi chhupaya;
+    ● Woh reasonable clarification ya reverification mein cooperate karega;
+    ● Woh apni information change ya expire hone par HandyGo ko update karega;
+    ● Woh samajhta hai ke verification consent activation ki guarantee nahi hai.
+
+Fake identity, borrowed CNIC, fake selfie, forged document, account sharing ya material
+information chhupana serious violation hoga.
+
+9. INFORMATION KI CORRECTION
+
+Ustaad apparent factual error, incorrect status ya identity mismatch report kar sakta hai.
+
+Correction aur Privacy Contact: legal@handygo.ai
+
+Request Method:
+
+    ● HandyGo application ke Support section ke through;
+    ● Ya registered email/mobile details ke saath legal@handygo.ai par email.
+
+Request verify karne ke liye HandyGo yeh use kar sakta hai:
+
+    ● Registered HandyGo account;
+    ● Registered mobile number;
+    ● OTP;
+
+    ● CNIC details;
+    ● Selfie;
+    ● Ya reasonable supporting identity evidence.
+
+HandyGo:
+
+    ● Correction request record karega;
+    ● Supporting information verify karega;
+    ● Applicable provider ya internal record review karega;
+    ● Ustaad ko next review step batayega.
+
+Correction request:
+
+    ● Activation ki automatic guarantee nahi hai;
+    ● Lawfully retained original record ko automatically erase nahi karti;
+    ● Genuine provider result ko bina evidence ke change nahi karti.
+
+10. VERIFICATION RECORD KI SECURITY AUR
+RETENTION
+
+10.1 Background aur identity records sirf utni muddat tak rakhe jayenge jitni qanooni,
+contractual, safety, fraud, tax, dispute, audit aur operational purpose ke liye reasonably
+necessary ho.
+
+10.2 Access role-based aur need-to-know basis par restricted hoga.
+
+10.3 Full CNIC aur background records:
+
+    ● Open WhatsApp groups mein share nahi honge;
+    ● Trainer ke general folders mein nahi rakhe jayenge;
+    ● Public profile par upload nahi honge;
+    ● Unauthorized personal devices par nahi rakhe jayenge.
+
+10.4 Download, export, correction aur deletion sirf authorized process ke through hogi.
+
+10.5 Jahan technically possible ho, system yeh record kar sakta hai:
+
+    ● Kis authorized shakhs ne information access ki;
+    ● Kis ne verification status update kiya;
+    ● Kis date aur time par change hua.
+
+10.6 Suspected data loss, unauthorized access ya disclosure investigate ki jayegi.
+
+10.7 Active complaint, fraud review, safety incident, tax requirement, legal dispute, court matter
+ya legal hold ki wajah se normal deletion temporarily roki ja sakti hai.
+
+10.8 “Permanent” retention tabhi hogi jab uska documented lawful basis maujood ho.
+
+11. REVERIFICATION
+
+Ustaad ki reverification in situations mein required ho sakti hai:
+
+    ● Policy-defined interval par;
+    ● CNIC expire hone par;
+    ● Naam, address ya material information change hone par;
+    ● Lambi inactivity ke baad;
+    ● Identity ya account sharing concern par;
+    ● Serious safety concern par;
+    ● Fraud concern par;
+    ● Legal ya police matter par;
+    ● Verification provider change hone par;
+    ● Applicable qanoon ya authority requirement change hone par.
+
+Required reverification complete na karne par booking access temporarily hold ya restrict kiya ja
+sakta hai.
+
+12. CONSENT WAPAS LENA
+
+12.1 Ustaad legal@handygo.ai ya in-app Support ke through future verification processing ke
+liye consent withdrawal request kar sakta hai.
+
+12.2 Jahan identity aur background verification platform safety, activation ya continued booking
+access ke liye zaroori ho, consent wapas lene se:
+
+    ● Activation complete na ho sake;
+    ● Booking access suspend ho sake;
+    ● Account deactivate ya restrict ho sake.
+
+12.3 Consent withdrawal un records ki deletion require nahi karega jo:
+
+    ● Existing booking;
+    ● Payment;
+    ● Complaint;
+    ● Fraud;
+
+    ● Safety incident;
+    ● Legal dispute;
+    ● Audit;
+    ● Ya lawful authority requirement
+ke liye retain karna zaroori ho.
+12.4 Withdrawal pehle lawfully complete ki gayi processing ko automatically unlawful nahi
+banata.
+
+13. BACKGROUND VERIFICATION AUR EVS CONSENT
+RECORD
+
+Consent Document Version: 1.0
+Effective Date: Sign ya electronic acceptance ki tareekh
+Ustaad ka Legal Naam: ____________________________________
+CNIC Number: ____________________________________________
+Registered Mobile Number: _________________________________
+Ustaad Account ID: _______________________________________
+Main Trade: ______________________________________________
+Verification Provider/Agency: ______________________________
+Provider Request Reference: _______________________________
+Ustaad confirm karta hai:
+□ Mujhe complete Background Verification aur EVS Consent parhne aur download karne ka
+access mila.
+□ Main HandyGo ko apni identity verify karne ki ijazat deta hoon.
+□ Main Sindh Police EVS, CPLC ya approved equivalent verification process ke liye consent
+deta hoon.
+□ Main samajhta hoon ke meri CNIC, selfie, address, mobile aur required supporting information
+verification ke liye process ho sakti hai.
+
+□ Main samajhta hoon ke minimum necessary information approved provider aur authorized
+HandyGo personnel ke saath share ho sakti hai.
+□ Main samajhta hoon ke verification result complete onboarding record ke saath review hoga
+aur activation guaranteed nahi hai.
+□ Main samajhta hoon ke required clearance aur final activation tak Customer booking access
+disabled rahega.
+□ Main confirm karta hoon ke submitted identity aur information meri apni, true aur accurate hai.
+□ Main reasonable correction aur reverification process mein cooperate karunga.
+□ Main is Consent ko apne registered HandyGo account ke through electronically accept karta
+hoon.
+Consent Date/Time: _______________________________________
+Unique Consent ID: ______________________________________
+Consent Document Hash/Snapshot Reference: ________________
+Device/Session/IP Reference: ______________________________
+Authorized HandyGo Reviewer: ______________________________
+Complete Consent/PDF Ustaad ko available ki gayi: □ Haan □ Nahi
+
+PART B — USTAAD PRIVACY NOTICE
+AUR DATA-HANDLING
+ACKNOWLEDGEMENT
+
+1. INFORMATION KI RESPONSIBLE ENTITY
+
+Ustaad ki personal information ke liye responsible entity:
+HandyGo (Private) Limited
+CUIN: 0346585
+Registered Office: 13th Floor, Nacon House, Din Mohammad Wafai Road, Civil Lines, Karachi
+74000
+
+Privacy Contact: legal@handygo.ai
+Support Email: support@handygo.ai
+Support Number: 0332-0219006
+Website: www.handygo.ai
+
+2. HANDYGO KONSI INFORMATION PROCESS KAR
+SAKTA HAI
+
+2.1 Identity aur Profile Information
+
+    ● Naam;
+    ● Walid ka naam;
+    ● CNIC details;
+    ● CNIC copies;
+    ● Selfie ya profile image;
+    ● Mobile number;
+    ● Residential address;
+    ● Emergency contact;
+    ● Account ID;
+    ● Authentication information.
+
+2.2 Onboarding aur Professional Information
+
+    ● Main trade;
+    ● Additional trades;
+    ● Experience;
+    ● Skills;
+    ● Practical assessment;
+    ● Training;
+    ● Agreements aur acceptance records;
+    ● Tools;
+    ● PPE;
+    ● Transport readiness;
+    ● Phone aur app readiness;
+    ● Uniform aur Company assets;
+    ● Certification;
+    ● Licence ya credential status.
+
+2.3 Background aur Trust Information
+
+    ● Verification requests;
+
+    ● Provider references;
+    ● Provider results;
+    ● Clearance status;
+    ● Identity-risk indicators;
+    ● Account-security indicators;
+    ● Reverification history;
+    ● Duplicate-account indicators.
+
+2.4 Booking aur Location Information
+
+    ● Online/Offline availability;
+    ● Approved service tags;
+    ● Booking details;
+    ● Customer location jo booking ke liye relevant ho;
+    ● Travel status;
+    ● Arrival status;
+    ● Work status;
+    ● Completion status;
+    ● Required GPS aur location records;
+    ● No-show ya route verification records.
+
+2.5 Communication Information
+
+    ● In-app messages;
+    ● Support tickets;
+    ● Booking-related calls aur chats ka metadata;
+    ● Communication content, jahan qanoonan process kiya ja sake;
+    ● Complaint aur investigation communication.
+
+2.6 Service aur Evidence Information
+
+    ● Inspection report;
+    ● Diagnosis;
+    ● Quote;
+    ● Customer approval;
+    ● Parts aur materials;
+    ● Before/after evidence;
+    ● Tests;
+    ● Completion records;
+    ● Complaint;
+    ● Rework;
+    ● Safety incident;
+    ● Property-damage record;
+    ● Near-miss record.
+
+2.7 Financial aur Performance Information
+
+    ● Customer payment status;
+    ● Labour aur material breakdown;
+    ● HandyGo commission;
+    ● Outstanding balance;
+    ● Finance statement;
+    ● Rating;
+    ● Review;
+    ● Quality record;
+    ● Reliability record;
+    ● Reward aur leaderboard records.
+
+2.8 Device aur Security Information
+
+    ● Device information;
+    ● App aur session data;
+    ● Login records;
+    ● App logs;
+    ● IP address ya technical identifier, jahan lawful aur necessary ho;
+    ● Fraud aur security logs;
+    ● Agreement aur consent acceptance evidence.
+
+3. INFORMATION KYUN USE KI JATI HAI
+
+Ustaad information in purposes ke liye process ki ja sakti hai:
+
+    ● Registration;
+    ● Identity verification;
+    ● Background verification;
+    ● Account authentication aur security;
+    ● Onboarding;
+    ● Account activation;
+    ● Approved service-tag access;
+    ● Customer ko suitable Ustaad profiles dikhana;
+    ● Booking matching aur assignment;
+    ● Customer ko Ustaad select karne mein madad dena;
+    ● Navigation aur arrival manage karna;
+    ● Booking statuses verify karna;
+    ● Customer communication;
+    ● Service delivery;
+    ● Quote aur approval record;
+
+    ● Parts aur materials record;
+    ● Payment aur commission record;
+    ● Complaints aur rework;
+    ● Refund aur payment dispute;
+    ● Safety aur incident handling;
+    ● Property-damage investigation;
+    ● Training aur certification;
+    ● Reassessment;
+    ● Quality aur performance review;
+    ● Rewards aur leaderboard;
+    ● Fraud prevention;
+    ● Account security;
+    ● Audit;
+    ● Legal compliance;
+    ● Product reliability aur service improvement.
+
+Information ko unrelated marketing ya surveillance ke liye clear notice, lawful basis aur required
+consent ke baghair use nahi kiya jayega.
+
+4. INFORMATION KIN LOGON KE SAATH SHARE HO
+SAKTI HAI
+
+Minimum necessary information in recipients ke saath share ho sakti hai:
+
+4.1 Customer
+
+Active ya confirmed booking ke liye Customer ko yeh information dikhayi ja sakti hai:
+
+    ● Ustaad ka first name ya approved display name;
+    ● Profile photo;
+    ● Approved trade;
+    ● Approved service tags;
+    ● Rating aur reviews;
+    ● Required verification indicator;
+    ● Booking-related contact aur status.
+
+Customer ko full CNIC, home address, detailed background result ya unnecessary private
+information nahi di jayegi.
+
+4.2 HandyGo Personnel
+
+Need-to-know basis par:
+
+    ● Support;
+    ● Operations;
+    ● Admin;
+    ● Finance;
+    ● Quality;
+    ● Legal aur Privacy;
+    ● Product aur Technology;
+    ● Authorized trainer ya assessor.
+
+4.3 Service aur Verification Providers
+
+    ● Sindh Police EVS;
+    ● CPLC;
+    ● Approved identity/background provider;
+    ● Hosting provider;
+    ● Messaging provider;
+    ● Mapping provider;
+    ● Payment provider;
+    ● Analytics ya technical provider.
+
+4.4 Doosre Authorized Recipients
+
+    ● Insurer;
+    ● Auditor;
+    ● Professional adviser;
+    ● Approved recovery provider;
+    ● Police;
+    ● Court;
+    ● Regulator;
+    ● Utility;
+    ● Koi aur lawful authority.
+
+HandyGo jaan boojh kar Ustaad ki personal information advertisers ko sell nahi karega.
+
+5. CUSTOMER DATA KI USTAAD PAR ZIMMEDARI
+
+HandyGo ke through milne wala Customer data sirf approved booking ya Support purpose ke
+liye use hoga.
+
+Ustaad:
+
+    ● Customer data sirf authorized booking ke liye use karega;
+
+    ● Customer ka phone number aur address secure rakhega;
+    ● Customer data personal notebook ya contact list mein save nahi karega;
+    ● Customer information apni marketing list mein add nahi karega;
+    ● Customer ko future private work ke liye contact nahi karega;
+    ● Customer ko personal ya social reason se contact nahi karega;
+    ● Customer data unapproved helper ya third party ke saath share nahi karega;
+    ● Approved purpose complete hone par unnecessary local copy remove karega;
+    ● Lost phone, unauthorized access ya accidental sharing foran report karega.
+
+Customer data ka misuse serious violation hai aur account restriction, suspension, removal ya
+lawful reporting ka sabab ban sakta hai.
+
+6. PHOTOS, VIDEO AUR RECORDING
+
+6.1 Evidence sirf service area aur necessary condition par focus karegi.
+
+6.2 Jahan possible ho, in cheezon ko capture nahi kiya jayega:
+
+    ● Customer ya household members ke faces;
+    ● Bachche;
+    ● CNIC ya private documents;
+    ● Mobile aur computer screens;
+    ● Payment credentials;
+    ● Bedrooms aur private areas;
+    ● Unrelated personal belongings.
+
+6.3 Evidence:
+
+    ● Stage nahi ki jayegi;
+    ● Misleading tareeqe se edit nahi ki jayegi;
+    ● Social media par post nahi hogi;
+    ● Personal gallery mein permanently save nahi hogi;
+    ● Personal use ke liye retain nahi ki jayegi.
+
+6.4 Secret audio ya video recording prohibited hai, siwaye us surat ke jahan woh qanoonan
+allowed aur written HandyGo process ke through authorized ho.
+
+6.5 Emergency help aur hazard control evidence capture se zyada important hai.
+
+7. LOCATION INFORMATION
+
+Location in purposes ke liye use ho sakti hai:
+
+    ● Eligible job radius;
+    ● Nearby bookings;
+    ● Navigation;
+    ● Arrival verification;
+    ● No-show verification;
+    ● Active booking safety;
+    ● Fraud ya fake-status review;
+    ● Customer ko active booking progress dikhana.
+
+Location collection:
+
+    ● App permissions ke mutabiq hogi;
+    ● Disclosed purpose se zyada broad nahi hogi;
+    ● Final product functionality ke mutabiq hogi;
+    ● Zaroorat se zyada use nahi ki jayegi.
+
+Location permission band karne se Online status, nearby jobs, navigation, arrival ya safety
+features kaam na kar saken.
+
+8. RECORDS KITNI DER RAKHE JA SAKTE HAIN
+
+Records sirf utni muddat tak rakhe jayenge jitni qanooni, contractual, safety, fraud, tax, dispute
+aur operational purpose ke liye reasonably necessary ho.
+
+Retention categories mein yeh shamil ho sakti hain:
+
+    ● Incomplete ya unsuccessful registration;
+    ● Identity aur agreement acceptance records;
+    ● Background verification records;
+    ● Active account aur profile;
+    ● Booking;
+    ● Quote aur Customer approval;
+    ● Payment aur commission;
+    ● Customer communication aur evidence;
+    ● Complaints aur refunds;
+    ● Property damage;
+    ● Safety incidents;
+    ● Disciplinary records;
+    ● Security aur fraud logs;
+    ● Closed accounts;
+    ● Legal-hold records.
+
+Account closure ka matlab yeh nahi ke tamam records foran delete ho jayenge.
+
+Legal hold, complaint, payment, tax, fraud, safety ya court matter ki surat mein related record
+longer period ke liye preserve kiya ja sakta hai.
+
+Koi record documented lawful basis ke baghair “permanent” nahi rakha jayega.
+
+9. INFORMATION KI ACCURACY AUR UPDATES
+
+Ustaad apni information true, current aur complete rakhega.
+
+Ustaad foran update karega:
+
+    ● Mobile number;
+    ● Residential address;
+    ● CNIC expiry;
+    ● Trade status;
+    ● Certification;
+    ● Bank ya payment details;
+    ● Emergency contact;
+    ● Doosri material profile information.
+
+Protected identity ya financial field change karne se pehle HandyGo supporting evidence mang
+sakta hai.
+
+10. USTAAD KI PRIVACY REQUESTS
+
+Applicable law aur approved process ke mutabiq Ustaad request kar sakta hai:
+
+    ● Apni important account information ki copy ya summary;
+    ● Ghalat information ki correction;
+    ● Verification ya activation status ki explanation, jahan disclosure lawful ho;
+    ● Account closure ya deactivation;
+    ● Applicable situation mein deletion ya restriction;
+    ● Material decision ka review ya appeal;
+    ● Marketing opt-out, jahan applicable ho.
+
+Privacy Request Contact: legal@handygo.ai
+
+Request Method: In-app Support ya registered account details ke saath email.
+
+Identity verify karne ke liye HandyGo:
+
+    ● Registered account;
+    ● Registered mobile number;
+    ● OTP;
+    ● CNIC details;
+    ● Selfie;
+    ● Ya reasonable identity evidence
+
+use kar sakta hai.
+
+Privacy request ki wajah se HandyGo ko yeh disclose karna zaroori nahi hoga:
+
+    ● Kisi aur shakhs ka personal data;
+    ● Confidential security methods;
+    ● Legally protected material;
+    ● Aisa evidence jis ki release lawful investigation ko compromise kare.
+
+Requests applicable law aur reasonable verification process ke mutabiq handle ki jayengi.
+
+11. DATA SECURITY
+
+HandyGo information aur business ki nature ke mutabiq reasonable security controls use
+karega, jin mein yeh shamil ho sakte hain:
+
+    ● Account authentication;
+    ● Role-based access;
+    ● Restricted staff access;
+    ● Restricted data export;
+    ● Backups;
+    ● Activity logging;
+    ● Provider controls;
+    ● Security monitoring;
+    ● Incident response.
+
+Koi digital system zero risk ki absolute guarantee nahi de sakta.
+
+Ustaad:
+
+    ● Apne phone par device lock rakhega;
+    ● Password aur OTP secret rakhega;
+    ● Account share nahi karega;
+    ● Registered mobile access current rakhega;
+
+    ● Security concern foran report karega.
+
+12. DATA AUR SECURITY INCIDENTS
+
+Yeh incidents foran official Support route ke through report kiye jayenge:
+
+    ● Phone gum ya chori hona;
+    ● Unauthorized account use;
+    ● Customer data expose hona;
+    ● Ghalat recipient ko data jana;
+    ● Malware;
+    ● Document leak;
+    ● Suspicious login;
+    ● Account compromise.
+
+Ustaad:
+
+    ● Facts aur evidence preserve karega;
+    ● Company ki containment instructions follow karega;
+    ● Evidence secretly delete nahi karega;
+    ● Incident chhupayega nahi.
+
+HandyGo assess karega:
+
+    ● Konsi information affect hui;
+    ● Incident ko kaise contain karna hai;
+    ● Provider, Customer ya Ustaad ko communication;
+    ● Applicable legal notification duties.
+
+13. THIRD-PARTY AUR CROSS-BORDER PROCESSING
+
+Ustaad ki information approved hosting ya technology providers ke through Pakistan ke andar
+ya bahar process ho sakti hai.
+
+HandyGo:
+
+    ● Reasonable provider controls aur contracts use karega;
+    ● Applicable safeguards maintain karega;
+    ● Yeh claim nahi karega ke tamam data sirf Pakistan mein rehta hai jab tak yeh technically
+
+         verified na ho.
+
+14. PRIVACY NOTICE MEIN TABDEELİ
+
+14.1 Material privacy change clear notice ke through communicate ki jayegi.
+14.2 Jahan qanoonan required ho, fresh consent ya acknowledgement li jayegi.
+14.3 Har Privacy Notice ka version aur Effective Date maintain ki jayegi.
+14.4 Previous accepted notice aur acceptance evidence preserve ki ja sakti hai.
+14.5 Accepted version ko overwrite nahi kiya jayega.
+
+15. COMBINED PRIVACY ACKNOWLEDGEMENT
+
+Privacy Notice Version: 1.0
+Effective Date: Sign ya electronic acceptance ki tareekh
+Ustaad ka Legal Naam: ____________________________________
+CNIC Number: ____________________________________________
+Registered Mobile Number: _________________________________
+Ustaad Account ID: _______________________________________
+Ustaad confirm karta hai:
+□ Mujhe complete Ustaad Privacy Notice parhne aur download karne ka access mila.
+□ Main samajhta hoon ke meri information onboarding, identity verification, bookings, safety,
+payments, commission, quality aur legal purposes ke liye use ho sakti hai.
+□ Main samajhta hoon ke minimum necessary profile aur booking information Customer ko
+dikhayi ja sakti hai.
+□ Main samajhta hoon ke meri location job radius, navigation, arrival, safety aur fraud review ke
+liye use ho sakti hai.
+□ Main Customer data ko sirf approved booking aur Support purpose ke liye use karunga.
+
+□ Main Customer ki information ko private work, marketing, social contact ya personal use ke
+liye use nahi karunga.
+
+□ Main Customer data, photos ya evidence ko personal groups, galleries ya social media par
+share nahi karunga.
+
+□ Main lost phone, unauthorized account access ya privacy incident foran report karunga.
+
+□ Main samajhta hoon ke qanooni, tax, safety, fraud, complaint ya dispute records account
+closure ke baad bhi required period tak retain kiye ja sakte hain.
+
+□ Main apne registered HandyGo account ke through is Privacy Notice ko electronically
+acknowledge karta hoon.
+
+Acknowledgement Date/Time: ________________________________
+
+Unique Acknowledgement ID: _______________________________
+
+Privacy Notice Hash/Snapshot Reference: ___________________
+
+Device/Session/IP Reference: ______________________________
+
+Acceptance Method: Authenticated HandyGo account aur explicit checkbox consent.
+
+Complete Privacy Notice/PDF Ustaad ko available ki gayi: □ Haan □ Nahi
+
+16. COMBINED ELECTRONIC RECORD REQUIREMENTS
+
+Background Verification Consent aur Privacy Acknowledgement ke electronic record mein yeh
+information save ki jayegi:
+
+    ● Ustaad ka poora legal naam;
+    ● CNIC Number;
+    ● Registered mobile number;
+    ● Ustaad Account ID;
+    ● Exact document title;
+    ● Document version;
+    ● Complete text ya PDF snapshot;
+    ● Document hash;
+    ● Acceptance ki exact date aur time;
+    ● Unique Consent/Acknowledgement ID;
+    ● Device aur session information;
+    ● IP reference, jahan lawful ho;
+    ● Checkbox/action record;
+
+    ● CNIC front/back aur live selfie verification reference;
+    ● Verification provider aur request reference, jahan applicable ho.
+Accepted document ko overwrite nahi kiya jayega.
+Material change ki surat mein:
+    ● Naya document version issue hoga;
+    ● Complete updated document Ustaad ko diya jayega;
+    ● Fresh electronic acceptance ya acknowledgement li jayegi.
+Generated acceptance PDF mein yeh statement diya ja sakta hai:
+“Yeh Background Verification, EVS Consent aur Ustaad Privacy Notice Ustaad ne
+HandyGo application ke through electronically accept kiya.”
+
+END OF HANDYGO BACKGROUND
+VERIFICATION, EVS CONSENT AUR
+USTAAD PRIVACY NOTICE

@@ -16,8 +16,10 @@ export class WhatsappOtpService {
     this.phoneNumberId = this.config.get<string>('whatsapp.phoneNumberId');
     this.apiVersion = this.config.get<string>('whatsapp.apiVersion') || 'v20.0';
     this.templateName = this.config.get<string>('whatsapp.otpTemplateName');
-    this.templateLanguage = this.config.get<string>('whatsapp.otpTemplateLanguage') || 'en_US';
-    this.includeButtonCode = this.config.get<string>('whatsapp.includeButtonCode') === 'true';
+    this.templateLanguage =
+      this.config.get<string>('whatsapp.otpTemplateLanguage') || 'en_US';
+    this.includeButtonCode =
+      this.config.get<string>('whatsapp.includeButtonCode') === 'true';
   }
 
   get isConfigured(): boolean {
@@ -69,7 +71,9 @@ export class WhatsappOtpService {
 
     if (!response.ok) {
       const text = await response.text().catch(() => '');
-      this.logger.error(`WhatsApp OTP send failed [${response.status}]: ${text}`);
+      this.logger.error(
+        `WhatsApp OTP send failed [${response.status}]: ${text}`,
+      );
     }
   }
 }

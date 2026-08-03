@@ -215,16 +215,45 @@ class ReviewPromptController {
   }
 
   /// The booking, but only while the backend still lists it as unreviewed.
+  ///
+  /// A cache miss is NOT proof the review exists. [pendingReviewsProvider] is
+  /// kept alive by this controller, so its first result — typically an empty
+  /// list fetched at launch, before anything had completed — would otherwise
+  /// be reused forever. Every booking queued afterwards looked "already
+  /// reviewed" and was dropped permanently, which is why the completion
+  /// popup, the notification tap and the Review Worker button all appeared to
+  /// do nothing.
+  ///
+  /// So: trust a hit, but re-read backend truth once before concluding a miss
+  /// means reviewed. Refreshing only on the miss path keeps the common case
+  /// (draining several already-fetched bookings) to a single request.
   Future<BookingEntity?> _resolvePending(String bookingId) async {
+    final cached = await _readPending(refresh: false);
+    final hit = _findById(cached, bookingId);
+    if (hit != null) return hit;
+
+    final fresh = await _readPending(refresh: true);
+    return _findById(fresh, bookingId);
+  }
+
+  Future<List<BookingEntity>> _readPending({required bool refresh}) async {
     try {
-      final pending = await _ref.read(pendingReviewsProvider.future);
-      for (final b in pending) {
-        if (b.id == bookingId) return b;
-      }
-      return null;
+      return refresh
+          ? await _ref.refresh(pendingReviewsProvider.future)
+          : await _ref.read(pendingReviewsProvider.future);
     } catch (_) {
-      return null;
+      // A failed fetch must never surface as an error to the client, and must
+      // never be read as "nothing pending" — the caller retries on the next
+      // resume.
+      return const [];
     }
+  }
+
+  BookingEntity? _findById(List<BookingEntity> bookings, String bookingId) {
+    for (final b in bookings) {
+      if (b.id == bookingId) return b;
+    }
+    return null;
   }
 }
 

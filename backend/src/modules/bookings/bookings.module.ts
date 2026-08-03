@@ -7,11 +7,13 @@ import { BookingsProcessor, BOOKINGS_QUEUE } from './bookings.processor';
 import { StorageModule } from '../storage/storage.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { ChatModule } from '../chat/chat.module';
+import { MatchingModule } from '../matching/matching.module';
 
 @Module({
   imports: [
     StorageModule,
     NotificationsModule,
+    MatchingModule,
     // forwardRef: ChatService now also needs BookingsService's shared
     // chat-eligibility check — forwardRef on both sides breaks that cycle.
     forwardRef(() => ChatModule),

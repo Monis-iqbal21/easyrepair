@@ -76,7 +76,9 @@ export class NotificationsService {
       const saved = await this.notificationsRepository.create(data);
       notificationId = saved.id;
     } catch (err) {
-      this.logger.warn(`Failed to persist notification for userId=${userId}: ${err}`);
+      this.logger.warn(
+        `Failed to persist notification for userId=${userId}: ${err}`,
+      );
     }
 
     // FCM push — fire and forget, never awaited by caller
@@ -125,13 +127,16 @@ export class NotificationsService {
     data: Record<string, string>,
   ): Promise<void> {
     try {
-      const fcmToken = await this.notificationsRepository.findUserFcmToken(userId);
+      const fcmToken =
+        await this.notificationsRepository.findUserFcmToken(userId);
       if (!fcmToken) {
         this.logger.debug(`No FCM token for userId=${userId}`);
         return;
       }
       await this.firebase.sendPush(fcmToken, title, body, data);
-      this.logger.debug(`Push sent to userId=${userId} eventKey=${data.eventKey}`);
+      this.logger.debug(
+        `Push sent to userId=${userId} eventKey=${data.eventKey}`,
+      );
     } catch (err) {
       this.logger.warn(`FCM push failed for userId=${userId}: ${err}`);
     }
@@ -147,6 +152,29 @@ export class NotificationsService {
       userId,
       bookingId,
       eventKey,
+    );
+  }
+
+  /**
+   * Per-live-cycle dedup for broadcasts — see
+   * NotificationsRepository.existsForBookingAndUserSince. Pass the booking's
+   * `liveStartedAt`; a null one falls back to the unbounded check so
+   * historical rows never regress into repeat notifications.
+   */
+  async wasAlreadyNotifiedThisCycle(
+    userId: string,
+    bookingId: string,
+    eventKey: string,
+    liveStartedAt: Date | null,
+  ): Promise<boolean> {
+    if (!liveStartedAt) {
+      return this.wasAlreadyNotified(userId, bookingId, eventKey);
+    }
+    return this.notificationsRepository.existsForBookingAndUserSince(
+      userId,
+      bookingId,
+      eventKey,
+      liveStartedAt,
     );
   }
 

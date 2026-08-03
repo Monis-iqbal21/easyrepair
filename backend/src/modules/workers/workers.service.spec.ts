@@ -5,8 +5,12 @@ describe('WorkersService.updateAvailability', () => {
   let workersRepository: any;
   let notificationsService: any;
   let storageService: any;
-  let agreementsService: any;
+  let ustaadTemplateService: any;
+  let ustaadAcceptanceService: any;
+  let ustaadAgreementAccess: any;
   let autoOfflineQueue: any;
+  let jobBroadcastService: any;
+  let jobCompletionNotifier: any;
   let service: WorkersService;
 
   const APPROVED_ONLINE_READY_PROFILE = {
@@ -29,7 +33,9 @@ describe('WorkersService.updateAvailability', () => {
     };
     notificationsService = {};
     storageService = {};
-    agreementsService = {};
+    ustaadTemplateService = {};
+    ustaadAcceptanceService = {};
+    ustaadAgreementAccess = {};
     // Never resolves — simulates a slow/unreachable Redis. If
     // updateAvailability's response depended on this, the test below would
     // time out; it must not.
@@ -37,12 +43,23 @@ describe('WorkersService.updateAvailability', () => {
       getJob: jest.fn().mockReturnValue(new Promise(() => {})),
       add: jest.fn().mockReturnValue(new Promise(() => {})),
     };
+    jobBroadcastService = {
+      matchRadiusKm: 7,
+      matchOpenJobsForWorker: jest.fn().mockResolvedValue(undefined),
+    };
+    jobCompletionNotifier = {
+      notifyClientJobCompleted: jest.fn().mockResolvedValue(undefined),
+    };
     service = new WorkersService(
       workersRepository,
       notificationsService,
       storageService,
-      agreementsService,
+      ustaadTemplateService,
+      ustaadAcceptanceService,
+      ustaadAgreementAccess,
       autoOfflineQueue,
+      jobBroadcastService,
+      jobCompletionNotifier,
     );
   });
 
@@ -72,6 +89,129 @@ describe('WorkersService.updateAvailability', () => {
     await expect(
       service.updateAvailability('user-1', { status: 'ONLINE' as const }),
     ).rejects.toThrow('Location is required when going online');
+  });
+
+  // ── Late discovery: going ONLINE ────────────────────────────────────────
+  //
+  // A genuine OFFLINE→ONLINE transition makes this Ustaad newly matchable, so
+  // every still-open nearby job must be surfaced immediately — no cooldown.
+  it('matches open jobs immediately (cooldown bypassed) on a true OFFLINE → ONLINE transition', async () => {
+    await service.updateAvailability('user-1', {
+      status: 'ONLINE' as const,
+      lat: 24.86,
+      lng: 67.0,
+    });
+
+    expect(jobBroadcastService.matchOpenJobsForWorker).toHaveBeenCalledWith(
+      'worker-1',
+      { bypassCooldown: true },
+    );
+  });
+
+  it('does not re-match when an already-ONLINE worker refreshes availability', async () => {
+    workersRepository.findByUserId.mockResolvedValue({
+      ...APPROVED_ONLINE_READY_PROFILE,
+      availabilityStatus: 'ONLINE',
+    });
+
+    await service.updateAvailability('user-1', {
+      status: 'ONLINE' as const,
+      lat: 24.86,
+      lng: 67.0,
+    });
+
+    expect(jobBroadcastService.matchOpenJobsForWorker).not.toHaveBeenCalled();
+  });
+
+  it('does not match open jobs when the worker goes OFFLINE', async () => {
+    workersRepository.findByUserId.mockResolvedValue({
+      ...APPROVED_ONLINE_READY_PROFILE,
+      availabilityStatus: 'ONLINE',
+    });
+
+    await service.updateAvailability('user-1', { status: 'OFFLINE' as const });
+
+    expect(jobBroadcastService.matchOpenJobsForWorker).not.toHaveBeenCalled();
+  });
+
+  // ── Late discovery: location heartbeat ──────────────────────────────────
+  describe('updateLocation', () => {
+    const ONLINE_FRESH = {
+      ...APPROVED_ONLINE_READY_PROFILE,
+      availabilityStatus: 'ONLINE',
+      locationUpdatedAt: new Date(),
+    };
+
+    beforeEach(() => {
+      workersRepository.updateLocationOnly = jest
+        .fn()
+        .mockResolvedValue(undefined);
+      workersRepository.findByUserId.mockResolvedValue(ONLINE_FRESH);
+    });
+
+    // A routine heartbeat is throttled by the Redis cooldown inside
+    // matchOpenJobsForWorker — it must NOT bypass it.
+    it('re-matches subject to the cooldown on a routine heartbeat', async () => {
+      await service.updateLocation('user-1', { lat: 24.87, lng: 67.01 });
+
+      expect(jobBroadcastService.matchOpenJobsForWorker).toHaveBeenCalledWith(
+        'worker-1',
+        { bypassCooldown: false },
+      );
+    });
+
+    // Stale → fresh is a real eligibility transition (the worker was invisible
+    // to matching until now), so it skips the cooldown.
+    it('bypasses the cooldown when a stale location becomes fresh', async () => {
+      workersRepository.findByUserId.mockResolvedValue({
+        ...ONLINE_FRESH,
+        locationUpdatedAt: new Date(Date.now() - 45 * 60 * 1000),
+      });
+
+      await service.updateLocation('user-1', { lat: 24.87, lng: 67.01 });
+
+      expect(jobBroadcastService.matchOpenJobsForWorker).toHaveBeenCalledWith(
+        'worker-1',
+        { bypassCooldown: true },
+      );
+    });
+
+    it('bypasses the cooldown when the worker had never sent a location', async () => {
+      workersRepository.findByUserId.mockResolvedValue({
+        ...ONLINE_FRESH,
+        locationUpdatedAt: null,
+      });
+
+      await service.updateLocation('user-1', { lat: 24.87, lng: 67.01 });
+
+      expect(jobBroadcastService.matchOpenJobsForWorker).toHaveBeenCalledWith(
+        'worker-1',
+        { bypassCooldown: true },
+      );
+    });
+
+    // An OFFLINE worker is not matchable and updateLocationOnly no-ops for
+    // them, so there is nothing to re-match.
+    it('does not re-match for an OFFLINE worker', async () => {
+      workersRepository.findByUserId.mockResolvedValue({
+        ...ONLINE_FRESH,
+        availabilityStatus: 'OFFLINE',
+      });
+
+      await service.updateLocation('user-1', { lat: 24.87, lng: 67.01 });
+
+      expect(jobBroadcastService.matchOpenJobsForWorker).not.toHaveBeenCalled();
+    });
+
+    it('still writes the location before considering a re-match', async () => {
+      await service.updateLocation('user-1', { lat: 24.87, lng: 67.01 });
+
+      expect(workersRepository.updateLocationOnly).toHaveBeenCalledWith(
+        'worker-1',
+        24.87,
+        67.01,
+      );
+    });
   });
 
   it('still requires an approved, profile-completed worker to go online', async () => {
@@ -161,6 +301,10 @@ describe('WorkersService.cancelJob', () => {
       {} as any,
       {} as any,
       {} as any,
+      {} as any,
+      {} as any,
+      { matchOpenJobsForWorker: jest.fn() } as any,
+      { notifyClientJobCompleted: jest.fn() } as any,
     );
   });
 
@@ -252,6 +396,10 @@ describe('WorkersService.getWorkerJobById — inspection role detection', () => 
       {} as any,
       {} as any,
       {} as any,
+      {} as any,
+      {} as any,
+      { matchOpenJobsForWorker: jest.fn() } as any,
+      { notifyClientJobCompleted: jest.fn() } as any,
     );
   });
 

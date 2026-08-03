@@ -7,8 +7,8 @@ Every literal that `tool/extract_ui_strings.py` finds in a user-visible position
 | Category | Meaning | Count |
 |---|---|---|
 | 1 | Dynamic / user / backend content that must remain unchanged | 50 |
-| 2 | Protected bottom-navigation English | 9 |
-| 3 | Internal technical value, or a fixed name no language changes | 231 |
+| 2 | _Retired_ — bottom-navigation labels are translated now | 0 |
+| 3 | Internal technical value, or a fixed name no language changes | 236 |
 | 4 | **Missed app-owned visible text that must be localized** | **0** |
 | 5 | Approved English-only legal document content awaiting professional translation | 64 |
 
@@ -244,33 +244,32 @@ Category 5 is a product and legal decision, not missed work. The Privacy Policy 
 | `lib/features/bookings/data/models/booking_model.dart` | 464 | `#${id.toUpperCase()}` | 3 | Booking reference format, not translatable copy |
 | `lib/features/bookings/data/models/inspection_report_model.dart` | 74 | `$base$raw` | 1 | Pure interpolation of dynamic/user/backend data |
 | `lib/features/bookings/data/models/inspection_report_model.dart` | 74 | `$base/$raw` | 1 | Pure interpolation of dynamic/user/backend data |
-| `lib/features/bookings/domain/entities/booking_entity.dart` | 340 | `Morning` | 3 | post_job_page compares this against its slot/window ids |
-| `lib/features/bookings/domain/entities/booking_entity.dart` | 341 | `Afternoon` | 3 | post_job_page compares this against its slot/window ids |
-| `lib/features/bookings/domain/entities/booking_entity.dart` | 342 | `Evening` | 3 | post_job_page compares this against its slot/window ids |
-| `lib/features/bookings/domain/entities/booking_entity.dart` | 343 | `Night` | 3 | post_job_page compares this against its slot/window ids |
-| `lib/features/bookings/domain/entities/booking_entity.dart` | 366 | `Within 1 hour` | 3 | post_job_page compares this against its slot/window ids |
-| `lib/features/bookings/domain/entities/booking_entity.dart` | 367 | `Within 2 hours` | 3 | post_job_page compares this against its slot/window ids |
-| `lib/features/bookings/domain/entities/booking_entity.dart` | 368 | `Within 4 hours` | 3 | post_job_page compares this against its slot/window ids |
-| `lib/features/bookings/domain/entities/booking_entity.dart` | 468 | `$firstName $lastName` | 1 | Pure interpolation of dynamic/user/backend data |
-| `lib/features/bookings/domain/entities/booking_entity.dart` | 469 | `${firstName.isNotEmpty ? firstName[0] : ` | 1 | Scanner cut this mid-`${...}` interpolation - dynamic content, nothing to translate |
+| `lib/features/bookings/domain/entities/booking_entity.dart` | 365 | `Morning` | 3 | post_job_page compares this against its slot/window ids |
+| `lib/features/bookings/domain/entities/booking_entity.dart` | 366 | `Afternoon` | 3 | post_job_page compares this against its slot/window ids |
+| `lib/features/bookings/domain/entities/booking_entity.dart` | 367 | `Evening` | 3 | post_job_page compares this against its slot/window ids |
+| `lib/features/bookings/domain/entities/booking_entity.dart` | 368 | `Night` | 3 | post_job_page compares this against its slot/window ids |
+| `lib/features/bookings/domain/entities/booking_entity.dart` | 391 | `Within 1 hour` | 3 | post_job_page compares this against its slot/window ids |
+| `lib/features/bookings/domain/entities/booking_entity.dart` | 392 | `Within 2 hours` | 3 | post_job_page compares this against its slot/window ids |
+| `lib/features/bookings/domain/entities/booking_entity.dart` | 393 | `Within 4 hours` | 3 | post_job_page compares this against its slot/window ids |
+| `lib/features/bookings/domain/entities/booking_entity.dart` | 493 | `$firstName $lastName` | 1 | Pure interpolation of dynamic/user/backend data |
+| `lib/features/bookings/domain/entities/booking_entity.dart` | 494 | `${firstName.isNotEmpty ? firstName[0] : ` | 1 | Scanner cut this mid-`${...}` interpolation - dynamic content, nothing to translate |
 | `lib/features/bookings/domain/entities/nearby_worker_entity.dart` | 28 | `$firstName $lastName` | 1 | Pure interpolation of dynamic/user/backend data |
 | `lib/features/bookings/domain/entities/nearby_worker_entity.dart` | 30 | `${firstName.isNotEmpty ? firstName[0] : ` | 1 | Scanner cut this mid-`${...}` interpolation - dynamic content, nothing to translate |
-| `lib/features/bookings/presentation/pages/booking_detail_page.dart` | 432 | `${booking.serviceEmoji}  ${booking.primaryServiceLabel}` | 1 | Pure interpolation of dynamic/user/backend data |
-| `lib/features/bookings/presentation/pages/booking_detail_page.dart` | 465 | ` \u2022 ${timeSlotLabel(context.l10n, booking.timeSlot!)}` | 1 | Already localized — the literal is only a separator |
-| `lib/features/bookings/presentation/pages/booking_detail_page.dart` | 2622 | `\u26a0\ufe0f` | 3 | Escaped emoji/symbol, nothing to translate |
+| `lib/features/bookings/presentation/pages/booking_detail_page.dart` | 444 | `${booking.serviceEmoji}  ${booking.primaryServiceLabel}` | 1 | Pure interpolation of dynamic/user/backend data |
+| `lib/features/bookings/presentation/pages/booking_detail_page.dart` | 477 | ` \u2022 ${timeSlotLabel(context.l10n, booking.timeSlot!)}` | 1 | Already localized — the literal is only a separator |
+| `lib/features/bookings/presentation/pages/booking_detail_page.dart` | 2670 | `\u26a0\ufe0f` | 3 | Escaped emoji/symbol, nothing to translate |
 | `lib/features/bookings/presentation/pages/my_bookings_page.dart` | 222 | `${user.firstName} ${user.lastName}` | 1 | Pure interpolation of dynamic/user/backend data |
 | `lib/features/bookings/presentation/pages/my_bookings_page.dart` | 370 | `$count` | 1 | Pure interpolation of dynamic/user/backend data |
 | `lib/features/bookings/presentation/utils/worker_labels.dart` | 17 | `${rating.toStringAsFixed(1)}/5` | 3 | Numeric score format, identical in every language |
-| `lib/features/bookings/presentation/widgets/inspection_report_card.dart` | 58 | `: ${formatPkr(fee)}` | 1 | Pure interpolation of dynamic/user/backend data |
 | `lib/features/bookings/presentation/widgets/media_attachment_widgets.dart` | 112 | `$m:$s` | 1 | Pure interpolation of dynamic/user/backend data |
 | `lib/features/bookings/presentation/widgets/media_attachment_widgets.dart` | 563 | `$m:$s` | 1 | Pure interpolation of dynamic/user/backend data |
 | `lib/features/bookings/presentation/widgets/media_attachment_widgets.dart` | 620 | `${_fmt(pos)} / ${_fmt(total)}` | 1 | Pure interpolation of dynamic/user/backend data |
 | `lib/features/chat/domain/entities/chat_entities.dart` | 19 | `$firstName $lastName` | 1 | Pure interpolation of dynamic/user/backend data |
 | `lib/features/chat/domain/entities/chat_entities.dart` | 23 | `$f$l` | 1 | Pure interpolation of dynamic/user/backend data |
-| `lib/features/chat/presentation/pages/chat_detail_page.dart` | 1304 | `$h:$m` | 1 | Pure interpolation of dynamic/user/backend data |
-| `lib/features/chat/presentation/pages/chat_detail_page.dart` | 1387 | `${context.l10n.chatEdited}  ` | 1 | Already localized — the literal is only a separator |
-| `lib/features/chat/presentation/pages/chat_detail_page.dart` | 1783 | `$m:$s` | 1 | Pure interpolation of dynamic/user/backend data |
-| `lib/features/chat/presentation/pages/chat_detail_page.dart` | 2279 | `$m:$s` | 1 | Pure interpolation of dynamic/user/backend data |
+| `lib/features/chat/presentation/pages/chat_detail_page.dart` | 1334 | `$h:$m` | 1 | Pure interpolation of dynamic/user/backend data |
+| `lib/features/chat/presentation/pages/chat_detail_page.dart` | 1417 | `${context.l10n.chatEdited}  ` | 1 | Already localized — the literal is only a separator |
+| `lib/features/chat/presentation/pages/chat_detail_page.dart` | 1813 | `$m:$s` | 1 | Pure interpolation of dynamic/user/backend data |
+| `lib/features/chat/presentation/pages/chat_detail_page.dart` | 2309 | `$m:$s` | 1 | Pure interpolation of dynamic/user/backend data |
 | `lib/features/chat/presentation/pages/chat_list_page.dart` | 318 | `$unread` | 1 | Pure interpolation of dynamic/user/backend data |
 | `lib/features/chat/presentation/pages/chat_list_page.dart` | 345 | `$h:$m` | 1 | Pure interpolation of dynamic/user/backend data |
 | `lib/features/chat/presentation/pages/chat_list_page.dart` | 362 | `${dt.day}/${dt.month}/${dt.year % 100}` | 1 | Pure interpolation of dynamic/user/backend data |
@@ -302,8 +301,8 @@ Category 5 is a product and legal decision, not missed work. The Privacy Policy 
 | `lib/features/client/presentation/pages/post_job_page.dart` | 490 | `${key.substring(0, 4)}...${key.substring(key.length - 4)}` | 1 | Pure interpolation of dynamic/user/backend data |
 | `lib/features/client/presentation/pages/post_job_page.dart` | 497 | `${key.substring(0, 4)}...${key.substring(key.length - 4)}` | 1 | Pure interpolation of dynamic/user/backend data |
 | `lib/features/client/presentation/pages/post_job_page.dart` | 657 | `$m:${sec.toString().padLeft(2, ` | 3 | Numeric time format (mm:ss), identical in every language |
-| `lib/features/client/presentation/pages/post_job_page.dart` | 2844 | `$n` | 1 | Pure interpolation of dynamic/user/backend data |
-| `lib/features/client/presentation/pages/post_job_page.dart` | 3482 | `${i + 1}` | 1 | Pure interpolation of dynamic/user/backend data |
+| `lib/features/client/presentation/pages/post_job_page.dart` | 2841 | `$n` | 1 | Pure interpolation of dynamic/user/backend data |
+| `lib/features/client/presentation/pages/post_job_page.dart` | 3476 | `${i + 1}` | 1 | Pure interpolation of dynamic/user/backend data |
 | `lib/features/client/presentation/pages/privacy_policy_page.dart` | 19 | `Privacy Policy` | 3 | Unreachable legacy scaffold - nothing routes to or imports it |
 | `lib/features/client/presentation/pages/privacy_policy_page.dart` | 45 | `April 2025` | 3 | Unreachable legacy scaffold - nothing routes to or imports it |
 | `lib/features/client/presentation/pages/privacy_policy_page.dart` | 47 | `EasyRepair ("we", "our", or "us") is committed to protecting your ` | 3 | Unreachable legacy scaffold - nothing routes to or imports it |
@@ -370,10 +369,6 @@ Category 5 is a product and legal decision, not missed work. The Privacy Policy 
 | `lib/features/client/presentation/pages/terms_conditions_page.dart` | 194 | `EasyRepair may update these Terms and Conditions at any time. ` | 3 | Unreachable legacy scaffold - nothing routes to or imports it |
 | `lib/features/client/presentation/pages/terms_conditions_page.dart` | 202 | `These Terms are governed by the applicable laws of the ` | 3 | Unreachable legacy scaffold - nothing routes to or imports it |
 | `lib/features/client/presentation/pages/terms_conditions_page.dart` | 223 | `Last updated: $date` | 3 | Unreachable legacy scaffold - nothing routes to or imports it |
-| `lib/features/client/presentation/widgets/client_bottom_nav_bar.dart` | 15 | `Home` | 2 | Protected bottom-navigation label, intentionally English |
-| `lib/features/client/presentation/widgets/client_bottom_nav_bar.dart` | 20 | `Bookings` | 2 | Protected bottom-navigation label, intentionally English |
-| `lib/features/client/presentation/widgets/client_bottom_nav_bar.dart` | 25 | `Chats` | 2 | Protected bottom-navigation label, intentionally English |
-| `lib/features/client/presentation/widgets/client_bottom_nav_bar.dart` | 30 | `Profile` | 2 | Protected bottom-navigation label, intentionally English |
 | `lib/features/client/presentation/widgets/location_picker_sheet.dart` | 197 | `${latlng.latitude},${latlng.longitude}` | 3 | HTTP request parameter sent to an external API |
 | `lib/features/client/presentation/widgets/location_picker_sheet.dart` | 291 | `country:pk` | 3 | Internal identifier (switch case / map key / API parameter) |
 | `lib/features/client/presentation/widgets/location_picker_sheet.dart` | 292 | `${_kKarachiCenter.latitude},${_kKarachiCenter.longitude}` | 3 | HTTP request parameter sent to an external API |
@@ -408,16 +403,20 @@ Category 5 is a product and legal decision, not missed work. The Privacy Policy 
 | `lib/features/client/presentation/widgets/service_data.dart` | 245 | `Keep Your Home Running` | 3 | Unreachable legacy scaffold - nothing routes to or imports it |
 | `lib/features/client/presentation/widgets/service_data.dart` | 248 | `Gardening` | 3 | Unreachable legacy scaffold - nothing routes to or imports it |
 | `lib/features/client/presentation/widgets/service_data.dart` | 256 | `Car Wash` | 3 | Unreachable legacy scaffold - nothing routes to or imports it |
+| `lib/features/worker/data/models/agreement_template_model.dart` | 32 | `ur_Latn` | 3 | BCP-47 locale subtag / persisted settings value, not display copy |
+| `lib/features/worker/data/models/agreement_template_model.dart` | 38 | `ur_Latn` | 3 | BCP-47 locale subtag / persisted settings value, not display copy |
+| `lib/features/worker/data/models/agreement_template_model.dart` | 88 | `ur_Latn` | 3 | BCP-47 locale subtag / persisted settings value, not display copy |
 | `lib/features/worker/data/models/earning_history_model.dart` | 24 | `Service` | 3 | Data-layer default for a backend free-text field |
 | `lib/features/worker/data/models/worker_review_model.dart` | 27 | `Service` | 3 | Data-layer default for a backend free-text field |
+| `lib/features/worker/data/repositories/worker_repository_impl.dart` | 161 | `ur_Latn` | 3 | BCP-47 locale subtag / persisted settings value, not display copy |
 | `lib/features/worker/domain/entities/new_job_entity.dart` | 28 | `$firstName $lastName` | 1 | Pure interpolation of dynamic/user/backend data |
-| `lib/features/worker/presentation/pages/inspection_report_form_page.dart` | 723 | `$m:$s` | 1 | Pure interpolation of dynamic/user/backend data |
+| `lib/features/worker/presentation/pages/inspection_report_form_page.dart` | 726 | `$m:$s` | 1 | Pure interpolation of dynamic/user/backend data |
 | `lib/features/worker/presentation/pages/worker_bid_page.dart` | 421 | `${job.addressLine}, ${job.city}` | 1 | Pure interpolation of dynamic/user/backend data |
-| `lib/features/worker/presentation/pages/worker_home_page.dart` | 294 | `$count` | 1 | Pure interpolation of dynamic/user/backend data |
-| `lib/features/worker/presentation/pages/worker_home_page.dart` | 619 | `${profile.stats.completedJobs}` | 1 | Pure interpolation of dynamic/user/backend data |
-| `lib/features/worker/presentation/pages/worker_home_page.dart` | 633 | `${profile.stats.activeJobs}` | 1 | Pure interpolation of dynamic/user/backend data |
-| `lib/features/worker/presentation/pages/worker_home_page.dart` | 1185 | `${profile.stats.completedJobs}` | 1 | Pure interpolation of dynamic/user/backend data |
-| `lib/features/worker/presentation/pages/worker_home_page.dart` | 1303 | `${profile.rating.toStringAsFixed(1)} · ${profile.totalRatings}` | 1 | Pure interpolation of dynamic/user/backend data |
+| `lib/features/worker/presentation/pages/worker_home_page.dart` | 295 | `$count` | 1 | Pure interpolation of dynamic/user/backend data |
+| `lib/features/worker/presentation/pages/worker_home_page.dart` | 620 | `${profile.stats.completedJobs}` | 1 | Pure interpolation of dynamic/user/backend data |
+| `lib/features/worker/presentation/pages/worker_home_page.dart` | 634 | `${profile.stats.activeJobs}` | 1 | Pure interpolation of dynamic/user/backend data |
+| `lib/features/worker/presentation/pages/worker_home_page.dart` | 1169 | `${profile.stats.completedJobs}` | 1 | Pure interpolation of dynamic/user/backend data |
+| `lib/features/worker/presentation/pages/worker_home_page.dart` | 1287 | `${profile.rating.toStringAsFixed(1)} · ${profile.totalRatings}` | 1 | Pure interpolation of dynamic/user/backend data |
 | `lib/features/worker/presentation/pages/worker_job_detail_page.dart` | 372 | ` • ${timeSlotLabel(context.l10n, job.timeSlot!)}` | 1 | Already localized — the literal is only a separator |
 | `lib/features/worker/presentation/pages/worker_job_detail_page.dart` | 1562 | `${origin.latitude},${origin.longitude}` | 3 | HTTP request parameter sent to an external API |
 | `lib/features/worker/presentation/pages/worker_job_detail_page.dart` | 1563 | `${dest.latitude},${dest.longitude}` | 3 | HTTP request parameter sent to an external API |
@@ -425,26 +424,23 @@ Category 5 is a product and legal decision, not missed work. The Privacy Policy 
 | `lib/features/worker/presentation/pages/worker_jobs_page.dart` | 458 | `${job.city}, ` | 1 | Pure interpolation of dynamic/user/backend data |
 | `lib/features/worker/presentation/pages/worker_jobs_page.dart` | 706 | `${lifecycleActionLabel(context.l10n, action)}...` | 1 | Already localized — the literal is only a separator |
 | `lib/features/worker/presentation/pages/worker_jobs_page.dart` | 830 | `${inspectionActionLabel(context.l10n, action)}...` | 1 | Already localized — the literal is only a separator |
-| `lib/features/worker/presentation/pages/worker_profile_completion_page.dart` | 115 | `$exp` | 1 | Pure interpolation of dynamic/user/backend data |
-| `lib/features/worker/presentation/pages/worker_profile_page.dart` | 38 | `worker_avatar_path_$userId` | 3 | Internal identifier (switch case / map key / API parameter) |
-| `lib/features/worker/presentation/pages/worker_profile_page.dart` | 112 | `).first}` | 3 | Filename or URL fragment, not display copy |
-| `lib/features/worker/presentation/pages/worker_profile_page.dart` | 112 | `.${url.split(` | 3 | Filename or URL fragment, not display copy |
-| `lib/features/worker/presentation/pages/worker_profile_page.dart` | 112 | `.jpg` | 3 | Filename or URL fragment, not display copy |
-| `lib/features/worker/presentation/pages/worker_profile_page.dart` | 164 | `avatar.jpg` | 3 | Filename or URL fragment, not display copy |
+| `lib/features/worker/presentation/pages/worker_profile_completion_page.dart` | 45 | `agreement:$documentType` | 3 | Internal error-set key, matched in code and never rendered (// l10n-ignore) |
+| `lib/features/worker/presentation/pages/worker_profile_completion_page.dart` | 147 | `$exp` | 1 | Pure interpolation of dynamic/user/backend data |
+| `lib/features/worker/presentation/pages/worker_profile_completion_page.dart` | 328 | `${date.year.toString().padLeft(4, ` | 1 | Scanner cut this mid-`${...}` interpolation - dynamic content, nothing to translate |
+| `lib/features/worker/presentation/pages/worker_profile_page.dart` | 39 | `worker_avatar_path_$userId` | 3 | Internal identifier (switch case / map key / API parameter) |
+| `lib/features/worker/presentation/pages/worker_profile_page.dart` | 113 | `).first}` | 3 | Filename or URL fragment, not display copy |
+| `lib/features/worker/presentation/pages/worker_profile_page.dart` | 113 | `.${url.split(` | 3 | Filename or URL fragment, not display copy |
+| `lib/features/worker/presentation/pages/worker_profile_page.dart` | 113 | `.jpg` | 3 | Filename or URL fragment, not display copy |
+| `lib/features/worker/presentation/pages/worker_profile_page.dart` | 165 | `avatar.jpg` | 3 | Filename or URL fragment, not display copy |
 | `lib/features/worker/presentation/pages/worker_reviews_page.dart` | 175 | `$maxRating` | 1 | Pure interpolation of dynamic/user/backend data |
 | `lib/features/worker/presentation/pages/worker_reviews_page.dart` | 176 | `$minRating` | 1 | Pure interpolation of dynamic/user/backend data |
-| `lib/features/worker/presentation/providers/worker_providers.dart` | 139 | `initial online sync` | 3 | Sync reason sent to the /workers/location API, never displayed |
-| `lib/features/worker/presentation/providers/worker_providers.dart` | 172 | `post_online_refresh` | 3 | Internal identifier (switch case / map key / API parameter) |
-| `lib/features/worker/presentation/providers/worker_providers.dart` | 216 | `final offline sync` | 3 | Sync reason sent to the /workers/location API, never displayed |
-| `lib/features/worker/presentation/providers/worker_providers.dart` | 258 | `app_resumed` | 3 | Internal identifier (switch case / map key / API parameter) |
-| `lib/features/worker/presentation/providers/worker_providers.dart` | 308 | ` ($forcedReason)` | 3 | Developer log, never shown to a user |
-| `lib/features/worker/presentation/providers/worker_providers.dart` | 309 | ` (moved ${distanceMeters!.toStringAsFixed(1)}m)` | 3 | Developer log, never shown to a user |
-| `lib/features/worker/presentation/providers/worker_providers.dart` | 310 | ` (heartbeat)` | 3 | Developer log, never shown to a user |
-| `lib/features/worker/presentation/providers/worker_providers.dart` | 311 | ` (backup_5m)` | 3 | Developer log, never shown to a user |
-| `lib/features/worker/presentation/providers/worker_providers.dart` | 321 | `moved ${distanceMeters!.toStringAsFixed(1)}m` | 3 | Sync reason sent to the /workers/location API, never displayed |
-| `lib/features/worker/presentation/providers/worker_providers.dart` | 323 | `backup_5m` | 3 | Internal identifier (switch case / map key / API parameter) |
-| `lib/features/worker/presentation/widgets/worker_bottom_nav_bar.dart` | 14 | `Home` | 2 | Protected bottom-navigation label, intentionally English |
-| `lib/features/worker/presentation/widgets/worker_bottom_nav_bar.dart` | 15 | `New Jobs` | 2 | Protected bottom-navigation label, intentionally English |
-| `lib/features/worker/presentation/widgets/worker_bottom_nav_bar.dart` | 16 | `My Jobs` | 2 | Protected bottom-navigation label, intentionally English |
-| `lib/features/worker/presentation/widgets/worker_bottom_nav_bar.dart` | 17 | `Chat` | 2 | Protected bottom-navigation label, intentionally English |
-| `lib/features/worker/presentation/widgets/worker_bottom_nav_bar.dart` | 18 | `Profile` | 2 | Protected bottom-navigation label, intentionally English |
+| `lib/features/worker/presentation/providers/worker_providers.dart` | 140 | `initial online sync` | 3 | Sync reason sent to the /workers/location API, never displayed |
+| `lib/features/worker/presentation/providers/worker_providers.dart` | 173 | `post_online_refresh` | 3 | Internal identifier (switch case / map key / API parameter) |
+| `lib/features/worker/presentation/providers/worker_providers.dart` | 217 | `final offline sync` | 3 | Sync reason sent to the /workers/location API, never displayed |
+| `lib/features/worker/presentation/providers/worker_providers.dart` | 259 | `app_resumed` | 3 | Internal identifier (switch case / map key / API parameter) |
+| `lib/features/worker/presentation/providers/worker_providers.dart` | 309 | ` ($forcedReason)` | 3 | Developer log, never shown to a user |
+| `lib/features/worker/presentation/providers/worker_providers.dart` | 310 | ` (moved ${distanceMeters!.toStringAsFixed(1)}m)` | 3 | Developer log, never shown to a user |
+| `lib/features/worker/presentation/providers/worker_providers.dart` | 311 | ` (heartbeat)` | 3 | Developer log, never shown to a user |
+| `lib/features/worker/presentation/providers/worker_providers.dart` | 312 | ` (backup_5m)` | 3 | Developer log, never shown to a user |
+| `lib/features/worker/presentation/providers/worker_providers.dart` | 322 | `moved ${distanceMeters!.toStringAsFixed(1)}m` | 3 | Sync reason sent to the /workers/location API, never displayed |
+| `lib/features/worker/presentation/providers/worker_providers.dart` | 324 | `backup_5m` | 3 | Internal identifier (switch case / map key / API parameter) |

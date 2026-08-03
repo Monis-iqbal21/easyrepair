@@ -38,7 +38,9 @@ export class CategoriesService {
   }
 
   /** GET /categories/:id/standard-services — active fixed-price catalog for a category */
-  async findStandardServices(categoryId: string): Promise<StandardServiceDto[]> {
+  async findStandardServices(
+    categoryId: string,
+  ): Promise<StandardServiceDto[]> {
     const category = await this.prisma.serviceCategory.findUnique({
       where: { id: categoryId },
       select: { id: true },

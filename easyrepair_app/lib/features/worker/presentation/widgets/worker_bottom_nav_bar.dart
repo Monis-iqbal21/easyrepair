@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/l10n/l10n_extensions.dart';
 import '../../../../core/presentation/responsive_utils.dart';
+import '../../../../l10n/app_localizations.dart';
 
 const _kAccent = Color(0xFFDB6234);
 
@@ -10,19 +12,24 @@ class WorkerBottomNavBar extends StatelessWidget {
 
   const WorkerBottomNavBar({super.key, required this.currentIndex});
 
+  /// Tab order and icons are fixed; only the label is language-dependent, so
+  /// the label is a lookup rather than a string and the list stays const. The
+  /// last four reuse the matching page-title keys — one English string must
+  /// map to one ARB key (see the duplicate check in arb_parity_test.dart).
   static const _tabs = [
-    _NavTab(label: 'Home',     icon: Icons.home_outlined,          route: '/worker/home'),
-    _NavTab(label: 'New Jobs', icon: Icons.work_outline_rounded,   route: '/worker/new-jobs'),
-    _NavTab(label: 'My Jobs',  icon: Icons.build_outlined,         route: '/worker/jobs'),
-    _NavTab(label: 'Chat',     icon: Icons.chat_bubble_outline,    route: '/worker/chat'),
-    _NavTab(label: 'Profile',  icon: Icons.person_outline,         route: '/worker/profile'),
+    _NavTab(label: _navHome,    icon: Icons.home_outlined,          route: '/worker/home'),
+    _NavTab(label: _navNewJobs, icon: Icons.work_outline_rounded,   route: '/worker/new-jobs'),
+    _NavTab(label: _navMyJobs,  icon: Icons.build_outlined,         route: '/worker/jobs'),
+    _NavTab(label: _navChat,    icon: Icons.chat_bubble_outline,    route: '/worker/chat'),
+    _NavTab(label: _navProfile, icon: Icons.person_outline,         route: '/worker/profile'),
   ];
 
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).padding.bottom;
-    // Excluded from localization by design: labels stay English in every
-    // language, and forcing LTR here stops Urdu RTL from reversing tab order.
+    final l10n = context.l10n;
+    // Labels are translated, but the bar itself stays pinned LTR: Urdu RTL
+    // must never reverse tab order or move Home away from the left edge.
     // Verified by test/core/l10n/bottom_nav_protection_test.dart.
     return Directionality(
       textDirection: TextDirection.ltr,
@@ -74,7 +81,7 @@ class WorkerBottomNavBar extends StatelessWidget {
                           ),
                           SizedBox(height: gap),
                           Text(
-                            tab.label,
+                            tab.label(l10n),
                             style: TextStyle(
                               fontSize: labelSize,
                               fontWeight: isActive
@@ -102,8 +109,19 @@ class WorkerBottomNavBar extends StatelessWidget {
   }
 }
 
+/// Resolves a tab's label for the active language. A plain `String` field
+/// could not be const here, and a const tab list is what keeps tab order and
+/// icons identical in every language.
+typedef _NavLabel = String Function(AppLocalizations l10n);
+
+String _navHome(AppLocalizations l10n) => l10n.navHome;
+String _navNewJobs(AppLocalizations l10n) => l10n.workerNewJobsTitle;
+String _navMyJobs(AppLocalizations l10n) => l10n.clientJobsTitle;
+String _navChat(AppLocalizations l10n) => l10n.chatTitleFallback;
+String _navProfile(AppLocalizations l10n) => l10n.clientProfileTitle;
+
 class _NavTab {
-  final String label;
+  final _NavLabel label;
   final IconData icon;
   final String route;
   const _NavTab({required this.label, required this.icon, required this.route});

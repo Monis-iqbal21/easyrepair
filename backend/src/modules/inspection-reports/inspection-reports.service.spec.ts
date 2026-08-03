@@ -435,8 +435,11 @@ describe('InspectionReportsService', () => {
 
   // ── #6 Sanitized report hides all prices ────────────────────────────────
   describe('sanitized report for an eligible bidder', () => {
+    // Old-style shape: the INSPECTION booking itself was reopened in place,
+    // so it is PENDING and unassigned — that is the job being bid on.
     const REOPENED_BOOKING = {
       ...BASE_BOOKING,
+      status: 'PENDING',
       workerProfileId: null,
       workerProfile: null,
     };

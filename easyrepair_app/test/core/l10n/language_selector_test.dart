@@ -102,14 +102,27 @@ void main() {
     );
   });
 
-  testWidgets('the Urdu option renders right-to-left while the sheet around '
-      'it does not force the others', (tester) async {
+  testWidgets('every option is laid out identically, including اردو', (
+    tester,
+  ) async {
+    // The three rows must read as one list. Wrapping the Urdu endonym in an
+    // RTL Directionality would push it to the opposite edge from the other
+    // two — the mirroring HandyGo does not do. The Urdu glyphs shape correctly
+    // without it.
     await _openSheet(tester);
 
-    final urduContext = tester.element(find.text('اردو'));
-    expect(Directionality.of(urduContext), TextDirection.rtl);
+    for (final label in ['English', 'اردو', 'Roman Urdu']) {
+      expect(
+        Directionality.of(tester.element(find.text(label))),
+        TextDirection.ltr,
+        reason: '$label is laid out differently from the other options',
+      );
+    }
 
-    final englishContext = tester.element(find.text('English'));
-    expect(Directionality.of(englishContext), TextDirection.ltr);
+    // …and they all start at the same left edge.
+    final lefts = ['English', 'اردو', 'Roman Urdu']
+        .map((l) => tester.getTopLeft(find.text(l)).dx)
+        .toSet();
+    expect(lefts, hasLength(1), reason: 'options are not left-aligned together');
   });
 }

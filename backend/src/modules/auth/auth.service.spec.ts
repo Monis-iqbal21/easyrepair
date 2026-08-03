@@ -8,6 +8,7 @@ describe('AuthService — SMS OTP login/registration', () => {
   let config: any;
   let storageService: any;
   let smsOtp: any;
+  let chatService: any;
   let service: AuthService;
 
   const IP = '10.0.0.1';
@@ -84,12 +85,16 @@ describe('AuthService — SMS OTP login/registration', () => {
     storageService = {};
     smsOtp = { isConfigured: false, sendOtp: jest.fn() };
 
+    // Support-thread creation is fire-and-forget and must never affect auth.
+    chatService = { ensureSupportConversation: jest.fn().mockResolvedValue(null) };
+
     service = new AuthService(
       repository,
       jwtService,
       config,
       storageService,
       smsOtp,
+      chatService,
     );
 
     process.env.NODE_ENV = 'test'; // non-production -> dev OTP log path

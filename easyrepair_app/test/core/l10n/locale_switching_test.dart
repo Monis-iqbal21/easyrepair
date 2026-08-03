@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -101,14 +103,15 @@ void main() {
       expect(find.text('Language'), findsOneWidget);
       expect(_direction(tester), 'dir:ltr');
 
-      // → Urdu: script changes and the layout flips to RTL.
+      // → Urdu: the script changes and the layout does NOT. HandyGo is
+      // never mirrored, so Urdu translates the words and leaves the direction
+      // alone.
       await _select(tester, container, AppLocale.urdu);
       expect(find.text('زبان'), findsOneWidget);
       expect(find.text('Language'), findsNothing);
-      expect(_direction(tester), 'dir:rtl');
+      expect(_direction(tester), 'dir:ltr');
 
-      // → Roman Urdu: Latin script, and crucially back to LTR even though the
-      // language code is still 'ur'.
+      // → Roman Urdu: Latin script, still LTR.
       await _select(tester, container, AppLocale.romanUrdu);
       expect(find.text('Zaban'), findsOneWidget);
       expect(find.text('زبان'), findsNothing);
@@ -125,7 +128,7 @@ void main() {
         kLocalePrefsKey: 'ur',
       });
       expect(find.text('زبان'), findsOneWidget);
-      expect(_direction(tester), 'dir:rtl');
+      expect(_direction(tester), 'dir:ltr');
 
       await _select(tester, container, AppLocale.romanUrdu);
       expect(find.text('Zaban'), findsOneWidget);
@@ -133,22 +136,87 @@ void main() {
     });
   });
 
-  group('text direction per language', () {
-    testWidgets('English is LTR', (tester) async {
-      await _pump(tester, initialPrefs: {kLocalePrefsKey: 'en'});
-      expect(_direction(tester), 'dir:ltr');
-    });
+  group('the interface is never mirrored', () {
+    // HandyGo is designed left-to-right and stays that way in every language.
+    // Urdu changes the words; it must not flip rows, app bars, cards, icons,
+    // list order, padding or navigation. Urdu's language code would normally
+    // make Flutter mirror everything, so this is the regression guard.
+    for (final stored in ['en', 'ur', 'ur_Latn']) {
+      testWidgets('$stored lays out left-to-right', (tester) async {
+        await _pump(tester, initialPrefs: {kLocalePrefsKey: stored});
+        expect(_direction(tester), 'dir:ltr');
+      });
+    }
 
-    testWidgets('Urdu is RTL', (tester) async {
-      await _pump(tester, initialPrefs: {kLocalePrefsKey: 'ur'});
-      expect(_direction(tester), 'dir:rtl');
-    });
-
-    testWidgets('Roman Urdu is LTR, not RTL like its language code implies', (
+    testWidgets('no language reports RTL from AppLocale either', (
       tester,
     ) async {
-      await _pump(tester, initialPrefs: {kLocalePrefsKey: 'ur_Latn'});
+      for (final locale in AppLocale.values) {
+        expect(
+          locale.textDirection,
+          TextDirection.ltr,
+          reason: '${locale.storageValue} would reintroduce mirroring',
+        );
+      }
+    });
+
+    testWidgets('Urdu still renders Urdu script while laid out LTR', (
+      tester,
+    ) async {
+      // The point of pinning direction is that it costs nothing linguistically:
+      // the translation is still Urdu, only the layout is unchanged.
+      await _pump(tester, initialPrefs: {kLocalePrefsKey: 'ur'});
+
+      expect(find.text('زبان'), findsOneWidget);
       expect(_direction(tester), 'dir:ltr');
+    });
+
+    testWidgets('dialogs and bottom sheets are LTR in Urdu too', (
+      tester,
+    ) async {
+      // Overlays are pushed as their own routes, so they are the likeliest
+      // place for RTL to creep back in unnoticed.
+      await _pump(tester, initialPrefs: {kLocalePrefsKey: 'ur'});
+      final context = tester.element(find.byType(Scaffold));
+
+      unawaited(showDialog<void>(
+        context: context,
+        builder: (_) => const AlertDialog(content: Text('dialog')),
+      ));
+      await tester.pumpAndSettle();
+      expect(
+        Directionality.of(tester.element(find.text('dialog'))),
+        TextDirection.ltr,
+      );
+      Navigator.of(context).pop();
+      await tester.pumpAndSettle();
+
+      unawaited(showModalBottomSheet<void>(
+        context: context,
+        builder: (_) => const Text('sheet'),
+      ));
+      await tester.pumpAndSettle();
+      expect(
+        Directionality.of(tester.element(find.text('sheet'))),
+        TextDirection.ltr,
+      );
+    });
+
+    testWidgets('directional padding does not flip in Urdu', (tester) async {
+      // EdgeInsetsDirectional/AlignmentDirectional resolve against the ambient
+      // direction. If anything ever re-enabled RTL, spacing across the app
+      // would silently swap sides — this catches that without a golden file.
+      await _pump(tester, initialPrefs: {kLocalePrefsKey: 'ur'});
+      final direction = Directionality.of(tester.element(find.byType(Scaffold)));
+
+      const padding = EdgeInsetsDirectional.only(start: 16);
+      expect(padding.resolve(direction).left, 16);
+      expect(padding.resolve(direction).right, 0);
+
+      expect(
+        AlignmentDirectional.centerStart.resolve(direction),
+        Alignment.centerLeft,
+      );
     });
   });
 
@@ -182,7 +250,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('زبان'), findsOneWidget);
-      expect(_direction(tester), 'dir:rtl');
+      expect(_direction(tester), 'dir:ltr');
     });
 
     testWidgets('logging out does not reset it — the key is untouched by auth',

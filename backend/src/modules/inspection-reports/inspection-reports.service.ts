@@ -18,7 +18,7 @@ import {
 import { StorageService } from '../storage/storage.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { BookingsService } from '../bookings/bookings.service';
-import { assertEligibleForInspectionBidding } from '../../common/utils/inspection-bidder-eligibility.util';
+import { assertEligibleForInspectionBidding } from '../../common/utils/job-eligibility.util';
 
 const MAX_PHOTOS = 6;
 

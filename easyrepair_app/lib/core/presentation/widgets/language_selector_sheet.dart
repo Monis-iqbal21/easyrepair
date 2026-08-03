@@ -95,17 +95,18 @@ class _LanguageOption extends StatelessWidget {
           children: [
             Expanded(
               // Each language names itself and is shown in its own script, so
-              // it is never translated and never mirrored — a user who cannot
-              // read the current language can still find their own.
-              child: Directionality(
-                textDirection: option.textDirection,
-                child: Text(
-                  option.displayLabel,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                    color: isSelected ? _kOrange : const Color(0xFF1A1A1A),
-                  ),
+              // it is never translated — a user who cannot read the current
+              // language can still find their own. It is not wrapped in an RTL
+              // Directionality either: that would push اردو to the right edge
+              // while the other two sat left, which is the mirroring HandyGo
+              // does not do. Urdu glyphs shape correctly inside an LTR row
+              // without it.
+              child: Text(
+                option.displayLabel,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                  color: isSelected ? _kOrange : const Color(0xFF1A1A1A),
                 ),
               ),
             ),

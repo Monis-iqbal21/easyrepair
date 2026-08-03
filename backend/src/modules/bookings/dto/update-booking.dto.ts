@@ -71,7 +71,9 @@ export class UpdateBookingDto {
   longitude?: number;
 
   @IsOptional()
-  @Transform(({ value }) => (typeof value === 'string' ? value === 'true' : value))
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value === 'true' : value,
+  )
   @IsBoolean()
   inspection?: boolean;
 

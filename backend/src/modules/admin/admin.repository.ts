@@ -74,7 +74,9 @@ export class AdminRepository {
       totalUsers,
     ] = await Promise.all([
       this.prisma.workerProfile.count({
-        where: { onboardingStatus: WorkerOnboardingStatus.SUBMITTED_FOR_REVIEW },
+        where: {
+          onboardingStatus: WorkerOnboardingStatus.SUBMITTED_FOR_REVIEW,
+        },
       }),
       this.prisma.workerProfile.count({
         where: { onboardingStatus: WorkerOnboardingStatus.APPROVED },

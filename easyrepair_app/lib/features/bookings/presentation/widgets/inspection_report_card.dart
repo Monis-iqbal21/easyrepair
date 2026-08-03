@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/l10n/l10n_extensions.dart';
 import '../../../../core/utils/currency_utils.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/entities/booking_entity.dart';
 import '../providers/booking_providers.dart';
 
@@ -22,7 +24,7 @@ class InspectionStatusStrip extends StatelessWidget {
   Widget build(BuildContext context) {
     if (booking.lane != BookingLane.inspection) return const SizedBox.shrink();
 
-    final (text, icon, color) = _stripFor(booking);
+    final (text, icon, color) = _stripFor(booking, context.l10n);
     if (text == null) return const SizedBox.shrink();
 
     return Container(
@@ -49,37 +51,40 @@ class InspectionStatusStrip extends StatelessWidget {
     );
   }
 
-  (String?, IconData, Color) _stripFor(BookingEntity b) {
+  (String?, IconData, Color) _stripFor(BookingEntity b, AppLocalizations l10n) {
     if (b.status == BookingStatus.completed) {
       if (b.inspectionDecisionStatus == InspectionDecisionStatus.closedAfterInspection) {
         final fee = b.inspectionFeeSnapshot;
         return (
-          'Closed after inspection — client pays inspection fee only'
-              '${fee != null ? ': ${formatPkr(fee)}' : '.'}',
+          // The fee is a formatted PKR amount, so it stays a placeholder rather
+          // than being concatenated onto a translated sentence.
+          fee != null
+              ? l10n.inspStripClosedFeeOnlyWithAmount(formatPkr(fee))
+              : l10n.inspStripClosedFeeOnly,
           Icons.info_outline_rounded,
           const Color(0xFF2563EB),
         );
       }
-      return ('Repair completed — inspection fee waived.', Icons.check_circle_outline_rounded, _kSuccess);
+      return (l10n.inspStripRepairCompletedFeeWaived, Icons.check_circle_outline_rounded, _kSuccess);
     }
     if (b.inspectionDecisionStatus == InspectionDecisionStatus.acceptedRepair) {
-      return ('Quote accepted — inspection fee waived. Repair in progress.', Icons.build_circle_outlined, _kPrimary);
+      return (l10n.inspStripQuoteAcceptedFeeWaived, Icons.build_circle_outlined, _kPrimary);
     }
     if (b.status == BookingStatus.inProgress) {
       if (b.inspectionReportSubmitted) {
         return (
-          'Inspection report submitted — review quote to continue repair or close after inspection.',
+          l10n.inspStripReportSubmitted,
           Icons.assignment_turned_in_outlined,
           _kPrimary,
         );
       }
-      return ('Inspection in progress', Icons.search_rounded, _kPrimary);
+      return (l10n.trackStepInspectionInProgress, Icons.search_rounded, _kPrimary);
     }
     if (b.assignedWorker != null) {
-      return ('Ustaad hired', Icons.handshake_outlined, _kPrimary);
+      return (l10n.inspStripUstaadHired, Icons.handshake_outlined, _kPrimary);
     }
     if (b.status == BookingStatus.pending) {
-      return ('Inspection booked — choose an Ustaad', Icons.event_available_outlined, _kGray);
+      return (l10n.inspStripBookedChooseUstaad, Icons.event_available_outlined, _kGray);
     }
     return (null, Icons.info_outline_rounded, _kGray);
   }
@@ -92,21 +97,22 @@ class InspectionStatusStrip extends StatelessWidget {
 class ViewInspectionReportButton extends ConsumerWidget {
   final String bookingId;
   final String route;
-  /// Defaults to the English label used across the inspection lane. Pass the
-  /// Roman Urdu 'Inspection Report Dekhein' for the post-inspection bidding
-  /// context, where the report is optional extra context for bidders.
-  final String label;
+  /// Overrides the shared "View Inspection Report" wording. Left null
+  /// everywhere today — it cannot default to a translation because defaults
+  /// must be const, so the fallback is resolved in [build] instead.
+  final String? label;
 
   const ViewInspectionReportButton({
     super.key,
     required this.bookingId,
     required this.route,
-    this.label = 'View Inspection Report',
+    this.label,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final reportAsync = ref.watch(inspectionReportProvider(bookingId));
+    final buttonLabel = label ?? context.l10n.discoveryViewInspectionReport;
 
     return reportAsync.when(
       data: (_) => Padding(
@@ -116,7 +122,7 @@ class ViewInspectionReportButton extends ConsumerWidget {
           child: OutlinedButton.icon(
             onPressed: () => context.push(route),
             icon: const Icon(Icons.description_outlined, size: 17),
-            label: Text(label),
+            label: Text(buttonLabel),
             style: OutlinedButton.styleFrom(
               foregroundColor: _kPrimary,
               side: const BorderSide(color: _kPrimary),

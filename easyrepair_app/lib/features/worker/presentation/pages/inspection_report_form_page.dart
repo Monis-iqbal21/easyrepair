@@ -292,7 +292,9 @@ class _InspectionReportFormPageState
         .watch(workerJobDetailProvider(widget.bookingId))
         .valueOrNull
         ?.serviceCategory;
-    final issueHint = inspectionIssueHintFor(context.l10n, categoryName);
+    // One lookup for every example-bearing field, so the issue, the
+    // recommended repair and each part line always describe the same trade.
+    final hints = inspectionFieldHintsFor(context.l10n, categoryName);
 
     return Scaffold(
       backgroundColor: _kBg,
@@ -325,7 +327,7 @@ class _InspectionReportFormPageState
                           ),
                           _TextInput(
                             controller: _issueCtrl,
-                            hint: issueHint,
+                            hint: hints.issue,
                             onChanged: (_) => setState(() {}),
                           ),
                           const SizedBox(height: 16),
@@ -336,7 +338,7 @@ class _InspectionReportFormPageState
                           ),
                           _TextInput(
                             controller: _repairCtrl,
-                            hint: context.l10n.inspFormWhatWorkNeeded,
+                            hint: hints.repair,
                             maxLines: 3,
                             onChanged: (_) => setState(() {}),
                           ),
@@ -406,6 +408,7 @@ class _InspectionReportFormPageState
                             ..._parts.asMap().entries.map(
                               (e) => _PartCard(
                                 part: e.value,
+                                nameHint: hints.partName,
                                 onChanged: (p) =>
                                     setState(() => _parts[e.key] = p),
                                 onRemove: () =>
@@ -813,11 +816,16 @@ class _VoiceNoteSection extends StatelessWidget {
 
 class _PartCard extends StatefulWidget {
   final InspectionReportPartDraft part;
+
+  /// Trade-specific example for the part name, resolved once by the form from
+  /// the booking's category — a Painter must never be shown "Gas refill".
+  final String nameHint;
   final ValueChanged<InspectionReportPartDraft> onChanged;
   final VoidCallback onRemove;
 
   const _PartCard({
     required this.part,
+    required this.nameHint,
     required this.onChanged,
     required this.onRemove,
   });
@@ -876,7 +884,7 @@ class _PartCardState extends State<_PartCard> {
           _FieldLabel(context.l10n.inspFormPartName),
           _TextInput(
             controller: _name,
-            hint: context.l10n.inspFormPartNameHint,
+            hint: widget.nameHint,
             onChanged: (_) => _emit(),
           ),
           const SizedBox(height: 10),

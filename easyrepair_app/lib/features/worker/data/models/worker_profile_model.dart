@@ -26,6 +26,9 @@ class WorkerProfileModel {
   final String? fullLegalName;
   final String? residentialAddress;
   final String? cnicNumber;
+  final String? fatherName;
+  final String? dateOfBirth;
+  final String? emergencyContact;
   final String? cnicFrontUrl;
   final String? cnicBackUrl;
   final String? liveSelfieUrl;
@@ -62,6 +65,9 @@ class WorkerProfileModel {
     this.fullLegalName,
     this.residentialAddress,
     this.cnicNumber,
+    this.fatherName,
+    this.dateOfBirth,
+    this.emergencyContact,
     this.cnicFrontUrl,
     this.cnicBackUrl,
     this.liveSelfieUrl,
@@ -105,6 +111,9 @@ class WorkerProfileModel {
       fullLegalName: json['fullLegalName'] as String?,
       residentialAddress: json['residentialAddress'] as String?,
       cnicNumber: json['cnicNumber'] as String?,
+      fatherName: json['fatherName'] as String?,
+      dateOfBirth: json['dateOfBirth'] as String?,
+      emergencyContact: json['emergencyContact'] as String?,
       cnicFrontUrl: json['cnicFrontUrl'] as String?,
       cnicBackUrl: json['cnicBackUrl'] as String?,
       liveSelfieUrl: json['liveSelfieUrl'] as String?,
@@ -152,6 +161,9 @@ class WorkerProfileModel {
       fullLegalName: fullLegalName,
       residentialAddress: residentialAddress,
       cnicNumber: cnicNumber,
+      fatherName: fatherName,
+      dateOfBirth: dateOfBirth,
+      emergencyContact: emergencyContact,
       cnicFrontUrl: cnicFrontUrl,
       cnicBackUrl: cnicBackUrl,
       liveSelfieUrl: liveSelfieUrl,

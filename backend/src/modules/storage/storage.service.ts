@@ -4,6 +4,7 @@ import {
   S3Client,
   PutObjectCommand,
   DeleteObjectCommand,
+  GetObjectCommand,
 } from '@aws-sdk/client-s3';
 import { randomUUID } from 'crypto';
 import { extname } from 'path';
@@ -45,7 +46,12 @@ export class StorageService {
     mimeType: string,
     folder = 'booking-attachments',
   ): Promise<string> {
-    const { url } = await this.uploadFile(buffer, originalName, mimeType, folder);
+    const { url } = await this.uploadFile(
+      buffer,
+      originalName,
+      mimeType,
+      folder,
+    );
     return url;
   }
 
@@ -118,6 +124,48 @@ export class StorageService {
       'audio/webm': '.webm',
     };
     return mimeMap[mimeType] ?? '';
+  }
+
+  /**
+   * Read a private object back into memory by its storage key.
+   *
+   * Exists so sensitive documents (accepted agreement PDFs) can be streamed
+   * through an authenticated endpoint that checks ownership, instead of
+   * handing out the bucket URL. The caller is responsible for authorization —
+   * this method deliberately does no access control of its own.
+   *
+   * Returns null when the object is missing, so a deleted/never-uploaded file
+   * surfaces as a 404 rather than a 500.
+   */
+  async getObject(
+    key: string,
+  ): Promise<{ body: Buffer; contentType: string } | null> {
+    try {
+      const result = await this.s3.send(
+        new GetObjectCommand({ Bucket: this.bucket, Key: key }),
+      );
+      if (!result.Body) return null;
+      const bytes = await result.Body.transformToByteArray();
+      return {
+        body: Buffer.from(bytes),
+        contentType: result.ContentType ?? 'application/octet-stream',
+      };
+    } catch (err) {
+      this.logger.warn(`[StorageService] failed to read ${key}: ${err}`);
+      return null;
+    }
+  }
+
+  /**
+   * The storage key behind a stored public URL.
+   *
+   * Legacy acceptance rows were written before acceptancePdfStorageKey
+   * existed; this lets the secure download endpoint still serve them without
+   * ever handing the URL itself to the client.
+   */
+  keyFromUrl(url: string): string | null {
+    const prefix = `${this.publicUrl}/`;
+    return url.startsWith(prefix) ? url.slice(prefix.length) : null;
   }
 
   /**

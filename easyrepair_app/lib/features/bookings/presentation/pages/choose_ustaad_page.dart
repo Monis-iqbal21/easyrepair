@@ -645,15 +645,15 @@ class _WorkerCard extends StatelessWidget {
                         ),
                         _statChip(
                           Icons.task_alt_rounded,
-                          '${worker.completedJobs} jobs',
+                          context.l10n.bidJobCount(worker.completedJobs),
                         ),
                         _statChip(
                           Icons.reviews_rounded,
-                          '${worker.reviewsCount} reviews',
+                          context.l10n.reviewsCount(worker.reviewsCount),
                         ),
                         _statChip(
                           Icons.cancel_outlined,
-                          '${worker.cancellationRate}% cancel',
+                          context.l10n.chooseChipCancelRate(worker.cancellationRate),
                         ),
                         _statChip(
                           Icons.location_on_rounded,
@@ -889,11 +889,11 @@ class _WorkerProfileModalContent extends StatelessWidget {
                   children: [
                     _statBlock(
                       worker.rating > 0 ? worker.rating.toStringAsFixed(1) : '—',
-                      'Rating',
+                      context.l10n.workerRating,
                     ),
-                    _statBlock('${worker.completedJobs}', 'Jobs done'),
-                    _statBlock('${worker.reviewsCount}', 'Reviews'),
-                    _statBlock('${worker.cancellationRate}%', 'Cancel rate'),
+                    _statBlock('${worker.completedJobs}', context.l10n.workerJobsDone),
+                    _statBlock('${worker.reviewsCount}', context.l10n.workerReviews),
+                    _statBlock('${worker.cancellationRate}%', context.l10n.workerCancelRate),
                   ],
                 ),
                 if (worker.skills.isNotEmpty) ...[

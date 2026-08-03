@@ -329,6 +329,9 @@ export class BidsRepository {
     return this.prisma.booking.findMany({
       where: {
         status: BookingStatus.PENDING,
+        // Already hired — must never surface, even in the window before the
+        // status catches up.
+        workerProfileId: null,
         categoryId: { in: categoryIds },
         // A worker who cancelled (or was otherwise excluded from) a STANDARD
         // booking must never see it again in their own feed, even after relist.

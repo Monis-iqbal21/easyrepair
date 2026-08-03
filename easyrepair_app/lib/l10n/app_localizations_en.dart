@@ -2224,7 +2224,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get inspFormStartRecording => 'Start recording';
 
   @override
-  String get inspFormPartNameHint => 'e.g. Gas refill';
+  String get inspFormPartNameHint => 'e.g. the part or material used';
 
   @override
   String get inspFormWarrantyHint => 'e.g. 7 days';
@@ -2554,24 +2554,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'I confirm my legal name matches my CNIC.';
 
   @override
-  String get workerAcceptGeneralAgreement =>
-      'I accept the General Ustaad Agreement.';
-
-  @override
-  String workerAcceptGeneralAgreementVersioned(String version) {
-    return 'I accept the General Ustaad Agreement (v$version).';
-  }
-
-  @override
-  String get workerAcceptTradeAgreement =>
-      'I accept the Trade-specific Agreement.';
-
-  @override
-  String workerAcceptTradeAgreementVersioned(String version) {
-    return 'I accept the Trade-specific Agreement (v$version).';
-  }
-
-  @override
   String get workerViewAgreement => 'View Agreement';
 
   @override
@@ -2581,19 +2563,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workerSubmitForApproval => 'Submit for Approval';
 
   @override
-  String get workerAgreementFallbackTitle => 'Agreement';
-
-  @override
   String workerAgreementVersion(String version) {
     return 'Version $version';
   }
-
-  @override
-  String get workerAgreementSelectSkillFirst =>
-      'Select your main skill first to load this agreement.';
-
-  @override
-  String get workerCloseDialog => 'Close';
 
   @override
   String get workerOnboardingSubmitted => 'Submitted for Review';
@@ -2622,7 +2594,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workerProfileApproval => 'Profile Approval';
 
   @override
-  String get inspHintFallback => 'e.g. Gas leak — a refill is needed';
+  String get inspHintFallback => 'e.g. describe what you found';
 
   @override
   String get bidAmountRequired => 'Please enter a bid amount.';
@@ -2791,4 +2763,321 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get workerBidJobFallbackTitle => 'Job';
+
+  @override
+  String get navHome => 'Home';
+
+  @override
+  String get navBookings => 'Bookings';
+
+  @override
+  String get navChats => 'Chats';
+
+  @override
+  String get inspectionRowIssueFound => 'Issue found';
+
+  @override
+  String get inspectionRowNotes => 'Notes';
+
+  @override
+  String get inspectionBadgeAwaitingDecision =>
+      'Report submitted — awaiting decision';
+
+  @override
+  String get inspectionBadgeQuoteAccepted =>
+      'Quote accepted — repair in progress';
+
+  @override
+  String get inspectionBadgeFindingAnother =>
+      'Finding another Ustaad — open for bidding';
+
+  @override
+  String inspStripClosedFeeOnlyWithAmount(String fee) {
+    return 'Closed after inspection — client pays inspection fee only: $fee';
+  }
+
+  @override
+  String get inspStripClosedFeeOnly =>
+      'Closed after inspection — client pays inspection fee only.';
+
+  @override
+  String get inspStripRepairCompletedFeeWaived =>
+      'Repair completed — inspection fee waived.';
+
+  @override
+  String get inspStripQuoteAcceptedFeeWaived =>
+      'Quote accepted — inspection fee waived. Repair in progress.';
+
+  @override
+  String get inspStripReportSubmitted =>
+      'Inspection report submitted — review quote to continue repair or close after inspection.';
+
+  @override
+  String get inspStripUstaadHired => 'Ustaad hired';
+
+  @override
+  String get inspStripBookedChooseUstaad =>
+      'Inspection booked — choose an Ustaad';
+
+  @override
+  String chooseChipCancelRate(int rate) {
+    return '$rate% cancel';
+  }
+
+  @override
+  String get locationCurrentFailed => 'Could not get current location.';
+
+  @override
+  String get locationResolveFailed => 'Could not resolve selected location.';
+
+  @override
+  String get locationOutsideKarachi =>
+      'Location is outside the Karachi service area.';
+
+  @override
+  String postJobVideoTooLong(int seconds) {
+    return 'Video must be $seconds seconds or shorter.';
+  }
+
+  @override
+  String get postJobLocationRetrieveFailed =>
+      'Could not retrieve location. Please try again.';
+
+  @override
+  String get postJobSelectOption => 'Select an option to continue.';
+
+  @override
+  String get postJobDescribeIssue => 'Please describe what needs fixing.';
+
+  @override
+  String get postJobSelectStandardService =>
+      'Please select at least one standard service.';
+
+  @override
+  String get postJobSelectArrivalWindow => 'Please select an arrival window.';
+
+  @override
+  String get postJobSelectUrgencyWindow => 'Please select an urgency window.';
+
+  @override
+  String get postJobEnterAddress => 'Enter your address.';
+
+  @override
+  String get postJobAddAddressToContinue =>
+      'Add your service address to continue.';
+
+  @override
+  String get postJobNearbyNotifiedNow =>
+      'Nearby Ustaads are notified right away.';
+
+  @override
+  String get postJobInspectionNotAvailable =>
+      'Inspection is not available for this service.';
+
+  @override
+  String get postJobInspectionHeroStep1 =>
+      'The Ustaad comes and checks it himself';
+
+  @override
+  String get postJobInspectionHeroStep2 =>
+      'The rate is agreed before any work starts.';
+
+  @override
+  String get postJobInspectionHeroStep3 =>
+      'Go ahead if you like the quote, otherwise just pay the inspection fee.';
+
+  @override
+  String get postJobStandardTotalFinal =>
+      'Total amount is final — no bidding. You choose your Ustaad in the next step.';
+
+  @override
+  String get postJobHowInspectionStep1 => 'The inspection fee is fixed.';
+
+  @override
+  String get postJobHowInspectionStep2 =>
+      'Ustaad visits, finds the problem, and gives you a fixed repair quote in the app.';
+
+  @override
+  String get postJobHowInspectionStep3 =>
+      'Accept his quote and continue, or get bids from other Ustaads — your choice.';
+
+  @override
+  String get cancelReasonNoLongerNeeded => 'I no longer need the service';
+
+  @override
+  String get cancelReasonBookedByMistake => 'I booked it by mistake';
+
+  @override
+  String get cancelReasonProblemSolved => 'The problem sorted itself out';
+
+  @override
+  String get cancelReasonTimingNotSuitable =>
+      'The time or date does not suit me';
+
+  @override
+  String get cancelReasonPriceNotSuitable =>
+      'The price or budget does not suit me';
+
+  @override
+  String get cancelReasonCannotReachUstaad => 'I cannot reach the Ustaad';
+
+  @override
+  String get cancelReasonUstaadRunningLate => 'The Ustaad is running very late';
+
+  @override
+  String get cancelReasonOther => 'Another reason';
+
+  @override
+  String get bookingAgreedPrice => 'Agreed Price';
+
+  @override
+  String get inspRepairHintElectrical =>
+      'e.g. replace the MCB and redo the socket wiring';
+
+  @override
+  String get inspRepairHintPlumbing =>
+      'e.g. replace the leaking pipe and fit a new valve';
+
+  @override
+  String get inspRepairHintAc =>
+      'e.g. refill the gas and replace the capacitor';
+
+  @override
+  String get inspRepairHintCarpentry =>
+      'e.g. replace the hinges and straighten the door frame';
+
+  @override
+  String get inspRepairHintPainting =>
+      'e.g. apply putty and primer, then two coats of emulsion';
+
+  @override
+  String get inspRepairHintFallback => 'e.g. what work is needed to fix it';
+
+  @override
+  String get inspPartHintElectrical => 'e.g. MCB, switch, socket';
+
+  @override
+  String get inspPartHintPlumbing => 'e.g. pipe, valve, tap';
+
+  @override
+  String get inspPartHintAc => 'e.g. gas refill, capacitor, compressor';
+
+  @override
+  String get inspPartHintCarpentry => 'e.g. hinges, plywood, door frame';
+
+  @override
+  String get inspPartHintPainting => 'e.g. primer, putty, emulsion';
+
+  @override
+  String get inspHintPainting =>
+      'e.g. paint is peeling, damp patch on the wall...';
+
+  @override
+  String get agreementViewerTitle => 'Agreement';
+
+  @override
+  String get agreementLoadFailed =>
+      'Could not load the agreement. Please try again.';
+
+  @override
+  String get agreementUnavailableForTrade =>
+      'No approved agreement is available for your selected trade yet. Please contact HandyGo support.';
+
+  @override
+  String agreementLanguageChip(String language) {
+    return 'Agreement Language: $language';
+  }
+
+  @override
+  String agreementTradeChip(String trade) {
+    return 'Trade: $trade';
+  }
+
+  @override
+  String get agreementLanguageNotice =>
+      'This approved legal agreement is currently available in Roman Urdu.';
+
+  @override
+  String get agreementLanguageRomanUrdu => 'Roman Urdu';
+
+  @override
+  String get agreementLanguageEnglish => 'English';
+
+  @override
+  String get agreementLanguageUrdu => 'Urdu';
+
+  @override
+  String get agreementAcceptCheckbox =>
+      'I have read and accept this agreement.';
+
+  @override
+  String get agreementViewBeforeAccepting =>
+      'Open and read the agreement before accepting it.';
+
+  @override
+  String get agreementAcceptRequired => 'This agreement must be accepted.';
+
+  @override
+  String get agreementTradeChangedReopen =>
+      'Your main trade changed. Open and accept the trade agreement again.';
+
+  @override
+  String get agreementsLoadFailed => 'Agreements could not be loaded.';
+
+  @override
+  String get agreementsAllThreeRequired =>
+      'Open and accept all three agreements before submitting.';
+
+  @override
+  String get workerFatherName => 'Father\'s Name';
+
+  @override
+  String get workerFatherNameRequired => 'Father\'s name is required.';
+
+  @override
+  String get workerDateOfBirth => 'Date of Birth';
+
+  @override
+  String get workerDateOfBirthHint => 'Select your date of birth';
+
+  @override
+  String get workerDateOfBirthRequired => 'Date of birth is required.';
+
+  @override
+  String get workerEmergencyContact => 'Emergency Contact (optional)';
+
+  @override
+  String get workerEmergencyContactHint => 'Name and phone number';
+
+  @override
+  String get workerAcceptedAgreementsTitle => 'My Agreements';
+
+  @override
+  String get workerAcceptedAgreementsEmpty =>
+      'You have not accepted any agreements yet.';
+
+  @override
+  String agreementAcceptedOn(String date) {
+    return 'Accepted on $date';
+  }
+
+  @override
+  String agreementAcceptanceId(String id) {
+    return 'Acceptance ID: $id';
+  }
+
+  @override
+  String get agreementDownload => 'Download';
+
+  @override
+  String get agreementDownloadInProgress => 'Downloading agreement...';
+
+  @override
+  String agreementDownloadSaved(String path) {
+    return 'Agreement saved to $path';
+  }
+
+  @override
+  String get agreementDownloadFailed =>
+      'Could not download the agreement. Please try again.';
 }

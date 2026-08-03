@@ -7,6 +7,7 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
+  ACTIVE_BOOKING_STATUSES,
   computeCancellationRate,
   computeCompletedJobs,
 } from '../../common/utils/worker-stats.util';
@@ -102,6 +103,9 @@ const WORKER_JOB_INCLUDE = {
       },
     },
   },
+  // Required by deriveInspectionFeePaid so the inspecting Ustaad sees the fee
+  // status of the ORIGINAL inspection work unit, not of this repair booking.
+  sourceInspectionBooking: { select: { status: true } },
 } satisfies Prisma.BookingInclude;
 
 export type WorkerJobWithRelations = Prisma.BookingGetPayload<{
@@ -406,14 +410,7 @@ export class WorkersRepository {
       this.prisma.booking.count({
         where: {
           workerProfileId,
-          status: {
-            in: [
-              BookingStatus.ACCEPTED,
-              BookingStatus.EN_ROUTE,
-              BookingStatus.ARRIVED,
-              BookingStatus.IN_PROGRESS,
-            ],
-          },
+          status: { in: [...ACTIVE_BOOKING_STATUSES] },
         },
       }),
       // Today's completed bookings CURRENTLY assigned to this worker, with
@@ -688,18 +685,19 @@ export class WorkersRepository {
       }));
   }
 
-  /** Find the single ongoing job for this worker (if any). */
+  /**
+   * Find the single ongoing job for this worker (if any) — what the Home
+   * dashboard's "Active Job" card shows.
+   *
+   * Uses the shared active-status set so this can never disagree with the
+   * `activeJobs` stat or the My Jobs list again. Lane-agnostic: standard,
+   * inspection, bid and rehired assignments all surface here.
+   */
   async findOngoingJob(workerProfileId: string) {
     return this.prisma.booking.findFirst({
       where: {
         workerProfileId,
-        status: {
-          in: [
-            BookingStatus.ACCEPTED,
-            BookingStatus.EN_ROUTE,
-            BookingStatus.IN_PROGRESS,
-          ],
-        },
+        status: { in: [...ACTIVE_BOOKING_STATUSES] },
       },
       orderBy: { updatedAt: 'desc' },
       select: {

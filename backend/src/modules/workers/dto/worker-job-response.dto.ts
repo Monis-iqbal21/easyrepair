@@ -125,4 +125,11 @@ export class WorkerJobResponseDto {
    * inspectors) inspection report exists for this job.
    */
   sourceInspectionBookingId: string | null;
+  /**
+   * Whether the client has paid the inspection fee for the work unit this
+   * Ustaad inspected — derived ONLY from the original inspection booking
+   * reaching COMPLETED (see inspection-fee.util.ts). `null` when no
+   * inspection is involved.
+   */
+  inspectionFeePaid: boolean | null;
 }

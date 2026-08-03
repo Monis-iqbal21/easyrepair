@@ -357,7 +357,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
         file = await _picker.pickVideo(source: ImageSource.gallery);
         if (file != null && !await _checkVideoDuration(file)) {
           if (mounted) {
-            _showError('Video must be $_kMaxVideoSecs seconds or shorter.');
+            _showError(context.l10n.postJobVideoTooLong(_kMaxVideoSecs));
           }
           return;
         }
@@ -570,7 +570,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
       }
       if (permission == LocationPermission.denied ||
           permission == LocationPermission.deniedForever) {
-        if (mounted) _showError('Location permission denied.');
+        if (mounted) _showError(context.l10n.workerLocationPermissionDenied);
         return;
       }
       final pos = await Geolocator.getCurrentPosition(
@@ -614,7 +614,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
         });
       }
     } catch (_) {
-      if (mounted) _showError('Could not retrieve location. Please try again.');
+      if (mounted) _showError(context.l10n.postJobLocationRetrieveFailed);
     } finally {
       if (mounted) setState(() => _locationLoading = false);
     }
@@ -669,7 +669,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
       return;
     }
     if (!status.isGranted) {
-      if (mounted) _showError('Microphone permission denied.');
+      if (mounted) _showError(context.l10n.inspFormMicDenied);
       return;
     }
     final dir = await getTemporaryDirectory();
@@ -773,46 +773,46 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     if (_isSubmitting) return;
 
     if (_selectedService == null) {
-      _showError('Please select a service.');
+      _showError(context.l10n.postJobSelectService);
       return;
     }
 
     if (_laneChoice == null) {
-      _showError('Select an option to continue.');
+      _showError(context.l10n.postJobSelectOption);
       return;
     }
 
     if (_laneChoice == BookingLane.bidding &&
         _titleCtrl.text.trim().length <= 3) {
-      _showError('Please describe what needs fixing.');
+      _showError(context.l10n.postJobDescribeIssue);
       return;
     }
 
     if (_laneChoice == BookingLane.standard &&
         _selectedStandardServices.isEmpty) {
-      _showError('Please select at least one standard service.');
+      _showError(context.l10n.postJobSelectStandardService);
       return;
     }
 
     if (!_isUrgent) {
       if (_selectedDate == null) {
-        _showError('Please select a date.');
+        _showError(context.l10n.postJobSelectDate);
         return;
       }
       if (_selectedTimeSlot == null) {
-        _showError('Please select an arrival window.');
+        _showError(context.l10n.postJobSelectArrivalWindow);
         return;
       }
     } else {
       if (_urgentOption == null) {
-        _showError('Please select an urgency window.');
+        _showError(context.l10n.postJobSelectUrgencyWindow);
         return;
       }
     }
 
     final address = _addressCtrl.text.trim();
     if (address.isEmpty) {
-      _showError('Enter your address.');
+      _showError(context.l10n.postJobEnterAddress);
       return;
     }
 
@@ -1515,7 +1515,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
           );
         }),
         const SizedBox(height: 4),
-        _infoNote('Nearby Ustaads are notified right away.', color: _kRed),
+        _infoNote(context.l10n.postJobNearbyNotifiedNow, color: _kRed),
       ],
     );
   }
@@ -2306,7 +2306,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
   bool _validateStep1() {
     final address = _addressCtrl.text.trim();
     if (address.isEmpty) {
-      _showError('Add your service address to continue.');
+      _showError(context.l10n.postJobAddAddressToContinue);
       return false;
     }
     return true;
@@ -2315,17 +2315,17 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
   // Step 2 · Details
   bool _validateStep2() {
     if (_laneChoice == null) {
-      _showError('Select an option to continue.');
+      _showError(context.l10n.postJobSelectOption);
       return false;
     }
     if (_laneChoice == BookingLane.bidding &&
         _titleCtrl.text.trim().length <= 3) {
-      _showError('Please describe what needs fixing.');
+      _showError(context.l10n.postJobDescribeIssue);
       return false;
     }
     if (_laneChoice == BookingLane.standard &&
         _selectedStandardServices.isEmpty) {
-      _showError('Please select at least one standard service.');
+      _showError(context.l10n.postJobSelectStandardService);
       return false;
     }
     return true;
@@ -2669,7 +2669,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
               _selectedStandardServices.clear();
             })
           : () =>
-                _showError('Is service ke liye inspection available nahi hai.'),
+                _showError(context.l10n.postJobInspectionNotAvailable),
       child: Opacity(
         opacity: enabled ? 1 : 0.45,
         child: AnimatedContainer(
@@ -2787,14 +2787,11 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                   ),
                 ),
                 const SizedBox(height: 13),
-                _heroStep(1, 'Ustaad aa kar khud check karega'),
+                _heroStep(1, context.l10n.postJobInspectionHeroStep1),
                 const SizedBox(height: 9),
-                _heroStep(2, 'Kaam shuru karne se pehle rate clear hoga.'),
+                _heroStep(2, context.l10n.postJobInspectionHeroStep2),
                 const SizedBox(height: 9),
-                _heroStep(
-                  3,
-                  'Pasand aaye to kaam karwa lein, warna sirf inspection fee dein.',
-                ),
+                _heroStep(3, context.l10n.postJobInspectionHeroStep3),
                 const SizedBox(height: 12),
                 Container(
                   width: double.infinity,
@@ -3310,8 +3307,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                   ],
                   const SizedBox(height: 12),
                   _infoNote(
-                    'Total amount is final — no bidding. Aap next step par '
-                    'Ustaad choose karenge.',
+                    context.l10n.postJobStandardTotalFinal,
                     color: _kGreen,
                   ),
                 ],
@@ -3454,12 +3450,10 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
 
   // ── Mode B: "How inspection works" info card ───────────────────────────────
   Widget _buildInspectionInfoCard() {
-    const steps = [
-      'Inspection fee fixed hai.',
-      'Ustaad visits, finds the problem, and gives you a fixed repair quote '
-          'in the app.',
-      'Accept his quote and continue, or get bids from other Ustaads — your '
-          'choice.',
+    final steps = [
+      context.l10n.postJobHowInspectionStep1,
+      context.l10n.postJobHowInspectionStep2,
+      context.l10n.postJobHowInspectionStep3,
     ];
     return _sectionCard(
       title: context.l10n.postJobHowInspectionWorks,

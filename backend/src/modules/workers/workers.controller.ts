@@ -15,15 +15,19 @@ import {
   BadRequestException,
   UploadedFile,
   UseInterceptors,
+  Res,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { Response } from 'express';
 import { BookingStatus } from '@prisma/client';
 import { WorkersService } from './workers.service';
 import { BidsService } from '../bids/bids.service';
+import { sendPrivatePdf } from '../../common/utils/private-pdf-response.util';
 import { UpdateAvailabilityDto } from './dto/update-availability.dto';
 import { UpdateLocationDto } from './dto/update-location.dto';
 import { UpdateSkillsDto } from './dto/update-skills.dto';
 import { UpdateProfileCompletionDto } from './dto/update-profile-completion.dto';
+import { SubmitProfileCompletionDto } from './dto/submit-profile-completion.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -168,18 +172,30 @@ export class WorkersController {
   }
 
   /**
-   * GET /workers/profile-completion/agreement-templates
-   * Exact text/version of the agreements the worker is about to accept.
+   * GET /workers/profile-completion/agreement-templates?locale=en|ur|ur_Latn
+   *
+   * All THREE documents the Ustaad must read, with their exact text, version
+   * and source hash. `locale` is the language the app is currently showing —
+   * the legal body comes back in the language it genuinely exists in, and
+   * `legalLanguageNoticeRequired` tells the app to say so. Falls back to the
+   * Accept-Language header, then Roman Urdu.
    */
   @Get('profile-completion/agreement-templates')
-  getAgreementTemplates(@CurrentUser() user: { id: string }) {
-    return this.workersService.getAgreementTemplates(user.id);
+  getAgreementTemplates(
+    @CurrentUser() user: { id: string },
+    @Query('locale') locale?: string,
+    @Headers('accept-language') acceptLanguage?: string,
+  ) {
+    return this.workersService.getAgreementTemplates(
+      user.id,
+      locale ?? acceptLanguage ?? 'ur_Latn',
+    );
   }
 
   /**
    * GET /workers/profile-completion/agreements
-   * Owner-only: this worker's own permanent agreement acceptance records
-   * (with downloadable PDF URLs).
+   * Owner-only: this worker's own permanent agreement acceptance records.
+   * Metadata only — no storage URL is ever returned.
    */
   @Get('profile-completion/agreements')
   getMyAgreementAcceptances(@CurrentUser() user: { id: string }) {
@@ -187,15 +203,39 @@ export class WorkersController {
   }
 
   /**
+   * GET /workers/profile-completion/agreements/:acceptanceId/download
+   *
+   * Streams the accepted PDF through this authenticated endpoint after an
+   * ownership check. Another worker's acceptance id is rejected, the bucket
+   * URL is never exposed, and the filename carries only the public acceptance
+   * id — never the CNIC or the Ustaad's name.
+   */
+  @Get('profile-completion/agreements/:acceptanceId/download')
+  async downloadMyAgreement(
+    @CurrentUser() user: { id: string },
+    @Param('acceptanceId') acceptanceId: string,
+    @Res() res: Response,
+  ) {
+    const pdf = await this.workersService.downloadMyAgreement(
+      user.id,
+      acceptanceId,
+    );
+    sendPrivatePdf(res, pdf);
+  }
+
+  /**
    * POST /workers/profile-completion/submit
-   * Validates every required field is present, records permanent agreement
-   * acceptances, then moves the profile to SUBMITTED_FOR_REVIEW. Rejects with
-   * a list of missing fields otherwise.
+   *
+   * Body: { submissionAttemptId, agreements: [3 evidence objects] }.
+   * Validates every required profile field, seals the three immutable
+   * acceptance records and moves the profile to SUBMITTED_FOR_REVIEW — all in
+   * one transaction. Identity, hashes and timestamps are resolved server-side.
    */
   @Post('profile-completion/submit')
   @HttpCode(HttpStatus.OK)
   submitProfileForReview(
     @CurrentUser() user: { id: string; phone: string },
+    @Body() dto: SubmitProfileCompletionDto,
     @Ip() ip: string,
     @Headers('user-agent') userAgent?: string,
   ) {
@@ -204,6 +244,7 @@ export class WorkersController {
       user.phone,
       ip ?? null,
       userAgent ?? null,
+      dto,
     );
   }
 

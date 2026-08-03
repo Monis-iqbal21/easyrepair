@@ -2,6 +2,25 @@ import { BookingStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 
 /**
+ * A booking currently occupying a worker: assigned but not yet finished.
+ *
+ * Every "is this worker busy / what are they working on" query must use this
+ * exact set. They used to be written out by hand at each call site, and
+ * `findOngoingJob` was missing ARRIVED — so an Ustaad who had tapped
+ * "Arrived" vanished from the Home dashboard while still being counted in
+ * `activeJobs` and still listed under My Jobs.
+ *
+ * Lane-agnostic on purpose: standard, inspection, bid and rehired jobs are
+ * all "active" by the same rule.
+ */
+export const ACTIVE_BOOKING_STATUSES = [
+  BookingStatus.ACCEPTED,
+  BookingStatus.EN_ROUTE,
+  BookingStatus.ARRIVED,
+  BookingStatus.IN_PROGRESS,
+] as const;
+
+/**
  * Single source of truth for "cancellationRate", replacing the three
  * independent implementations that previously existed in
  * workers.repository.ts (getJobStats), bookings.repository.ts

@@ -2170,7 +2170,7 @@ class AppLocalizationsUr extends AppLocalizations {
   String get inspFormStartRecording => 'ریکارڈنگ شروع کریں';
 
   @override
-  String get inspFormPartNameHint => 'مثلاً گیس ری فل';
+  String get inspFormPartNameHint => 'مثلاً استعمال ہونے والا پرزہ یا سامان';
 
   @override
   String get inspFormWarrantyHint => 'مثلاً 7 دن';
@@ -2491,24 +2491,6 @@ class AppLocalizationsUr extends AppLocalizations {
       'میں تصدیق کرتا ہوں کہ میرا قانونی نام میرے شناختی کارڈ کے مطابق ہے۔';
 
   @override
-  String get workerAcceptGeneralAgreement =>
-      'میں جنرل استاد معاہدہ قبول کرتا ہوں۔';
-
-  @override
-  String workerAcceptGeneralAgreementVersioned(String version) {
-    return 'میں جنرل استاد معاہدہ (v$version) قبول کرتا ہوں۔';
-  }
-
-  @override
-  String get workerAcceptTradeAgreement =>
-      'میں ہنر سے متعلق معاہدہ قبول کرتا ہوں۔';
-
-  @override
-  String workerAcceptTradeAgreementVersioned(String version) {
-    return 'میں ہنر سے متعلق معاہدہ (v$version) قبول کرتا ہوں۔';
-  }
-
-  @override
   String get workerViewAgreement => 'معاہدہ دیکھیں';
 
   @override
@@ -2518,19 +2500,9 @@ class AppLocalizationsUr extends AppLocalizations {
   String get workerSubmitForApproval => 'منظوری کے لیے بھیجیں';
 
   @override
-  String get workerAgreementFallbackTitle => 'معاہدہ';
-
-  @override
   String workerAgreementVersion(String version) {
     return 'ورژن $version';
   }
-
-  @override
-  String get workerAgreementSelectSkillFirst =>
-      'یہ معاہدہ دیکھنے کے لیے پہلے اپنا بنیادی ہنر منتخب کریں۔';
-
-  @override
-  String get workerCloseDialog => 'بند کریں';
 
   @override
   String get workerOnboardingSubmitted => 'جائزے کے لیے بھیج دی گئی';
@@ -2559,7 +2531,7 @@ class AppLocalizationsUr extends AppLocalizations {
   String get workerProfileApproval => 'پروفائل کی منظوری';
 
   @override
-  String get inspHintFallback => 'مثلاً گیس لیک ہے — ری فل کرانا ہو گا';
+  String get inspHintFallback => 'مثلاً بتائیں آپ کو کیا ملا';
 
   @override
   String get bidAmountRequired => 'براہِ کرم بولی کی رقم لکھیں۔';
@@ -2729,6 +2701,318 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get workerBidJobFallbackTitle => 'کام';
+
+  @override
+  String get navHome => 'ہوم';
+
+  @override
+  String get navBookings => 'بکنگز';
+
+  @override
+  String get navChats => 'چیٹس';
+
+  @override
+  String get inspectionRowIssueFound => 'جو مسئلہ ملا';
+
+  @override
+  String get inspectionRowNotes => 'نوٹس';
+
+  @override
+  String get inspectionBadgeAwaitingDecision =>
+      'رپورٹ جمع ہو گئی — فیصلے کا انتظار';
+
+  @override
+  String get inspectionBadgeQuoteAccepted => 'قیمت منظور — مرمت جاری ہے';
+
+  @override
+  String get inspectionBadgeFindingAnother =>
+      'دوسرا استاد تلاش کیا جا رہا ہے — بولی کے لیے کھلا';
+
+  @override
+  String inspStripClosedFeeOnlyWithAmount(String fee) {
+    return 'معائنے کے بعد بند — کلائنٹ صرف معائنہ فیس دے گا: $fee';
+  }
+
+  @override
+  String get inspStripClosedFeeOnly =>
+      'معائنے کے بعد بند — کلائنٹ صرف معائنہ فیس دے گا۔';
+
+  @override
+  String get inspStripRepairCompletedFeeWaived =>
+      'مرمت مکمل — معائنہ فیس معاف۔';
+
+  @override
+  String get inspStripQuoteAcceptedFeeWaived =>
+      'قیمت منظور — معائنہ فیس معاف۔ مرمت جاری ہے۔';
+
+  @override
+  String get inspStripReportSubmitted =>
+      'معائنہ رپورٹ جمع ہو گئی — مرمت جاری رکھنے کے لیے قیمت دیکھیں یا معائنے کے بعد بند کریں۔';
+
+  @override
+  String get inspStripUstaadHired => 'استاد ہائر ہو گیا';
+
+  @override
+  String get inspStripBookedChooseUstaad =>
+      'معائنہ بک ہو گیا — استاد منتخب کریں';
+
+  @override
+  String chooseChipCancelRate(int rate) {
+    return '$rate% منسوخی';
+  }
+
+  @override
+  String get locationCurrentFailed => 'موجودہ لوکیشن حاصل نہیں ہو سکی۔';
+
+  @override
+  String get locationResolveFailed => 'منتخب لوکیشن معلوم نہیں ہو سکی۔';
+
+  @override
+  String get locationOutsideKarachi =>
+      'یہ لوکیشن کراچی کے سروس ایریا سے باہر ہے۔';
+
+  @override
+  String postJobVideoTooLong(int seconds) {
+    return 'ویڈیو $seconds سیکنڈ یا اس سے کم ہونی چاہیے۔';
+  }
+
+  @override
+  String get postJobLocationRetrieveFailed =>
+      'لوکیشن حاصل نہیں ہو سکی۔ دوبارہ کوشش کریں۔';
+
+  @override
+  String get postJobSelectOption => 'جاری رکھنے کے لیے ایک آپشن منتخب کریں۔';
+
+  @override
+  String get postJobDescribeIssue => 'براہ کرم بتائیں کہ کیا ٹھیک کروانا ہے۔';
+
+  @override
+  String get postJobSelectStandardService =>
+      'کم از کم ایک اسٹینڈرڈ سروس منتخب کریں۔';
+
+  @override
+  String get postJobSelectArrivalWindow => 'براہ کرم آمد کا وقت منتخب کریں۔';
+
+  @override
+  String get postJobSelectUrgencyWindow => 'براہ کرم فوری وقت منتخب کریں۔';
+
+  @override
+  String get postJobEnterAddress => 'اپنا پتہ درج کریں۔';
+
+  @override
+  String get postJobAddAddressToContinue =>
+      'جاری رکھنے کے لیے اپنا سروس پتہ شامل کریں۔';
+
+  @override
+  String get postJobNearbyNotifiedNow =>
+      'قریبی استادوں کو فوراً اطلاع دی جاتی ہے۔';
+
+  @override
+  String get postJobInspectionNotAvailable =>
+      'اس سروس کے لیے معائنہ دستیاب نہیں ہے۔';
+
+  @override
+  String get postJobInspectionHeroStep1 => 'استاد آ کر خود چیک کرے گا';
+
+  @override
+  String get postJobInspectionHeroStep2 =>
+      'کام شروع کرنے سے پہلے ریٹ طے ہو جائے گا۔';
+
+  @override
+  String get postJobInspectionHeroStep3 =>
+      'پسند آئے تو کام کروا لیں، ورنہ صرف معائنہ فیس دیں۔';
+
+  @override
+  String get postJobStandardTotalFinal =>
+      'کل رقم حتمی ہے — کوئی بولی نہیں۔ اگلے مرحلے میں آپ استاد منتخب کریں گے۔';
+
+  @override
+  String get postJobHowInspectionStep1 => 'معائنہ فیس مقرر ہے۔';
+
+  @override
+  String get postJobHowInspectionStep2 =>
+      'استاد آتا ہے، مسئلہ معلوم کرتا ہے، اور ایپ میں مرمت کی مقررہ قیمت دیتا ہے۔';
+
+  @override
+  String get postJobHowInspectionStep3 =>
+      'اس کی قیمت قبول کر کے جاری رکھیں، یا دوسرے استادوں سے بولیاں لیں — آپ کی مرضی۔';
+
+  @override
+  String get cancelReasonNoLongerNeeded => 'اب سروس کی ضرورت نہیں';
+
+  @override
+  String get cancelReasonBookedByMistake => 'بکنگ غلطی سے ہو گئی';
+
+  @override
+  String get cancelReasonProblemSolved => 'مسئلہ خود حل ہو گیا';
+
+  @override
+  String get cancelReasonTimingNotSuitable => 'وقت یا تاریخ مناسب نہیں';
+
+  @override
+  String get cancelReasonPriceNotSuitable => 'قیمت یا بجٹ مناسب نہیں';
+
+  @override
+  String get cancelReasonCannotReachUstaad => 'استاد سے رابطہ نہیں ہو رہا';
+
+  @override
+  String get cancelReasonUstaadRunningLate => 'استاد بہت دیر کر رہا ہے';
+
+  @override
+  String get cancelReasonOther => 'دوسری وجہ';
+
+  @override
+  String get bookingAgreedPrice => 'طے شدہ قیمت';
+
+  @override
+  String get inspRepairHintElectrical =>
+      'مثلاً ایم سی بی بدلیں اور ساکٹ کی وائرنگ دوبارہ کریں';
+
+  @override
+  String get inspRepairHintPlumbing =>
+      'مثلاً لیک ہوتا پائپ بدلیں اور نیا والو لگائیں';
+
+  @override
+  String get inspRepairHintAc => 'مثلاً گیس بھروائیں اور کیپیسیٹر بدلیں';
+
+  @override
+  String get inspRepairHintCarpentry =>
+      'مثلاً قبضے بدلیں اور دروازے کا فریم سیدھا کریں';
+
+  @override
+  String get inspRepairHintPainting =>
+      'مثلاً پٹی اور پرائمر لگائیں، پھر ایملشن کے دو کوٹ';
+
+  @override
+  String get inspRepairHintFallback =>
+      'مثلاً اسے ٹھیک کرنے کے لیے کیا کام درکار ہے';
+
+  @override
+  String get inspPartHintElectrical => 'مثلاً ایم سی بی، سوئچ، ساکٹ';
+
+  @override
+  String get inspPartHintPlumbing => 'مثلاً پائپ، والو، ٹونٹی';
+
+  @override
+  String get inspPartHintAc => 'مثلاً گیس ری فل، کیپیسیٹر، کمپریسر';
+
+  @override
+  String get inspPartHintCarpentry => 'مثلاً قبضے، پلائی ووڈ، دروازے کا فریم';
+
+  @override
+  String get inspPartHintPainting => 'مثلاً پرائمر، پٹی، ایملشن';
+
+  @override
+  String get inspHintPainting => 'مثلاً پینٹ اکھڑ رہا ہے، دیوار پر سیلن...';
+
+  @override
+  String get agreementViewerTitle => 'معاہدہ';
+
+  @override
+  String get agreementLoadFailed =>
+      'معاہدہ لوڈ نہیں ہو سکا۔ براہِ کرم دوبارہ کوشش کریں۔';
+
+  @override
+  String get agreementUnavailableForTrade =>
+      'آپ کے منتخب کام کے لیے ابھی کوئی منظور شدہ معاہدہ دستیاب نہیں۔ براہِ کرم HandyGo سپورٹ سے رابطہ کریں۔';
+
+  @override
+  String agreementLanguageChip(String language) {
+    return 'معاہدے کی زبان: $language';
+  }
+
+  @override
+  String agreementTradeChip(String trade) {
+    return 'کام: $trade';
+  }
+
+  @override
+  String get agreementLanguageNotice =>
+      'یہ منظور شدہ قانونی معاہدہ فی الحال صرف رومن اردو میں دستیاب ہے۔';
+
+  @override
+  String get agreementLanguageRomanUrdu => 'رومن اردو';
+
+  @override
+  String get agreementLanguageEnglish => 'انگریزی';
+
+  @override
+  String get agreementLanguageUrdu => 'اردو';
+
+  @override
+  String get agreementAcceptCheckbox =>
+      'میں نے یہ معاہدہ پڑھ لیا ہے اور اسے قبول کرتا ہوں۔';
+
+  @override
+  String get agreementViewBeforeAccepting =>
+      'قبول کرنے سے پہلے معاہدہ کھول کر پڑھیں۔';
+
+  @override
+  String get agreementAcceptRequired => 'یہ معاہدہ قبول کرنا لازمی ہے۔';
+
+  @override
+  String get agreementTradeChangedReopen =>
+      'آپ کا مرکزی کام تبدیل ہو گیا ہے۔ کام سے متعلق معاہدہ دوبارہ کھول کر قبول کریں۔';
+
+  @override
+  String get agreementsLoadFailed => 'معاہدے لوڈ نہیں ہو سکے۔';
+
+  @override
+  String get agreementsAllThreeRequired =>
+      'جمع کرانے سے پہلے تینوں معاہدے کھول کر قبول کریں۔';
+
+  @override
+  String get workerFatherName => 'والد کا نام';
+
+  @override
+  String get workerFatherNameRequired => 'والد کا نام لازمی ہے۔';
+
+  @override
+  String get workerDateOfBirth => 'تاریخِ پیدائش';
+
+  @override
+  String get workerDateOfBirthHint => 'اپنی تاریخِ پیدائش منتخب کریں';
+
+  @override
+  String get workerDateOfBirthRequired => 'تاریخِ پیدائش لازمی ہے۔';
+
+  @override
+  String get workerEmergencyContact => 'ہنگامی رابطہ (اختیاری)';
+
+  @override
+  String get workerEmergencyContactHint => 'نام اور فون نمبر';
+
+  @override
+  String get workerAcceptedAgreementsTitle => 'میرے معاہدے';
+
+  @override
+  String get workerAcceptedAgreementsEmpty =>
+      'آپ نے ابھی تک کوئی معاہدہ قبول نہیں کیا۔';
+
+  @override
+  String agreementAcceptedOn(String date) {
+    return 'قبول کیا گیا: $date';
+  }
+
+  @override
+  String agreementAcceptanceId(String id) {
+    return 'ایکسیپٹنس آئی ڈی: $id';
+  }
+
+  @override
+  String get agreementDownload => 'ڈاؤن لوڈ';
+
+  @override
+  String get agreementDownloadInProgress => 'معاہدہ ڈاؤن لوڈ ہو رہا ہے...';
+
+  @override
+  String agreementDownloadSaved(String path) {
+    return 'معاہدہ محفوظ ہو گیا: $path';
+  }
+
+  @override
+  String get agreementDownloadFailed =>
+      'معاہدہ ڈاؤن لوڈ نہیں ہو سکا۔ براہِ کرم دوبارہ کوشش کریں۔';
 }
 
 /// The translations for Urdu, using the Latin script (`ur_Latn`).
@@ -4919,7 +5203,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get inspFormStartRecording => 'Recording shuru karein';
 
   @override
-  String get inspFormPartNameHint => 'Maslan Gas refill';
+  String get inspFormPartNameHint => 'Maslan istemal hone wala purza ya saman';
 
   @override
   String get inspFormWarrantyHint => 'Maslan 7 din';
@@ -5246,24 +5530,6 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
       'Main tasdeeq karta hoon ke mera qanooni naam mere CNIC ke mutabiq hai.';
 
   @override
-  String get workerAcceptGeneralAgreement =>
-      'Main General Ustaad muahida qabool karta hoon.';
-
-  @override
-  String workerAcceptGeneralAgreementVersioned(String version) {
-    return 'Main General Ustaad muahida (v$version) qabool karta hoon.';
-  }
-
-  @override
-  String get workerAcceptTradeAgreement =>
-      'Main hunar se mutaliq muahida qabool karta hoon.';
-
-  @override
-  String workerAcceptTradeAgreementVersioned(String version) {
-    return 'Main hunar se mutaliq muahida (v$version) qabool karta hoon.';
-  }
-
-  @override
   String get workerViewAgreement => 'Muahida dekhein';
 
   @override
@@ -5273,19 +5539,9 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get workerSubmitForApproval => 'Manzoori ke liye bhejein';
 
   @override
-  String get workerAgreementFallbackTitle => 'Muahida';
-
-  @override
   String workerAgreementVersion(String version) {
     return 'Version $version';
   }
-
-  @override
-  String get workerAgreementSelectSkillFirst =>
-      'Ye muahida dekhne ke liye pehle apna buniyadi hunar muntakhab karein.';
-
-  @override
-  String get workerCloseDialog => 'Band karein';
 
   @override
   String get workerOnboardingSubmitted => 'Jaizey ke liye bhej di gayi';
@@ -5315,7 +5571,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get workerProfileApproval => 'Profile ki manzoori';
 
   @override
-  String get inspHintFallback => 'Misal: gas leak hai — refill karana ho ga';
+  String get inspHintFallback => 'Maslan batayein aap ko kya mila';
 
   @override
   String get bidAmountRequired => 'Baraye meherbani bid ki raqam likhein.';
@@ -5487,4 +5743,323 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get workerBidJobFallbackTitle => 'Kaam';
+
+  @override
+  String get navHome => 'Home';
+
+  @override
+  String get navBookings => 'Bookings';
+
+  @override
+  String get navChats => 'Chats';
+
+  @override
+  String get inspectionRowIssueFound => 'Jo masla mila';
+
+  @override
+  String get inspectionRowNotes => 'Notes';
+
+  @override
+  String get inspectionBadgeAwaitingDecision =>
+      'Report jama ho gayi — faisle ka intezar';
+
+  @override
+  String get inspectionBadgeQuoteAccepted =>
+      'Quote manzoor — marammat jari hai';
+
+  @override
+  String get inspectionBadgeFindingAnother =>
+      'Doosra Ustaad talash kiya ja raha hai — bidding ke liye khula';
+
+  @override
+  String inspStripClosedFeeOnlyWithAmount(String fee) {
+    return 'Inspection ke baad band — client sirf inspection fee dega: $fee';
+  }
+
+  @override
+  String get inspStripClosedFeeOnly =>
+      'Inspection ke baad band — client sirf inspection fee dega.';
+
+  @override
+  String get inspStripRepairCompletedFeeWaived =>
+      'Marammat mukammal — inspection fee maaf.';
+
+  @override
+  String get inspStripQuoteAcceptedFeeWaived =>
+      'Quote manzoor — inspection fee maaf. Marammat jari hai.';
+
+  @override
+  String get inspStripReportSubmitted =>
+      'Inspection report jama ho gayi — marammat jari rakhne ke liye quote dekhein ya inspection ke baad band karein.';
+
+  @override
+  String get inspStripUstaadHired => 'Ustaad hire ho gaya';
+
+  @override
+  String get inspStripBookedChooseUstaad =>
+      'Inspection book ho gaya — Ustaad chunein';
+
+  @override
+  String chooseChipCancelRate(int rate) {
+    return '$rate% cancel';
+  }
+
+  @override
+  String get locationCurrentFailed => 'Maujooda location hasil nahi ho saki.';
+
+  @override
+  String get locationResolveFailed => 'Muntakhib location maloom nahi ho saki.';
+
+  @override
+  String get locationOutsideKarachi =>
+      'Yeh location Karachi ke service area se bahar hai.';
+
+  @override
+  String postJobVideoTooLong(int seconds) {
+    return 'Video $seconds second ya us se kam honi chahiye.';
+  }
+
+  @override
+  String get postJobLocationRetrieveFailed =>
+      'Location hasil nahi ho saki. Dobara koshish karein.';
+
+  @override
+  String get postJobSelectOption => 'Jari rakhne ke liye ek option chunein.';
+
+  @override
+  String get postJobDescribeIssue =>
+      'Baraye meherbani batayein ke kya theek karwana hai.';
+
+  @override
+  String get postJobSelectStandardService =>
+      'Kam az kam ek standard service chunein.';
+
+  @override
+  String get postJobSelectArrivalWindow =>
+      'Baraye meherbani aane ka waqt chunein.';
+
+  @override
+  String get postJobSelectUrgencyWindow =>
+      'Baraye meherbani foran ka waqt chunein.';
+
+  @override
+  String get postJobEnterAddress => 'Apna pata darj karein.';
+
+  @override
+  String get postJobAddAddressToContinue =>
+      'Jari rakhne ke liye apna service pata shamil karein.';
+
+  @override
+  String get postJobNearbyNotifiedNow =>
+      'Qareebi Ustaadon ko foran ittila di jati hai.';
+
+  @override
+  String get postJobInspectionNotAvailable =>
+      'Is service ke liye inspection available nahi hai.';
+
+  @override
+  String get postJobInspectionHeroStep1 => 'Ustaad aa kar khud check karega';
+
+  @override
+  String get postJobInspectionHeroStep2 =>
+      'Kaam shuru karne se pehle rate clear hoga.';
+
+  @override
+  String get postJobInspectionHeroStep3 =>
+      'Pasand aaye to kaam karwa lein, warna sirf inspection fee dein.';
+
+  @override
+  String get postJobStandardTotalFinal =>
+      'Total amount final hai — koi bidding nahi. Aap next step par Ustaad choose karenge.';
+
+  @override
+  String get postJobHowInspectionStep1 => 'Inspection fee fixed hai.';
+
+  @override
+  String get postJobHowInspectionStep2 =>
+      'Ustaad aata hai, masla maloom karta hai, aur app mein marammat ka fixed quote deta hai.';
+
+  @override
+  String get postJobHowInspectionStep3 =>
+      'Uska quote accept kar ke jari rakhein, ya doosre Ustaadon se bids lein — aap ki marzi.';
+
+  @override
+  String get cancelReasonNoLongerNeeded => 'Ab service ki zarurat nahi';
+
+  @override
+  String get cancelReasonBookedByMistake => 'Booking ghalti se ho gayi';
+
+  @override
+  String get cancelReasonProblemSolved => 'Masla khud hal ho gaya';
+
+  @override
+  String get cancelReasonTimingNotSuitable => 'Waqt ya tareekh munasib nahi';
+
+  @override
+  String get cancelReasonPriceNotSuitable => 'Qeemat ya budget munasib nahi';
+
+  @override
+  String get cancelReasonCannotReachUstaad => 'Ustaad se rabta nahi ho raha';
+
+  @override
+  String get cancelReasonUstaadRunningLate => 'Ustaad bohat dair kar raha hai';
+
+  @override
+  String get cancelReasonOther => 'Dusri wajah';
+
+  @override
+  String get bookingAgreedPrice => 'Tay shuda qeemat';
+
+  @override
+  String get inspRepairHintElectrical =>
+      'Maslan MCB badlein aur socket ki wiring dobara karein';
+
+  @override
+  String get inspRepairHintPlumbing =>
+      'Maslan leak hota pipe badlein aur naya valve lagayein';
+
+  @override
+  String get inspRepairHintAc => 'Maslan gas bharwayein aur capacitor badlein';
+
+  @override
+  String get inspRepairHintCarpentry =>
+      'Maslan qabzay badlein aur darwazay ka frame seedha karein';
+
+  @override
+  String get inspRepairHintPainting =>
+      'Maslan putty aur primer lagayein, phir emulsion ke do coat';
+
+  @override
+  String get inspRepairHintFallback =>
+      'Maslan ise theek karne ke liye kya kaam darkar hai';
+
+  @override
+  String get inspPartHintElectrical => 'Maslan MCB, switch, socket';
+
+  @override
+  String get inspPartHintPlumbing => 'Maslan pipe, valve, tonti';
+
+  @override
+  String get inspPartHintAc => 'Maslan gas refill, capacitor, compressor';
+
+  @override
+  String get inspPartHintCarpentry =>
+      'Maslan qabzay, plywood, darwazay ka frame';
+
+  @override
+  String get inspPartHintPainting => 'Maslan primer, putty, emulsion';
+
+  @override
+  String get inspHintPainting =>
+      'Maslan paint ukhar raha hai, deewar par seelan...';
+
+  @override
+  String get agreementViewerTitle => 'Muahida';
+
+  @override
+  String get agreementLoadFailed =>
+      'Muahida load nahi ho saka. Dobara koshish karein.';
+
+  @override
+  String get agreementUnavailableForTrade =>
+      'Aap ke muntakhab kaam ke liye abhi koi manzoor shuda muahida mojood nahi hai. Bara-e-karam HandyGo support se rabta karein.';
+
+  @override
+  String agreementLanguageChip(String language) {
+    return 'Muahide ki zubaan: $language';
+  }
+
+  @override
+  String agreementTradeChip(String trade) {
+    return 'Kaam: $trade';
+  }
+
+  @override
+  String get agreementLanguageNotice =>
+      'Yeh manzoor shuda legal muahida filhaal sirf Roman Urdu mein mojood hai.';
+
+  @override
+  String get agreementLanguageRomanUrdu => 'Roman Urdu';
+
+  @override
+  String get agreementLanguageEnglish => 'English';
+
+  @override
+  String get agreementLanguageUrdu => 'Urdu';
+
+  @override
+  String get agreementAcceptCheckbox =>
+      'Main ne yeh muahida parh liya hai aur ise qabool karta hoon.';
+
+  @override
+  String get agreementViewBeforeAccepting =>
+      'Qabool karne se pehle muahida khol kar parhein.';
+
+  @override
+  String get agreementAcceptRequired => 'Yeh muahida qabool karna lazmi hai.';
+
+  @override
+  String get agreementTradeChangedReopen =>
+      'Aap ka main kaam tabdeel ho gaya hai. Trade wala muahida dobara khol kar qabool karein.';
+
+  @override
+  String get agreementsLoadFailed => 'Muahide load nahi ho sake.';
+
+  @override
+  String get agreementsAllThreeRequired =>
+      'Submit karne se pehle teenon muahide khol kar qabool karein.';
+
+  @override
+  String get workerFatherName => 'Walid ka naam';
+
+  @override
+  String get workerFatherNameRequired => 'Walid ka naam lazmi hai.';
+
+  @override
+  String get workerDateOfBirth => 'Tareekh-e-Paidaish';
+
+  @override
+  String get workerDateOfBirthHint =>
+      'Apni tareekh-e-paidaish muntakhab karein';
+
+  @override
+  String get workerDateOfBirthRequired => 'Tareekh-e-paidaish lazmi hai.';
+
+  @override
+  String get workerEmergencyContact => 'Emergency Contact (ikhtiyari)';
+
+  @override
+  String get workerEmergencyContactHint => 'Naam aur phone number';
+
+  @override
+  String get workerAcceptedAgreementsTitle => 'Mere Muahide';
+
+  @override
+  String get workerAcceptedAgreementsEmpty =>
+      'Aap ne abhi tak koi muahida qabool nahi kiya.';
+
+  @override
+  String agreementAcceptedOn(String date) {
+    return 'Qabool kiya gaya: $date';
+  }
+
+  @override
+  String agreementAcceptanceId(String id) {
+    return 'Acceptance ID: $id';
+  }
+
+  @override
+  String get agreementDownload => 'Download';
+
+  @override
+  String get agreementDownloadInProgress => 'Muahida download ho raha hai...';
+
+  @override
+  String agreementDownloadSaved(String path) {
+    return 'Muahida save ho gaya: $path';
+  }
+
+  @override
+  String get agreementDownloadFailed =>
+      'Muahida download nahi ho saka. Dobara koshish karein.';
 }

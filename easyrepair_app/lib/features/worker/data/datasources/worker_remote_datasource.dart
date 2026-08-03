@@ -9,7 +9,8 @@ import '../../../bookings/data/models/booking_model.dart';
 import '../models/worker_profile_model.dart';
 import '../models/category_model.dart';
 import '../models/worker_review_model.dart';
-import '../models/agreement_template_model.dart';
+import '../models/agreement_template_model.dart'
+    show AgreementTemplateModel, AcceptedAgreementModel;
 import '../models/earning_history_model.dart';
 
 abstract class WorkerRemoteDatasource {
@@ -17,28 +18,45 @@ abstract class WorkerRemoteDatasource {
 
   /// Partial update of the profile-completion text/checkbox fields.
   /// Pass only the fields being changed — omitted params are left untouched.
+  ///
+  /// Agreement acceptance is deliberately absent: it is per-document evidence
+  /// sent to [submitProfileForReview], never a boolean the app can PATCH.
   Future<void> updateProfileCompletion({
     String? fullLegalName,
     String? residentialAddress,
     String? cnicNumber,
+    String? fatherName,
+    String? dateOfBirth,
+    String? emergencyContact,
     int? experienceYears,
     bool? legalNameConfirmed,
-    bool? generalAgreementAccepted,
-    bool? tradeAgreementAccepted,
   });
 
-  /// The exact text/version of the agreements the worker is about to accept
-  /// — General always, Trade-specific once a main skill is selected.
-  Future<List<AgreementTemplateModel>> getAgreementTemplates();
+  /// All THREE agreements the Ustaad must read, with their exact text,
+  /// version and source hash. [locale] is the language the app is showing —
+  /// the legal body comes back in the language it genuinely exists in.
+  Future<List<AgreementTemplateModel>> getAgreementTemplates({
+    required String locale,
+  });
+
+  /// This Ustaad's own sealed acceptance records (metadata only).
+  Future<List<AcceptedAgreementModel>> getMyAgreements();
+
+  /// The accepted PDF bytes, fetched through the authenticated endpoint. The
+  /// storage URL is never exposed, so this is the only way to read one.
+  Future<List<int>> downloadAgreementPdf(String acceptanceId);
 
   Future<String> uploadCnicFront(File file);
   Future<String> uploadCnicBack(File file);
   Future<String> uploadLiveSelfie(File file);
 
-  /// Validates all required fields server-side and moves the profile to
-  /// SUBMITTED_FOR_REVIEW. Throws a Failure with the missing-fields message
-  /// if anything required is absent.
-  Future<void> submitProfileForReview();
+  /// Validates all required fields server-side, seals the three immutable
+  /// acceptance records and moves the profile to SUBMITTED_FOR_REVIEW.
+  /// Returns the three accepted-agreement summaries the backend created.
+  Future<List<Map<String, dynamic>>> submitProfileForReview({
+    required String submissionAttemptId,
+    required List<Map<String, dynamic>> agreements,
+  });
 
   Future<List<Map<String, dynamic>>> getNewJobs();
 
@@ -144,10 +162,11 @@ class WorkerRemoteDatasourceImpl implements WorkerRemoteDatasource {
     String? fullLegalName,
     String? residentialAddress,
     String? cnicNumber,
+    String? fatherName,
+    String? dateOfBirth,
+    String? emergencyContact,
     int? experienceYears,
     bool? legalNameConfirmed,
-    bool? generalAgreementAccepted,
-    bool? tradeAgreementAccepted,
   }) async {
     final body = <String, dynamic>{};
     if (fullLegalName != null) body['fullLegalName'] = fullLegalName;
@@ -155,28 +174,48 @@ class WorkerRemoteDatasourceImpl implements WorkerRemoteDatasource {
       body['residentialAddress'] = residentialAddress;
     }
     if (cnicNumber != null) body['cnicNumber'] = cnicNumber;
+    if (fatherName != null) body['fatherName'] = fatherName;
+    if (dateOfBirth != null) body['dateOfBirth'] = dateOfBirth;
+    if (emergencyContact != null) body['emergencyContact'] = emergencyContact;
     if (experienceYears != null) body['experienceYears'] = experienceYears;
     if (legalNameConfirmed != null) {
       body['legalNameConfirmed'] = legalNameConfirmed;
-    }
-    if (generalAgreementAccepted != null) {
-      body['generalAgreementAccepted'] = generalAgreementAccepted;
-    }
-    if (tradeAgreementAccepted != null) {
-      body['tradeAgreementAccepted'] = tradeAgreementAccepted;
     }
     await _dio.patch<void>('/workers/profile-completion', data: body);
   }
 
   @override
-  Future<List<AgreementTemplateModel>> getAgreementTemplates() async {
+  Future<List<AgreementTemplateModel>> getAgreementTemplates({
+    required String locale,
+  }) async {
     final response = await _dio.get<Map<String, dynamic>>(
       '/workers/profile-completion/agreement-templates',
+      queryParameters: {'locale': locale},
     );
     final list = response.data!['data'] as List<dynamic>;
     return list
         .map((e) => AgreementTemplateModel.fromJson(e as Map<String, dynamic>))
         .toList();
+  }
+
+  @override
+  Future<List<AcceptedAgreementModel>> getMyAgreements() async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      '/workers/profile-completion/agreements',
+    );
+    final list = response.data!['data'] as List<dynamic>? ?? const [];
+    return list
+        .map((e) => AcceptedAgreementModel.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  @override
+  Future<List<int>> downloadAgreementPdf(String acceptanceId) async {
+    final response = await _dio.get<List<int>>(
+      '/workers/profile-completion/agreements/$acceptanceId/download',
+      options: Options(responseType: ResponseType.bytes),
+    );
+    return response.data ?? const <int>[];
   }
 
   Future<String> _uploadDocument(String path, File file) async {
@@ -206,8 +245,20 @@ class WorkerRemoteDatasourceImpl implements WorkerRemoteDatasource {
       _uploadDocument('/workers/profile-completion/selfie', file);
 
   @override
-  Future<void> submitProfileForReview() async {
-    await _dio.post<void>('/workers/profile-completion/submit');
+  Future<List<Map<String, dynamic>>> submitProfileForReview({
+    required String submissionAttemptId,
+    required List<Map<String, dynamic>> agreements,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/workers/profile-completion/submit',
+      data: {
+        'submissionAttemptId': submissionAttemptId,
+        'agreements': agreements,
+      },
+    );
+    final data = response.data?['data'] as Map<String, dynamic>?;
+    return (data?['acceptedAgreements'] as List<dynamic>? ?? const [])
+        .cast<Map<String, dynamic>>();
   }
 
   @override

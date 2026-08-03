@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/l10n/l10n_extensions.dart';
 import '../../../../core/presentation/responsive_utils.dart';
+import '../../../../l10n/app_localizations.dart';
 
 const _kAccent = Color(0xFFDB6234);
 
@@ -10,24 +12,28 @@ class ClientBottomNavBar extends StatelessWidget {
 
   const ClientBottomNavBar({super.key, required this.currentIndex});
 
+  /// Tab order and icons are fixed; only the label is language-dependent, so
+  /// the label is a lookup rather than a string and the list stays const.
   static const _tabs = [
     _NavTab(
-      label: 'Home',
+      label: _navHome,
       icon: Icons.home_outlined,
       route: '/client/home',
     ),
     _NavTab(
-      label: 'Bookings',
+      label: _navBookings,
       icon: Icons.assignment_turned_in_outlined,
       route: '/client/jobs',
     ),
     _NavTab(
-      label: 'Chats',
+      label: _navChats,
       icon: Icons.chat_bubble_outline_rounded,
       route: '/client/chat',
     ),
     _NavTab(
-      label: 'Profile',
+      // Shares the Profile page's own title key — one English string must map
+      // to one ARB key (see the duplicate check in arb_parity_test.dart).
+      label: _navProfile,
       icon: Icons.person_outline_rounded,
       route: '/client/profile',
     ),
@@ -36,8 +42,9 @@ class ClientBottomNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).padding.bottom;
-    // Excluded from localization by design: labels stay English in every
-    // language, and forcing LTR here stops Urdu RTL from reversing tab order.
+    final l10n = context.l10n;
+    // Labels are translated, but the bar itself stays pinned LTR: Urdu RTL
+    // must never reverse tab order or move Home away from the left edge.
     // Verified by test/core/l10n/bottom_nav_protection_test.dart.
     return Directionality(
       textDirection: TextDirection.ltr,
@@ -86,7 +93,7 @@ class ClientBottomNavBar extends StatelessWidget {
                           ),
                           SizedBox(height: gap),
                           Text(
-                            tab.label,
+                            tab.label(l10n),
                             style: TextStyle(
                               fontSize: labelSize,
                               fontWeight: isActive
@@ -114,8 +121,18 @@ class ClientBottomNavBar extends StatelessWidget {
   }
 }
 
+/// Resolves a tab's label for the active language. A plain `String` field
+/// could not be const here, and a const tab list is what keeps tab order and
+/// icons identical in every language.
+typedef _NavLabel = String Function(AppLocalizations l10n);
+
+String _navHome(AppLocalizations l10n) => l10n.navHome;
+String _navBookings(AppLocalizations l10n) => l10n.navBookings;
+String _navChats(AppLocalizations l10n) => l10n.navChats;
+String _navProfile(AppLocalizations l10n) => l10n.clientProfileTitle;
+
 class _NavTab {
-  final String label;
+  final _NavLabel label;
   final IconData icon;
   final String route;
 

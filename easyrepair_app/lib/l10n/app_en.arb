@@ -1135,7 +1135,7 @@
   },
   "inspFormStop": "Stop",
   "inspFormStartRecording": "Start recording",
-  "inspFormPartNameHint": "e.g. Gas refill",
+  "inspFormPartNameHint": "e.g. the part or material used",
   "inspFormWarrantyHint": "e.g. 7 days",
   "inspFormRemovePart": "Remove part",
   "inspFormTotalAmount": "Total amount for the work",
@@ -1277,30 +1277,9 @@
   "workerDocumentRequired": "Required",
   "workerAgreements": "Agreements",
   "workerConfirmLegalName": "I confirm my legal name matches my CNIC.",
-  "workerAcceptGeneralAgreement": "I accept the General Ustaad Agreement.",
-  "workerAcceptGeneralAgreementVersioned": "I accept the General Ustaad Agreement (v{version}).",
-  "@workerAcceptGeneralAgreementVersioned": {
-    "description": "{version} is the backend agreement version and stays Latin in every language.",
-    "placeholders": {
-      "version": {
-        "type": "String"
-      }
-    }
-  },
-  "workerAcceptTradeAgreement": "I accept the Trade-specific Agreement.",
-  "workerAcceptTradeAgreementVersioned": "I accept the Trade-specific Agreement (v{version}).",
-  "@workerAcceptTradeAgreementVersioned": {
-    "description": "{version} is the backend agreement version and stays Latin in every language.",
-    "placeholders": {
-      "version": {
-        "type": "String"
-      }
-    }
-  },
   "workerViewAgreement": "View Agreement",
   "workerConfirmationRequired": "This confirmation is required.",
   "workerSubmitForApproval": "Submit for Approval",
-  "workerAgreementFallbackTitle": "Agreement",
   "workerAgreementVersion": "Version {version}",
   "@workerAgreementVersion": {
     "description": "{version} is the backend agreement version and stays Latin in every language.",
@@ -1310,8 +1289,6 @@
       }
     }
   },
-  "workerAgreementSelectSkillFirst": "Select your main skill first to load this agreement.",
-  "workerCloseDialog": "Close",
   "workerOnboardingSubmitted": "Submitted for Review",
   "workerOnboardingChangesRequired": "Changes Required",
   "workerOnboardingApproved": "Approved",
@@ -1328,7 +1305,7 @@
   },
   "workerNoMainSkillYet": "No main skill selected yet",
   "workerProfileApproval": "Profile Approval",
-  "inspHintFallback": "e.g. Gas leak — a refill is needed",
+  "inspHintFallback": "e.g. describe what you found",
   "@inspHintFallback": {
     "description": "Issue-example hint shown when the booking's service category has no hint of its own."
   },
@@ -1473,5 +1450,322 @@
   "workerBidJobFallbackTitle": "Job",
   "@workerBidJobFallbackTitle": {
     "description": "Heading on the bid screen when the job title was not passed through"
-  }
+  },
+  "navHome": "Home",
+  "@navHome": {
+    "description": "Bottom-navigation tab: the home screen. Client and Ustaad share it."
+  },
+  "navBookings": "Bookings",
+  "@navBookings": {
+    "description": "Bottom-navigation tab: the client's bookings list."
+  },
+  "navChats": "Chats",
+  "@navChats": {
+    "description": "Bottom-navigation tab: the client's conversation list."
+  },
+  "inspectionRowIssueFound": "Issue found",
+  "@inspectionRowIssueFound": {
+    "description": "Row label above what the Ustaad found during the inspection"
+  },
+  "inspectionRowNotes": "Notes",
+  "@inspectionRowNotes": {
+    "description": "Row label above the Ustaad's free-text notes on the report"
+  },
+  "inspectionBadgeAwaitingDecision": "Report submitted — awaiting decision",
+  "@inspectionBadgeAwaitingDecision": {
+    "description": "Status badge on the inspection report while the client has not decided"
+  },
+  "inspectionBadgeQuoteAccepted": "Quote accepted — repair in progress",
+  "@inspectionBadgeQuoteAccepted": {
+    "description": "Status badge on the inspection report once the repair quote was accepted"
+  },
+  "inspectionBadgeFindingAnother": "Finding another Ustaad — open for bidding",
+  "@inspectionBadgeFindingAnother": {
+    "description": "Status badge on the inspection report after the client chose to re-open bidding"
+  },
+  "inspStripClosedFeeOnlyWithAmount": "Closed after inspection — client pays inspection fee only: {fee}",
+  "@inspStripClosedFeeOnlyWithAmount": {
+    "description": "Status strip when the job closed after inspection and the fee amount is known",
+    "placeholders": {
+      "fee": {
+        "type": "String"
+      }
+    }
+  },
+  "inspStripClosedFeeOnly": "Closed after inspection — client pays inspection fee only.",
+  "@inspStripClosedFeeOnly": {
+    "description": "Same strip when no fee snapshot is available to show"
+  },
+  "inspStripRepairCompletedFeeWaived": "Repair completed — inspection fee waived.",
+  "@inspStripRepairCompletedFeeWaived": {
+    "description": "Status strip once an inspection-lane repair finished"
+  },
+  "inspStripQuoteAcceptedFeeWaived": "Quote accepted — inspection fee waived. Repair in progress.",
+  "@inspStripQuoteAcceptedFeeWaived": {
+    "description": "Status strip while the accepted repair is being carried out"
+  },
+  "inspStripReportSubmitted": "Inspection report submitted — review quote to continue repair or close after inspection.",
+  "@inspStripReportSubmitted": {
+    "description": "Status strip once the Ustaad submitted the report and the client must decide"
+  },
+  "inspStripUstaadHired": "Ustaad hired",
+  "@inspStripUstaadHired": {
+    "description": "Status strip once an Ustaad is assigned to the inspection"
+  },
+  "inspStripBookedChooseUstaad": "Inspection booked — choose an Ustaad",
+  "@inspStripBookedChooseUstaad": {
+    "description": "Status strip while the inspection is still pending an Ustaad"
+  },
+  "chooseChipCancelRate": "{rate}% cancel",
+  "@chooseChipCancelRate": {
+    "description": "Stat chip on an Ustaad card: their cancellation rate",
+    "placeholders": {
+      "rate": {
+        "type": "int"
+      }
+    }
+  },
+  "locationCurrentFailed": "Could not get current location.",
+  "@locationCurrentFailed": {
+    "description": "Shown when the GPS button fails to resolve a position"
+  },
+  "locationResolveFailed": "Could not resolve selected location.",
+  "@locationResolveFailed": {
+    "description": "Shown when a search result cannot be turned into coordinates"
+  },
+  "locationOutsideKarachi": "Location is outside the Karachi service area.",
+  "@locationOutsideKarachi": {
+    "description": "Shown when the picked point falls outside the serviceable area"
+  },
+  "postJobVideoTooLong": "Video must be {seconds} seconds or shorter.",
+  "@postJobVideoTooLong": {
+    "description": "Rejects an attached video that is longer than the allowed duration",
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "postJobLocationRetrieveFailed": "Could not retrieve location. Please try again.",
+  "@postJobLocationRetrieveFailed": {
+    "description": "Shown when reading the device location fails on the post-job form"
+  },
+  "postJobSelectOption": "Select an option to continue.",
+  "@postJobSelectOption": {
+    "description": "Validation: no booking lane was picked"
+  },
+  "postJobDescribeIssue": "Please describe what needs fixing.",
+  "@postJobDescribeIssue": {
+    "description": "Validation: the job description is too short"
+  },
+  "postJobSelectStandardService": "Please select at least one standard service.",
+  "@postJobSelectStandardService": {
+    "description": "Validation: the standard lane needs at least one service ticked"
+  },
+  "postJobSelectArrivalWindow": "Please select an arrival window.",
+  "@postJobSelectArrivalWindow": {
+    "description": "Validation: no time slot was picked for a scheduled booking"
+  },
+  "postJobSelectUrgencyWindow": "Please select an urgency window.",
+  "@postJobSelectUrgencyWindow": {
+    "description": "Validation: no window was picked for an urgent booking"
+  },
+  "postJobEnterAddress": "Enter your address.",
+  "@postJobEnterAddress": {
+    "description": "Validation: the address field is empty on final submit"
+  },
+  "postJobAddAddressToContinue": "Add your service address to continue.",
+  "@postJobAddAddressToContinue": {
+    "description": "Validation: the address step cannot be left without an address"
+  },
+  "postJobNearbyNotifiedNow": "Nearby Ustaads are notified right away.",
+  "@postJobNearbyNotifiedNow": {
+    "description": "Note under the urgent option explaining what happens on submit"
+  },
+  "postJobInspectionNotAvailable": "Inspection is not available for this service.",
+  "@postJobInspectionNotAvailable": {
+    "description": "Shown when tapping the inspection lane on a category that does not offer it"
+  },
+  "postJobInspectionHeroStep1": "The Ustaad comes and checks it himself",
+  "@postJobInspectionHeroStep1": {
+    "description": "Inspection explainer, step 1"
+  },
+  "postJobInspectionHeroStep2": "The rate is agreed before any work starts.",
+  "@postJobInspectionHeroStep2": {
+    "description": "Inspection explainer, step 2"
+  },
+  "postJobInspectionHeroStep3": "Go ahead if you like the quote, otherwise just pay the inspection fee.",
+  "@postJobInspectionHeroStep3": {
+    "description": "Inspection explainer, step 3"
+  },
+  "postJobStandardTotalFinal": "Total amount is final — no bidding. You choose your Ustaad in the next step.",
+  "@postJobStandardTotalFinal": {
+    "description": "Note under the standard-lane price summary"
+  },
+  "postJobHowInspectionStep1": "The inspection fee is fixed.",
+  "@postJobHowInspectionStep1": {
+    "description": "\"How inspection works\" card, step 1"
+  },
+  "postJobHowInspectionStep2": "Ustaad visits, finds the problem, and gives you a fixed repair quote in the app.",
+  "@postJobHowInspectionStep2": {
+    "description": "\"How inspection works\" card, step 2"
+  },
+  "postJobHowInspectionStep3": "Accept his quote and continue, or get bids from other Ustaads — your choice.",
+  "@postJobHowInspectionStep3": {
+    "description": "\"How inspection works\" card, step 3"
+  },
+  "cancelReasonNoLongerNeeded": "I no longer need the service",
+  "@cancelReasonNoLongerNeeded": {
+    "description": "Cancellation reason label. The stored value is fixed in ClientCancelReason."
+  },
+  "cancelReasonBookedByMistake": "I booked it by mistake",
+  "@cancelReasonBookedByMistake": {
+    "description": "Cancellation reason label. The stored value is fixed in ClientCancelReason."
+  },
+  "cancelReasonProblemSolved": "The problem sorted itself out",
+  "@cancelReasonProblemSolved": {
+    "description": "Cancellation reason label. The stored value is fixed in ClientCancelReason."
+  },
+  "cancelReasonTimingNotSuitable": "The time or date does not suit me",
+  "@cancelReasonTimingNotSuitable": {
+    "description": "Cancellation reason label. The stored value is fixed in ClientCancelReason."
+  },
+  "cancelReasonPriceNotSuitable": "The price or budget does not suit me",
+  "@cancelReasonPriceNotSuitable": {
+    "description": "Cancellation reason label. The stored value is fixed in ClientCancelReason."
+  },
+  "cancelReasonCannotReachUstaad": "I cannot reach the Ustaad",
+  "@cancelReasonCannotReachUstaad": {
+    "description": "Cancellation reason label, shown only when an Ustaad is assigned."
+  },
+  "cancelReasonUstaadRunningLate": "The Ustaad is running very late",
+  "@cancelReasonUstaadRunningLate": {
+    "description": "Cancellation reason label, shown only when an Ustaad is assigned."
+  },
+  "cancelReasonOther": "Another reason",
+  "@cancelReasonOther": {
+    "description": "Free-text cancellation reason sentinel; picking it reveals a text field."
+  },
+  "bookingAgreedPrice": "Agreed Price",
+  "@bookingAgreedPrice": {
+    "description": "Booking details: the amount agreed with the hired Ustaad, matching the figure Track Worker shows"
+  },
+  "inspRepairHintElectrical": "e.g. replace the MCB and redo the socket wiring",
+  "@inspRepairHintElectrical": {
+    "description": "Recommended-repair example for Electrician bookings"
+  },
+  "inspRepairHintPlumbing": "e.g. replace the leaking pipe and fit a new valve",
+  "@inspRepairHintPlumbing": {
+    "description": "Recommended-repair example for Plumber bookings"
+  },
+  "inspRepairHintAc": "e.g. refill the gas and replace the capacitor",
+  "@inspRepairHintAc": {
+    "description": "Recommended-repair example for AC Technician bookings"
+  },
+  "inspRepairHintCarpentry": "e.g. replace the hinges and straighten the door frame",
+  "@inspRepairHintCarpentry": {
+    "description": "Recommended-repair example for Carpenter bookings"
+  },
+  "inspRepairHintPainting": "e.g. apply putty and primer, then two coats of emulsion",
+  "@inspRepairHintPainting": {
+    "description": "Recommended-repair example for Painter bookings"
+  },
+  "inspRepairHintFallback": "e.g. what work is needed to fix it",
+  "@inspRepairHintFallback": {
+    "description": "Trade-neutral recommended-repair example for a category with no tailored hint"
+  },
+  "inspPartHintElectrical": "e.g. MCB, switch, socket",
+  "@inspPartHintElectrical": {
+    "description": "Part-name example for Electrician bookings"
+  },
+  "inspPartHintPlumbing": "e.g. pipe, valve, tap",
+  "@inspPartHintPlumbing": {
+    "description": "Part-name example for Plumber bookings"
+  },
+  "inspPartHintAc": "e.g. gas refill, capacitor, compressor",
+  "@inspPartHintAc": {
+    "description": "Part-name example for AC Technician bookings"
+  },
+  "inspPartHintCarpentry": "e.g. hinges, plywood, door frame",
+  "@inspPartHintCarpentry": {
+    "description": "Part-name example for Carpenter bookings"
+  },
+  "inspPartHintPainting": "e.g. primer, putty, emulsion",
+  "@inspPartHintPainting": {
+    "description": "Part-name example for Painter bookings"
+  },
+  "inspHintPainting": "e.g. paint is peeling, damp patch on the wall...",
+  "@inspHintPainting": {
+    "description": "Issue example for Painter bookings"
+  },
+  "agreementViewerTitle": "Agreement",
+  "agreementLoadFailed": "Could not load the agreement. Please try again.",
+  "agreementUnavailableForTrade": "No approved agreement is available for your selected trade yet. Please contact HandyGo support.",
+  "agreementLanguageChip": "Agreement Language: {language}",
+  "@agreementLanguageChip": {
+    "description": "{language} is a localized language name, e.g. Roman Urdu.",
+    "placeholders": {
+      "language": {
+        "type": "String"
+      }
+    }
+  },
+  "agreementTradeChip": "Trade: {trade}",
+  "@agreementTradeChip": {
+    "description": "{trade} is a localized trade name, e.g. Electrician.",
+    "placeholders": {
+      "trade": {
+        "type": "String"
+      }
+    }
+  },
+  "agreementLanguageNotice": "This approved legal agreement is currently available in Roman Urdu.",
+  "agreementLanguageRomanUrdu": "Roman Urdu",
+  "agreementLanguageEnglish": "English",
+  "agreementLanguageUrdu": "Urdu",
+  "agreementAcceptCheckbox": "I have read and accept this agreement.",
+  "agreementViewBeforeAccepting": "Open and read the agreement before accepting it.",
+  "agreementAcceptRequired": "This agreement must be accepted.",
+  "agreementTradeChangedReopen": "Your main trade changed. Open and accept the trade agreement again.",
+  "agreementsLoadFailed": "Agreements could not be loaded.",
+  "agreementsAllThreeRequired": "Open and accept all three agreements before submitting.",
+  "workerFatherName": "Father's Name",
+  "workerFatherNameRequired": "Father's name is required.",
+  "workerDateOfBirth": "Date of Birth",
+  "workerDateOfBirthHint": "Select your date of birth",
+  "workerDateOfBirthRequired": "Date of birth is required.",
+  "workerEmergencyContact": "Emergency Contact (optional)",
+  "workerEmergencyContactHint": "Name and phone number",
+  "workerAcceptedAgreementsTitle": "My Agreements",
+  "workerAcceptedAgreementsEmpty": "You have not accepted any agreements yet.",
+  "agreementAcceptedOn": "Accepted on {date}",
+  "@agreementAcceptedOn": {
+    "description": "{date} is an already-formatted date.",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "agreementAcceptanceId": "Acceptance ID: {id}",
+  "@agreementAcceptanceId": {
+    "description": "{id} is the backend acceptance identifier and is never translated.",
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "agreementDownload": "Download",
+  "agreementDownloadInProgress": "Downloading agreement...",
+  "agreementDownloadSaved": "Agreement saved to {path}",
+  "@agreementDownloadSaved": {
+    "description": "{path} is a file system path and is never translated.",
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "agreementDownloadFailed": "Could not download the agreement. Please try again."
 }

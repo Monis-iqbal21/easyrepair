@@ -56,12 +56,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // The page itself is mirrored...
+    // The page is left-to-right like every other screen — HandyGo does not
+    // mirror in Urdu...
     expect(
       Directionality.of(tester.element(find.byType(Scaffold))),
-      TextDirection.rtl,
+      TextDirection.ltr,
     );
-    // ...but the approved English clauses are not.
+    // ...and the approved English clauses pin LTR themselves regardless.
     final clause = find.text('1. Information We Collect');
     expect(clause, findsOneWidget);
     expect(Directionality.of(tester.element(clause)), TextDirection.ltr);

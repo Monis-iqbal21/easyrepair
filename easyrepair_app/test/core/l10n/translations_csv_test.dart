@@ -120,24 +120,28 @@ void main() {
       }
     });
 
-    test('excludes the protected bottom-navigation labels', () {
-      const navLabels = {'New Jobs', 'My Jobs', 'Bookings', 'Chats'};
-      // clientJobsTitle is the Client Jobs AppBar title, which happens to read
-      // "My Jobs" too. It is a different surface; the nav bars consult no
-      // localization at all. See bottom_nav_protection_test.dart.
-      const allowedKeys = {
+    test('includes the bottom-navigation labels so they can be reviewed', () {
+      // The nav bars are translated (only their layout is pinned LTR — see
+      // bottom_nav_protection_test.dart), so every key they read must be
+      // editable by a reviewer here. Several tabs deliberately share a key
+      // with the page they open, which is why this checks keys, not wording.
+      const navKeys = {
+        'navHome',
+        'navBookings',
+        'navChats',
+        'clientProfileTitle',
         'clientJobsTitle',
         'workerNewJobsTitle',
+        'chatTitleFallback',
       };
-      for (final row in rows.skip(1)) {
-        if (allowedKeys.contains(row[0])) continue;
-        for (final label in navLabels) {
-          expect(
-            row[2],
-            isNot(label),
-            reason: '"$label" is a bottom-nav label and must not be in the CSV',
-          );
-        }
+      final present = rows.skip(1).map((row) => row[0]).toSet();
+
+      for (final key in navKeys) {
+        expect(
+          present,
+          contains(key),
+          reason: '$key is read by a bottom-nav tab and must be reviewable',
+        );
       }
     });
 

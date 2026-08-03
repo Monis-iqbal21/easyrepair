@@ -110,14 +110,17 @@ export class InspectionReportsController {
     const dto = plainToInstance(CreateInspectionReportDto, parsed);
     const errors = await validate(dto, { whitelist: true });
     if (errors.length > 0) {
-      const messages = errors.flatMap((e) => Object.values(e.constraints ?? {}));
+      const messages = errors.flatMap((e) =>
+        Object.values(e.constraints ?? {}),
+      );
       throw new BadRequestException(messages);
     }
 
     const photos = files.photos ?? [];
     const voiceNote = files.voiceNote?.[0];
 
-    const hasWrittenText = !!dto.issueFound?.trim() && !!dto.recommendedRepair?.trim();
+    const hasWrittenText =
+      !!dto.issueFound?.trim() && !!dto.recommendedRepair?.trim();
     if (!hasWrittenText && !voiceNote) {
       throw new BadRequestException(
         'Provide written findings (issue found and recommended repair) or a voice note.',

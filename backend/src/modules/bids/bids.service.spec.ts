@@ -17,7 +17,11 @@ describe('BidsService', () => {
   let bidsRepository: any;
   let notificationsService: any;
   let chatService: any;
+  let jobBroadcastService: any;
   let service: BidsService;
+
+  /** The configured match radius all lanes now share. */
+  const MATCH_RADIUS_KM = 7;
 
   const APPROVED_WORKER = {
     id: 'worker-1',
@@ -62,10 +66,15 @@ describe('BidsService', () => {
     chatService = {
       ensureConversationForBooking: jest.fn().mockResolvedValue(undefined),
     };
+    jobBroadcastService = {
+      matchRadiusKm: MATCH_RADIUS_KM,
+      reconcileVisibleJobs: jest.fn(),
+    };
     service = new BidsService(
       bidsRepository,
       notificationsService,
       chatService,
+      jobBroadcastService,
     );
   });
 
@@ -241,6 +250,7 @@ describe('BidsService', () => {
       clientProfileRepo as any,
       notificationsService,
       chatService,
+      jobBroadcastService,
     );
     await expect(svc.acceptBid('client-user-1', 'bid-1')).rejects.toThrow(
       'This Ustaad just got another job. Please choose another Ustaad.',
@@ -270,7 +280,12 @@ describe('BidsService', () => {
         workerProfile: { userId: 'worker-user-2' },
       }),
     };
-    const svc = new BidsService(repo as any, notificationsService, chatService);
+    const svc = new BidsService(
+      repo as any,
+      notificationsService,
+      chatService,
+      jobBroadcastService,
+    );
     const result = await svc.acceptBid('client-user-1', 'bid-2');
     expect(result).toEqual({
       success: true,
@@ -319,7 +334,12 @@ describe('BidsService', () => {
         workerProfile: { userId: 'worker-user-3' },
       }),
     };
-    const svc = new BidsService(repo as any, notificationsService, chatService);
+    const svc = new BidsService(
+      repo as any,
+      notificationsService,
+      chatService,
+      jobBroadcastService,
+    );
 
     await svc.acceptBid('client-user-1', 'bid-3');
 
@@ -349,7 +369,12 @@ describe('BidsService', () => {
       }),
       acceptBid: jest.fn(),
     };
-    const svc = new BidsService(repo as any, notificationsService, chatService);
+    const svc = new BidsService(
+      repo as any,
+      notificationsService,
+      chatService,
+      jobBroadcastService,
+    );
 
     await expect(
       svc.acceptBid('client-user-1', 'bid-4'),
@@ -516,27 +541,100 @@ describe('BidsService', () => {
       expect(jobs).toHaveLength(0);
     });
 
-    // Normal BIDDING jobs stay visible regardless of radius/online state —
-    // the gate is scoped to post-inspection jobs only (do not break Normal
-    // Bidding Lane).
-    it('still shows a normal BIDDING job to a distant/offline worker (regression)', async () => {
+    // Direct Bidding is now radius-gated too — a live job is only visible to
+    // nearby eligible Ustaads, whatever the lane. `sourceInspectionBookingId
+    // == null` means "no inspector to exclude", NOT "skip matching".
+    const DIRECT_BIDDING_ROW = {
+      ...FEED_CHILD_ROW,
+      id: 'normal-1',
+      sourceInspectionBookingId: null,
+      sourceInspectionBooking: null,
+      inspectionReport: null,
+    };
+
+    it('shows a Direct-Bidding job (no InspectionReport) to a nearby eligible worker', async () => {
       bidsRepository.findAvailableJobsForWorker.mockResolvedValue([
-        {
-          ...FEED_CHILD_ROW,
-          id: 'normal-1',
-          sourceInspectionBookingId: null,
-          sourceInspectionBooking: null,
-        },
+        DIRECT_BIDDING_ROW,
       ]);
-      bidsRepository.findWorkerProfileByUserId.mockResolvedValue({
-        ...APPROVED_WORKER,
-        availabilityStatus: AvailabilityStatus.OFFLINE,
-        currentLat: 31.5204,
-        currentLng: 74.3587,
-      });
       const jobs = await service.getNewJobsForWorker('user-1');
       expect(jobs).toHaveLength(1);
       expect(jobs[0].id).toBe('normal-1');
+      expect(jobs[0].isOpenForBidding).toBe(true);
+    });
+
+    it.each([
+      [
+        'outside the radius',
+        { currentLat: 31.5204, currentLng: 74.3587 },
+      ],
+      ['offline', { availabilityStatus: AvailabilityStatus.OFFLINE }],
+      [
+        'stale location',
+        { locationUpdatedAt: new Date(Date.now() - 31 * 60 * 1000) },
+      ],
+      ['busy on another job', { currentlyWorking: true }],
+    ])(
+      'hides a Direct-Bidding job from a worker %s (null inspector never bypasses matching)',
+      async (_label, override) => {
+        bidsRepository.findAvailableJobsForWorker.mockResolvedValue([
+          DIRECT_BIDDING_ROW,
+        ]);
+        bidsRepository.findWorkerProfileByUserId.mockResolvedValue({
+          ...APPROVED_WORKER,
+          ...override,
+        });
+        expect(await service.getNewJobsForWorker('user-1')).toHaveLength(0);
+      },
+    );
+
+    it('hides any job that has already been assigned', async () => {
+      bidsRepository.findAvailableJobsForWorker.mockResolvedValue([
+        { ...DIRECT_BIDDING_ROW, workerProfileId: 'worker-9' },
+      ]);
+      expect(await service.getNewJobsForWorker('user-1')).toHaveLength(0);
+    });
+
+    // STANDARD stays visible-but-direct-assign-only: never bid-actionable.
+    it('keeps a nearby STANDARD job visible but never bid-actionable', async () => {
+      bidsRepository.findAvailableJobsForWorker.mockResolvedValue([
+        { ...DIRECT_BIDDING_ROW, id: 'standard-1', lane: 'STANDARD' },
+      ]);
+      const jobs = await service.getNewJobsForWorker('user-1');
+      expect(jobs).toHaveLength(1);
+      expect(jobs[0].isOpenForBidding).toBe(false);
+    });
+
+    // An ordinary INSPECTION job keeps its own lane action (direct-assign) —
+    // it only becomes biddable after FIND_OTHER_USTAAD.
+    it('keeps an ordinary INSPECTION job visible but not bid-actionable', async () => {
+      bidsRepository.findAvailableJobsForWorker.mockResolvedValue([
+        {
+          ...DIRECT_BIDDING_ROW,
+          id: 'inspection-1',
+          lane: 'INSPECTION',
+          inspectionReport: {
+            decisionStatus: 'PENDING_CLIENT_DECISION',
+            workerProfileId: 'inspector-1',
+          },
+        },
+      ]);
+      const jobs = await service.getNewJobsForWorker('user-1');
+      expect(jobs).toHaveLength(1);
+      expect(jobs[0].isOpenForBidding).toBe(false);
+    });
+
+    // Refreshing recovers pushes missed while the app was closed, without
+    // blocking the response.
+    it('kicks off a non-blocking reconciliation for the visible jobs', async () => {
+      bidsRepository.findAvailableJobsForWorker.mockResolvedValue([
+        DIRECT_BIDDING_ROW,
+      ]);
+      await service.getNewJobsForWorker('user-1');
+
+      expect(jobBroadcastService.reconcileVisibleJobs).toHaveBeenCalledWith(
+        'worker-1',
+        ['normal-1'],
+      );
     });
   });
 });

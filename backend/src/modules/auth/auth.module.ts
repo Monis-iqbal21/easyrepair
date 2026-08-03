@@ -8,11 +8,15 @@ import { AuthRepository } from './auth.repository';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { SmsOtpService } from './sms-otp.service';
 import { StorageModule } from '../storage/storage.module';
+import { ChatModule } from '../chat/chat.module';
 
 @Module({
   imports: [
     PassportModule.register({ defaultStrategy: 'jwt' }),
     StorageModule,
+    // Login/registration ensures the user's HandyGo Support conversation.
+    // Acyclic: ChatModule does not import AuthModule.
+    ChatModule,
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({

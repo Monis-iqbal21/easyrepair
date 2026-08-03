@@ -14,7 +14,18 @@ import { Server, Socket } from 'socket.io';
 
 import { TokenPayload } from '../auth/entities/token-payload.entity';
 import { ChatRepository } from './chat.repository';
+import { SupportUserService } from './support-user.service';
 import { MessageResponseDto } from './dto/message-response.dto';
+
+/**
+ * Socket room every authorized support agent joins. Membership is granted
+ * SERVER-SIDE at connection time from the verified JWT role — there is no
+ * client event that can request it.
+ */
+export const SUPPORT_INBOX_ROOM = 'support:inbox';
+
+/** Roles allowed into [SUPPORT_INBOX_ROOM]. Mirrors SUPPORT_ROLES. */
+export const SUPPORT_SOCKET_ROLES: string[] = ['ADMIN'];
 
 // Augment Socket with our auth data so TypeScript knows what's on socket.data
 type AuthSocket = Socket & { data: { userId: string; role: string } };
@@ -29,7 +40,28 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly chatRepository: ChatRepository,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly supportUserService: SupportUserService,
   ) {}
+
+  /**
+   * A conversation is a support thread iff the support system user is one of
+   * its participants. Resolved here (rather than via ChatService) so the
+   * gateway stays free of a service dependency cycle.
+   */
+  private async _isSupportConversation(conversationId: string): Promise<boolean> {
+    try {
+      const participants =
+        await this.chatRepository.findConversationParticipants(conversationId);
+      if (!participants) return false;
+      const supportUserId = await this.supportUserService.getSupportUserId();
+      return (
+        participants.clientUserId === supportUserId ||
+        participants.workerUserId === supportUserId
+      );
+    } catch {
+      return false;
+    }
+  }
 
   // ── Connection lifecycle ──────────────────────────────────────────────────
 
@@ -52,11 +84,18 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       // updates to them directly (even when no conversation is open).
       await socket.join(`user:${payload.sub}`);
 
+      // Support inbox room — membership is decided HERE from the verified JWT
+      // role, never from anything the client sends. There is deliberately no
+      // `join_support_inbox` client event: a non-admin socket has no way to
+      // ask for this room. Mirrors SUPPORT_ROLES in support.controller.ts.
+      if (SUPPORT_SOCKET_ROLES.includes(payload.role)) {
+        await socket.join(SUPPORT_INBOX_ROOM);
+        this.logger.log(`[chat] admin joined support inbox userId=${payload.sub}`);
+      }
+
       this.logger.log(`[chat] connected userId=${payload.sub}`);
     } catch (err) {
-      this.logger.warn(
-        `[chat] auth failed: ${(err as Error)?.message}`,
-      );
+      this.logger.warn(`[chat] auth failed: ${(err as Error)?.message}`);
       socket.disconnect();
     }
   }
@@ -149,9 +188,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
           seenAt: seenAt.toISOString(),
         });
     } catch (err) {
-      this.logger.warn(
-        `[chat] mark_seen failed: ${(err as Error)?.message}`,
-      );
+      this.logger.warn(`[chat] mark_seen failed: ${(err as Error)?.message}`);
     }
   }
 
@@ -174,6 +211,16 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.server
         .to(`conversation:${conversationId}`)
         .emit('new_message', message);
+
+      // Support threads additionally reach every connected admin in real time
+      // through the existing chat websocket, so the external admin panel sees
+      // a new question without polling. Non-support conversations are never
+      // emitted here.
+      if (await this._isSupportConversation(conversationId)) {
+        this.server
+          .to(SUPPORT_INBOX_ROOM)
+          .emit('support_message', { conversationId, message });
+      }
 
       // Update both participants' conversation lists.
       const participants =
