@@ -7,6 +7,8 @@
   "license": "UNLICENSED",
   "scripts": {
     "build": "prisma generate && nest build",
+    "postbuild": "node scripts/verify-build-assets.js",
+    "verify:assets": "node scripts/verify-build-assets.js",
     "postinstall": "prisma generate",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
