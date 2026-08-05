@@ -522,7 +522,7 @@ class AppLocalizationsUr extends AppLocalizations {
   }
 
   @override
-  String get postJobAddPhotoVideo => 'تصویر یا ویڈیو شامل کریں';
+  String get postJobAddPhotoVideo => 'تصویر/ویڈیو';
 
   @override
   String get postJobChoosePhoto => 'تصویر منتخب کریں';
@@ -605,8 +605,12 @@ class AppLocalizationsUr extends AppLocalizations {
   String get postJobVoiceAttached => 'وائس نوٹ لگا دیا گیا';
 
   @override
+  String get postJobAttachmentHelper =>
+      'تصاویر یا 30 سیکنڈ تک کی ویڈیو شامل کریں۔ زیادہ سے زیادہ 4 اٹیچمنٹس۔';
+
+  @override
   String postJobAttachmentCount(int count) {
-    return '4 میں سے $count · تصاویر یا 30 سیکنڈ کی ویڈیو';
+    return '$count/4 اٹیچمنٹس شامل کی گئی ہیں';
   }
 
   @override
@@ -3553,7 +3557,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   }
 
   @override
-  String get postJobAddPhotoVideo => 'Photo/Video shamil karein';
+  String get postJobAddPhotoVideo => 'Photo/Video';
 
   @override
   String get postJobChoosePhoto => 'Photo chunain';
@@ -3638,8 +3642,12 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get postJobVoiceAttached => 'Voice note laga diya gaya';
 
   @override
+  String get postJobAttachmentHelper =>
+      'Photos ya 30 sec ki video dalain. Zyada se zyada 4 attachments.';
+
+  @override
   String postJobAttachmentCount(int count) {
-    return '4 mein se $count · Photos ya 30-sec video';
+    return '$count/4 attachments add ki gayi hain';
   }
 
   @override

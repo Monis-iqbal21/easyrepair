@@ -379,6 +379,24 @@ class _NewJobCard extends ConsumerWidget {
                     ),
                   ],
 
+                  // ── INSPECTION lane: the fixed fee, known before hire ────
+                  // BIDDING never gets a price here — job.displayPrice is
+                  // null before a bid is accepted, and this card is always
+                  // for a not-yet-hired job.
+                  if (job.isInspectionLane && job.displayPrice != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      context.l10n.chooseInspectionFeeAmount(
+                        formatPkr(job.displayPrice),
+                      ),
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: _kAccent,
+                      ),
+                    ),
+                  ],
+
                   // ── Description snippet ───────────────────────────────
                   if (job.description != null && job.description!.isNotEmpty) ...[
                     const SizedBox(height: 8),

@@ -1026,7 +1026,7 @@ abstract class AppLocalizations {
   /// No description provided for @postJobAddPhotoVideo.
   ///
   /// In en, this message translates to:
-  /// **'Add Photo/Video'**
+  /// **'Photo/Video'**
   String get postJobAddPhotoVideo;
 
   /// No description provided for @postJobChoosePhoto.
@@ -1179,10 +1179,16 @@ abstract class AppLocalizations {
   /// **'Voice note attached'**
   String get postJobVoiceAttached;
 
+  /// No description provided for @postJobAttachmentHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'Add photos or a video up to 30 seconds. Maximum 4 attachments.'**
+  String get postJobAttachmentHelper;
+
   /// No description provided for @postJobAttachmentCount.
   ///
   /// In en, this message translates to:
-  /// **'{count} of 4 · Photos or 30-sec video'**
+  /// **'{count}/4 attachments added'**
   String postJobAttachmentCount(int count);
 
   /// No description provided for @postJobAttachmentsWillBeRemoved.

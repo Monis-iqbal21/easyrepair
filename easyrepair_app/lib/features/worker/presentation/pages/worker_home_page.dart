@@ -1001,6 +1001,28 @@ class _ActiveJobCard extends StatelessWidget {
                 ),
               ],
             ),
+            // Price this Ustaad was hired for — OngoingJobEntity.displayPrice
+            // is the same canonicalWorkPrice rule as My Jobs and Track
+            // Worker, so this card can never disagree with them. Never an
+            // "estimate": HandyGo has no estimated-price concept.
+            if (job.displayPrice != null) ...[
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  const Icon(Icons.payments_outlined,
+                      size: 12, color: _kLight),
+                  const SizedBox(width: 4),
+                  Text(
+                    formatPkr(job.displayPrice),
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w700,
+                      color: _kDark,
+                    ),
+                  ),
+                ],
+              ),
+            ],
             const SizedBox(height: 12),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,

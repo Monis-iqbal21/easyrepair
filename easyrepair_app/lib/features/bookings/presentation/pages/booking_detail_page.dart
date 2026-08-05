@@ -544,14 +544,15 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
                   const SizedBox(height: 16),
                 ],
 
-                // Pricing
-                if (booking.estimatedPrice != null || booking.finalPrice != null)
+                // Pricing — hidden entirely for an open BIDDING job nobody
+                // has been hired for yet (canonicalPrice is null there);
+                // never shows Rs 0 or an "estimate".
+                if (booking.canonicalPrice != null)
                   _PricingCard(booking: booking),
 
                 // Worker section
                 if (booking.assignedWorker != null) ...[
-                  if (booking.estimatedPrice != null ||
-                      booking.finalPrice != null)
+                  if (booking.canonicalPrice != null)
                     const SizedBox(height: 16),
                   // INSPECTION lane, "Find Other Ustaad" outcome where a
                   // DIFFERENT worker ended up hired than who inspected — show
@@ -1027,33 +1028,17 @@ class _PricingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isCompleted = booking.status == BookingStatus.completed;
-    // Only the FIND_OTHER_USTAAD outcome (a different Ustaad ended up hired)
-    // actually charges the inspection fee separately from the work amount —
-    // booking.finalPrice there is the accepted bid only, never merged with
-    // the fee. CLOSED_AFTER_INSPECTION and ACCEPTED_REPAIR (including a
-    // rehired original inspector) both fall through to the plain single
-    // "Final Price" line below: for CLOSED_AFTER_INSPECTION, finalPrice IS
-    // the fee (set once at assignment, never touched again) — showing it a
-    // second time as a "breakdown" would double it. For ACCEPTED_REPAIR the
-    // fee is waived and finalPrice is the repair quote alone.
-    final showInspectionBreakdown = isCompleted &&
-        booking.lane == BookingLane.inspection &&
-        booking.inspectionDecisionStatus == InspectionDecisionStatus.findOtherUstaad &&
-        booking.inspectionFeeSnapshot != null;
-    final hasWorkCharge = showInspectionBreakdown && booking.finalPrice != null;
+    // BookingEntity.displayPrice is the single source of truth for this
+    // card and for Track Worker's hired-price pill — one label, one amount,
+    // never a fee+work breakdown that double-counts a number already folded
+    // into finalPrice. See its doc comment for the full precedence rule.
+    final (label, amount) = booking.displayPrice;
 
-    // The amount actually agreed with the hired Ustaad, which for a BIDDING
-    // or rehired job lives in acceptedBidAmount and is NOT estimatedPrice.
-    // Track Worker has always shown this ("Hired at Rs X"); this page showed
-    // only the client's original estimate, so the two disagreed. Restricted to
-    // live assigned bookings because once completed the Final Price row (or
-    // the inspection breakdown above it) is already the authoritative figure.
-    final agreedPrice = booking.agreedPrice;
-    final showAgreedPrice = !isCompleted &&
-        booking.assignedWorker != null &&
-        agreedPrice != null &&
-        agreedPrice != booking.estimatedPrice;
+    final labelText = switch (label) {
+      DisplayPriceLabel.agreed => context.l10n.bookingAgreedPrice,
+      DisplayPriceLabel.finalPrice => context.l10n.bookingFinalPrice,
+      DisplayPriceLabel.inspectionFee => context.l10n.postJobInspectionFeeTitle,
+    };
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -1074,42 +1059,16 @@ class _PricingCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          if (booking.estimatedPrice != null)
+          if (amount != null)
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  context.l10n.bookingEstimatedPrice,
+                  labelText,
                   style: TextStyle(fontSize: 13, color: _kGray),
                 ),
                 Text(
-                  formatPkr(booking.estimatedPrice),
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    // Superseded once a real amount exists — struck through so
-                    // the estimate is never mistaken for what will be paid.
-                    color: isCompleted || showAgreedPrice ? _kLight : _kDark,
-                    decoration:
-                        (isCompleted && booking.finalPrice != null) ||
-                                showAgreedPrice
-                            ? TextDecoration.lineThrough
-                            : null,
-                  ),
-                ),
-              ],
-            ),
-          if (showAgreedPrice) ...[
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  context.l10n.bookingAgreedPrice,
-                  style: TextStyle(fontSize: 13, color: _kGray),
-                ),
-                Text(
-                  formatPkr(agreedPrice),
+                  formatPkr(amount),
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
@@ -1118,85 +1077,6 @@ class _PricingCard extends StatelessWidget {
                 ),
               ],
             ),
-          ],
-          if (showInspectionBreakdown) ...[
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  context.l10n.bookingInspectionCharges,
-                  style: TextStyle(fontSize: 13, color: _kGray),
-                ),
-                Text(
-                  formatPkr(booking.inspectionFeeSnapshot),
-                  style: const TextStyle(fontSize: 14, color: _kDark),
-                ),
-              ],
-            ),
-            if (hasWorkCharge) ...[
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    context.l10n.bookingWorkCharges,
-                    style: TextStyle(fontSize: 13, color: _kGray),
-                  ),
-                  Text(
-                    formatPkr(booking.finalPrice),
-                    style: const TextStyle(fontSize: 14, color: _kDark),
-                  ),
-                ],
-              ),
-            ],
-            const SizedBox(height: 8),
-            const Divider(height: 1, color: _kBorder),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  context.l10n.postJobTotal,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: _kDark,
-                  ),
-                ),
-                Text(
-                  formatPkr(
-                    booking.inspectionFeeSnapshot! +
-                        (hasWorkCharge ? booking.finalPrice! : 0),
-                  ),
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: _kDark,
-                  ),
-                ),
-              ],
-            ),
-          ] else if (isCompleted && booking.finalPrice != null) ...[
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  context.l10n.bookingFinalPrice,
-                  style: TextStyle(fontSize: 13, color: _kGray),
-                ),
-                Text(
-                  formatPkr(booking.finalPrice),
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: _kDark,
-                  ),
-                ),
-              ],
-            ),
-          ],
         ],
       ),
     );

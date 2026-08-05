@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/utils/currency_utils.dart';
 import '../../../bookings/domain/entities/booking_entity.dart';
 import '../../../bookings/presentation/providers/booking_providers.dart';
 import '../../../bookings/presentation/widgets/booking_skeleton.dart';
@@ -420,6 +421,31 @@ class _JobCard extends ConsumerWidget {
                     // Urgency badge
                     _UrgencyPill(urgency: job.urgency),
                     if (job.inspection) const InspectionBadge(small: true),
+                    // Price this Ustaad's work unit was hired/paid for — see
+                    // BookingEntity.canonicalPrice. Null only for a still-open
+                    // BIDDING job (never happens here, since My Jobs only
+                    // lists jobs already assigned to this worker), so this is
+                    // deliberately defensive rather than unreachable.
+                    if (job.canonicalPrice != null)
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.payments_outlined,
+                            size: 12,
+                            color: _kLight,
+                          ),
+                          const SizedBox(width: 3),
+                          Text(
+                            formatPkr(job.canonicalPrice),
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: _kDark,
+                            ),
+                          ),
+                        ],
+                      ),
                     // Date
                     Row(
                       mainAxisSize: MainAxisSize.min,

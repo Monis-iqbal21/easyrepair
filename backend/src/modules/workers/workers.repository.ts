@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import {
   AvailabilityStatus,
+  BidStatus,
   BookingLane,
   BookingStatus,
   Prisma,
@@ -723,6 +724,24 @@ export class WorkersRepository {
         addressLine: true,
         lane: true,
         category: { select: { name: true } },
+        // Price fields — the Home dashboard's Active Job card shows the
+        // exact price this worker was hired for, computed the same way as
+        // every other price-showing screen (see canonicalWorkPrice on the
+        // Flutter side).
+        finalPrice: true,
+        inspectionFeeSnapshot: true,
+        standardServicePriceSnapshot: true,
+        standardServiceItems: {
+          select: { priceSnapshot: true, quantity: true },
+        },
+        inspectionReport: { select: { decisionStatus: true } },
+        // acceptedBidAmount isn't a column — it's the accepted bid's amount,
+        // same derivation BookingsService._toDto uses.
+        bids: {
+          where: { status: BidStatus.ACCEPTED },
+          select: { amount: true },
+          take: 1,
+        },
       },
     });
   }

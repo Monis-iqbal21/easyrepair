@@ -763,9 +763,10 @@ class _StatusCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final worker = booking.assignedWorker;
     final firstName = worker?.firstName ?? context.l10n.trackWorkerLabel;
-    // Shared with Booking Details' "Agreed Price" row — see
-    // BookingEntity.agreedPrice.
-    final price = booking.agreedPrice;
+    // Shared with Booking Details' "Qeemat" row — see
+    // BookingEntity.canonicalPrice. Never estimatedPrice: HandyGo has no
+    // estimate concept, and this pill is only shown once a worker is hired.
+    final price = booking.canonicalPrice;
 
     return Container(
       width: double.infinity,

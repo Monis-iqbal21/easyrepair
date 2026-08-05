@@ -1846,6 +1846,14 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
           _buildVoiceBar(),
           const SizedBox(height: 12),
 
+          // Static rule explanation — photos and video share one combined
+          // cap of 4, never "4 photos plus a video".
+          Text(
+            context.l10n.postJobAttachmentHelper,
+            style: const TextStyle(fontSize: 11, color: _kGray),
+          ),
+          const SizedBox(height: 8),
+
           // Action row: file attachment + camera
           Row(
             children: [
@@ -2006,7 +2014,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 11),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 11),
         decoration: BoxDecoration(
           color: _kSurface,
           borderRadius: BorderRadius.circular(12),
@@ -2019,12 +2027,20 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
           children: [
             Icon(icon, size: 16, color: enabled ? _kGreen : _kGray),
             const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: enabled ? _kDark : _kGray,
+            // Flexible + ellipsis rather than shrinking the font: this button
+            // sits in a half-width Expanded next to the Camera button, and a
+            // longer translation (or a narrow Android screen) must never
+            // overflow the row.
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: enabled ? _kDark : _kGray,
+                ),
               ),
             ),
           ],
@@ -2577,23 +2593,29 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
             style: TextStyle(fontSize: 12, color: _kGray),
           ),
           const SizedBox(height: 12),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
-            decoration: BoxDecoration(
-              color: _kCream,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              context.l10n.postJobUnderstandingIsOurJob,
-              style: TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF7A4520),
+          // Only relevant to INSPECTION: it's the one lane where the client
+          // isn't expected to diagnose the problem themselves. STANDARD and
+          // BIDDING clients already know what they need, so the tagline
+          // doesn't apply there.
+          if (_laneChoice == BookingLane.inspection) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+              decoration: BoxDecoration(
+                color: _kCream,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                context.l10n.postJobUnderstandingIsOurJob,
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF7A4520),
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 14),
+            const SizedBox(height: 14),
+          ],
           if (!_isEditMode) ...[
             _laneRowOption(
               lane: BookingLane.standard,

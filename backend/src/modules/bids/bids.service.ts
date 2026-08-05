@@ -583,6 +583,10 @@ export class BidsService {
           priceSnapshot: item.priceSnapshot,
           quantity: item.quantity,
         })),
+        // INSPECTION lane only — the fixed fee from the category's fee
+        // schedule, known before any Ustaad is hired. Lets the New Jobs card
+        // show a real price instead of nothing for INSPECTION jobs.
+        inspectionFeeSnapshot: b.inspectionFeeSnapshot ?? null,
         category: b.category,
         client: b.clientProfile,
         bidCount: b._count.bids,

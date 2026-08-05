@@ -2,12 +2,31 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:handygo_app/core/l10n/app_locale.dart';
 import 'package:handygo_app/core/l10n/l10n_config.dart';
 import 'package:handygo_app/core/l10n/l10n_extensions.dart';
 import 'package:handygo_app/core/l10n/locale_provider.dart';
+import 'package:handygo_app/core/storage/secure_storage_service.dart';
+import 'package:handygo_app/features/auth/presentation/pages/role_selection_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+/// In-memory stand-in for [SecureStorageService] — same pattern as
+/// api_client_test.dart's fake — so exercising the real `clearTokens()` API
+/// never touches the actual `flutter_secure_storage` platform channel.
+class _FakeSecureStorage extends SecureStorageService {
+  _FakeSecureStorage() : super(const FlutterSecureStorage());
+
+  String? accessToken;
+  String? refreshToken;
+
+  @override
+  Future<void> clearTokens() async {
+    accessToken = null;
+    refreshToken = null;
+  }
+}
 
 /// A stand-in for the app root: same delegates, same supportedLocales, same
 /// locale source as `EasyRepairApp`, without dragging in Firebase or the
@@ -77,30 +96,67 @@ Future<void> _select(
 
 void main() {
   group('default language', () {
-    testWidgets('an existing user with no saved choice sees English', (
+    testWidgets('no saved choice at all defaults to Roman Urdu', (
       tester,
     ) async {
       await _pump(tester);
 
-      expect(find.text('Language'), findsOneWidget);
+      expect(find.text('Zaban'), findsOneWidget);
+      expect(find.text('Language'), findsNothing);
+      expect(find.text('زبان'), findsNothing);
       expect(_direction(tester), 'dir:ltr');
     });
 
-    testWidgets('an unrecognised stored value falls back to English', (
+    testWidgets('an unrecognised stored value falls back to Roman Urdu', (
       tester,
     ) async {
       await _pump(tester, initialPrefs: {kLocalePrefsKey: 'fr_CA'});
 
+      expect(find.text('Zaban'), findsOneWidget);
+    });
+
+    testWidgets('reinstall / cleared app data (empty storage) is Roman Urdu '
+        'again, even after a language had been chosen before', (
+      tester,
+    ) async {
+      // Simulates uninstall+reinstall: a fresh SharedPreferences instance
+      // with nothing in it, regardless of what a previous install had saved.
+      final container = await _pump(tester);
+      await _select(tester, container, AppLocale.english);
       expect(find.text('Language'), findsOneWidget);
+
+      SharedPreferences.setMockInitialValues(const {});
+      final freshPrefs = await SharedPreferences.getInstance();
+      final freshContainer = ProviderContainer(
+        overrides: [sharedPreferencesProvider.overrideWithValue(freshPrefs)],
+      );
+      addTearDown(freshContainer.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: freshContainer,
+          child: const _Harness(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Zaban'), findsOneWidget);
     });
   });
 
   group('switching applies immediately, with no restart', () {
-    testWidgets('English → Urdu → Roman Urdu → English', (tester) async {
+    testWidgets('Roman Urdu (default) → English → Urdu → Roman Urdu', (
+      tester,
+    ) async {
       final container = await _pump(tester);
 
-      // English
+      // Default: Roman Urdu.
+      expect(find.text('Zaban'), findsOneWidget);
+      expect(_direction(tester), 'dir:ltr');
+
+      // → English
+      await _select(tester, container, AppLocale.english);
       expect(find.text('Language'), findsOneWidget);
+      expect(find.text('Zaban'), findsNothing);
       expect(_direction(tester), 'dir:ltr');
 
       // → Urdu: the script changes and the layout does NOT. HandyGo is
@@ -111,15 +167,10 @@ void main() {
       expect(find.text('Language'), findsNothing);
       expect(_direction(tester), 'dir:ltr');
 
-      // → Roman Urdu: Latin script, still LTR.
+      // → back to Roman Urdu: Latin script, still LTR.
       await _select(tester, container, AppLocale.romanUrdu);
       expect(find.text('Zaban'), findsOneWidget);
       expect(find.text('زبان'), findsNothing);
-      expect(_direction(tester), 'dir:ltr');
-
-      // → back to English
-      await _select(tester, container, AppLocale.english);
-      expect(find.text('Language'), findsOneWidget);
       expect(_direction(tester), 'dir:ltr');
     });
 
@@ -253,15 +304,156 @@ void main() {
       expect(_direction(tester), 'dir:ltr');
     });
 
+    testWidgets('a fresh app over the same storage starts in English — '
+        'survives app close and device restart', (tester) async {
+      final container = await _pump(tester);
+      await _select(tester, container, AppLocale.english);
+
+      final prefs = container.read(sharedPreferencesProvider);
+      final restarted = ProviderContainer(
+        overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+      );
+      addTearDown(restarted.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: restarted,
+          child: const _Harness(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Language'), findsOneWidget);
+      expect(_direction(tester), 'dir:ltr');
+    });
+
     testWidgets('logging out does not reset it — the key is untouched by auth',
         (tester) async {
+      // Selects a locale different from the Roman Urdu default so the write
+      // to storage actually happens (setLocale is a no-op when reselecting
+      // the already-current value).
       final container = await _pump(tester);
-      await _select(tester, container, AppLocale.romanUrdu);
+      await _select(tester, container, AppLocale.urdu);
 
       // Auth clears secure storage, never SharedPreferences.
       final prefs = container.read(sharedPreferencesProvider);
-      expect(prefs.getString(kLocalePrefsKey), 'ur_Latn');
+      expect(prefs.getString(kLocalePrefsKey), 'ur');
     });
+
+    testWidgets(
+      'clearing only auth tokens (secure storage) never touches the saved '
+      'language preference (SharedPreferences)',
+      (tester) async {
+        final container = await _pump(tester);
+        await _select(tester, container, AppLocale.urdu);
+
+        // Same in-memory fake used by api_client_test.dart — proves clearing
+        // tokens through the real SecureStorageService API never reaches
+        // SharedPreferences, since the two are independent storage systems.
+        final secureStorage = _FakeSecureStorage()
+          ..accessToken = 'access-1'
+          ..refreshToken = 'refresh-1';
+        await secureStorage.clearTokens();
+
+        expect(secureStorage.accessToken, isNull);
+        expect(secureStorage.refreshToken, isNull);
+        final prefs = container.read(sharedPreferencesProvider);
+        expect(prefs.getString(kLocalePrefsKey), 'ur');
+      },
+    );
+  });
+
+  group('auth screens read the same locale provider immediately', () {
+    testWidgets(
+      'role selection (login/register entry) renders Roman Urdu on a fresh '
+      'install, before any login happens',
+      (tester) async {
+        SharedPreferences.setMockInitialValues(const {});
+        final prefs = await SharedPreferences.getInstance();
+        final container = ProviderContainer(
+          overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+        );
+        addTearDown(container.dispose);
+
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: Consumer(
+              builder: (context, ref, _) {
+                final appLocale = ref.watch(localeProvider);
+                return MaterialApp(
+                  locale: appLocale.locale,
+                  supportedLocales: appSupportedLocales,
+                  localizationsDelegates: appLocalizationsDelegates,
+                  localeResolutionCallback: (_, _) => appLocale.locale,
+                  home: const RoleSelectionPage(),
+                );
+              },
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('HandyGo par aap kya karna chahte hain?'),
+          findsOneWidget,
+        );
+        expect(
+          find.text('What would you like to do on HandyGo?'),
+          findsNothing,
+        );
+      },
+    );
+
+    testWidgets(
+      'changing the language updates the auth screen immediately, with no '
+      'restart and no login required',
+      (tester) async {
+        SharedPreferences.setMockInitialValues(const {});
+        final prefs = await SharedPreferences.getInstance();
+        final container = ProviderContainer(
+          overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+        );
+        addTearDown(container.dispose);
+
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: Consumer(
+              builder: (context, ref, _) {
+                final appLocale = ref.watch(localeProvider);
+                return MaterialApp(
+                  locale: appLocale.locale,
+                  supportedLocales: appSupportedLocales,
+                  localizationsDelegates: appLocalizationsDelegates,
+                  localeResolutionCallback: (_, _) => appLocale.locale,
+                  home: const RoleSelectionPage(),
+                );
+              },
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('HandyGo par aap kya karna chahte hain?'),
+          findsOneWidget,
+        );
+
+        await container.read(localeProvider.notifier).setLocale(
+              AppLocale.english,
+            );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('What would you like to do on HandyGo?'),
+          findsOneWidget,
+        );
+        expect(
+          find.text('HandyGo par aap kya karna chahte hain?'),
+          findsNothing,
+        );
+      },
+    );
   });
 
   group('English fallback for a missing key', () {

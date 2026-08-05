@@ -280,6 +280,11 @@ class OngoingJobModel {
   final String addressLine;
   final String status;
   final String lane;
+  final double? finalPrice;
+  final double? acceptedBidAmount;
+  final double? inspectionFeeSnapshot;
+  final double? standardServicesTotal;
+  final String? inspectionDecisionStatusRaw;
 
   const OngoingJobModel({
     required this.id,
@@ -289,6 +294,11 @@ class OngoingJobModel {
     required this.addressLine,
     required this.status,
     this.lane = 'STANDARD',
+    this.finalPrice,
+    this.acceptedBidAmount,
+    this.inspectionFeeSnapshot,
+    this.standardServicesTotal,
+    this.inspectionDecisionStatusRaw,
   });
 
   factory OngoingJobModel.fromJson(Map<String, dynamic> json) {
@@ -300,6 +310,13 @@ class OngoingJobModel {
       addressLine: json['addressLine'] as String? ?? '',
       status: json['status'] as String,
       lane: json['lane'] as String? ?? 'STANDARD',
+      finalPrice: (json['finalPrice'] as num?)?.toDouble(),
+      acceptedBidAmount: (json['acceptedBidAmount'] as num?)?.toDouble(),
+      inspectionFeeSnapshot:
+          (json['inspectionFeeSnapshot'] as num?)?.toDouble(),
+      standardServicesTotal:
+          (json['standardServicesTotal'] as num?)?.toDouble(),
+      inspectionDecisionStatusRaw: json['inspectionDecisionStatus'] as String?,
     );
   }
 
@@ -312,6 +329,11 @@ class OngoingJobModel {
       addressLine: addressLine,
       status: status,
       lane: lane,
+      finalPrice: finalPrice,
+      acceptedBidAmount: acceptedBidAmount,
+      inspectionFeeSnapshot: inspectionFeeSnapshot,
+      standardServicesTotal: standardServicesTotal,
+      inspectionDecisionStatusRaw: inspectionDecisionStatusRaw,
     );
   }
 }

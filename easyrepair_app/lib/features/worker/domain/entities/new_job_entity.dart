@@ -55,6 +55,9 @@ class NewJobEntity {
   final bool inspection;
   final BookingLane lane;
   final List<BookingStandardServiceItemEntity> standardServiceItems;
+  /// INSPECTION lane only — the fixed fee from the category's fee schedule,
+  /// known before any Ustaad is hired. Null for STANDARD/BIDDING.
+  final double? inspectionFeeSnapshot;
   /// Server-computed: true for BIDDING lane, or an INSPECTION job the
   /// customer reopened via "Find Other Ustaad". False for ordinary
   /// Standard/Inspection direct-assign jobs.
@@ -86,6 +89,7 @@ class NewJobEntity {
     this.inspection = false,
     this.lane = BookingLane.bidding,
     this.standardServiceItems = const [],
+    this.inspectionFeeSnapshot,
     this.isOpenForBidding = false,
     this.myBidCooldownRemainingSeconds = 0,
   });
@@ -102,6 +106,21 @@ class NewJobEntity {
   double get standardServicesTotal => standardServiceItems.fold<double>(
         0,
         (sum, item) => sum + item.lineTotal,
+      );
+
+  /// The single canonical price for this not-yet-hired job — reuses
+  /// [canonicalWorkPrice] (same rule BookingEntity uses) with the hire-time
+  /// fields (acceptedBidAmount, finalPrice, inspectionDecisionStatus) left
+  /// null, since a New Jobs card is always a PENDING, not-yet-assigned
+  /// booking. STANDARD shows the fixed catalog total, INSPECTION shows the
+  /// fee, BIDDING is always null (no fixed price before a bid is accepted) —
+  /// callers must hide the price UI entirely in that case, never show Rs 0
+  /// or "Bid: No".
+  double? get displayPrice => canonicalWorkPrice(
+        lane: lane,
+        inspectionDecisionStatus: null,
+        standardServicesTotal: standardServicesTotal,
+        inspectionFeeSnapshot: inspectionFeeSnapshot,
       );
 
   String get displayTitle => title?.isNotEmpty == true ? title! : category.name;

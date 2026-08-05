@@ -521,7 +521,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get postJobAddPhotoVideo => 'Add Photo/Video';
+  String get postJobAddPhotoVideo => 'Photo/Video';
 
   @override
   String get postJobChoosePhoto => 'Choose Photo';
@@ -604,8 +604,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get postJobVoiceAttached => 'Voice note attached';
 
   @override
+  String get postJobAttachmentHelper =>
+      'Add photos or a video up to 30 seconds. Maximum 4 attachments.';
+
+  @override
   String postJobAttachmentCount(int count) {
-    return '$count of 4 · Photos or 30-sec video';
+    return '$count/4 attachments added';
   }
 
   @override

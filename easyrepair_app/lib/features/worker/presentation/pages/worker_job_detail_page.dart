@@ -142,6 +142,9 @@ class _JobBody extends ConsumerWidget {
     final canComplete = job.status.isWorkerActive && !isStandard && !isInspection && !isBidding;
     final cancelledByClient = job.status == BookingStatus.cancelled &&
         job.cancelledByRole == CancelledByRole.client;
+    // Same getter Booking Details' Qeemat card and Track Worker read, so
+    // this Ustaad's own job detail can never show a different number.
+    final (priceLabel, priceAmount) = job.displayPrice;
 
     return Column(
       children: [
@@ -436,25 +439,25 @@ class _JobBody extends ConsumerWidget {
                 const SizedBox(height: 16),
 
                 // ── Pricing ───────────────────────────────────────────────
-                if (job.estimatedPrice != null || job.finalPrice != null) ...[
+                // Never an "estimate" row: HandyGo has no estimated-price
+                // concept.
+                if (priceAmount != null) ...[
                   _Section(
                     title: context.l10n.bookingPricing,
                     child: Column(
                       children: [
-                        if (job.estimatedPrice != null)
-                          _InfoRow(
-                            icon: Icons.attach_money_rounded,
-                            label: context.l10n.workerEstimatedLabel,
-                            value: formatPkr(job.estimatedPrice),
-                          ),
-                        if (job.finalPrice != null)
-                          _InfoRow(
-                            icon: Icons.payments_outlined,
-                            label: job.isInspectionOnlyForCaller
-                                ? context.l10n.postJobInspectionFeeTitle
-                                : context.l10n.bookingFinalPrice,
-                            value: formatPkr(job.finalPrice),
-                          ),
+                        _InfoRow(
+                          icon: Icons.payments_outlined,
+                          label: switch (priceLabel) {
+                            DisplayPriceLabel.agreed =>
+                              context.l10n.bookingAgreedPrice,
+                            DisplayPriceLabel.finalPrice =>
+                              context.l10n.bookingFinalPrice,
+                            DisplayPriceLabel.inspectionFee =>
+                              context.l10n.postJobInspectionFeeTitle,
+                          },
+                          value: formatPkr(priceAmount),
+                        ),
                         // Paid/not-paid follows the ORIGINAL inspection work
                         // unit, so the inspecting Ustaad is never told the fee
                         // is earned before that booking is COMPLETED.

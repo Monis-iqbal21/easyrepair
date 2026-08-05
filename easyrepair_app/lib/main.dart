@@ -61,8 +61,9 @@ Future<void> main() async {
   // background notification.
   await LocalNotificationService.instance.init();
 
-  // Resolved before runApp so the saved language is known on the first frame —
-  // otherwise the app would render English and then visibly switch.
+  // Resolved before runApp so the saved (or default Roman Urdu) language is
+  // known on the first frame — otherwise the app would render one language
+  // and then visibly switch.
   final prefs = await SharedPreferences.getInstance();
 
   runApp(

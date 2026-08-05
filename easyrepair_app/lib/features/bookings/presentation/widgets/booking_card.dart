@@ -35,7 +35,6 @@ class BookingCard extends StatelessWidget {
     final isLive = booking.status.tab == BookingTab.live;
     final isAssigned = booking.status.tab == BookingTab.assigned;
     final isCancelled = booking.status.tab == BookingTab.cancelled;
-    final isCompleted = booking.status.tab == BookingTab.completed;
 
     return GestureDetector(
       onTap: onTap,
@@ -215,11 +214,13 @@ class BookingCard extends StatelessWidget {
                           isAssigned: isAssigned,
                         ),
                       ),
-                      if (booking.estimatedPrice != null)
+                      // canonicalPrice is null only for an open BIDDING job
+                      // nobody has been hired for yet — hide the tag rather
+                      // than showing Rs 0 or a fake estimate.
+                      if (booking.canonicalPrice != null)
                         _PriceTag(
-                          price: booking.estimatedPrice!,
+                          price: booking.canonicalPrice!,
                           isCancelled: isCancelled,
-                          isCompleted: isCompleted,
                         ),
                     ],
                   ),
@@ -643,38 +644,24 @@ class _SearchingDotState extends State<_SearchingDot>
 class _PriceTag extends StatelessWidget {
   final double price;
   final bool isCancelled;
-  final bool isCompleted;
 
   const _PriceTag({
     required this.price,
     required this.isCancelled,
-    required this.isCompleted,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Text(
-          formatPkr(price),
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-            color: isCancelled
-                ? const Color(0xFFCBD5E1)
-                : isCompleted
-                    ? const Color(0xFF1A1A1A)
-                    : const Color(0xFF1A1A1A),
-            decoration: isCancelled ? TextDecoration.lineThrough : null,
-          ),
-        ),
-        if (!isCancelled)
-          Text(
-            context.l10n.cardEstimatePrefix,
-            style: TextStyle(fontSize: 9.5, color: Color(0xFF94A3B8)),
-          ),
-      ],
+    return Text(
+      formatPkr(price),
+      style: TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w700,
+        color: isCancelled
+            ? const Color(0xFFCBD5E1)
+            : const Color(0xFF1A1A1A),
+        decoration: isCancelled ? TextDecoration.lineThrough : null,
+      ),
     );
   }
 }

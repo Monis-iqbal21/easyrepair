@@ -90,7 +90,11 @@ void main() {
   });
 
   testWidgets('picking Roman Urdu persists ur_Latn', (tester) async {
-    final container = await _openSheet(tester);
+    // Starts from English (not the Roman Urdu default) so tapping "Roman
+    // Urdu" is a real selection — setLocale is a no-op when reselecting the
+    // already-current value, which would leave storage unwritten.
+    final container =
+        await _openSheet(tester, initialPrefs: {kLocalePrefsKey: 'en'});
 
     await tester.tap(find.text('Roman Urdu'));
     await tester.pumpAndSettle();

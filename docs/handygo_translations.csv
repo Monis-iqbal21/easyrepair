@@ -163,7 +163,7 @@ authConfirmNewPasswordButton,Authentication,Confirm New Password,نیا پاس �
 postJobOffersSoon,Uncategorised,You will start getting Ustaad offers within minutes.,چند ہی منٹ میں آپ کو استادوں کی آفرز ملنا شروع ہو جائیں گی۔,Chand hi minute mein aap ko Ustaad ki offers milna shuru ho jayengi.,
 postJobSelectDateTimeFirst,Uncategorised,Select date and time to continue.,آگے بڑھنے کے لیے تاریخ اور وقت منتخب کریں۔,Aage barhne ke liye date aur time chunain.,
 postJobGoesLiveAt,Uncategorised,Job goes live at {time} on {date} — 1 hour before the Ustaad arrival time.,کام {date} کو {time} بجے لائیو ہوگا — استاد کے پہنچنے کے وقت سے ایک گھنٹہ پہلے۔,Kaam {date} ko {time} baje live hoga — Ustaad ke pohanchne ke waqt se ek ghanta pehle.,"Placeholders: {date}, {time}"
-postJobAddPhotoVideo,Uncategorised,Add Photo/Video,تصویر یا ویڈیو شامل کریں,Photo/Video shamil karein,
+postJobAddPhotoVideo,Uncategorised,Photo/Video,تصویر/ویڈیو,Photo/Video,
 postJobChoosePhoto,Uncategorised,Choose Photo,تصویر منتخب کریں,Photo chunain,
 postJobChooseVideo,Uncategorised,Choose Video - 30 sec,ویڈیو منتخب کریں - 30 سیکنڈ,Video chunain - 30 sec,
 postJobCamera,Uncategorised,Camera,کیمرہ,Camera,
@@ -189,7 +189,8 @@ postJobAddressHint,Uncategorised,"e.g. House 12, Street 5, DHA Phase 6, Karachi"
 postJobAddLocationFirst,Uncategorised,Add your location to continue.,آگے بڑھنے کے لیے اپنی لوکیشن شامل کریں۔,Aage barhne ke liye apni location shamil karein.,
 postJobVoiceAndPhotos,Uncategorised,Voice note & photos,وائس نوٹ اور تصاویر,Voice note aur photos,
 postJobVoiceAttached,Uncategorised,Voice note attached,وائس نوٹ لگا دیا گیا,Voice note laga diya gaya,
-postJobAttachmentCount,Uncategorised,{count} of 4 · Photos or 30-sec video,4 میں سے {count} · تصاویر یا 30 سیکنڈ کی ویڈیو,4 mein se {count} · Photos ya 30-sec video,Placeholders: {count}
+postJobAttachmentHelper,Uncategorised,Add photos or a video up to 30 seconds. Maximum 4 attachments.,تصاویر یا 30 سیکنڈ تک کی ویڈیو شامل کریں۔ زیادہ سے زیادہ 4 اٹیچمنٹس۔,Photos ya 30 sec ki video dalain. Zyada se zyada 4 attachments.,
+postJobAttachmentCount,Uncategorised,{count}/4 attachments added,{count}/4 اٹیچمنٹس شامل کی گئی ہیں,{count}/4 attachments add ki gayi hain,Placeholders: {count}
 postJobAttachmentsWillBeRemoved,Uncategorised,"{count, plural, =1{{count} existing attachment will be removed on save.} other{{count} existing attachments will be removed on save.}}",محفوظ کرنے پر {count} پرانی فائلیں ہٹا دی جائیں گی۔,Save karne par {count} purani files hata di jayengi.,Placeholders: {count} | ICU plural — keep the plural syntax intact
 postJobTapToRecord,Uncategorised,Tap to record — describe the problem in your own words,ریکارڈ کرنے کے لیے دبائیں — مسئلہ اپنے الفاظ میں بتائیں,Record karne ke liye dabayein — masla apne alfaz mein batayein,
 postJobService,Uncategorised,Service,سروس,Service,

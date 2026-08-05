@@ -2,9 +2,11 @@ import 'package:flutter/widgets.dart';
 
 /// The three languages HandyGo ships in.
 ///
-/// The app never resolves the language from the device — [english] is the
-/// default so existing users keep seeing what they see today until they pick
-/// something else themselves.
+/// The app never resolves the language from the device — [romanUrdu] is the
+/// default for anyone with no saved choice yet (first install, or app data/
+/// storage cleared), across every screen including role selection and
+/// login/register. Once a user picks a language it is persisted and used
+/// verbatim until they change it again; picking never gets reset by logout.
 enum AppLocale {
   english,
   urdu,
@@ -43,13 +45,14 @@ enum AppLocale {
   /// answer per-locale and accidentally reintroduce RTL.
   TextDirection get textDirection => TextDirection.ltr;
 
-  /// Reads a persisted value, falling back to English for anything unknown
-  /// (missing key, corrupted value, or a language removed in a later release).
+  /// Reads a persisted value, falling back to Roman Urdu for anything unknown
+  /// (no saved choice yet, corrupted value, or a language removed in a later
+  /// release) — HandyGo's app-wide default.
   static AppLocale fromStorage(String? value) {
     for (final option in AppLocale.values) {
       if (option.storageValue == value) return option;
     }
-    return AppLocale.english;
+    return AppLocale.romanUrdu;
   }
 
   /// Maps a [Locale] back to the option that produced it.

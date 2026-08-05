@@ -22,7 +22,9 @@ class LocaleNotifier extends Notifier<AppLocale> {
   @override
   AppLocale build() {
     final prefs = ref.read(sharedPreferencesProvider);
-    // An existing user who has never chosen a language gets English.
+    // No saved choice yet (first install, or app data/storage cleared) gets
+    // Roman Urdu — see AppLocale.fromStorage. A user who has already picked a
+    // language keeps seeing it: logout/token clearing never touches this key.
     return AppLocale.fromStorage(prefs.getString(kLocalePrefsKey));
   }
 

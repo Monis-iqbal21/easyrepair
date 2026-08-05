@@ -263,7 +263,7 @@
       }
     }
   },
-  "postJobAddPhotoVideo": "Add Photo/Video",
+  "postJobAddPhotoVideo": "Photo/Video",
   "postJobChoosePhoto": "Choose Photo",
   "postJobChooseVideo": "Choose Video - 30 sec",
   "postJobCamera": "Camera",
@@ -289,7 +289,8 @@
   "postJobAddLocationFirst": "Add your location to continue.",
   "postJobVoiceAndPhotos": "Voice note & photos",
   "postJobVoiceAttached": "Voice note attached",
-  "postJobAttachmentCount": "{count} of 4 · Photos or 30-sec video",
+  "postJobAttachmentHelper": "Add photos or a video up to 30 seconds. Maximum 4 attachments.",
+  "postJobAttachmentCount": "{count}/4 attachments added",
   "@postJobAttachmentCount": {
     "placeholders": {
       "count": {

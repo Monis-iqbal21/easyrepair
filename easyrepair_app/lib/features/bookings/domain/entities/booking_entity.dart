@@ -201,6 +201,57 @@ extension InspectionWorkerActionX on InspectionWorkerAction {
   bool get isActionable => this != InspectionWorkerAction.waitingForDecision;
 }
 
+/// Which wording the "Qeemat" card / Track Worker pill should use for the
+/// amount [BookingEntity.displayPrice] resolves — the number is shared, but
+/// the label still depends on how final/agreed it is. HandyGo has no
+/// "estimate" concept, so there is deliberately no `estimated` variant here —
+/// [canonicalWorkPrice] never reads [BookingEntity.estimatedPrice].
+enum DisplayPriceLabel { agreed, finalPrice, inspectionFee }
+
+/// The single canonical price for one work unit, shared by every screen that
+/// shows a job/booking price (Booking Details, Track Worker, client Bookings
+/// cards, Choose Ustaad, worker My Jobs / New Jobs / Job Detail / Home active
+/// job). Never reads an "estimate" — HandyGo has no estimated-price concept —
+/// so callers must hide all price UI when this returns null (an open BIDDING
+/// job nobody has been hired for yet) rather than showing Rs 0 or a
+/// placeholder.
+///
+/// Per-lane precedence:
+///  * STANDARD — the fixed catalog total ([standardServicesTotal]), known
+///    before any Ustaad is hired. Falls back to [finalPrice] only for
+///    legacy rows missing item snapshots.
+///  * INSPECTION — the inspection fee ([inspectionFeeSnapshot]), known
+///    before hire from the category's fee schedule. Once the client accepts
+///    a repair quote from a rehired inspector ([InspectionDecisionStatus.
+///    acceptedRepair]), the fee is waived and [finalPrice] (already replaced
+///    with the repair quote by BookingsService.setInspectionRepairPrice)
+///    takes over instead. CLOSED_AFTER_INSPECTION and FIND_OTHER_USTAAD both
+///    keep the fee — the repair (if any) is a separate linked booking that
+///    prices itself independently, so it is never added in here.
+///  * BIDDING (including a "Find Other Ustaad" child booking) — only
+///    [acceptedBidAmount] once a bid has been accepted; null before that,
+///    which callers must render as "no price yet", never Rs 0 or "Bid: No".
+double? canonicalWorkPrice({
+  required BookingLane lane,
+  required InspectionDecisionStatus? inspectionDecisionStatus,
+  double? standardServicesTotal,
+  double? inspectionFeeSnapshot,
+  double? acceptedBidAmount,
+  double? finalPrice,
+}) {
+  switch (lane) {
+    case BookingLane.standard:
+      return standardServicesTotal ?? finalPrice;
+    case BookingLane.inspection:
+      if (inspectionDecisionStatus == InspectionDecisionStatus.acceptedRepair) {
+        return finalPrice ?? inspectionFeeSnapshot;
+      }
+      return inspectionFeeSnapshot ?? finalPrice;
+    case BookingLane.bidding:
+      return acceptedBidAmount ?? finalPrice;
+  }
+}
+
 extension BookingInspectionLifecycleX on BookingEntity {
   /// True once a DIFFERENT worker than the original inspector has been hired
   /// to perform the repair (customer used "Find Other Ustaad" and accepted a
@@ -248,17 +299,53 @@ extension BookingInspectionLifecycleX on BookingEntity {
           inspectionDecisionStatus == InspectionDecisionStatus.findOtherUstaad) ||
       (lane == BookingLane.bidding && sourceInspectionBookingId != null);
 
-  /// The price actually agreed with the hired Ustaad, in precedence order.
-  ///
-  /// [acceptedBidAmount] wins because on a BIDDING job (including a rehire
-  /// after "Find Other Ustaad") it is the only field holding what the client
-  /// actually agreed to — [estimatedPrice] is still the client's original
-  /// guess. Booking Details used to read estimated/final directly and so
-  /// disagreed with Track Worker, which already applied this order. Both now
-  /// read this one getter, so the two screens cannot show different numbers.
-  ///
-  /// Null when nothing has been agreed or estimated yet.
-  double? get agreedPrice => acceptedBidAmount ?? finalPrice ?? estimatedPrice;
+  /// The single canonical price for this booking's own work unit — see
+  /// [canonicalWorkPrice] for the full per-lane rule. Every price-showing
+  /// screen (Booking Details, Track Worker, Bookings cards, Choose Ustaad,
+  /// worker My Jobs / New Jobs / Job Detail / Home active job) reads this one
+  /// getter so none of them can ever disagree. Null means "no valid price
+  /// yet" (an open BIDDING job) — callers must hide their price UI entirely,
+  /// never show Rs 0.
+  double? get canonicalPrice => canonicalWorkPrice(
+        lane: lane,
+        inspectionDecisionStatus: inspectionDecisionStatus,
+        standardServicesTotal: standardServicesTotal,
+        inspectionFeeSnapshot: inspectionFeeSnapshot,
+        acceptedBidAmount: acceptedBidAmount,
+        finalPrice: finalPrice,
+      );
+
+  /// The single canonical (label, amount) pair for the "Qeemat" card on
+  /// Booking Details — [canonicalPrice] plus which wording to use. A
+  /// completed INSPECTION booking that ended CLOSED_AFTER_INSPECTION or
+  /// FIND_OTHER_USTAAD did exactly one thing on THIS booking (the
+  /// inspection), so it is always labelled as the inspection fee — never a
+  /// "work charges" line double-counting the same number (a repair after
+  /// FIND_OTHER_USTAAD happens on a separate linked booking, priced
+  /// independently). Every other case is labelled "agreed" while live and
+  /// "final" once completed. The amount always equals [canonicalPrice], so
+  /// this can never disagree with Track Worker or any other screen reading
+  /// that getter directly.
+  (DisplayPriceLabel, double?) get displayPrice {
+    final isInspectionFeeOnly = status == BookingStatus.completed &&
+        lane == BookingLane.inspection &&
+        (inspectionDecisionStatus ==
+                InspectionDecisionStatus.closedAfterInspection ||
+            inspectionDecisionStatus == InspectionDecisionStatus.findOtherUstaad);
+    if (isInspectionFeeOnly) {
+      return (
+        DisplayPriceLabel.inspectionFee,
+        inspectionFeeSnapshot ?? canonicalPrice,
+      );
+    }
+
+    return (
+      status == BookingStatus.completed
+          ? DisplayPriceLabel.finalPrice
+          : DisplayPriceLabel.agreed,
+      canonicalPrice,
+    );
+  }
 
   /// True when this booking can have an inspection report worth offering —
   /// either it IS the inspection booking, or it is the linked repair booking

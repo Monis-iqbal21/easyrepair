@@ -557,6 +557,23 @@ export class WorkersService {
             addressLine: ongoingJob.addressLine,
             status: ongoingJob.status,
             lane: ongoingJob.lane,
+            finalPrice: ongoingJob.finalPrice ?? null,
+            acceptedBidAmount: ongoingJob.bids[0]
+              ? Number(ongoingJob.bids[0].amount)
+              : null,
+            inspectionFeeSnapshot: ongoingJob.inspectionFeeSnapshot ?? null,
+            // STANDARD lane total — sum of selected item snapshots, falling
+            // back to the legacy singular snapshot when no item rows exist.
+            // Mirrors the same computation in BookingsService.assignWorker.
+            standardServicesTotal:
+              ongoingJob.standardServiceItems.length > 0
+                ? ongoingJob.standardServiceItems.reduce(
+                    (sum, item) => sum + item.priceSnapshot * item.quantity,
+                    0,
+                  )
+                : (ongoingJob.standardServicePriceSnapshot ?? null),
+            inspectionDecisionStatus:
+              ongoingJob.inspectionReport?.decisionStatus ?? null,
           }
         : null,
     };
