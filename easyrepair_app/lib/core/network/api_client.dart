@@ -18,12 +18,29 @@ class AuthInterceptor extends Interceptor {
   bool _isRefreshing = false;
   Completer<void>? _refreshCompleter;
 
+  /// The client used for `/auth/refresh`, exposed so a test can assert it is
+  /// bounded — an unbounded refresh stalls every queued 401 behind it.
+  @visibleForTesting
+  Dio get refreshDio => _refreshDio;
+
   /// [refreshDio] is injectable purely so tests can point the `/auth/refresh`
   /// call at a fake adapter instead of the network; production always uses
   /// the default (a plain client with no interceptors, same as before this
   /// was hoisted out of `onError` into a field).
   AuthInterceptor(this._storage, this._dio, {Dio? refreshDio})
-      : _refreshDio = refreshDio ?? Dio(BaseOptions(baseUrl: AppConfig.apiBaseUrl));
+      : _refreshDio = refreshDio ??
+            Dio(
+              BaseOptions(
+                baseUrl: AppConfig.apiBaseUrl,
+                // Must be bounded like the main client. A refresh that never
+                // returns holds `_isRefreshing` true forever, and every later
+                // 401 then waits on a completer that never settles — the
+                // request never fails, so the screen spins with no error.
+                connectTimeout: const Duration(seconds: 10),
+                receiveTimeout: const Duration(seconds: 10),
+                sendTimeout: const Duration(seconds: 10),
+              ),
+            );
 
   @override
   Future<void> onRequest(
@@ -181,23 +198,65 @@ class ErrorInterceptor extends Interceptor {
 /// `message` responses via an unsafe `as String` cast). Kept as a thin
 /// re-export so the 5 datasources already importing `dioExceptionToFailure`
 /// from here don't need an import-path change.
-Failure dioExceptionToFailure(DioException e) =>
-    failure_mapper.dioExceptionToFailure(e);
+///
+/// [preserveUnauthorizedMessage]: see the mapper's own doc — only public,
+/// pre-login auth endpoints (password login, register, OTP, reset) should
+/// ever pass `true`.
+Failure dioExceptionToFailure(
+  DioException e, {
+  bool preserveUnauthorizedMessage = false,
+}) =>
+    failure_mapper.dioExceptionToFailure(
+      e,
+      preserveUnauthorizedMessage: preserveUnauthorizedMessage,
+    );
 
-final dioProvider = Provider<Dio>((ref) {
-  final storage = ref.watch(secureStorageServiceProvider);
-
-  final dio = Dio(
+Dio _buildDio() {
+  return Dio(
     BaseOptions(
       baseUrl: AppConfig.apiBaseUrl,
       connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 10),
+      // Without this an upload that stalls mid-body never times out, and the
+      // calling screen's loader never clears.
+      sendTimeout: const Duration(seconds: 30),
       headers: {'Content-Type': 'application/json'},
     ),
   );
+}
+
+final dioProvider = Provider<Dio>((ref) {
+  final storage = ref.watch(secureStorageServiceProvider);
+  final dio = _buildDio();
 
   dio.interceptors.addAll([
     AuthInterceptor(storage, dio),
+    ErrorInterceptor(),
+    if (kDebugMode) PrettyDioLogger(requestBody: true, responseBody: true),
+  ]);
+
+  return dio;
+});
+
+/// A Dio client for the public, pre-login auth endpoints only (login,
+/// register, OTP request/verify, password reset, phone-check). Deliberately
+/// carries no [AuthInterceptor]:
+///
+///  * No stale/leftover access token is ever attached to a request that
+///    doesn't need one — these endpoints authenticate the *request body*
+///    (phone + password/OTP), not the caller.
+///  * A 401 here (wrong password, unknown account) is never mistaken for an
+///    expired session — nothing tries to refresh a token or clear storage on
+///    it, so it reaches the repository as a plain rejected request and the
+///    backend's real message survives (see dioExceptionToFailure's
+///    `preserveUnauthorizedMessage`).
+///
+/// `/auth/logout`, `/auth/me` and `/auth/account` are genuinely protected —
+/// [AuthRemoteDatasource] keeps using [dioProvider] for those.
+final publicDioProvider = Provider<Dio>((ref) {
+  final dio = _buildDio();
+
+  dio.interceptors.addAll([
     ErrorInterceptor(),
     if (kDebugMode) PrettyDioLogger(requestBody: true, responseBody: true),
   ]);

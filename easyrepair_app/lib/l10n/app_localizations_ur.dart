@@ -664,10 +664,6 @@ class AppLocalizationsUr extends AppLocalizations {
   String get postJobInspectionFeeTitle => 'انسپیکشن فیس';
 
   @override
-  String get postJobNothingOpensBeforeRate =>
-      'ریٹ بتانے سے پہلے کچھ نہیں کھلتا — جو کہا، وہی لیا۔';
-
-  @override
   String get postJobChooseStandardService => 'اسٹینڈرڈ سروس منتخب کریں';
 
   @override
@@ -715,6 +711,9 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get postJobStepAddress => 'پتہ';
+
+  @override
+  String get postJobStepLaneSelection => 'قسم منتخب کریں';
 
   @override
   String get postJobStepDetails => 'تفصیلات';
@@ -1320,6 +1319,14 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get discoveryInspectionFeeSeparate =>
       'انسپیکشن کرنے والے استاد کی انسپیکشن فیس الگ سے دینی ہوگی۔ نیا استاد اپنی آفر کے مطابق کام کی پوری رقم لے گا، اور انسپیکشن فیس اس میں ایڈجسٹ نہیں ہوگی۔';
+
+  @override
+  String get discoveryBidLabourOnlyNote =>
+      'یہ بولی صرف مزدوری کے اخراجات کے لیے ہے۔ پرزے اور سامان آپ کی منظوری سے الگ خریدے یا چارج کیے جائیں گے۔';
+
+  @override
+  String get discoveryBidInspectionBasedNote =>
+      'یہ بولی انسپیکشن رپورٹ کے مطابق ہے اور اس میں مزدوری اور رپورٹ کیے گئے کام کے لیے درکار پرزے یا سامان شامل ہیں۔';
 
   @override
   String get discoveryWorkerHired => 'استاد کامیابی سے ہائر ہو گئے';
@@ -3701,10 +3708,6 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get postJobInspectionFeeTitle => 'Inspection Fee';
 
   @override
-  String get postJobNothingOpensBeforeRate =>
-      'Rate batane se pehle kuch nahi khulta — jo kaha, wohi liya.';
-
-  @override
   String get postJobChooseStandardService => 'Standard service chunain';
 
   @override
@@ -3754,6 +3757,9 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get postJobStepAddress => 'Pata';
+
+  @override
+  String get postJobStepLaneSelection => 'Qisam Chunein';
 
   @override
   String get postJobStepDetails => 'Tafseelat';
@@ -4368,6 +4374,14 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   @override
   String get discoveryInspectionFeeSeparate =>
       'Inspection karne wale Ustaad ko inspection fee alag deni hogi. Naya Ustaad apne offer ke mutabiq kaam ki puri raqam charge karega. Inspection fee uske offer mein adjust nahi hogi.';
+
+  @override
+  String get discoveryBidLabourOnlyNote =>
+      'Yeh bid sirf labour charges ke liye hai. Parts aur material aap ki approval se alag khareede ya charge kiye jayenge.';
+
+  @override
+  String get discoveryBidInspectionBasedNote =>
+      'Yeh bid inspection report ke mutabiq hai aur is mein labour aur report ke kaam ke liye zaroori parts ya material shamil hain.';
 
   @override
   String get discoveryWorkerHired => 'Ustaad kamyabi se hire ho gaye';

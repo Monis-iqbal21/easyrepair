@@ -206,7 +206,6 @@ postJobIKnowThePartWarning,Uncategorised,"Only choose this if you are completely
 postJobSomethingIsBroken,Uncategorised,Something is broken,کچھ خراب ہے,Kuch kharab hai,
 postJobDontKnowIssue,Uncategorised,I do not know what the problem is,مسئلہ کیا ہے، یہ معلوم نہیں,"Masla kya hai, ye pata nahi",
 postJobInspectionFeeTitle,Uncategorised,Inspection Fee,انسپیکشن فیس,Inspection Fee,
-postJobNothingOpensBeforeRate,Uncategorised,Nothing is opened before the rate is given — what is quoted is what is charged.,ریٹ بتانے سے پہلے کچھ نہیں کھلتا — جو کہا، وہی لیا۔,"Rate batane se pehle kuch nahi khulta — jo kaha, wohi liya.",
 postJobChooseStandardService,Uncategorised,Choose a standard service,اسٹینڈرڈ سروس منتخب کریں,Standard service chunain,
 postJobServicesUnavailable,Uncategorised,Unable to load services. Please go back and try again.,سروسز لوڈ نہیں ہو سکیں۔ واپس جا کر دوبارہ کوشش کریں۔,Services load nahi ho sakin. Wapas jaa kar dobara koshish karein.,
 postJobSelectCategoryFirst,Uncategorised,Select a service category first.,پہلے سروس کیٹیگری منتخب کریں۔,Pehle service category chunain.,
@@ -222,6 +221,7 @@ postJobWhatDoYouSeeHint,Uncategorised,e.g. AC turns on but room stays hot…,م�
 postJobBack,Uncategorised,Back,پیچھے,Wapas,
 postJobNext,Uncategorised,Next,آگے,Aage,
 postJobStepAddress,Uncategorised,Address,پتہ,Pata,
+postJobStepLaneSelection,Uncategorised,Choose Type,قسم منتخب کریں,Qisam Chunein,
 postJobStepDetails,Uncategorised,Details,تفصیلات,Tafseelat,
 postJobStepTimeSelection,Uncategorised,Time Selection,وقت کا انتخاب,Time ka intekhab,
 postJobStepIndicator,Uncategorised,Step {current} of {total}  ·  {title},مرحلہ {total} میں سے {current}  ·  {title},Step {total} mein se {current}  ·  {title},"Placeholders: {current}, {title}, {total}"
@@ -412,6 +412,8 @@ discoveryHiring,Uncategorised,Hiring…,ہائر کیا جا رہا ہے…,Hire
 discoveryHireNamed,Uncategorised,Hire {name}?,{name} کو ہائر کریں؟,{name} ko hire karein?,Placeholders: {name}
 discoveryAcceptBid,Uncategorised,Accept {name}'s bid of {price}?,{name} کی {price} کی بولی منظور کریں؟,{name} ki {price} ki bid accept karein?,"Placeholders: {name}, {price}"
 discoveryInspectionFeeSeparate,Uncategorised,"The inspecting Ustaad's inspection fee is paid separately. The new Ustaad will charge the full amount of their own offer, and the inspection fee is not adjusted into it.",انسپیکشن کرنے والے استاد کی انسپیکشن فیس الگ سے دینی ہوگی۔ نیا استاد اپنی آفر کے مطابق کام کی پوری رقم لے گا، اور انسپیکشن فیس اس میں ایڈجسٹ نہیں ہوگی۔,Inspection karne wale Ustaad ko inspection fee alag deni hogi. Naya Ustaad apne offer ke mutabiq kaam ki puri raqam charge karega. Inspection fee uske offer mein adjust nahi hogi.,
+discoveryBidLabourOnlyNote,Uncategorised,This bid covers labour only. Parts and materials will be purchased or charged separately with your approval.,یہ بولی صرف مزدوری کے اخراجات کے لیے ہے۔ پرزے اور سامان آپ کی منظوری سے الگ خریدے یا چارج کیے جائیں گے۔,Yeh bid sirf labour charges ke liye hai. Parts aur material aap ki approval se alag khareede ya charge kiye jayenge.,Bidding hire-confirmation modal — direct BIDDING lane (labour only)
+discoveryBidInspectionBasedNote,Uncategorised,This bid is based on the inspection report and includes labour and the parts or materials required for the reported work.,یہ بولی انسپیکشن رپورٹ کے مطابق ہے اور اس میں مزدوری اور رپورٹ کیے گئے کام کے لیے درکار پرزے یا سامان شامل ہیں۔,Yeh bid inspection report ke mutabiq hai aur is mein labour aur report ke kaam ke liye zaroori parts ya material shamil hain.,Bidding hire-confirmation modal — Inspection → Find Other Ustaad → Bidding lane
 discoveryWorkerHired,Uncategorised,Worker hired successfully,استاد کامیابی سے ہائر ہو گئے,Ustaad kamyabi se hire ho gaye,
 discoveryHireFailed,Uncategorised,Failed to hire worker.,استاد ہائر نہیں ہو سکے۔,Ustaad hire nahi ho sake.,
 discoveryInspectedThisJob,Uncategorised,INSPECTED THIS JOB,اس کام کی انسپیکشن کی,IS KAAM KI INSPECTION KI,

@@ -2328,12 +2328,17 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     return true;
   }
 
-  // Step 2 · Details
-  bool _validateStep2() {
+  // Step 2.1 · Lane choice
+  bool _validateLaneSelectStep() {
     if (_laneChoice == null) {
       _showError(context.l10n.postJobSelectOption);
       return false;
     }
+    return true;
+  }
+
+  // Step 2.2 · Selected lane's details
+  bool _validateLaneDetailsStep() {
     if (_laneChoice == BookingLane.bidding &&
         _titleCtrl.text.trim().length <= 3) {
       _showError(context.l10n.postJobDescribeIssue);
@@ -2350,8 +2355,9 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
   void _nextStep() {
     FocusScope.of(context).unfocus();
     if (_currentStep == 0 && !_validateStep1()) return;
-    if (_currentStep == 1 && !_validateStep2()) return;
-    if (_currentStep < 2) setState(() => _currentStep++);
+    if (_currentStep == 1 && !_validateLaneSelectStep()) return;
+    if (_currentStep == 2 && !_validateLaneDetailsStep()) return;
+    if (_currentStep < 3) setState(() => _currentStep++);
   }
 
   void _prevStep() {
@@ -2365,16 +2371,16 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
 
   // ── Step indicator ────────────────────────────────────────────────────────────
   Widget _buildStepIndicator() {
-    const labels = ['Address', 'Details', 'Time'];
+    const labels = ['Address', 'Lane', 'Details', 'Time'];
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
-        children: List.generate(3, (i) {
+        children: List.generate(4, (i) {
           final isDone = i < _currentStep;
           final isActive = i == _currentStep;
           return Expanded(
             child: Padding(
-              padding: EdgeInsetsDirectional.only(end: i < 2 ? 8 : 0),
+              padding: EdgeInsetsDirectional.only(end: i < 3 ? 8 : 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -2429,7 +2435,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     );
   }
 
-  // ── Step 2: Booking lane + lane-specific content ───────────────────────────
+  // ── Step 2.1: Booking lane choice only ──────────────────────────────────────
   // Editing an existing STANDARD booking locks the lane — the 3 "what do you
   // need?" cards never show, since switching lane on an existing booking
   // isn't supported. A read-only service header replaces them instead, so
@@ -2437,7 +2443,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
   bool get _hideLaneCardsForEdit =>
       _isEditMode && _laneChoice == BookingLane.standard;
 
-  Widget _buildStep2() {
+  Widget _buildLaneSelectStep() {
     return SingleChildScrollView(
       key: const ValueKey(1),
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
@@ -2449,10 +2455,33 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
             _buildLockedServiceHeader()
           else
             _buildLaneSelector(),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+
+  // ── Step 2.2: Selected lane's detail form ───────────────────────────────────
+  // Shown only after a lane has been committed to on step 2.1 — one lane's
+  // fields at a time, on their own page.
+  Widget _buildLaneDetailsStep() {
+    final categoriesAsync = ref.watch(clientBookingCategoriesProvider);
+    final inspectionFee = categoriesAsync.maybeWhen(
+      data: (categories) => _resolveCategory(categories)?.inspectionFee,
+      orElse: () => null,
+    );
+
+    return SingleChildScrollView(
+      key: const ValueKey(2),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           if (_laneChoice == BookingLane.standard) ...[
-            const SizedBox(height: 16),
             _buildStandardServicesSection(),
           ] else if (_laneChoice == BookingLane.inspection) ...[
+            _buildInspectionOverviewCard(fee: inspectionFee),
             const SizedBox(height: 16),
             _buildInspectionInfoCard(),
             const SizedBox(height: 16),
@@ -2466,7 +2495,6 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
               color: _kGreen,
             ),
           ] else if (_laneChoice == BookingLane.bidding) ...[
-            const SizedBox(height: 16),
             _buildTitleSection(),
             const SizedBox(height: 16),
             _buildMediaSection(),
@@ -2486,7 +2514,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
   // ── Step 3: Booking type + schedule ────────────────────────────────────────
   Widget _buildStep3() {
     return SingleChildScrollView(
-      key: const ValueKey(2),
+      key: const ValueKey(3),
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       child: Column(
@@ -2581,7 +2609,6 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     );
     final inspectionAvailable =
         !categoriesLoaded || category?.inspectionFee != null;
-    final inspectionFee = category?.inspectionFee;
 
     return _sectionCard(
       title: context.l10n.postJobWhatDoYouNeed,
@@ -2593,29 +2620,11 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
             style: TextStyle(fontSize: 12, color: _kGray),
           ),
           const SizedBox(height: 12),
-          // Only relevant to INSPECTION: it's the one lane where the client
-          // isn't expected to diagnose the problem themselves. STANDARD and
-          // BIDDING clients already know what they need, so the tagline
-          // doesn't apply there.
-          if (_laneChoice == BookingLane.inspection) ...[
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
-              decoration: BoxDecoration(
-                color: _kCream,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                context.l10n.postJobUnderstandingIsOurJob,
-                style: TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF7A4520),
-                ),
-              ),
-            ),
-            const SizedBox(height: 14),
-          ],
+          // The "understanding the problem is our job" tagline used to live
+          // here, but this page is lane-choice only now — it moved into the
+          // INSPECTION-specific details step (see
+          // _buildInspectionOverviewCard) so it appears only once the client
+          // has actually committed to that lane.
           if (!_isEditMode) ...[
             _laneRowOption(
               lane: BookingLane.standard,
@@ -2625,7 +2634,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
             ),
             const SizedBox(height: 10),
           ],
-          _laneHeroCard(fee: inspectionFee, enabled: inspectionAvailable),
+          _laneHeroCard(enabled: inspectionAvailable),
           const SizedBox(height: 16),
           const Divider(height: 1, color: _kBorder),
           const SizedBox(height: 12),
@@ -2682,7 +2691,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     );
   }
 
-  Widget _laneHeroCard({required double? fee, required bool enabled}) {
+  Widget _laneHeroCard({required bool enabled}) {
     final selected = _laneChoice == BookingLane.inspection;
     return GestureDetector(
       onTap: enabled
@@ -2768,82 +2777,100 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                   ),
                 ],
               ),
-              // Full detail (fee, steps, guarantee note) only when Inspection
-              // is the SELECTED lane — otherwise this card must stay a
-              // compact option like Standard's, or its full detail block
-              // pushes Standard's fixed-price services section (which
-              // renders right after the whole lane selector) far down the
-              // screen whenever Standard is actually selected.
-              if (selected) ...[
-                const SizedBox(height: 12),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 10,
-                  ),
-                  decoration: BoxDecoration(
-                    color: _kCream,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        context.l10n.postJobInspectionFeeTitle,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF7A4520),
-                        ),
-                      ),
-                      Text(
-                        fee != null ? formatPkr(fee) : '—',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFFC2541D),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 13),
-                _heroStep(1, context.l10n.postJobInspectionHeroStep1),
-                const SizedBox(height: 9),
-                _heroStep(2, context.l10n.postJobInspectionHeroStep2),
-                const SizedBox(height: 9),
-                _heroStep(3, context.l10n.postJobInspectionHeroStep3),
-                const SizedBox(height: 12),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 10,
-                  ),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFF0FDF4),
-                    borderRadius: BorderRadius.horizontal(
-                      right: Radius.circular(9),
-                    ),
-                    border: Border(
-                      left: BorderSide(color: Color(0xFF22C55E), width: 3),
-                    ),
-                  ),
-                  child: Text(
-                    context.l10n.postJobNothingOpensBeforeRate,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      height: 1.35,
-                      color: Color(0xFF166534),
-                    ),
-                  ),
-                ),
-              ],
+              // Full detail (fee, steps, guarantee note) used to render here
+              // when Inspection was the selected lane. It now lives on the
+              // dedicated INSPECTION details step instead — see
+              // _buildInspectionOverviewCard — so this lane-selection page
+              // only ever shows the 3 compact choice cards.
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  // ── Step 2.2 (INSPECTION): fee + how-it-works recap ────────────────────────
+  // Previously rendered inline inside the lane-selector hero card once
+  // INSPECTION was selected; moved here so Page 2.1 (lane choice) never
+  // shows lane-specific detail. Shown at the top of the INSPECTION details
+  // step, above the existing report/media sections.
+  Widget _buildInspectionOverviewCard({required double? fee}) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: _kGreen.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _kGreen, width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 10,
+            ),
+            decoration: BoxDecoration(
+              color: _kCream,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  context.l10n.postJobInspectionFeeTitle,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF7A4520),
+                  ),
+                ),
+                Text(
+                  fee != null ? formatPkr(fee) : '—',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFFC2541D),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 13),
+          _heroStep(1, context.l10n.postJobInspectionHeroStep1),
+          const SizedBox(height: 9),
+          _heroStep(2, context.l10n.postJobInspectionHeroStep2),
+          const SizedBox(height: 9),
+          _heroStep(3, context.l10n.postJobInspectionHeroStep3),
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 10,
+            ),
+            decoration: const BoxDecoration(
+              color: Color(0xFFF0FDF4),
+              borderRadius: BorderRadius.horizontal(
+                right: Radius.circular(9),
+              ),
+              border: Border(
+                left: BorderSide(color: Color(0xFF22C55E), width: 3),
+              ),
+            ),
+            child: Text(
+              context.l10n.postJobUnderstandingIsOurJob,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                height: 1.35,
+                color: Color(0xFF166534),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -3556,7 +3583,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
 
   // ── Step navigation buttons ───────────────────────────────────────────────────
   Widget _buildStepNavButtons() {
-    final isLast = _currentStep == 2;
+    final isLast = _currentStep == 3;
     final isFirst = _currentStep == 0;
 
     return Container(
@@ -3645,6 +3672,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
   Widget build(BuildContext context) {
     final stepTitles = [
       context.l10n.postJobStepAddress,
+      context.l10n.postJobStepLaneSelection,
       context.l10n.postJobStepDetails,
       context.l10n.postJobStepTimeSelection,
     ];
@@ -3697,7 +3725,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                       Text(
                         context.l10n.postJobStepIndicator(
                           _currentStep + 1,
-                          3,
+                          4,
                           stepTitles[_currentStep],
                         ),
                         style: const TextStyle(
@@ -3720,7 +3748,8 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
             Expanded(
               child: switch (_currentStep) {
                 0 => _buildStep1(),
-                1 => _buildStep2(),
+                1 => _buildLaneSelectStep(),
+                2 => _buildLaneDetailsStep(),
                 _ => _buildStep3(),
               },
             ),

@@ -28,7 +28,7 @@ class AuthRepositoryImpl implements AuthRepository {
       );
       return Right(expiresAt);
     } on DioException catch (e) {
-      return Left(dioExceptionToFailure(e));
+      return Left(dioExceptionToFailure(e, preserveUnauthorizedMessage: true));
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
@@ -52,7 +52,7 @@ class AuthRepositoryImpl implements AuthRepository {
       );
       return Right(model.toEntity());
     } on DioException catch (e) {
-      return Left(dioExceptionToFailure(e));
+      return Left(dioExceptionToFailure(e, preserveUnauthorizedMessage: true));
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
@@ -80,7 +80,7 @@ class AuthRepositoryImpl implements AuthRepository {
       );
       return Right(model.toEntity());
     } on DioException catch (e) {
-      return Left(dioExceptionToFailure(e));
+      return Left(dioExceptionToFailure(e, preserveUnauthorizedMessage: true));
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
@@ -99,7 +99,7 @@ class AuthRepositoryImpl implements AuthRepository {
       );
       return Right(model.toEntity());
     } on DioException catch (e) {
-      return Left(dioExceptionToFailure(e));
+      return Left(dioExceptionToFailure(e, preserveUnauthorizedMessage: true));
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
@@ -129,7 +129,7 @@ class AuthRepositoryImpl implements AuthRepository {
       );
       return Right(model.toEntity());
     } on DioException catch (e) {
-      return Left(dioExceptionToFailure(e));
+      return Left(dioExceptionToFailure(e, preserveUnauthorizedMessage: true));
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
@@ -148,7 +148,7 @@ class AuthRepositoryImpl implements AuthRepository {
       );
       return Right(model.toEntity());
     } on DioException catch (e) {
-      return Left(dioExceptionToFailure(e));
+      return Left(dioExceptionToFailure(e, preserveUnauthorizedMessage: true));
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
@@ -188,7 +188,7 @@ class AuthRepositoryImpl implements AuthRepository {
       final expiresAt = await _datasource.forgotPasswordRequest(phone);
       return Right(expiresAt);
     } on DioException catch (e) {
-      return Left(dioExceptionToFailure(e));
+      return Left(dioExceptionToFailure(e, preserveUnauthorizedMessage: true));
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
@@ -208,7 +208,7 @@ class AuthRepositoryImpl implements AuthRepository {
       );
       return const Right(null);
     } on DioException catch (e) {
-      return Left(dioExceptionToFailure(e));
+      return Left(dioExceptionToFailure(e, preserveUnauthorizedMessage: true));
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
@@ -239,7 +239,7 @@ class AuthRepositoryImpl implements AuthRepository {
         _ => ClientPhoneStatus.newAccount,
       });
     } on DioException catch (e) {
-      return Left(dioExceptionToFailure(e));
+      return Left(dioExceptionToFailure(e, preserveUnauthorizedMessage: true));
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
@@ -261,7 +261,7 @@ class AuthRepositoryImpl implements AuthRepository {
       );
       return Right(model.toEntity());
     } on DioException catch (e) {
-      return Left(dioExceptionToFailure(e));
+      return Left(dioExceptionToFailure(e, preserveUnauthorizedMessage: true));
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
@@ -285,7 +285,7 @@ class AuthRepositoryImpl implements AuthRepository {
       );
       return Right(model.toEntity());
     } on DioException catch (e) {
-      return Left(dioExceptionToFailure(e));
+      return Left(dioExceptionToFailure(e, preserveUnauthorizedMessage: true));
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
@@ -299,7 +299,7 @@ class AuthRepositoryImpl implements AuthRepository {
       final expiresAt = await _datasource.clientForgotPasswordRequest(phone);
       return Right(expiresAt);
     } on DioException catch (e) {
-      return Left(dioExceptionToFailure(e));
+      return Left(dioExceptionToFailure(e, preserveUnauthorizedMessage: true));
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
@@ -319,7 +319,7 @@ class AuthRepositoryImpl implements AuthRepository {
       );
       return const Right(null);
     } on DioException catch (e) {
-      return Left(dioExceptionToFailure(e));
+      return Left(dioExceptionToFailure(e, preserveUnauthorizedMessage: true));
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }

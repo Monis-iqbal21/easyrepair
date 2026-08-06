@@ -84,5 +84,40 @@ void main() {
       expect(find.text('go to choice'), findsOneWidget);
       expect(find.byType(WorkerTypeSelectionPage), findsNothing);
     });
+
+    testWidgets(
+      'choosing "new Ustaad", coming back, then choosing "existing Ustaad" '
+      'opens the login page — the selection does not lock',
+      (tester) async {
+        await tester.pumpWidget(
+          _app({
+            '/choice': (_) => const WorkerTypeSelectionPage(),
+            '/auth/worker/register': (context) => Scaffold(
+                  appBar: AppBar(
+                    leading: BackButton(onPressed: () => context.pop()),
+                  ),
+                  body: const Text('REGISTER_PAGE'),
+                ),
+            '/auth/worker/login': (_) =>
+                const Scaffold(body: Text('LOGIN_PAGE')),
+          }),
+        );
+
+        await tester.tap(find.text('Main naya Ustaad hoon'));
+        await tester.pumpAndSettle();
+        expect(find.text('REGISTER_PAGE'), findsOneWidget);
+
+        // WorkerTypeSelectionPage's State survives underneath the pushed
+        // register page — without the fix, `_selected` stays 'new' here.
+        await tester.tap(find.byType(BackButton));
+        await tester.pumpAndSettle();
+        expect(find.text('Main naya Ustaad hoon'), findsOneWidget);
+
+        await tester.tap(find.text('Mera account pehle se bana hua hai'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('LOGIN_PAGE'), findsOneWidget);
+      },
+    );
   });
 }

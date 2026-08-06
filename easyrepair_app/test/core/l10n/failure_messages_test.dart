@@ -118,5 +118,20 @@ void main() {
         }
       }
     });
+
+    testWidgets(
+      'a wrong-password 401 shows the backend reason, never "session '
+      'expired" — password login always uses preserveUnauthorizedMessage',
+      (tester) async {
+        final l10n = await _l10nFor(tester, AppLocale.english);
+        const failure = UnauthorizedFailure('Invalid phone number or password');
+
+        expect(
+          failureMessage(l10n, failure),
+          'Invalid phone number or password',
+        );
+        expect(failureMessage(l10n, failure), isNot(l10n.errorSessionExpired));
+      },
+    );
   });
 }

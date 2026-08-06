@@ -10,9 +10,13 @@ import 'package:handygo_app/features/client/presentation/pages/post_job_page.dar
 
 import '../../support/l10n_test_app.dart';
 
-/// Booking-form fixes covered here:
-///  * The "understanding the problem is our job" tagline must only show for
-///    the INSPECTION lane — it used to render for STANDARD and BIDDING too.
+/// Booking-form behavior covered here:
+///  * Page 2 was split into two dedicated steps: 2.1 lane selection only,
+///    2.2 the selected lane's detail form. Page 2.1 must never show
+///    lane-specific fields, attachment controls or the inspection tagline.
+///  * The "understanding the problem is our job" tagline moved from the
+///    lane-selection page into the INSPECTION details step only, and its
+///    old "Rate batane se pehle..." counterpart is gone entirely.
 ///  * The attachment button's "Photo/Video" label overflowed on narrow
 ///    screens because the Text inside it wasn't Flexible.
 ///  * The attachment helper/counter text implied "4 photos plus a video"
@@ -29,6 +33,21 @@ const _nextLabel = {
   AppLocale.romanUrdu: 'Aage',
   AppLocale.urdu: 'آگے',
 };
+
+const _backLabel = {
+  AppLocale.english: 'Back',
+  AppLocale.romanUrdu: 'Wapas',
+  AppLocale.urdu: 'پیچھے',
+};
+
+const _tagline = 'Understanding the problem is our job — not yours.';
+const _oldTaglineRomanUrdu =
+    'Rate batane se pehle kuch nahi khulta — jo kaha, wohi liya.';
+
+// Section-title markers unique to each lane's Page 2.2 content.
+const _standardMarker = 'Choose a standard service';
+const _inspectionMarker = 'How inspection works';
+const _biddingMarker = "What needs fixing?";
 
 ProviderScope _wrap(
   Widget child, {
@@ -78,9 +97,9 @@ BookingEntity _editableBooking({
   );
 }
 
-/// Reaches Step 2 (lane + media section) from a fresh (non-edit) form with a
-/// preselected service, so the service picker never has to be driven.
-Future<void> _goToStep2(
+/// Reaches Page 2.1 (lane selection only) from a fresh (non-edit) form with
+/// a preselected service, so the service picker never has to be driven.
+Future<void> _goToLaneSelectStep(
   WidgetTester tester, {
   AppLocale locale = AppLocale.english,
 }) async {
@@ -111,57 +130,282 @@ Future<void> _selectLane(WidgetTester tester, String optionTitle) async {
   await tester.pump(const Duration(milliseconds: 200));
 }
 
+/// Reaches Page 2.2 (the selected lane's details) from a fresh form.
+/// Passing no [laneOptionTitle] keeps the default lane (INSPECTION).
+Future<void> _goToLaneDetailsStep(
+  WidgetTester tester, {
+  AppLocale locale = AppLocale.english,
+  String? laneOptionTitle,
+}) async {
+  await _goToLaneSelectStep(tester, locale: locale);
+  if (laneOptionTitle != null) {
+    await _selectLane(tester, laneOptionTitle);
+  }
+  await tester.tap(find.text(_nextLabel[locale]!));
+  await tester.pumpAndSettle();
+}
+
 void main() {
-  group('lane-selection tagline visibility', () {
-    testWidgets('shown for INSPECTION (the default lane)', (tester) async {
-      await _goToStep2(tester);
+  group('Page 2.1 — lane selection only', () {
+    testWidgets('shows exactly the 3 lane choices', (tester) async {
+      await _goToLaneSelectStep(tester);
 
+      expect(find.text('Standard work'), findsOneWidget);
+      expect(find.text('Something is broken'), findsOneWidget);
+      expect(find.text('I know the exact part'), findsOneWidget);
+    });
+
+    testWidgets('does not show any lane-specific form fields', (
+      tester,
+    ) async {
+      // Default lane is INSPECTION, so this is the strictest check: none of
+      // the lane detail sections — for any lane — render on this page.
+      await _goToLaneSelectStep(tester);
+
+      expect(find.text(_standardMarker), findsNothing);
+      expect(find.text(_inspectionMarker), findsNothing);
+      expect(find.text(_biddingMarker), findsNothing);
+    });
+
+    testWidgets('does not show attachment controls', (tester) async {
+      await _goToLaneSelectStep(tester);
+      expect(find.text('Photo/Video'), findsNothing);
+    });
+
+    testWidgets('does not show the inspection tagline', (tester) async {
+      await _goToLaneSelectStep(tester);
+      expect(find.text(_tagline), findsNothing);
+    });
+
+    testWidgets('Next is not blocked — the default lane selection carries '
+        'forward', (tester) async {
+      await _goToLaneSelectStep(tester);
+      await tester.tap(find.text(_nextLabel[AppLocale.english]!));
+      await tester.pumpAndSettle();
+
+      expect(find.text(_inspectionMarker), findsOneWidget);
+    });
+  });
+
+  group('Page 2.2 — selected lane\'s details only', () {
+    testWidgets('selecting STANDARD opens only STANDARD details', (
+      tester,
+    ) async {
+      await _goToLaneDetailsStep(tester, laneOptionTitle: 'Standard work');
+
+      expect(find.text(_standardMarker), findsOneWidget);
+      expect(find.text(_inspectionMarker), findsNothing);
+      expect(find.text(_biddingMarker), findsNothing);
+    });
+
+    testWidgets('selecting INSPECTION opens only INSPECTION details', (
+      tester,
+    ) async {
+      await _goToLaneDetailsStep(tester);
+
+      expect(find.text(_inspectionMarker), findsOneWidget);
+      expect(find.text(_standardMarker), findsNothing);
+      expect(find.text(_biddingMarker), findsNothing);
+    });
+
+    testWidgets('selecting BIDDING opens only BIDDING details', (
+      tester,
+    ) async {
+      await _goToLaneDetailsStep(
+        tester,
+        laneOptionTitle: 'I know the exact part',
+      );
+
+      expect(find.text(_biddingMarker), findsOneWidget);
+      expect(find.text(_standardMarker), findsNothing);
+      expect(find.text(_inspectionMarker), findsNothing);
+    });
+
+    testWidgets('the lane cards themselves are gone on this page', (
+      tester,
+    ) async {
+      await _goToLaneDetailsStep(tester);
+      expect(find.text('Standard work'), findsNothing);
+      expect(find.text('I know the exact part'), findsNothing);
+    });
+  });
+
+  group('Back/Next navigation between 2.1 and 2.2', () {
+    testWidgets('Back from lane-details returns to lane-selection', (
+      tester,
+    ) async {
+      await _goToLaneDetailsStep(tester);
+      expect(find.text(_inspectionMarker), findsOneWidget);
+
+      await tester.tap(find.text(_backLabel[AppLocale.english]!));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Standard work'), findsOneWidget);
+      expect(find.text(_inspectionMarker), findsNothing);
+    });
+
+    testWidgets('selected lane remains selected after Back then Next', (
+      tester,
+    ) async {
+      await _goToLaneDetailsStep(
+        tester,
+        laneOptionTitle: 'I know the exact part',
+      );
+      expect(find.text(_biddingMarker), findsOneWidget);
+
+      await tester.tap(find.text(_backLabel[AppLocale.english]!));
+      await tester.pumpAndSettle();
+
+      // No re-selection here — BIDDING must still be the remembered choice.
+      await tester.tap(find.text(_nextLabel[AppLocale.english]!));
+      await tester.pumpAndSettle();
+
+      expect(find.text(_biddingMarker), findsOneWidget);
+    });
+
+    testWidgets('entered BIDDING details text survives Back then Next', (
+      tester,
+    ) async {
+      await _goToLaneDetailsStep(
+        tester,
+        laneOptionTitle: 'I know the exact part',
+      );
+
+      await tester.enterText(
+        find.byType(TextFormField).first,
+        'Broken kitchen faucet',
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(_backLabel[AppLocale.english]!));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(_nextLabel[AppLocale.english]!));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Broken kitchen faucet'), findsOneWidget);
+    });
+  });
+
+  group('Edit-booking mode', () {
+    testWidgets('STANDARD booking: lane-select shows the locked header, '
+        'Next opens STANDARD details', (tester) async {
+      final booking = _editableBooking(lane: BookingLane.standard);
+      await tester.pumpWidget(
+        _wrap(
+          BookServicePage(editBookingId: booking.id),
+          editBooking: booking,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Next'));
+      await tester.pumpAndSettle();
+
+      // Locked header replaces the 3 lane cards for a STANDARD edit.
+      expect(find.text('Standard work'), findsNothing);
+      expect(find.text('I know the exact part'), findsNothing);
+
+      await tester.tap(find.text('Next'));
+      await tester.pumpAndSettle();
+
+      expect(find.text(_standardMarker), findsOneWidget);
+    });
+
+    testWidgets('BIDDING booking: lane-select opens with BIDDING '
+        'preselected, Next opens BIDDING details', (tester) async {
+      final booking = _editableBooking(lane: BookingLane.bidding);
+      await tester.pumpWidget(
+        _wrap(
+          BookServicePage(editBookingId: booking.id),
+          editBooking: booking,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Next'));
+      await tester.pumpAndSettle();
+      // No lane re-selection — the booking's own lane must already be
+      // active.
+      await tester.tap(find.text('Next'));
+      await tester.pumpAndSettle();
+
+      expect(find.text(_biddingMarker), findsOneWidget);
+      expect(find.text(_standardMarker), findsNothing);
+      expect(find.text(_inspectionMarker), findsNothing);
+    });
+  });
+
+  group('Validation is unchanged, just relocated to its own step', () {
+    testWidgets('BIDDING details step blocks Next until a real title is '
+        'entered', (tester) async {
+      await _goToLaneDetailsStep(
+        tester,
+        laneOptionTitle: 'I know the exact part',
+      );
+
+      await tester.tap(find.text(_nextLabel[AppLocale.english]!));
+      await tester.pumpAndSettle();
+
+      // Still on the BIDDING details step — validation blocked the advance.
+      expect(find.text(_biddingMarker), findsOneWidget);
+    });
+  });
+
+  group('Inspection wording', () {
+    testWidgets('old "Rate batane se pehle..." text no longer appears', (
+      tester,
+    ) async {
+      await _goToLaneDetailsStep(tester, locale: AppLocale.romanUrdu);
+      expect(find.text(_oldTaglineRomanUrdu), findsNothing);
+    });
+
+    testWidgets('new tagline appears only in INSPECTION details', (
+      tester,
+    ) async {
+      await _goToLaneSelectStep(tester);
+      expect(find.text(_tagline), findsNothing);
+
+      await tester.tap(find.text(_nextLabel[AppLocale.english]!));
+      await tester.pumpAndSettle();
+      expect(find.text(_tagline), findsOneWidget);
+    });
+
+    testWidgets('new tagline does not appear for STANDARD or BIDDING '
+        'details', (tester) async {
+      await _goToLaneDetailsStep(tester, laneOptionTitle: 'Standard work');
+      expect(find.text(_tagline), findsNothing);
+    });
+
+    testWidgets('renders in Roman Urdu', (tester) async {
+      await _goToLaneDetailsStep(tester, locale: AppLocale.romanUrdu);
       expect(
-        find.text('Understanding the problem is our job — not yours.'),
+        find.text('Masla samajhna hamara kaam hai — aapka nahi.'),
         findsOneWidget,
       );
     });
 
-    testWidgets('hidden for STANDARD', (tester) async {
-      await _goToStep2(tester);
+    testWidgets('renders in Urdu', (tester) async {
+      await _goToLaneDetailsStep(tester, locale: AppLocale.urdu);
       expect(
-        find.text('Understanding the problem is our job — not yours.'),
+        find.text('مسئلہ سمجھنا ہمارا کام ہے — آپ کا نہیں۔'),
         findsOneWidget,
-      );
-
-      await _selectLane(tester, 'Standard work');
-
-      expect(
-        find.text('Understanding the problem is our job — not yours.'),
-        findsNothing,
-      );
-    });
-
-    testWidgets('hidden for BIDDING', (tester) async {
-      await _goToStep2(tester);
-
-      await _selectLane(tester, 'I know the exact part');
-
-      expect(
-        find.text('Understanding the problem is our job — not yours.'),
-        findsNothing,
       );
     });
   });
 
   group('Photo/Video attachment button label', () {
     testWidgets('renders in English', (tester) async {
-      await _goToStep2(tester);
+      await _goToLaneDetailsStep(tester);
       expect(find.text('Photo/Video'), findsOneWidget);
     });
 
     testWidgets('renders in Roman Urdu', (tester) async {
-      await _goToStep2(tester, locale: AppLocale.romanUrdu);
+      await _goToLaneDetailsStep(tester, locale: AppLocale.romanUrdu);
       expect(find.text('Photo/Video'), findsOneWidget);
     });
 
     testWidgets('renders تصویر/ویڈیو in Urdu', (tester) async {
-      await _goToStep2(tester, locale: AppLocale.urdu);
+      await _goToLaneDetailsStep(tester, locale: AppLocale.urdu);
       expect(find.text('تصویر/ویڈیو'), findsOneWidget);
     });
 
@@ -220,7 +464,7 @@ void main() {
     testWidgets('helper text mentions 30 seconds and maximum 4 attachments', (
       tester,
     ) async {
-      await _goToStep2(tester);
+      await _goToLaneDetailsStep(tester);
 
       expect(
         find.text(
@@ -267,6 +511,9 @@ void main() {
       // resolve before advancing the step.
       await tester.pumpAndSettle();
 
+      // Step 1 (Address) → 2.1 (lane, BIDDING preselected) → 2.2 (details).
+      await tester.tap(find.text('Next'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Next'));
       await tester.pumpAndSettle();
 

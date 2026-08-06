@@ -7,7 +7,23 @@ import 'failures.dart';
 /// went wrong ([FailureCode]) and passes through any human sentence the
 /// backend wrote; the language the user reads is chosen later, in
 /// `failure_messages.dart`, from `AppLocalizations`.
-Failure dioExceptionToFailure(DioException e) {
+///
+/// [preserveUnauthorizedMessage] controls what happens to a 401's message:
+///
+///  * `false` (default) — the message is discarded and `failure_messages.dart`
+///    renders the generic "session expired" copy instead. Correct for every
+///    *protected* endpoint: a 401 there always means the access token is
+///    missing/invalid/expired, and NestJS's own default rejection message
+///    ("Unauthorized") is not something to show a user.
+///  * `true` — the backend's actual sentence is kept ("Invalid phone number
+///    or password", "Account is deactivated", …). Only pass this for a
+///    public, pre-login auth call (login, register, OTP, password reset):
+///    there a 401 means the *credentials* were rejected, not that a session
+///    expired, and the backend already writes a message meant for the user.
+Failure dioExceptionToFailure(
+  DioException e, {
+  bool preserveUnauthorizedMessage = false,
+}) {
   switch (e.type) {
     case DioExceptionType.connectionTimeout:
     case DioExceptionType.sendTimeout:
@@ -52,7 +68,10 @@ Failure dioExceptionToFailure(DioException e) {
       if (statusCode == 400) {
         return ValidationFailure(message ?? '', diagnostic: diagnostic);
       } else if (statusCode == 401) {
-        return UnauthorizedFailure('', diagnostic: diagnostic);
+        return UnauthorizedFailure(
+          preserveUnauthorizedMessage ? (message ?? '') : '',
+          diagnostic: diagnostic,
+        );
       } else if (statusCode == 403) {
         return ForbiddenFailure(message ?? '', diagnostic: diagnostic);
       } else if (statusCode == 404) {

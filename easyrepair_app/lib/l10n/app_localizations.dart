@@ -1281,12 +1281,6 @@ abstract class AppLocalizations {
   /// **'Inspection Fee'**
   String get postJobInspectionFeeTitle;
 
-  /// No description provided for @postJobNothingOpensBeforeRate.
-  ///
-  /// In en, this message translates to:
-  /// **'Nothing is opened before the rate is given — what is quoted is what is charged.'**
-  String get postJobNothingOpensBeforeRate;
-
   /// No description provided for @postJobChooseStandardService.
   ///
   /// In en, this message translates to:
@@ -1376,6 +1370,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Address'**
   String get postJobStepAddress;
+
+  /// No description provided for @postJobStepLaneSelection.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose Type'**
+  String get postJobStepLaneSelection;
 
   /// No description provided for @postJobStepDetails.
   ///
@@ -2498,6 +2498,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The inspecting Ustaad\'s inspection fee is paid separately. The new Ustaad will charge the full amount of their own offer, and the inspection fee is not adjusted into it.'**
   String get discoveryInspectionFeeSeparate;
+
+  /// No description provided for @discoveryBidLabourOnlyNote.
+  ///
+  /// In en, this message translates to:
+  /// **'This bid covers labour only. Parts and materials will be purchased or charged separately with your approval.'**
+  String get discoveryBidLabourOnlyNote;
+
+  /// No description provided for @discoveryBidInspectionBasedNote.
+  ///
+  /// In en, this message translates to:
+  /// **'This bid is based on the inspection report and includes labour and the parts or materials required for the reported work.'**
+  String get discoveryBidInspectionBasedNote;
 
   /// No description provided for @discoveryWorkerHired.
   ///

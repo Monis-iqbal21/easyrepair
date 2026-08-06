@@ -7,9 +7,17 @@ import '../models/auth_response_model.dart';
 import '../models/user_model.dart';
 
 class AuthRemoteDatasource {
+  /// No [AuthInterceptor] — used for every public, pre-login endpoint below
+  /// (login, register, OTP, password reset, phone-check) so none of them
+  /// ever carries a stale Authorization header or gets its 401 mistaken for
+  /// an expired session. See `publicDioProvider`'s doc comment.
+  final Dio _publicDio;
+
+  /// Authenticated client — only for the genuinely protected endpoints
+  /// (`/auth/logout`, `/auth/me`, `/auth/account`).
   final Dio _dio;
 
-  const AuthRemoteDatasource(this._dio);
+  const AuthRemoteDatasource(this._publicDio, this._dio);
 
   Future<AuthResponseModel> register({
     required String phone,
@@ -19,7 +27,7 @@ class AuthRemoteDatasource {
     required String role,
     String? categoryId,
   }) async {
-    final response = await _dio.post(
+    final response = await _publicDio.post(
       '/auth/register',
       data: {
         'phone': phone,
@@ -38,7 +46,7 @@ class AuthRemoteDatasource {
     required String password,
   }) async {
     debugPrint('[AuthDatasource] login request started for $phone');
-    final response = await _dio.post(
+    final response = await _publicDio.post(
       '/auth/login',
       data: {'phone': phone, 'password': password},
     );
@@ -50,7 +58,7 @@ class AuthRemoteDatasource {
     required String phone,
     required String purpose,
   }) async {
-    final response = await _dio.post(
+    final response = await _publicDio.post(
       '/auth/otp/request',
       data: {'phone': phone, 'purpose': purpose},
     );
@@ -63,7 +71,7 @@ class AuthRemoteDatasource {
     required String phone,
     required String otp,
   }) async {
-    final response = await _dio.post(
+    final response = await _publicDio.post(
       '/auth/client/otp-login',
       data: {'fullName': fullName, 'phone': phone, 'otp': otp},
     );
@@ -77,7 +85,7 @@ class AuthRemoteDatasource {
     required String password,
     required String categoryId,
   }) async {
-    final response = await _dio.post(
+    final response = await _publicDio.post(
       '/auth/worker/otp-register',
       data: {
         'fullName': fullName,
@@ -94,7 +102,7 @@ class AuthRemoteDatasource {
     required String phone,
     required String otp,
   }) async {
-    final response = await _dio.post(
+    final response = await _publicDio.post(
       '/auth/worker/otp-login',
       data: {'phone': phone, 'otp': otp},
     );
@@ -115,7 +123,7 @@ class AuthRemoteDatasource {
   }
 
   Future<DateTime> forgotPasswordRequest(String phone) async {
-    final response = await _dio.post(
+    final response = await _publicDio.post(
       '/auth/forgot-password/request',
       data: {'phone': phone},
     );
@@ -128,7 +136,7 @@ class AuthRemoteDatasource {
     required String otp,
     required String newPassword,
   }) async {
-    await _dio.post('/auth/forgot-password/reset', data: {
+    await _publicDio.post('/auth/forgot-password/reset', data: {
       'phone': phone,
       'otp': otp,
       'newPassword': newPassword,
@@ -140,7 +148,7 @@ class AuthRemoteDatasource {
   }
 
   Future<String> checkClientPhoneStatus(String phone) async {
-    final response = await _dio.post(
+    final response = await _publicDio.post(
       '/auth/client/phone-check',
       data: {'phone': phone},
     );
@@ -152,7 +160,7 @@ class AuthRemoteDatasource {
     required String phone,
     required String password,
   }) async {
-    final response = await _dio.post(
+    final response = await _publicDio.post(
       '/auth/client/password-login',
       data: {'phone': phone, 'password': password},
     );
@@ -164,7 +172,7 @@ class AuthRemoteDatasource {
     required String phone,
     required String password,
   }) async {
-    final response = await _dio.post(
+    final response = await _publicDio.post(
       '/auth/client/password-register',
       data: {'fullName': fullName, 'phone': phone, 'password': password},
     );
@@ -172,7 +180,7 @@ class AuthRemoteDatasource {
   }
 
   Future<DateTime> clientForgotPasswordRequest(String phone) async {
-    final response = await _dio.post(
+    final response = await _publicDio.post(
       '/auth/client/forgot-password/request',
       data: {'phone': phone},
     );
@@ -185,7 +193,7 @@ class AuthRemoteDatasource {
     required String otp,
     required String newPassword,
   }) async {
-    await _dio.post('/auth/client/forgot-password/reset', data: {
+    await _publicDio.post('/auth/client/forgot-password/reset', data: {
       'phone': phone,
       'otp': otp,
       'newPassword': newPassword,
@@ -194,5 +202,8 @@ class AuthRemoteDatasource {
 }
 
 final authRemoteDatasourceProvider = Provider<AuthRemoteDatasource>((ref) {
-  return AuthRemoteDatasource(ref.watch(dioProvider));
+  return AuthRemoteDatasource(
+    ref.watch(publicDioProvider),
+    ref.watch(dioProvider),
+  );
 });

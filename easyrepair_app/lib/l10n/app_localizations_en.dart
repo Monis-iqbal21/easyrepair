@@ -670,10 +670,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get postJobInspectionFeeTitle => 'Inspection Fee';
 
   @override
-  String get postJobNothingOpensBeforeRate =>
-      'Nothing is opened before the rate is given — what is quoted is what is charged.';
-
-  @override
   String get postJobChooseStandardService => 'Choose a standard service';
 
   @override
@@ -721,6 +717,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get postJobStepAddress => 'Address';
+
+  @override
+  String get postJobStepLaneSelection => 'Choose Type';
 
   @override
   String get postJobStepDetails => 'Details';
@@ -1341,6 +1340,14 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get discoveryInspectionFeeSeparate =>
       'The inspecting Ustaad\'s inspection fee is paid separately. The new Ustaad will charge the full amount of their own offer, and the inspection fee is not adjusted into it.';
+
+  @override
+  String get discoveryBidLabourOnlyNote =>
+      'This bid covers labour only. Parts and materials will be purchased or charged separately with your approval.';
+
+  @override
+  String get discoveryBidInspectionBasedNote =>
+      'This bid is based on the inspection report and includes labour and the parts or materials required for the reported work.';
 
   @override
   String get discoveryWorkerHired => 'Worker hired successfully';

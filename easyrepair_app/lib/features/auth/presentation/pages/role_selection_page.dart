@@ -25,7 +25,16 @@ class _RoleSelectionPageState extends State<RoleSelectionPage> {
     // push, not go: `go` replaces the stack, which leaves the destination
     // with nothing to pop back to - the AppBar arrow does nothing and the
     // Android Back button closes the app from a mid-flow auth screen.
-    context.push(route);
+    //
+    // `push` returns once the pushed route (and anything it pushed in turn)
+    // is popped back off, i.e. exactly when the user returns here — that's
+    // the moment to drop the highlight/tap-guard. Without this, this page's
+    // State survives underneath the pushed route (push never disposes it),
+    // so `_selected` stayed stuck on whichever card was tapped last time and
+    // silently swallowed every tap after Back — a temporary UI choice must
+    // never outlive the screen it was made for.
+    await context.push(route);
+    if (mounted) setState(() => _selected = null);
   }
 
   @override

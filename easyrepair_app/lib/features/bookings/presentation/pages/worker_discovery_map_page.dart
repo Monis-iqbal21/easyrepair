@@ -659,6 +659,17 @@ class _BidOfferCard extends ConsumerWidget {
           ),
               style: const TextStyle(fontSize: 13, color: _kGray),
             ),
+            const SizedBox(height: 10),
+            Text(
+              isPostInspectionReopen
+                  ? context.l10n.discoveryBidInspectionBasedNote
+                  : context.l10n.discoveryBidLabourOnlyNote,
+              style: const TextStyle(
+                fontSize: 12.5,
+                color: _kGray,
+                height: 1.4,
+              ),
+            ),
             if (isPostInspectionReopen) ...[
               const SizedBox(height: 10),
               Text(

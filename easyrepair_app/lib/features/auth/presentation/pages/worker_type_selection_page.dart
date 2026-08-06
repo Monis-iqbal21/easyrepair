@@ -25,7 +25,12 @@ class _WorkerTypeSelectionPageState extends State<WorkerTypeSelectionPage> {
     if (!mounted) return;
     // push, not go - see RoleSelectionPage._select. Each auth step must stay
     // on the stack so Back returns to the exact preceding screen.
-    context.push(route);
+    //
+    // Reset the tap-guard/highlight once control returns here (the pushed
+    // route was popped) — see RoleSelectionPage._select for why this must
+    // not be skipped.
+    await context.push(route);
+    if (mounted) setState(() => _selected = null);
   }
 
   @override
