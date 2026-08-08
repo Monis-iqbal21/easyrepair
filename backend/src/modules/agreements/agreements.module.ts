@@ -26,7 +26,9 @@ import { StorageModule } from '../storage/storage.module';
   // The three-document Ustaad flow: templates to read, acceptance to write,
   // access for the Worker Legal section and the Admin detail page. The
   // single-document Client flow mirrors it. The legacy AgreementsService is
-  // still exported for template lookups elsewhere.
+  // still exported for template lookups elsewhere. AgreementsRepository is
+  // exported too — AdminClientAgreementsController (AdminModule) injects it
+  // directly for its own existence check, alongside CustomerAgreementAccessService.
   exports: [
     AgreementsService,
     UstaadTemplateService,
@@ -35,6 +37,7 @@ import { StorageModule } from '../storage/storage.module';
     CustomerTemplateService,
     CustomerAcceptanceService,
     CustomerAgreementAccessService,
+    AgreementsRepository,
   ],
 })
 export class AgreementsModule {}
