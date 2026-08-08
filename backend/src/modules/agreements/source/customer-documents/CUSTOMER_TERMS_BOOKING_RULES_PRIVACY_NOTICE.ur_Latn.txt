@@ -1,0 +1,1406 @@
+HANDYGO CUSTOMER TERMS, BOOKING
+        RULES AUR PRIVACY NOTICE
+
+Document Version: 1.0
+Effective Date: Customer ke sign ya electronic acceptance ki tareekh
+Website: www.handygo.ai
+
+COMPANY KI DETAILS
+
+Company: HandyGo (Private) Limited
+Registration/CUIN Number: 0346585
+Registered Office: 13th Floor, Nacon House, Din Mohammad Wafai Road,
+Civil Lines, Karachi 74000
+Official Legal Email: legal@handygo.ai
+Official Support Email: support@handygo.ai
+Official Support Number: 0332-0219006
+
+Is document mein “HandyGo”, “Company”, “Platform”, “hum”, “hamara” ya
+“hamari” se murad HandyGo (Private) Limited hai.
+
+“Customer”, “aap” ya “aapka” se murad woh shakhs hai jo HandyGo
+account banata hai, service book karta hai, ya property/service hasil karne
+wale shakhs ki taraf se qanooni ijazat ke saath booking karta hai.
+
+PART A — CUSTOMER TERMS AUR
+BOOKING RULES
+
+1. AGREEMENT KI ACCEPTANCE
+
+1.1 Customer in tamam Terms ko HandyGo application ya kisi approved
+electronic tareeqe se accept kar sakta hai.
+
+1.2 Acceptance se pehle Customer ko poora document dekhne, parhne aur
+download karne ka mauqa diya jayega.
+
+1.3 Acceptance checkbox pehle se selected nahi hoga. Customer ko khud
+checkbox select karke apni razamandi deni hogi.
+
+1.4 Document ka title, version aur Effective Date Customer ko clearly
+dikhaya jayega.
+
+1.5 In Terms mein koi aham tabdeeli hone par Customer ko clear notice
+diya jayega aur jahan qanoonan zaroori ho, dobara acceptance li jayegi.
+
+1.6 Sirf app ya service use karne ka matlab yeh nahi hoga ke Customer kisi
+chhupi hui ya bilkul mukhtalif shart ko accept karta hai.
+
+2. CUSTOMER KI ELIGIBILITY AUR ACCOUNT
+RESPONSIBILITY
+
+2.1 Customer ke paas booking aur transaction karne ki qanooni salahiyat
+honi chahiye.
+
+2.2 Customer ke paas property ya service location par Ustaad ko bulane
+aur kaam ki ijazat dene ka haq hona chahiye.
+
+2.3 Koi bachcha ya qanooni salahiyat na rakhne wala shakhs akelay
+Ustaad ko ghar ya property mein bulane ki booking nahi karega. Zaroorat
+par parent, guardian ya authorized adult maujood hoga.
+
+2.4 Customer apna sahi naam, mobile number, service address, complaint
+ki details aur access instructions provide karega.
+
+2.5 Customer account personal hai. OTP, password ya account/device
+access kisi aur ko fraud, nakli booking ya impersonation ke liye nahi diya
+jayega.
+
+2.6 Customer booking se pehle apni ghalat ya purani contact aur address
+details update karega.
+
+2.7 Safety, fraud, payment, identity ya qanooni investigation ke dauran
+HandyGo Customer account ko temporarily restrict kar sakta hai.
+
+2.8 Temporary restriction ka matlab yeh nahi ke Customer automatically
+guilty qarar de diya gaya hai.
+
+3. HANDYGO KA ROLE
+
+3.1 HandyGo ek service platform hai jo Customers ko approved
+independent service providers, jinhein “Ustaads” kaha jata hai, ke saath
+connect karta hai.
+
+3.2 HandyGo discovery, booking, communication, quality controls, support,
+complaints, refunds, evidence aur dispute handling ka process provide
+karta hai.
+
+3.3 Asal technical ya physical service aam tor par Customer ke selected ya
+assigned Ustaad ki taraf se perform ki jati hai.
+
+3.4 Booking kisi chhupe hue, unregistered ya unverified shakhs ko transfer
+nahi ki ja sakti.
+
+3.5 HandyGo Ustaad eligibility, service categories, booking process,
+complaints, evidence, refund process aur safety controls manage kar sakta
+hai.
+
+3.6 HandyGo aisi koi shart use nahi karega jo Customer ke qanooni
+consumer rights ko khatam kare.
+
+3.7 HandyGo har service, Ustaad, time, diagnosis, part, arrival ya result ki
+har waqt availability ya guarantee nahi deta.
+
+4. USTAAD KI VERIFICATION
+
+4.1 Customer bookings sirf un Ustaads ke liye available hongi jo required
+onboarding, internal review aur approved background-verification process
+complete kar chuke hon.
+4.2 Verification mein Karachi Police EVS, CPLC, ya Company ka koi
+approved equivalent verification process shamil ho sakta hai.
+4.3 App par verification badge ya status Ustaad ke current approved
+verification record ke mutabiq show hoga.
+4.4 Pending, expired, incomplete ya hold par maujood verification ko “Fully
+Verified” show nahi kiya jayega.
+4.5 Background verification identity aur trust se related kuch risks kam karti
+hai, lekin future behaviour, skill, honesty ya zero incident ki absolute
+guarantee nahi hoti.
+4.6 Ustaad sirf un services aur trades ke liye kaam karega jin ke liye uski
+profile par active approval maujood ho.
+4.7 Sirf “Electrician”, “Plumber”, “AC Technician” ya “Carpenter” likha hona
+yeh nahi batata ke Ustaad us trade ka har possible kaam karne ke liye
+approved hai.
+
+5. SERVICE KI AVAILABILITY AUR AREA
+
+5.1 HandyGo services active Service Catalog, location, available Ustaads,
+demand, timing, safety aur system capability ke mutabiq provide karega.
+
+5.2 Service areas aur Karachi coverage app ya website par update ki ja
+sakti hai.
+
+5.3 HandyGo aisi booking decline ya cancel kar sakta hai jo:
+
+   ● Service area se bahar ho;
+   ● Unsafe ho;
+   ● Illegal ho;
+   ● Prohibited ho;
+   ● Technically unsuitable ho;
+   ● Required Ustaad available na ho;
+   ● Ya normal HandyGo service ke scope mein na aati ho.
+
+5.4 HandyGo normal home-service platform hai. Yeh fire brigade, police,
+ambulance, medical rescue, gas emergency, utility emergency, structural
+engineer ya kisi regulated emergency service ka replacement nahi hai.
+
+6. TEEN BOOKING LANES
+
+6.1 Standard Fixed-Price Service
+
+   ● Customer defined service select karta hai.
+   ● Price HandyGo ki taraf se pehle se fixed aur app mein displayed hoti
+
+       hai.
+   ● Service ka included scope pehle se clear hota hai.
+   ● Customer available Ustaad profiles mein se Ustaad select kar sakta
+
+       hai, jahan app yeh option provide kare.
+   ● Standard Service bidding nahi hoti.
+   ● Same approved scope ka price Ustaad Customer ke darwaze par
+
+       apni taraf se increase nahi kar sakta.
+   ● Agar naya ya additional kaam samne aaye to separate approval aur
+
+       revised quote zaroori hogi.
+
+6.2 Inspection / Diagnosis Service
+
+   ● Yeh lane tab use hoti hai jab Customer ko exact fault ya required
+       work ka pata na ho.
+
+   ● App par displayed Inspection Fee valid inspection aur report ke liye
+       hoti hai.
+
+   ● Inspection Fee automatically repair, labour ya parts ki total price nahi
+       hoti.
+
+   ● Inspection ke baad Ustaad findings, required work, labour aur parts
+       ka quote provide karega.
+
+   ● Customer ki recorded approval ke baghair repair, part purchase ya
+       additional kaam start nahi hoga.
+
+   ● Jahan approved policy apply karti ho, already paid Inspection Fee
+       same booking ke approved labour/service amount mein adjust ki ja
+       sakti hai.
+
+   ● Customer se wohi Inspection Fee dobara charge nahi ki jayegi jo
+       already paid ya adjusted ho chuki ho.
+
+6.3 Live Offers / Bidding Service
+
+   ● Eligible Ustaads Customer ki job par offers bhej sakte hain.
+   ● Sirf offer bhejne se booking confirm nahi hoti.
+   ● Booking tab confirm hogi jab Customer offer select kare aur app
+
+       booking ko confirmed show kare.
+   ● Selected offer same approved scope ke liye final hoga.
+   ● Naya ya different scope samne aane par Ustaad wajah explain karke
+
+       separate revised approval lega.
+
+6.4 App par show hone wali labels aur confirmation process final app
+workflow ke mutabiq honge.
+
+7. USTAAD SELECTION AUR BOOKING CONFIRMATION
+
+7.1 Ustaad ka profile available hona, offer bhejna ya interest show karna
+booking confirmation nahi hai.
+
+7.2 Booking sirf app ke applicable confirmation process ke baad confirmed
+hogi.
+
+7.3 Customer booking confirm karne se pehle yeh cheezen review karega:
+
+   ● Ustaad profile;
+   ● Approved trade ya service;
+   ● Rating aur reviews;
+   ● Price ya offer;
+   ● Expected timing;
+   ● Service ka scope.
+
+7.4 Customer selected Ustaad ke account ke through kisi aur hidden,
+unapproved ya unregistered shakhs se service nahi karwayega.
+
+7.5 Agar approved helper ki zaroorat ho to Customer ko pehle inform kiya
+jayega aur required approval li jayegi.
+
+8. SERVICE ADDRESS, ACCESS AUR SITE
+INFORMATION
+
+8.1 Customer sahi aur accessible service address provide karega.
+
+8.2 Customer building, floor, gate, society, parking aur entry instructions
+clearly provide karega.
+
+8.3 Customer Ustaad ko known hazards ke baare mein pehle batayega,
+jaise:
+
+   ● Live electrical danger;
+   ● Gas ki smell;
+   ● Refrigerant leak;
+   ● Flooding ya zyada pani;
+   ● Aggressive pet;
+   ● Unsafe stairs ya roof access;
+
+   ● Structural damage;
+   ● Violence ya security risk.
+
+8.4 Customer ke paas inspection, drilling, opening, removal, cutting,
+installation ya modification ki ijazat dene ka authority hona chahiye.
+
+8.5 Building ya society permission, access pass, parking aur utility shutoff
+ka arrangement Customer karega, jab tak booking mein kuch aur clearly
+mention na ho.
+
+8.6 Bachchon, pets aur unrelated logon ko tools, wiring, pani, ladders,
+cutting aur active work area se door rakha jayega.
+
+9. ARRIVAL AUR IDENTITY CHECK
+
+9.1 Customer ke ghar ya service location par aane wala shakhs app par
+approved Ustaad profile aur booking record se match karna chahiye.
+
+9.2 Agar aane wala shakhs profile photo ya booking Ustaad se match na
+kare to Customer use andar nahi bulayega aur HandyGo Support se
+contact karega.
+
+9.3 Ustaad aam tor par:
+
+   ● Apna naam aur HandyGo booking batayega;
+   ● App profile ya booking show karega;
+   ● Customer ki complaint dobara confirm karega;
+   ● Inspection ya entry se pehle permission lega.
+
+9.4 Launch ke waqt app-based profile verification primary identity method
+ho sakta hai. Physical printed ID card ki guarantee nahi hai jab tak
+Company officially announce na kare.
+
+9.5 Customer reasonable floor ya shoe protection request kar sakta hai, jab
+tak woh safety ke khilaf na ho.
+
+10. INSPECTION, DIAGNOSIS AUR “NO APPROVAL, NO
+WORK”
+
+10.1 Customer apni complaint clearly explain karega aur Ustaad ko
+booking scope ke andar safe inspection karne dega.
+
+10.2 Inspection ke dauran hidden issue, uncertain fault, kisi aur trade ya
+specialist ki zaroorat samne aa sakti hai.
+
+10.3 Customer Ustaad par unsafe ya jhooti diagnosis dene ka pressure
+nahi dalega.
+
+10.4 Paid work ya part purchase se pehle Customer ko scope aur
+price/quote diya jayega.
+
+10.5 No Approval, No Work: Customer ki recorded approval ke baghair
+yeh kaam nahi hoga:
+
+   ● Paid repair;
+   ● Installation;
+   ● Additional task;
+   ● Part purchase;
+   ● Specification change;
+   ● Estimate ya price increase.
+
+10.6 Agar kaam ke dauran naya issue ya risk samne aaye to process yeh
+hoga:
+
+Kaam Roko → Customer ko Samjhao → Revised Plan/Quote Do →
+Approval Lo → Kaam Dobara Start Karo
+
+10.7 Customer ki approval bhi illegal, unsafe, incompatible ya Ustaad ke
+approved skill se bahar kaam ko allowed nahi bana sakti.
+
+11. PRICING AUR “NO SURPRISES”
+
+11.1 Customer ka charge in mein se applicable approved amount ke
+mutabiq hoga:
+
+   ● App par displayed fixed price;
+   ● Customer ka selected offer;
+   ● Customer-approved quote.
+
+11.2 Labour/service aur parts/material ki cost jahan possible ho alag show
+ki jayegi.
+
+11.3 Customer approval se pehle yeh details review karega:
+
+   ● Included aur excluded scope;
+   ● Labour amount;
+   ● Part specification aur price;
+   ● Helper ya procurement charge, agar applicable ho;
+   ● Advance;
+   ● Inspection Fee adjustment;
+   ● Remaining amount.
+
+11.4 Ustaad HandyGo ki internal 18% commission Customer ke bill mein
+separate charge ke taur par add nahi kar sakta.
+
+11.5 Ustaad ka normal fuel, mobile data, routine travel, basic tools aur
+basic safety equipment separate Customer charge nahi hain, jab tak kisi
+specific approved service mein pehle se clearly mention na ho.
+
+11.6 Applicable taxes, invoices aur receipts approved legal aur tax process
+ke mutabiq provide kiye jayenge.
+
+12. PARTS, MATERIALS AUR ADVANCE
+
+12.1 Parts aur materials Customer ki approval ke baad hi use ya purchase
+kiye jayenge.
+
+12.2 Parts safe, compatible aur required service ke liye suitable hone
+chahiye.
+
+12.3 Customer-funded purchase ke liye process mein yeh shamil ho sakta
+hai:
+
+   ● Customer advance de;
+   ● Customer khud part purchase kare;
+   ● Ustaad purchase karke actual cost reconcile kare.
+
+12.4 Jahan required ho, receipt ya purchase evidence provide kiya jayega.
+
+12.5 Fake receipt, hidden markup ya labour ko material aur material ko
+labour show karna prohibited hai.
+
+12.6 Policy threshold se zyada amount wale parts ke liye Customer
+advance ya direct purchase required ho sakti hai. Current reference
+threshold Rs. 3,000 ho sakti hai, lekin final applicable requirement app
+mein display hogi.
+
+12.7 Customer ke paison se khareeda gaya unused material aur removed
+parts Customer ki property honge, jab tak Customer recorded permission
+se disposal allow na kare.
+
+12.8 Agar Customer apna part provide kare:
+
+   ● Hidden product defect ki responsibility Customer/part supplier ki ho
+       sakti hai;
+
+   ● Approved installation ki quality aur visible incompatibility warn karna
+       Ustaad ki responsibility rahegi.
+
+13. PAYMENT MODEL
+
+13.1 Launch ke approved payment model mein Customer approved
+amount directly Ustaad ko Company-approved method se pay kar sakta
+hai.
+
+13.2 Payment ka status app ya approved Company record mein sach aur
+correctly update kiya jayega.
+
+13.3 Allowed payment methods app ya official Support instructions mein
+show kiye jayenge.
+
+13.4 Future JazzCash, Easypaisa, wallet ya in-app payment tabhi available
+hoga jab Company officially activate aur announce kare.
+
+13.5 Customer available booking aur payment record apne paas rakhega.
+
+13.6 Already paid ya adjusted Inspection Fee dobara charge nahi hogi.
+
+13.7 Genuine voluntary tip optional hai. Ustaad tip demand ya required
+charge ke taur par present nahi kar sakta.
+
+13.8 Payment dispute ki wajah se koi party:
+
+   ● Threat nahi degi;
+   ● Customer ya Ustaad ki property nahi rokegi;
+   ● Public shaming nahi karegi;
+   ● Unsafe confrontation nahi karegi.
+
+14. PAYMENT DISPUTE AUR NON-PAYMENT
+
+14.1 Approved aur undisputed work ka payment Customer par payable
+rahega.
+
+14.2 Genuinely disputed amount evidence review mein ja sakta hai.
+
+14.3 Partial payment ko “Paid Amount” aur “Disputed Outstanding Amount”
+ke taur par record kiya ja sakta hai.
+
+14.4 Customer payment dispute Support ke through raise karega aur
+booking, quote, approval, work aur payment evidence provide karega.
+
+14.5 Jaan boojh kar payment na karne par:
+
+   ● Outstanding balance record ho sakta hai;
+   ● Future bookings par control lag sakta hai;
+   ● Account restrict ho sakta hai.
+
+14.6 HandyGo exceptional case mein resolution ya protection review kar
+sakta hai, lekin automatic payment cancellation ya compensation ki
+guarantee nahi deta.
+
+14.7 Customer fake payment claim, fake screenshot, payment status
+manipulation ya undisputed payment fraudulently reverse nahi karega.
+
+15. SERVICE COMPLETION
+
+15.1 Completion se pehle Ustaad applicable situation ke mutabiq:
+
+   ● Work ko test ya observe karega;
+   ● Work area reasonably clean karega;
+   ● Customer ko kiya gaya kaam explain karega;
+   ● Limitations ya warnings batayega;
+   ● Required evidence aur status record karega.
+
+15.2 Customer ko result check karne ka reasonable mauqa diya jayega.
+
+15.3 Agar Customer result check karne se mana kare ya available na ho to
+yeh fact record kiya ja sakta hai.
+
+15.4 Separate Customer completion OTP launch process ka mandatory
+hissa nahi hoga jab tak app mein officially activate na ho.
+
+15.5 Ustaad required professional close aur truthful record ke baad job
+complete mark kar sakta hai.
+
+15.6 Job complete mark hone se Customer ka “Report a Problem” ya
+complaint ka haq khatam nahi hota.
+
+15.7 Technical completion aur payment status do separate records hain aur
+dono sach ke mutabiq update honge.
+
+16. CANCELLATION AUR RESCHEDULING
+
+16.1 Ustaad ke “On the Way” mark karne se pehle Customer cancellation
+ya ek reschedule approved process ke mutabiq free kar sakta hai.
+16.2 “On the Way” ke baad cancellation late cancellation ke taur par record
+ho sakti hai.
+16.3 Late cancellation automatically Customer no-show strike nahi hogi.
+16.4 Address, scope, date, time, part ya service change app ke approved
+process ke through ki jayegi.
+16.5 Private ya informal change ki wajah se booking cancel aur dobara
+create karni par sakti hai.
+16.6 Customer service ki zaroorat khatam hone par jaldi cancellation
+karega aur jaan boojh kar Ustaad ka travel waste nahi karega.
+16.7 Cancellation responsibility in categories mein record ho sakti hai:
+
+   ● Customer;
+   ● Ustaad;
+   ● HandyGo/System;
+   ● Verified Emergency.
+16.8 Agar cancellation Ustaad, HandyGo/System, verified emergency ya
+unsafe condition ki wajah se ho to Customer par fee ya strike apply nahi
+honi chahiye.
+
+17. CUSTOMER NO-SHOW AUR VISIT PROTECTION
+
+17.1 Verified Customer no-show ke liye controlled process follow hoga,
+jismein aam tor par yeh shamil hain:
+
+   ● Pre-arrival contact;
+   ● Arrival call;
+   ● GPS ya arrival evidence;
+   ● Reasonable 5 se 15 minute wait;
+   ● Bell maximum 3 martaba, taqreeban ek minute ke gap ke saath;
+   ● Support verification.
+
+17.2 Verified no-show par app mein pehle se displayed Visit Protection
+Fee, Customer strike aur approved Ustaad visit compensation apply ho
+sakti hai.
+
+17.3 Applicable Visit Protection Fee booking confirm karne se pehle
+Customer ko show ki jayegi.
+
+17.4 Repeated no-show 12-month rolling period mein in steps ka sabab
+ban sakta hai:
+
+   ● Pehli warning;
+   ● Stronger warning;
+   ● Advance-payment requirement;
+   ● Account review;
+   ● Restriction ya suspension.
+
+17.5 Customer ghalat no-show classification ko official Support ya appeal
+process ke through challenge kar sakta hai.
+
+18. REPORT A PROBLEM AUR COMPLAINTS
+
+18.1 Customer complaint official “Report a Problem” ya Support process ke
+through karega.
+
+18.2 Customer relevant details provide karega, jaise:
+
+   ● Booking ID;
+   ● Approved scope;
+   ● Quote;
+   ● Approval;
+   ● Payment;
+   ● Photos ya evidence;
+   ● Complaint ki details.
+
+18.3 Normal service-quality complaint jitni jaldi possible ho report ki jayegi,
+aam tor par 48 ghanton ke andar.
+
+18.4 Electric shock, gas/refrigerant leak, fire risk, serious property damage,
+fraud, theft ya harassment jaise serious cases available evidence aur
+applicable policy ke mutabiq baad mein bhi review ho sakte hain.
+
+18.5 Complaint file hona Ustaad ke guilty hone ka automatic proof nahi hai.
+
+18.6 Customer Ustaad ko threaten, harass, blackmail, publicly shame ya
+private settlement ke liye pressure nahi karega.
+
+18.7 HandyGo:
+
+   ● Dono parties se information le sakta hai;
+   ● Inspection ya recheck karwa sakta hai;
+   ● Temporary protective restriction laga sakta hai;
+   ● Rework approve kar sakta hai;
+   ● Evidence ke mutabiq decision le sakta hai.
+
+18.8 Customer complaint investigation se pehle relevant condition aur
+evidence ko preserve karega, jab tak immediate safety ya property
+protection ke liye change zaroori na ho.
+
+19. REWORK, REFUND AUR COMPENSATION
+
+19.1 Refund automatic punishment nahi hai. Refund verified financial
+correction ya approved resolution hota hai.
+
+19.2 Case ke mutabiq resolution mein yeh shamil ho sakta hai:
+
+   ● Explanation;
+   ● Record correction;
+   ● Authorized re-inspection;
+   ● Free workmanship rework;
+   ● Partial labour refund;
+   ● Full labour refund;
+   ● Parts/material remedy;
+   ● Exceptional direct-loss compensation.
+
+19.3 Jahan technically safe aur reasonable ho, rework aam tor par pehla
+remedy ho sakta hai.
+
+19.4 Ustaad apni taraf se refund, replacement, free labour, compensation
+ya disciplinary action ka final promise ya denial nahi kar sakta.
+
+19.5 Full refund, material reimbursement, property-damage settlement aur
+exceptional compensation ke liye authorized HandyGo approval zaroori
+hogi.
+
+19.6 Customer same verified loss ke liye double refund ya duplicate benefit
+claim nahi kar sakta.
+
+19.7 Indirect, speculative, business, emotional ya consequential loss
+applicable law aur evidence ke mutabiq decide hoga.
+
+20. SERVICE SUPPORT AUR WARRANTY
+
+20.1 Workmanship support aur rework eligibility active service ya trade
+schedule ke mutabiq hogi.
+
+20.2 Har service par ek jaisi blanket warranty apply nahi hogi.
+
+20.3 Approved AC repair ya gas-leak rectification par applicable support
+period aam tor par 7 din ho sakta hai.
+
+20.4 Applicable general services par support period service ke mutabiq 14
+din tak ho sakta hai.
+
+20.5 Exact support period Customer ko service page, booking details ya
+approved policy mein show kiya jayega.
+
+20.6 Ustaad ki private ya personal warranty promise tab tak HandyGo par
+binding nahi hogi jab tak woh HandyGo record mein approved na ho.
+
+20.7 Support ya warranty apply na hone ki wajah mein yeh shamil ho sakta
+hai:
+
+   ● Customer misuse;
+   ● Normal wear and tear;
+   ● Naya ya unrelated fault;
+   ● Third-party interference;
+   ● Customer-supplied defective part;
+   ● External utility ya building issue;
+   ● Required advice ko follow na karna.
+
+Har case evidence ke mutabiq decide hoga.
+
+21. PROPERTY DAMAGE, LOSS AUR PEHLE SE
+MAUJOOD CONDITION
+
+21.1 Customer Ustaad ko work area protect karne dega aur relevant fragile
+ya valuable cheezon ke baare mein pehle batayega.
+
+21.2 Kaam se pehle relevant pre-existing damage ki limited service-area
+photos ya evidence record ki ja sakti hai.
+
+21.3 Agar damage ho:
+
+   ● Kaam roka jayega;
+   ● Safety control ki jayegi;
+   ● Incident report kiya jayega;
+
+   ● Damage chhupaya nahi jayega;
+   ● Unauthorized private cash settlement nahi ki jayegi.
+
+21.4 Responsibility decide karte waqt yeh dekha jayega:
+
+   ● Approved scope;
+   ● Pre-existing condition;
+   ● Technical cause;
+   ● Customer ya third-party involvement;
+   ● Available evidence.
+
+21.5 Verified service-caused property damage HandyGo ke approved
+property-damage process ke through handle hoga.
+
+21.6 Customer ko sirf Ustaad ke peeche private recovery ke liye nahi
+chhoda jayega. HandyGo investigation aur resolution process manage
+karega.
+
+21.7 Cash payment se pehle repair ya equivalent replacement consider ki
+ja sakti hai.
+
+21.8 Customer ko automatic upgrade ya unsupported indirect loss ka
+promise nahi diya jata.
+
+21.9 Visible damage foran ya aam tor par 48 ghanton mein report kiya jana
+chahiye.
+
+21.10 Formal property-damage claim applicable policy ke mutabiq 30 din
+tak file ki ja sakti hai, serious-case exceptions ke saath.
+
+21.11 Theft ya missing-property allegation serious matter hai. Zaroorat par
+police ya legal authority involve ki ja sakti hai.
+
+21.12 Sirf allegation hona final guilt ka proof nahi hai.
+
+22. SAFETY AUR EMERGENCY
+
+22.1 Insani jaan aur safety app, booking, payment aur evidence se zyada
+important hai.
+
+22.2 Customer Ustaad se yeh kaam nahi kahega:
+
+   ● Illegal electrical connection;
+   ● Meter tampering;
+   ● Safety device bypass;
+   ● Unsafe temporary jugaar;
+   ● Dangerous height work;
+   ● Gas ya refrigerant ka uncontrolled release;
+   ● Koi aur illegal ya prohibited shortcut.
+
+22.3 Ustaad unsafe, illegal, approved skill se bahar ya required
+tools/PPE/access/isolation ke baghair kaam rok ya refuse kar sakta hai.
+
+22.4 Genuine safety refusal apne aap service breach nahi hoga.
+
+22.5 Immediate danger mein Customer safe jagah se relevant public
+emergency service ko contact karega aur HandyGo permission ka intezar
+nahi karega.
+
+22.6 Safe hone ke baad HandyGo ko jaldi inform kiya jayega.
+
+22.7 Customer Ustaad se medical rescue, firefighting, live electrical rescue,
+gas emergency intervention ya structural rescue nahi karwayega jab woh
+Ustaad ki training aur approved competence se bahar ho.
+
+23. CUSTOMER CONDUCT AUR SAFE ENVIRONMENT
+
+23.1 Customer aur property par maujood log Ustaad ke saath respect se
+pesh aayenge.
+
+23.2 Customer reasonably safe work environment provide karega.
+
+23.3 Yeh conduct prohibited hai:
+
+   ● Harassment;
+   ● Abuse;
+   ● Threat;
+   ● Violence;
+   ● Jhooti complaint;
+   ● Fake evidence;
+   ● Extortion ya blackmail;
+   ● Illegal kaam ki demand;
+   ● Known uncontrolled danger chhupana;
+   ● Ustaad ko property se nikalne na dena;
+   ● Ustaad ki property rokna;
+   ● Booking ya payment record jhoota update karne ka pressure.
+
+23.4 Customer ya property se serious risk hone par Ustaad kaam pause
+karke jagah chhor sakta hai aur Support ko involve kar sakta hai.
+
+23.5 Customer misconduct par case ke mutabiq:
+
+   ● Education;
+   ● Warning;
+   ● Advance-payment control;
+   ● Account restriction;
+   ● Suspension;
+   ● Permanent removal
+
+apply ho sakta hai.
+
+23.6 Genuine complaint, refund request ya good-faith payment dispute
+Customer misconduct nahi hai.
+
+24. HELPERS, MULTI-TRADE WORK AUR SUBSTITUTION
+
+24.1 Helper sirf approved policy, disclosure aur Customer approval ke baad
+use ho sakta hai.
+
+24.2 Customer hidden ya unregistered helper/substitute ki demand nahi
+karega.
+
+24.3 Primary Ustaad aam tor par site par present aur work ka responsible
+rahega.
+
+24.4 Basic helper high-risk technical kaam independently nahi karega.
+
+24.5 Multi-trade job ke liye:
+
+   ● Alag approved Ustaads;
+   ● Ya ek aisa Ustaad jiske paas tamam required active skill approvals
+
+       hon
+
+zaroori ho sakte hain.
+
+24.6 Multi-trade examples mein yeh shamil hain:
+
+   ● Pressure pump ki electrical connection;
+   ● AC electrical supply modification;
+   ● Hidden wires/pipes ke paas drilling;
+   ● Pani ki leakage ke paas electrical hazard.
+
+25. PHOTOS, RECORDING AUR HOME PRIVACY
+
+25.1 Customer safety aur service evidence ke liye qanooni aur reasonable
+photo/video record bana sakta hai.
+
+25.2 Customer footage ko harassment, misleading publication ya unrelated
+public exposure ke liye use nahi karega.
+
+25.3 HandyGo ya Ustaad ki evidence service area aur required condition
+tak limited honi chahiye.
+
+25.4 Faces, children, private documents, screens, payment information aur
+unrelated personal property ko avoid kiya jayega, jab tak woh necessary
+aur authorized na ho.
+
+25.5 Customer Ustaad ka CNIC, address, phone number, background
+report ya doosri sensitive information publicly post nahi karega.
+25.6 Public reviews genuine experience par based honge aur un mein
+threat, jhoota claim, hate speech, doxxing ya illegal content nahi hoga.
+
+26. RATINGS AUR REVIEWS
+
+26.1 Customer approved process ke through honest 1–5 rating aur review
+de sakta hai.
+26.2 Rating actual service aur experience par based honi chahiye.
+26.3 Customer review change karne ke badle paisay, free work ya personal
+benefit demand nahi karega.
+26.4 Yeh review activity prohibited hai:
+
+   ● Fake review;
+   ● Coordinated review;
+   ● Apne ya related account ka review;
+   ● Retaliatory review;
+   ● Paid review manipulation.
+26.5 HandyGo fraudulent, unlawful, irrelevant, abusive ya privacy-violating
+review ko investigate, restrict ya remove kar sakta hai.
+26.6 Sirf ek low rating Ustaad misconduct ka automatic proof nahi hai.
+
+27. OFF-PLATFORM DEAL AUR CUSTOMER CONTACT
+
+27.1 HandyGo ke through mili booking aur us se related support/rework
+HandyGo process ke through handle hoga.
+
+27.2 Customer Ustaad se yeh nahi kahega:
+
+   ● App booking cancel ya hide karo;
+   ● Payment status jhoota show karo;
+   ● Direct private deal karo;
+   ● HandyGo commission process avoid karo.
+
+27.3 Customer Ustaad ka personal data harassment, unrelated contact ya
+marketing ke liye use nahi karega.
+
+27.4 App temporarily unavailable hone ya genuine emergency mein
+approved fallback contact sirf booking ya Support purpose ke liye use kiya
+ja sakta hai.
+
+28. SERVICE REFUSAL AUR PLATFORM CANCELLATION
+
+28.1 HandyGo ya Ustaad booking decline, pause ya cancel kar sakta hai
+agar:
+
+   ● Scope unsafe ya illegal ho;
+   ● Identity mismatch ho;
+   ● Service ya area available na ho;
+   ● System error ho;
+   ● Approval ya payment confirm na ho;
+   ● Customer misconduct ho;
+   ● Property ya access prohibited/unsafe ho;
+   ● Koi aur justified wajah ho.
+
+28.2 Agar cancellation HandyGo/System ya Ustaad ki responsibility se ho
+to Customer par fee ya strike nahi lagni chahiye.
+
+28.3 Already paid amount applicable process ke mutabiq handle kiya
+jayega.
+
+28.4 HandyGo immediate replacement Ustaad ki guarantee nahi deta, lekin
+available next step Customer ko batayega.
+
+29. ACCOUNT RESTRICTION, SUSPENSION AUR
+APPEAL
+
+29.1 Customer account controls risk aur case ki seriousness ke mutabiq
+honge.
+29.2 Minor misunderstanding par education ya reminder diya ja sakta hai.
+29.3 Repeated reliability issue par warning ya account control lag sakta hai.
+29.4 Material abuse par account restrict ho sakta hai.
+29.5 Serious safety allegation par investigation ke dauran immediate
+temporary protective restriction lag sakti hai.
+29.6 Confirmed serious misconduct par permanent account removal ho
+sakta hai.
+29.7 Restriction avoid karne ke liye duplicate account banana prohibited
+hai.
+29.8 Material account action ke khilaf standard appeal period 14 calendar
+days ho sakta hai.
+
+30. SUPPORT AUR RESPONSE
+
+30.1 Official Support channels app, website ya Company communication
+mein publish kiye jayenge.
+30.2 Official Support:
+Email: support@handygo.ai
+Number: 0332-0219006
+30.3 Support ka acknowledgement final resolution nahi hota.
+
+30.4 Technical, payment, Ustaad, legal ya third-party dependency wale
+cases mein investigation aur updates ke liye additional time lag sakta hai.
+
+30.5 Emergency service ko HandyGo Support ka intezar karte hue delay
+nahi kiya jayega.
+
+31. THIRD-PARTY PRODUCTS AUR PROPERTY
+CONDITIONS
+
+31.1 HandyGo ya Ustaad Customer ke appliances, fixtures, parts, wiring,
+pipes, building, structure ya third-party products ka manufacturer nahi hai.
+
+31.2 Result aur responsibility par yeh cheezen asar daal sakti hain:
+
+   ● Hidden defect;
+   ● Counterfeit part;
+   ● Purani repair;
+   ● Building condition;
+   ● Voltage fluctuation;
+   ● Water pressure;
+   ● Utility issue;
+   ● Third-party interference.
+
+31.3 Ustaad phir bhi reasonable professional care use karega.
+
+31.4 Ustaad apni competence ke andar visible incompatibility ya material
+limitation Customer ko batayega.
+
+31.5 Koi clause proven negligence, fraud ya qanoonan khatam na ki ja
+sakne wali responsibility ko remove nahi karta.
+
+32. INTELLECTUAL PROPERTY AUR APP USE
+
+32.1 HandyGo app, brand, logo, content, Service Catalog, workflows aur
+non-public material HandyGo ya applicable licensors ki property hain.
+32.2 Customer ko app sirf lawful personal booking aur Support use ke liye
+limited permission milti hai.
+32.3 Customer yeh kaam nahi karega:
+
+   ● Hacking;
+   ● Unauthorized scraping;
+   ● Restricted systems ko reverse engineer karna;
+   ● Fake location ya status use karna;
+   ● Fraudulent accounts banana;
+   ● Bookings mein interference;
+   ● Internal confidential content ka misuse.
+
+33. TERMS AUR SERVICES MEIN TABDEELI
+
+33.1 Service Catalog, service availability aur operational process clear app
+ya website notice ke through update kiye ja sakte hain.
+33.2 Aham contractual ya privacy change par clear notice diya jayega.
+33.3 Jahan qanoonan zaroori ho, fresh electronic acceptance li jayegi.
+33.4 Customer ke continued use ko hidden aur materially harmful change
+ki unlimited consent nahi samjha jayega.
+
+34. ACCOUNT CLOSURE AUR TERMINATION
+
+34.1 Customer account closure request kar sakta hai.
+34.2 Account close karne se pehle yeh matters complete ya preserve kiye
+ja sakte hain:
+
+   ● Active booking;
+   ● Outstanding payment;
+   ● Complaint;
+   ● Refund;
+   ● Incident;
+   ● Property claim;
+   ● Fraud review;
+   ● Legal record.
+
+34.3 HandyGo material breach, safety risk, fraud, illegal activity,
+duplicate-account evasion ya business closure ki wajah se access suspend
+ya terminate kar sakta hai.
+
+34.4 Account closure se existing payment, complaint, refund, evidence,
+privacy, appeal ya legal obligations automatically khatam nahi hote.
+
+35. LIABILITY AUR DISCLAIMERS
+
+35.1 Har party apne proven acts, omissions aur qanooni duties ki
+responsible hogi.
+
+35.2 HandyGo yeh absolute guarantee nahi deta ke:
+
+   ● App ya service hamesha uninterrupted hogi;
+   ● Har diagnosis perfect hoga;
+   ● Koi incident kabhi nahi hoga;
+   ● Ustaad exact time par zaroor pohanchega;
+   ● Har service ka result Customer ki expectation ke bilkul mutabiq hoga.
+
+35.3 Liability ka decision actual HandyGo role, evidence aur applicable
+Pakistan/Sindh law ke mutabiq hoga.
+
+35.4 HandyGo third-party product, hidden property defect, external utility ya
+Customer/third-party interference se hone wale result ka automatically
+responsible nahi hoga.
+
+35.5 Koi shart fraud, proven negligence ya kisi aisi qanooni responsibility
+ko exclude nahi karegi jo qanoonan exclude nahi ki ja sakti.
+
+36. GOVERNING LAW AUR DISPUTE PROCESS
+
+36.1 Yeh Agreement Pakistan aur Province of Sindh ke applicable
+qawaneen ke mutabiq govern hoga.
+36.2 Dispute ki surat mein pehla step official HandyGo Support aur internal
+review hoga.
+36.3 Customer urgent safety, police, criminal, consumer-protection ya court
+relief ke liye relevant authority se contact karne ka haq rakhta hai.
+36.4 Resolve na hone wala dispute competent court ya consumer forum
+mein applicable law ke mutabiq raise kiya ja sakta hai.
+36.5 Koi clause Customer ke non-waivable consumer ya legal rights ko
+khatam nahi karega.
+
+37. ELECTRONIC ACCEPTANCE RECORD
+
+Terms Version: 1.0
+Effective Date: Sign ya electronic acceptance ki tareekh
+Customer ka Registered Naam: ______________________________
+Customer Account ID: _____________________________________
+Registered Mobile Number: _________________________________
+Customer confirm karta hai:
+□ Mujhe complete Customer Terms aur Booking Rules parhne aur
+download karne ka access mila.
+
+□ Main Standard, Inspection aur Live Offers/Bidding booking lanes ko
+samajhta/samajhti hoon.
+□ Main pricing, cancellation, no-show, payment aur complaint rules ko
+samajhta/samajhti hoon.
+□ Main samajhta/samajhti hoon ke Ustaad verification risks ko kam karti
+hai, lekin future behaviour, skill ya zero incident ki absolute guarantee nahi
+hai.
+□ Main samajhta/samajhti hoon ke additional service, parts ya price change
+ke liye meri recorded approval zaroori hai.
+□ Main apne registered HandyGo account ke through yeh Terms accept
+karta/karti hoon.
+□ Main razamand hoon ke meri electronic acceptance, date/time, account
+details, document version, device/session/IP reference aur Acceptance ID
+record ki jayegi.
+Acceptance Date/Time: ____________________________________
+Unique Acceptance ID: ___________________________________
+Complete Document Snapshot/Hash Reference: _______________
+Device/Session/IP Reference: ______________________________
+Acceptance Method: Authenticated HandyGo account aur explicit
+checkbox consent.
+Accepted Terms/PDF Customer ko available ki gayi: □ Haan □ Nahi
+
+PART B — CUSTOMER PRIVACY NOTICE
+
+1. RESPONSIBLE ENTITY
+
+Customer ke personal data ki responsible entity:
+
+HandyGo (Private) Limited
+CUIN: 0346585
+Registered Office: 13th Floor, Nacon House, Din Mohammad Wafai Road,
+Civil Lines, Karachi 74000
+Privacy Contact: legal@handygo.ai
+Support Email: support@handygo.ai
+Support Number: 0332-0219006
+Website: www.handygo.ai
+
+2. HUM KONSI INFORMATION PROCESS KAR SAKTE
+HAIN
+
+2.1 Account aur Identity Information
+
+   ● Naam;
+   ● Mobile number;
+   ● Customer Account ID;
+   ● Profile information;
+   ● Login aur authentication records;
+   ● OTP/security records.
+
+2.2 Address aur Booking Information
+
+   ● Service address;
+   ● Relevant location;
+   ● Area aur route details;
+   ● Service issue ya complaint;
+   ● Selected category;
+   ● Timing;
+   ● Access instructions;
+   ● Booking history.
+
+2.3 Communication Information
+
+   ● In-app chat;
+   ● Support cases;
+   ● Booking-related calls/messages ka relevant record;
+   ● Communication metadata aur content, jahan qanoonan allowed ho.
+
+2.4 Service aur Evidence Information
+
+   ● Inspection reports;
+   ● Quotes;
+   ● Customer approvals;
+   ● Parts aur materials;
+   ● Before/after service-area evidence;
+   ● Completion records;
+   ● Ratings aur reviews;
+   ● Complaints;
+   ● Rework;
+   ● Incidents;
+   ● Property-damage records.
+
+2.5 Payment Information
+
+   ● Payment method;
+   ● Payment status;
+   ● Amount;
+   ● Labour aur material breakdown;
+   ● Refund;
+   ● Outstanding ya disputed amount;
+   ● Transaction/reference details.
+
+HandyGo Customer ka bank PIN, payment OTP ya unnecessary complete
+card information nahi mangta.
+
+2.6 Device aur Security Information
+
+   ● App/device/session data;
+   ● IP address ya technical identifiers;
+   ● Security aur fraud logs;
+
+   ● Consent aur acceptance evidence.
+
+2.7 Emergency aur Safety Information
+
+Safety, harassment, fraud, security incident ya qanooni matter handle karne
+ke liye zaroori information process ki ja sakti hai.
+
+3. INFORMATION KYUN USE KI JATI HAI
+
+Customer information in purposes ke liye use ki ja sakti hai:
+
+   ● Customer account banana aur verify karna;
+   ● Account ko secure rakhna;
+   ● Relevant services aur Ustaads show karna;
+   ● Bookings process karna;
+   ● Customer ko Ustaad select karne mein madad dena;
+   ● Booking confirm karna;
+   ● Navigation, arrival aur no-show verify karna;
+   ● Active booking safety manage karna;
+   ● Customer aur Ustaad communication enable karna;
+   ● Quotes, approvals, payments aur commission records banana;
+   ● Complaint, rework, refund aur property-damage cases handle karna;
+   ● Fraud, fake booking, fake review aur account misuse rokna;
+   ● App reliability aur service quality improve karna;
+   ● Qanooni, court, regulator ya authority request comply karna;
+   ● Legal claims establish, defend ya resolve karna.
+
+Customer information ko unrelated marketing ya surveillance ke liye clear
+notice, lawful basis aur required consent ke baghair use nahi kiya jayega.
+
+4. USTAAD KE SAATH INFORMATION SHARING
+
+4.1 Ustaad ko booking ke stage aur service requirement ke mutabiq sirf
+minimum necessary Customer information di jayegi.
+
+4.2 Is information mein yeh shamil ho sakta hai:
+
+   ● Customer ka first name;
+   ● Service issue;
+   ● Relevant area ya address;
+   ● Approved contact route;
+   ● Booking details;
+   ● Access instructions.
+
+4.3 Customer ka phone number ya address Ustaad private future work,
+personal contact ya marketing ke liye use nahi kar sakta.
+
+5. INFORMATION KIN LOGON KE SAATH SHARE HO
+SAKTI HAI
+
+Minimum necessary information in recipients ke saath share ho sakti hai:
+
+   ● Authorized HandyGo Support team;
+   ● Operations team;
+   ● Finance team;
+   ● Quality team;
+   ● Legal team;
+   ● Product/Technology team;
+   ● Authorized Admin staff;
+   ● Approved hosting providers;
+   ● Messaging providers;
+   ● Mapping providers;
+   ● Payment providers;
+   ● Analytics ya technical service providers;
+   ● Insurers;
+   ● Auditors;
+
+   ● Professional advisers;
+   ● Approved recovery providers;
+   ● Police;
+   ● Court;
+   ● Regulator;
+   ● Utility company;
+   ● Koi aur lawful authority.
+
+HandyGo jaan boojh kar Customer ki personal information advertisers ko
+sell nahi karega.
+
+6. LOCATION INFORMATION
+
+6.1 Location information in purposes ke liye use ho sakti hai:
+
+   ● Service availability check karna;
+   ● Service address confirm karna;
+   ● Route aur arrival manage karna;
+   ● No-show events verify karna;
+   ● Active booking safety;
+   ● Fraud ya status investigation.
+
+6.2 Location sirf final app permissions aur active functionality ke mutabiq
+collect ki jayegi.
+
+6.3 Customer device settings ke through location permission manage kar
+sakta hai, lekin permission band karne se kuch booking ya safety features
+kaam nahi karenge.
+
+7. PHOTOS, VIDEO AUR SERVICE EVIDENCE
+
+7.1 Evidence service area aur required condition tak limited honi chahiye.
+
+7.2 Jahan possible ho, evidence mein yeh cheezen include nahi ki jayengi:
+   ● Customer ya household members ke faces;
+   ● Bachche;
+   ● Private documents;
+   ● Payment credentials;
+   ● Private rooms;
+   ● Unrelated personal property.
+
+7.3 Customer unnecessary ya inappropriate image ko Support ke through
+report kar sakta hai.
+7.4 Service evidence ko separate lawful permission ke baghair public
+marketing ke liye use nahi kiya jayega.
+7.5 Emergency help aur hazard control evidence capture se zyada
+important hoga.
+
+8. RATINGS AUR REVIEWS
+
+8.1 Rating aur review booking aur Ustaad performance ke saath associate
+ho sakte hain.
+8.2 Public display mein unnecessary Customer identity show nahi ki jayegi.
+8.3 Fake, abusive, fraudulent, privacy-invasive ya unlawful review
+investigate, restrict ya remove kiya ja sakta hai.
+
+9. SERVICE AUR MARKETING COMMUNICATIONS
+
+9.1 Account, booking, payment, safety aur Support ke transactional
+messages service provide karne ke liye zaroori ho sakte hain.
+
+9.2 Promotional marketing ke liye approved consent aur opt-out process
+use kiya jayega.
+
+9.3 Marketing se opt out karne par necessary booking, payment, safety ya
+Support messages band nahi honge.
+
+10. DATA KITNI DER RAKHA JA SAKTA HAI
+
+10.1 Information sirf utni muddat tak rakhi jayegi jitni qanooni, tax,
+consumer, safety, fraud, dispute aur operational purpose ke liye reasonably
+necessary ho.
+
+10.2 Retention categories mein yeh shamil ho sakti hain:
+
+   ● Incomplete registration;
+   ● Customer account/profile;
+   ● Booking;
+   ● Quote aur approval;
+   ● Payment;
+   ● Communication;
+   ● Service evidence;
+   ● Complaints;
+   ● Refunds;
+   ● Incidents;
+   ● Property claims;
+   ● Ratings/reviews;
+   ● Security aur fraud logs;
+   ● Closed accounts;
+   ● Legal holds.
+
+10.3 Account closure ka matlab yeh nahi ke har record foran delete ho
+jayega.
+
+10.4 Active complaint, payment, fraud, tax, safety, investigation ya qanooni
+requirement ka record zaroorat ke mutabiq preserve kiya ja sakta hai.
+
+11. CUSTOMER KI PRIVACY REQUESTS
+
+Applicable law aur approved process ke mutabiq Customer request kar
+sakta hai:
+
+   ● Apni important account information ka access ya summary;
+   ● Ghalat information ki correction;
+   ● Account closure;
+   ● Applicable situation mein deletion ya restriction;
+   ● Material account decision ka review;
+   ● Marketing opt-out.
+
+Privacy Request Contact: legal@handygo.ai
+
+Request Method: In-app Support ya email.
+
+Identity verify karne ke liye HandyGo registered account, registered mobile
+number, OTP, Customer details ya reasonable identity evidence use kar
+sakta hai.
+
+Customer request ki wajah se:
+
+   ● Kisi aur shakhs ka private data;
+   ● Protected security method;
+   ● Investigation ko compromise karne wala evidence
+
+release karna zaroori nahi hoga.
+
+12. DATA SECURITY
+
+12.1 HandyGo business aur information ki nature ke mutabiq reasonable
+security measures use karega, jin mein yeh shamil ho sakte hain:
+
+   ● Authentication;
+
+   ● Role-based access;
+   ● Restricted staff access;
+   ● Service-provider controls;
+   ● Restricted data export;
+   ● Activity logging;
+   ● Backups;
+   ● Security monitoring;
+   ● Incident response.
+12.2 Internet aur digital systems mein zero risk ki absolute guarantee nahi
+di ja sakti.
+12.3 Customer apna OTP, password aur device access secure rakhega.
+
+12.4 Suspected account compromise foran HandyGo Support ko report
+kiya jayega.
+
+13. DATA INCIDENTS
+
+13.1 HandyGo suspected unauthorized access, wrong-recipient disclosure,
+lost device, account takeover ya service-provider security incident ko
+assess karega.
+
+13.2 HandyGo reasonable containment aur investigation steps lega.
+13.3 Customer, service provider ya relevant authority ko notification us
+waqt applicable law aur incident ki seriousness ke mutabiq di jayegi.
+
+14. THIRD-PARTY AUR CROSS-BORDER PROCESSING
+
+14.1 Customer information approved technology ya hosting providers ke
+through Pakistan ke andar ya bahar process ho sakti hai.
+
+14.2 HandyGo reasonable provider contracts aur safeguards use karega.
+
+14.3 HandyGo data ko “sirf Pakistan mein stored” claim nahi karega jab tak
+yeh technically verified na ho.
+
+15. CHILDREN AUR VULNERABLE USERS
+
+15.1 HandyGo service knowingly kisi bachche ko akelay ghar ya property
+mein Ustaad bulane ke liye enable nahi karegi.
+15.2 Zaroorat par parent, guardian ya authorized adult ki involvement
+required hogi.
+15.3 Safety risk ki surat mein account ya booking protectively restrict ki ja
+sakti hai.
+
+16. PRIVACY NOTICE MEIN TABDEELI
+
+16.1 Privacy Notice mein material change clear notice ke through batayi
+jayegi.
+16.2 Jahan qanoonan zaroori ho, fresh consent ya acknowledgement li
+jayegi.
+16.3 Har Notice ka version aur Effective Date record ki jayegi.
+16.4 Previous accepted version aur acceptance evidence preserve kiya ja
+sakta hai.
+
+17. CUSTOMER PRIVACY ACKNOWLEDGEMENT
+
+Privacy Notice Version: 1.0
+Effective Date: Sign ya electronic acceptance ki tareekh
+
+Customer ka Registered Naam: ______________________________
+
+Customer Account ID: _____________________________________
+
+Registered Mobile Number: _________________________________
+
+Customer confirm karta hai:
+
+□ Mujhe complete Customer Privacy Notice parhne aur download karne ka
+access mila.
+
+□ Main samajhta/samajhti hoon ke HandyGo meri account, booking,
+address, location, communication, payment, service evidence aur security
+information process kar sakta hai.
+
+□ Main samajhta/samajhti hoon ke booking perform karne ke liye minimum
+necessary information selected Ustaad ke saath share ho sakti hai.
+
+□ Main samajhta/samajhti hoon ke location arrival, route, no-show, safety
+aur fraud review ke liye use ho sakti hai.
+
+□ Main samajhta/samajhti hoon ke service-area photos aur evidence
+complaint, quality, safety aur dispute handling ke liye use kiye ja sakte hain.
+
+□ Main samajhta/samajhti hoon ke required service messages marketing
+messages se separate hain.
+
+□ Main samajhta/samajhti hoon ke qanooni, tax, fraud, safety, complaint ya
+dispute record account closure ke baad bhi required period tak rakha ja
+sakta hai.
+
+□ Main is Privacy Notice ko apne registered HandyGo account ke through
+electronically acknowledge karta/karti hoon.
+
+Acknowledgement Date/Time: ________________________________
+
+Unique Acceptance ID: ___________________________________
+
+Complete Document Snapshot/Hash Reference: _______________
+
+Device/Session/IP Reference: ______________________________
+Acceptance Method: Authenticated HandyGo account aur explicit
+checkbox consent.
+Privacy Notice/PDF Customer ko available ki gayi: □ Haan □ Nahi
+
+END OF HANDYGO CUSTOMER TERMS,
+BOOKING RULES AUR PRIVACY NOTICE

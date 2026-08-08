@@ -57,6 +57,22 @@ export function isUstaadDocumentType(
 }
 
 /**
+ * Exactly the one document a Client accepts. Kept as its own list (rather
+ * than "everything not Ustaad") so a future fifth document type must be
+ * deliberately added here before any Client-flow code can see it.
+ */
+export const CUSTOMER_DOCUMENT_TYPES = [
+  'CUSTOMER_TERMS_BOOKING_RULES_PRIVACY_NOTICE',
+] as const satisfies readonly AgreementDocumentType[];
+export type CustomerDocumentType = (typeof CUSTOMER_DOCUMENT_TYPES)[number];
+
+export function isCustomerDocumentType(
+  value: string,
+): value is CustomerDocumentType {
+  return (CUSTOMER_DOCUMENT_TYPES as readonly string[]).includes(value);
+}
+
+/**
  * Lifecycle of one document-language version.
  *
  *  - ACTIVE              may be viewed and accepted.

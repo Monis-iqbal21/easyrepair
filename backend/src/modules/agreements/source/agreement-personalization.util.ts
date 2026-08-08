@@ -20,7 +20,12 @@ import { TradeCode } from './agreement-source.types';
 /** Printed where a field genuinely does not apply — never an empty blank. */
 export const NOT_APPLICABLE = 'Not applicable';
 
-/** Ustaad-supplied and system-resolved values available to the filler. */
+/**
+ * Values available to the filler, from either the Ustaad flow (all required
+ * fields below) or the Client flow (only fullLegalName, registeredMobile and
+ * customerAccountId — the rest are Ustaad-only and simply never appear as
+ * blanks in the Customer document, so they are never resolved for it).
+ */
 export interface PersonalizationData {
   // ── Identity (from the authenticated profile; never re-typed) ────────────
   fullLegalName: string;
@@ -36,6 +41,8 @@ export interface PersonalizationData {
   verificationProvider: string | null;
   verificationRequestDate: string | null;
   verificationRequestReference: string | null;
+  /** CLIENT flow only — the Customer's account id blank. */
+  customerAccountId?: string;
 
   // ── Server-generated (client values are never trusted) ───────────────────
   acceptanceId: string;
@@ -124,6 +131,18 @@ const BLANKS: Record<string, BlankSpec> = {
     profileField: 'emergencyContact',
   },
 
+  // Client identity — the Customer document's own label wordings.
+  'Customer ka Registered Naam': {
+    resolve: (d) => d.fullLegalName,
+    mandatory: true,
+    profileField: 'fullLegalName',
+  },
+  'Customer Account ID': {
+    resolve: (d) => d.customerAccountId ?? null,
+    mandatory: true,
+    profileField: 'customerAccountId',
+  },
+
   // Trade service tags — one approved label per schedule.
   'Approved Electrician Service Tags': {
     resolve: (d) => d.approvedServiceTags,
@@ -175,6 +194,11 @@ const BLANKS: Record<string, BlankSpec> = {
     mandatory: true,
     profileField: 'system',
   },
+  'Acceptance Date/Time': {
+    resolve: (d) => d.acceptedAtIso,
+    mandatory: true,
+    profileField: 'system',
+  },
   'Consent Date/Time': {
     resolve: (d) => d.acceptedAtIso,
     mandatory: true,
@@ -206,6 +230,11 @@ const BLANKS: Record<string, BlankSpec> = {
     profileField: 'system',
   },
   'Document Snapshot/Hash Reference': {
+    resolve: (d) => d.sourceDocumentHash,
+    mandatory: true,
+    profileField: 'system',
+  },
+  'Complete Document Snapshot/Hash Reference': {
     resolve: (d) => d.sourceDocumentHash,
     mandatory: true,
     profileField: 'system',

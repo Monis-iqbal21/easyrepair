@@ -1192,9 +1192,9 @@ class _LiveDotBadge extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 5),
-          const Text(
-            'LIVE',
-            style: TextStyle(
+          Text(
+            context.l10n.trackLiveBadge,
+            style: const TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w700,
               color: Colors.white,

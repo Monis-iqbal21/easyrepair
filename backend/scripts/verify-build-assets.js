@@ -31,6 +31,17 @@ const DIST_DOCS = path.join(
   'documents',
 );
 
+const DIST_CUSTOMER_DOCS = path.join(
+  __dirname,
+  '..',
+  'dist',
+  'src',
+  'modules',
+  'agreements',
+  'source',
+  'customer-documents',
+);
+
 const REQUIRED_FILES = [
   'USTAAD_SERVICE_PROVIDER_AGREEMENT.ur_Latn.txt',
   'BACKGROUND_VERIFICATION_EVS_PRIVACY_NOTICE.ur_Latn.txt',
@@ -38,6 +49,11 @@ const REQUIRED_FILES = [
   'TRADE_SPECIFIC_SERVICE_AGREEMENT.PLUMBER.ur_Latn.txt',
   'TRADE_SPECIFIC_SERVICE_AGREEMENT.AC_TECHNICIAN.ur_Latn.txt',
   'TRADE_SPECIFIC_SERVICE_AGREEMENT.CARPENTER.ur_Latn.txt',
+  'INGEST_MANIFEST.json',
+];
+
+const REQUIRED_CUSTOMER_FILES = [
+  'CUSTOMER_TERMS_BOOKING_RULES_PRIVACY_NOTICE.ur_Latn.txt',
   'INGEST_MANIFEST.json',
 ];
 
@@ -114,7 +130,46 @@ for (const [categoryName, expectedTrade] of TRADES) {
 
 if (problems.length > 0) fail(problems);
 
+// ── Customer document ────────────────────────────────────────────────────
+
+if (!fs.existsSync(DIST_CUSTOMER_DOCS)) {
+  fail([
+    `customer-documents directory was not copied into the build: ${DIST_CUSTOMER_DOCS}`,
+  ]);
+}
+
+const missingCustomer = REQUIRED_CUSTOMER_FILES.filter(
+  (f) => !fs.existsSync(path.join(DIST_CUSTOMER_DOCS, f)),
+);
+if (missingCustomer.length > 0) {
+  fail(missingCustomer.map((f) => `missing from dist: customer-documents/${f}`));
+}
+
+const {
+  CustomerTemplateService,
+} = require('../dist/src/modules/agreements/customer-template.service');
+
+const customerProblems = [];
+try {
+  const template = new CustomerTemplateService().getTemplateForClient('ur_Latn');
+  if (!template.contentText || template.contentText.length < 1000) {
+    customerProblems.push('CUSTOMER_TERMS_BOOKING_RULES_PRIVACY_NOTICE: content missing');
+  }
+  if (!/^[0-9a-f]{64}$/.test(template.sourceHash)) {
+    customerProblems.push('CUSTOMER_TERMS_BOOKING_RULES_PRIVACY_NOTICE: bad sourceHash');
+  }
+} catch (err) {
+  customerProblems.push(
+    `CUSTOMER_TERMS_BOOKING_RULES_PRIVACY_NOTICE: ${err && err.message ? err.message : err}`,
+  );
+}
+
+if (customerProblems.length > 0) fail(customerProblems);
+
 console.log(
   `  Agreement assets verified: ${REQUIRED_FILES.length} files, ` +
     `3 documents x ${TRADES.length} trades, all hashes match.`,
+);
+console.log(
+  `  Customer agreement assets verified: ${REQUIRED_CUSTOMER_FILES.length} files, hash matches.`,
 );

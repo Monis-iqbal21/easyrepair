@@ -11,6 +11,9 @@ import '../../features/auth/presentation/pages/forgot_password_page.dart';
 import '../../features/auth/presentation/pages/client_forgot_password_page.dart';
 import '../../features/auth/presentation/providers/auth_providers.dart';
 import '../../features/client/presentation/pages/client_home_page.dart';
+import '../../features/client/domain/entities/customer_agreement_entity.dart';
+import '../../features/client/presentation/pages/customer_agreement_gate_page.dart';
+import '../../features/client/presentation/providers/customer_agreement_providers.dart';
 import '../../features/bookings/presentation/pages/my_bookings_page.dart';
 import '../../features/client/presentation/pages/client_chat_page.dart';
 import '../../features/client/presentation/pages/client_profile_page.dart';
@@ -33,15 +36,22 @@ import '../../features/bookings/presentation/pages/track_worker_page.dart';
 import '../presentation/pages/splash_page.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
-  final authStateNotifier = ValueNotifier<bool>(false);
+  final refreshNotifier = ValueNotifier<bool>(false);
 
   ref.listen(authStateProvider, (_, __) {
-    authStateNotifier.value = !authStateNotifier.value;
+    refreshNotifier.value = !refreshNotifier.value;
+  });
+  // The gate re-runs `redirect` the moment acceptance status changes — after
+  // a successful accept (AcceptCustomerAgreementNotifier invalidates the
+  // required-status provider) and after a locale change (which can flip
+  // which language the required document resolves in).
+  ref.listen(requiredCustomerAgreementProvider, (_, __) {
+    refreshNotifier.value = !refreshNotifier.value;
   });
 
   return GoRouter(
     initialLocation: '/splash',
-    refreshListenable: authStateNotifier,
+    refreshListenable: refreshNotifier,
     redirect: (context, state) {
       final authState = ref.read(authStateProvider);
       final isSplash = state.matchedLocation == '/splash';
@@ -67,6 +77,24 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
 
       if (!isLoggedIn && !isAuthRoute) return '/auth/role-select';
+
+      // ── Mandatory Customer Terms gate ─────────────────────────────────
+      // Applies to EVERY authenticated CLIENT route (not just the dispatch
+      // above), so a notification, deep link or bottom-nav tap can never
+      // navigate around it. Never applies to a WORKER. Runs on cold start,
+      // right after OTP/password login/register (both invalidate
+      // authStateProvider, which this redirect already re-evaluates on),
+      // and on session restore — there is no separate trigger to wire per
+      // flow because they all funnel through this one redirect.
+      if (isLoggedIn) {
+        final gateRedirect = resolveClientAgreementRedirect(
+          isLoggedIn: isLoggedIn,
+          isWorker: user!.isWorker,
+          matchedLocation: state.matchedLocation,
+          agreementAsync: ref.read(requiredCustomerAgreementProvider),
+        );
+        if (gateRedirect != null) return gateRedirect;
+      }
 
       return null;
     },
@@ -106,6 +134,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/client/home',
         builder: (_, __) => const ClientHomePage(),
+      ),
+      GoRoute(
+        path: '/client/agreement-gate',
+        builder: (_, __) => const CustomerAgreementGatePage(),
       ),
       GoRoute(
         path: '/client/jobs',
@@ -231,3 +263,39 @@ final routerProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
+
+/// Pure decision logic for the mandatory Customer Terms gate redirect.
+///
+/// Extracted from the `redirect` closure so it can be unit-tested directly,
+/// without booting a full GoRouter/widget tree. Returns the location to
+/// redirect to, or `null` to leave navigation alone.
+///
+/// Rules:
+///  * Never applies when logged out or to a WORKER (`null`).
+///  * While [agreementAsync] is still resolving, stays on `/splash` rather
+///    than flashing any client content.
+///  * A network/server error ([agreementAsync] has an error) is treated the
+///    same as "acceptance required" — it must never be read as "accepted".
+///  * Once required, every location except the gate itself redirects to it.
+///  * Once no longer required, sitting on the gate redirects to home.
+String? resolveClientAgreementRedirect({
+  required bool isLoggedIn,
+  required bool isWorker,
+  required String matchedLocation,
+  required AsyncValue<CustomerAgreementStatusEntity?> agreementAsync,
+}) {
+  if (!isLoggedIn || isWorker) return null;
+
+  final isGateRoute = matchedLocation == '/client/agreement-gate';
+
+  if (agreementAsync.isLoading) {
+    return matchedLocation == '/splash' ? null : '/splash';
+  }
+
+  final mustShowGate = agreementAsync.hasError ||
+      agreementAsync.valueOrNull?.acceptanceRequired == true;
+
+  if (mustShowGate && !isGateRoute) return '/client/agreement-gate';
+  if (!mustShowGate && isGateRoute) return '/client/home';
+  return null;
+}

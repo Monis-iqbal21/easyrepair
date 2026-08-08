@@ -102,7 +102,7 @@ abstract class AppLocalizations {
   /// Settings section heading above the language row
   ///
   /// In en, this message translates to:
-  /// **'Preferences'**
+  /// **'Settings'**
   String get languageSectionTitle;
 
   /// Settings row that opens the language selector
@@ -954,7 +954,7 @@ abstract class AppLocalizations {
   /// No description provided for @authOr.
   ///
   /// In en, this message translates to:
-  /// **'Or'**
+  /// **'OR'**
   String get authOr;
 
   /// No description provided for @authLoginWithPassword.
@@ -1239,12 +1239,6 @@ abstract class AppLocalizations {
   /// **'Work and price are clear upfront.'**
   String get postJobStandardWorkSubtitle;
 
-  /// No description provided for @postJobOr.
-  ///
-  /// In en, this message translates to:
-  /// **'OR'**
-  String get postJobOr;
-
   /// No description provided for @postJobIKnowThePart.
   ///
   /// In en, this message translates to:
@@ -1394,6 +1388,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Step {current} of {total}  ·  {title}'**
   String postJobStepIndicator(int current, int total, String title);
+
+  /// Short label under segment 4 of the booking-form progress bar
+  ///
+  /// In en, this message translates to:
+  /// **'Time'**
+  String get postJobProgressBarTime;
+
+  /// Small badge on the inspection lane card in booking-form lane selection
+  ///
+  /// In en, this message translates to:
+  /// **'RECOMMENDED'**
+  String get postJobRecommendedBadge;
+
+  /// Small badge shown over the live map on the Track Worker screen
+  ///
+  /// In en, this message translates to:
+  /// **'LIVE'**
+  String get trackLiveBadge;
 
   /// No description provided for @clientHomeYourArea.
   ///
@@ -1830,8 +1842,8 @@ abstract class AppLocalizations {
   /// No description provided for @postJobGpsPrefix.
   ///
   /// In en, this message translates to:
-  /// **'GPS: {coordinates}'**
-  String postJobGpsPrefix(String coordinates);
+  /// **'Pinned Location'**
+  String get postJobGpsPrefix;
 
   /// No description provided for @postJobBookService.
   ///
@@ -2172,7 +2184,7 @@ abstract class AppLocalizations {
   /// No description provided for @bookingSeeWorkerBids.
   ///
   /// In en, this message translates to:
-  /// **'See Worker Bids'**
+  /// **'See Worker Offers'**
   String get bookingSeeWorkerBids;
 
   /// No description provided for @bookingTrackWorker.
@@ -2358,7 +2370,7 @@ abstract class AppLocalizations {
   /// No description provided for @trackEtaUnavailable.
   ///
   /// In en, this message translates to:
-  /// **'ETA unavailable'**
+  /// **'Arrival time unavailable'**
   String get trackEtaUnavailable;
 
   /// No description provided for @trackStepHired.
@@ -2454,13 +2466,13 @@ abstract class AppLocalizations {
   /// No description provided for @discoveryBidsLoadFailed.
   ///
   /// In en, this message translates to:
-  /// **'Could not load bids.'**
+  /// **'Could not load offers.'**
   String get discoveryBidsLoadFailed;
 
   /// No description provided for @discoveryNoBidsYet.
   ///
   /// In en, this message translates to:
-  /// **'No bids yet'**
+  /// **'No offers yet'**
   String get discoveryNoBidsYet;
 
   /// No description provided for @discoveryPendingCount.
@@ -2490,25 +2502,25 @@ abstract class AppLocalizations {
   /// No description provided for @discoveryAcceptBid.
   ///
   /// In en, this message translates to:
-  /// **'Accept {name}\'s bid of {price}?'**
+  /// **'Accept {name}\'s offer of {price}?'**
   String discoveryAcceptBid(String name, String price);
 
   /// No description provided for @discoveryInspectionFeeSeparate.
   ///
   /// In en, this message translates to:
-  /// **'The inspecting Ustaad\'s inspection fee is paid separately. The new Ustaad will charge the full amount of their own offer, and the inspection fee is not adjusted into it.'**
+  /// **'The inspection fee is paid separately.\nThe new Ustaad\'s offer is charged separately.'**
   String get discoveryInspectionFeeSeparate;
 
   /// No description provided for @discoveryBidLabourOnlyNote.
   ///
   /// In en, this message translates to:
-  /// **'This bid covers labour only. Parts and materials will be purchased or charged separately with your approval.'**
+  /// **'This offer covers labour only. Parts and materials will be purchased or charged separately with your approval.'**
   String get discoveryBidLabourOnlyNote;
 
   /// No description provided for @discoveryBidInspectionBasedNote.
   ///
   /// In en, this message translates to:
-  /// **'This bid is based on the inspection report and includes labour and the parts or materials required for the reported work.'**
+  /// **'This offer is based on the inspection report and includes labour and the parts or materials required for the reported work.'**
   String get discoveryBidInspectionBasedNote;
 
   /// No description provided for @discoveryWorkerHired.
@@ -3132,13 +3144,13 @@ abstract class AppLocalizations {
   /// No description provided for @discoveryLoadingBids.
   ///
   /// In en, this message translates to:
-  /// **'Loading bids...'**
+  /// **'Loading offers...'**
   String get discoveryLoadingBids;
 
   /// No description provided for @discoveryBidsLoadFailedShort.
   ///
   /// In en, this message translates to:
-  /// **'Could not load bids'**
+  /// **'Could not load offers'**
   String get discoveryBidsLoadFailedShort;
 
   /// No description provided for @bookingWorkersAvailableNearby.
@@ -3162,7 +3174,7 @@ abstract class AppLocalizations {
   /// No description provided for @discoveryPendingBidsSorted.
   ///
   /// In en, this message translates to:
-  /// **'{count, plural, =1{{count} pending bid · sorted by price} other{{count} pending bids · sorted by price}}'**
+  /// **'{count, plural, =1{{count} pending offer · sorted by price} other{{count} pending offers · sorted by price}}'**
   String discoveryPendingBidsSorted(int count);
 
   /// No description provided for @workerOffline.
@@ -3702,7 +3714,7 @@ abstract class AppLocalizations {
   /// No description provided for @bidPlaceABid.
   ///
   /// In en, this message translates to:
-  /// **'Place a Bid'**
+  /// **'Send an Offer'**
   String get bidPlaceABid;
 
   /// No description provided for @bidChatWithClient.
@@ -3714,7 +3726,7 @@ abstract class AppLocalizations {
   /// No description provided for @bidLiveBids.
   ///
   /// In en, this message translates to:
-  /// **'Live Bids'**
+  /// **'Live Offers'**
   String get bidLiveBids;
 
   /// No description provided for @bidAreaNotAvailable.
@@ -3726,7 +3738,7 @@ abstract class AppLocalizations {
   /// No description provided for @bidExactAddressAfterAccept.
   ///
   /// In en, this message translates to:
-  /// **'The exact address is shared once the client accepts your bid.'**
+  /// **'The exact address is shared once the client accepts your offer.'**
   String get bidExactAddressAfterAccept;
 
   /// No description provided for @bidStatusAccepted.
@@ -3750,49 +3762,49 @@ abstract class AppLocalizations {
   /// No description provided for @bidYourCurrentBid.
   ///
   /// In en, this message translates to:
-  /// **'Your Current Bid'**
+  /// **'Your Current Offer'**
   String get bidYourCurrentBid;
 
   /// No description provided for @bidSubmit.
   ///
   /// In en, this message translates to:
-  /// **'Submit Bid'**
+  /// **'Submit Offer'**
   String get bidSubmit;
 
   /// No description provided for @bidUpdate.
   ///
   /// In en, this message translates to:
-  /// **'Update Bid'**
+  /// **'Update Offer'**
   String get bidUpdate;
 
   /// No description provided for @bidPlaceYourBid.
   ///
   /// In en, this message translates to:
-  /// **'Place Your Bid'**
+  /// **'Send Your Offer'**
   String get bidPlaceYourBid;
 
   /// No description provided for @bidUpdateYourBid.
   ///
   /// In en, this message translates to:
-  /// **'Update Your Bid'**
+  /// **'Update Your Offer'**
   String get bidUpdateYourBid;
 
   /// No description provided for @bidCanUpdateIn.
   ///
   /// In en, this message translates to:
-  /// **'You can update your bid in {seconds}s.'**
+  /// **'You can update your offer in {seconds}s.'**
   String bidCanUpdateIn(String seconds);
 
   /// No description provided for @bidCanUpdateNow.
   ///
   /// In en, this message translates to:
-  /// **'You can update your bid now.'**
+  /// **'You can update your offer now.'**
   String get bidCanUpdateNow;
 
   /// No description provided for @bidAmountLabel.
   ///
   /// In en, this message translates to:
-  /// **'Bid Amount (PKR) *'**
+  /// **'Offer Amount (PKR) *'**
   String get bidAmountLabel;
 
   /// No description provided for @bidAmountHint.
@@ -3816,13 +3828,13 @@ abstract class AppLocalizations {
   /// No description provided for @bidBeFirstToBid.
   ///
   /// In en, this message translates to:
-  /// **'Be the first to bid on this job'**
+  /// **'Be the first to send an offer on this job'**
   String get bidBeFirstToBid;
 
   /// No description provided for @earningBidding.
   ///
   /// In en, this message translates to:
-  /// **'Bidding'**
+  /// **'Offers'**
   String get earningBidding;
 
   /// No description provided for @earningHistoryTitle.
@@ -3930,13 +3942,13 @@ abstract class AppLocalizations {
   /// No description provided for @inspFormRecommendedRepair.
   ///
   /// In en, this message translates to:
-  /// **'Recommended repair'**
+  /// **'Recommended Repair'**
   String get inspFormRecommendedRepair;
 
   /// No description provided for @inspFormRecommendedRepairRequired.
   ///
   /// In en, this message translates to:
-  /// **'Recommended repair *'**
+  /// **'Recommended Repair *'**
   String get inspFormRecommendedRepairRequired;
 
   /// No description provided for @inspFormWhatWorkNeeded.
@@ -4154,12 +4166,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This is a Standard job. The client can hire you directly — you do not need to send an offer.'**
   String get workerStandardDirectHireNote;
-
-  /// No description provided for @workerBidNow.
-  ///
-  /// In en, this message translates to:
-  /// **'Bid Now'**
-  String get workerBidNow;
 
   /// No description provided for @workerReportSubmittedWaiting.
   ///
@@ -4686,25 +4692,25 @@ abstract class AppLocalizations {
   /// No description provided for @bidAmountRequired.
   ///
   /// In en, this message translates to:
-  /// **'Please enter a bid amount.'**
+  /// **'Please enter an offer amount.'**
   String get bidAmountRequired;
 
   /// No description provided for @bidAmountRange.
   ///
   /// In en, this message translates to:
-  /// **'Bid amount must be between 100 and 500,000.'**
+  /// **'Offer amount must be between 100 and 500,000.'**
   String get bidAmountRange;
 
   /// No description provided for @bidSubmitted.
   ///
   /// In en, this message translates to:
-  /// **'Bid submitted!'**
+  /// **'Offer submitted!'**
   String get bidSubmitted;
 
   /// No description provided for @bidSubmitFailed.
   ///
   /// In en, this message translates to:
-  /// **'Failed to submit bid.'**
+  /// **'Failed to submit offer.'**
   String get bidSubmitFailed;
 
   /// No description provided for @workerViewJobDetails.
@@ -4995,12 +5001,6 @@ abstract class AppLocalizations {
   /// **'Bookings'**
   String get navBookings;
 
-  /// Bottom-navigation tab: the client's conversation list.
-  ///
-  /// In en, this message translates to:
-  /// **'Chats'**
-  String get navChats;
-
   /// Row label above what the Ustaad found during the inspection
   ///
   /// In en, this message translates to:
@@ -5028,7 +5028,7 @@ abstract class AppLocalizations {
   /// Status badge on the inspection report after the client chose to re-open bidding
   ///
   /// In en, this message translates to:
-  /// **'Finding another Ustaad — open for bidding'**
+  /// **'Finding another Ustaad — open for offers'**
   String get inspectionBadgeFindingAnother;
 
   /// Status strip when the job closed after inspection and the fee amount is known
@@ -5184,7 +5184,7 @@ abstract class AppLocalizations {
   /// Note under the standard-lane price summary
   ///
   /// In en, this message translates to:
-  /// **'Total amount is final — no bidding. You choose your Ustaad in the next step.'**
+  /// **'Total amount is final — no offers. You choose your Ustaad in the next step.'**
   String get postJobStandardTotalFinal;
 
   /// "How inspection works" card, step 1
@@ -5202,7 +5202,7 @@ abstract class AppLocalizations {
   /// "How inspection works" card, step 3
   ///
   /// In en, this message translates to:
-  /// **'Accept his quote and continue, or get bids from other Ustaads — your choice.'**
+  /// **'Accept his quote and continue, or get offers from other Ustaads — your choice.'**
   String get postJobHowInspectionStep3;
 
   /// Cancellation reason label. The stored value is fixed in ClientCancelReason.
@@ -5510,6 +5510,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Could not download the agreement. Please try again.'**
   String get agreementDownloadFailed;
+
+  /// No description provided for @customerAgreementTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer Terms, Booking Rules & Privacy Notice'**
+  String get customerAgreementTitle;
+
+  /// No description provided for @customerAgreementCheckboxLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'I have read and agree to these Terms and Privacy Notice.'**
+  String get customerAgreementCheckboxLabel;
+
+  /// No description provided for @customerAgreementIAgree.
+  ///
+  /// In en, this message translates to:
+  /// **'I Agree'**
+  String get customerAgreementIAgree;
+
+  /// No description provided for @customerAgreementViewDownloadPdf.
+  ///
+  /// In en, this message translates to:
+  /// **'View/Download PDF'**
+  String get customerAgreementViewDownloadPdf;
+
+  /// No description provided for @customerAgreementSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Acceptance could not be saved. Please try again.'**
+  String get customerAgreementSaveFailed;
+
+  /// No description provided for @customerAgreementEffectiveDateNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Effective from the date you accept below.'**
+  String get customerAgreementEffectiveDateNote;
+
+  /// No description provided for @customerAgreementHistoryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Accepted Agreements'**
+  String get customerAgreementHistoryTitle;
 
   /// No description provided for @workerSubmittedDetails.
   ///

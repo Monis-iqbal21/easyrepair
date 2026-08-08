@@ -1742,10 +1742,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                   child: Text(
                     _pickedAddress != null
                         ? context.l10n.postJobMapPrefix(_pickedAddress!)
-                        : context.l10n.postJobGpsPrefix(
-                            '${_gpsLat!.toStringAsFixed(5)}, '
-                            '${_gpsLng!.toStringAsFixed(5)}',
-                          ),
+                        : context.l10n.postJobGpsPrefix,
                     style: TextStyle(
                       fontSize: 11,
                       color: _kGreen.withValues(alpha: 0.85),
@@ -2371,7 +2368,12 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
 
   // ── Step indicator ────────────────────────────────────────────────────────────
   Widget _buildStepIndicator() {
-    const labels = ['Address', 'Lane', 'Details', 'Time'];
+    final labels = [
+      context.l10n.postJobStepAddress,
+      context.l10n.postJobService,
+      context.l10n.postJobStepDetails,
+      context.l10n.postJobProgressBarTime,
+    ];
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
@@ -2639,7 +2641,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
           const Divider(height: 1, color: _kBorder),
           const SizedBox(height: 12),
           Text(
-            context.l10n.postJobOr,
+            context.l10n.authOr,
             style: TextStyle(
               fontSize: 10.5,
               fontWeight: FontWeight.w700,
@@ -2765,9 +2767,9 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                       color: _kGreen,
                       borderRadius: BorderRadius.circular(5),
                     ),
-                    child: const Text(
-                      'BEHTAR',
-                      style: TextStyle(
+                    child: Text(
+                      context.l10n.postJobRecommendedBadge,
+                      style: const TextStyle(
                         fontSize: 9.5,
                         fontWeight: FontWeight.w800,
                         color: Colors.white,

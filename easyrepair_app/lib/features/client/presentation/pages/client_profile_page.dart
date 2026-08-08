@@ -18,6 +18,7 @@ import '../../../../core/presentation/widgets/language_selector_sheet.dart';
 import '../../../../core/presentation/pages/general_info_page.dart';
 import '../../../../core/presentation/pages/privacy_policy_page.dart';
 import '../../../../core/presentation/pages/terms_conditions_page.dart';
+import 'client_agreements_page.dart';
 
 const _kOrange = Color(0xFFDB6234);
 
@@ -354,6 +355,15 @@ class _ClientProfilePageState extends ConsumerState<ClientProfilePage> {
                           onTap: () => Navigator.of(context).push(
                             MaterialPageRoute(
                               builder: (_) => const TermsConditionsPage(),
+                            ),
+                          ),
+                        ),
+                        _SettingsItem(
+                          icon: Icons.gavel_rounded,
+                          label: context.l10n.customerAgreementHistoryTitle,
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const ClientAgreementsPage(),
                             ),
                           ),
                           showDivider: false,

@@ -16,13 +16,27 @@ export const USTAAD_AGREEMENT_TYPES: AgreementType[] = [
 ];
 
 /**
- * Everything the Worker/Admin agreement screens render — deliberately WITHOUT
- * acceptancePdfUrl, so no code path can leak the bucket URL into a response.
+ * The only agreement type a Client ever accepts. Mirrors
+ * USTAAD_AGREEMENT_TYPES — every Client-facing and Admin-facing read filters
+ * on this list, so a Worker document can never appear in a Client's history.
+ */
+export const CLIENT_AGREEMENT_TYPES: AgreementType[] = [
+  AgreementType.CUSTOMER_TERMS_BOOKING_RULES_PRIVACY_NOTICE,
+];
+
+/** Postgres unique-violation error code, used for the idempotent-insert race. */
+const UNIQUE_VIOLATION = 'P2002';
+
+/**
+ * Everything the Worker/Client/Admin agreement screens render — deliberately
+ * WITHOUT acceptancePdfUrl, so no code path can leak the bucket URL into a
+ * response.
  */
 const ACCEPTANCE_METADATA_SELECT = {
   id: true,
   acceptanceId: true,
   workerProfileId: true,
+  clientProfileId: true,
   userId: true,
   agreementType: true,
   agreementTitle: true,
@@ -151,6 +165,7 @@ export class AgreementsRepository {
         id: true,
         acceptanceId: true,
         workerProfileId: true,
+        clientProfileId: true,
         userId: true,
         agreementType: true,
         agreementTitle: true,
@@ -176,6 +191,7 @@ export class AgreementsRepository {
         id: true,
         acceptanceId: true,
         workerProfileId: true,
+        clientProfileId: true,
         userId: true,
         agreementType: true,
         agreementTitle: true,
@@ -234,5 +250,92 @@ export class AgreementsRepository {
   /** Single acceptance record, scoped by id — used for owner/admin authorization checks. */
   async findAcceptanceById(id: string) {
     return this.prisma.agreementAcceptance.findUnique({ where: { id } });
+  }
+
+  /** Resolves the authenticated Client's own profile — never trusts a client-supplied id. */
+  async findClientProfileByUserId(userId: string) {
+    return this.prisma.clientProfile.findUnique({ where: { userId } });
+  }
+
+  /** Admin-only existence check for a client profile id from the URL path. */
+  async findClientProfileById(clientProfileId: string) {
+    return this.prisma.clientProfile.findUnique({
+      where: { id: clientProfileId },
+    });
+  }
+
+  /**
+   * Client-only acceptance metadata for one client, newest first.
+   *
+   * Worker documents are excluded at the query level rather than filtered
+   * afterwards, and acceptancePdfUrl is not selected at all.
+   */
+  async findClientAcceptances(
+    clientProfileId: string,
+  ): Promise<AcceptanceMetadataRow[]> {
+    return this.prisma.agreementAcceptance.findMany({
+      where: {
+        clientProfileId,
+        agreementType: { in: CLIENT_AGREEMENT_TYPES },
+      },
+      select: ACCEPTANCE_METADATA_SELECT,
+      orderBy: { acceptedAt: 'desc' },
+    });
+  }
+
+  /**
+   * The already-sealed acceptance for this exact (client, type, version,
+   * hash), if one exists — the read-side half of the idempotency guard.
+   */
+  async findClientAcceptanceByUniqueKey(
+    clientProfileId: string,
+    agreementType: AgreementType,
+    agreementVersion: string,
+    agreementHash: string,
+  ) {
+    return this.prisma.agreementAcceptance.findUnique({
+      where: {
+        clientProfileId_agreementType_agreementVersion_agreementHash: {
+          clientProfileId,
+          agreementType,
+          agreementVersion,
+          agreementHash,
+        },
+      },
+    });
+  }
+
+  /**
+   * Creates one Client acceptance row. Relies on the DB unique constraint
+   * `(clientProfileId, agreementType, agreementVersion, agreementHash)` as the
+   * authoritative idempotency guard: if a concurrent request already inserted
+   * the same row between the caller's read-check and this write, Postgres
+   * rejects the duplicate insert and the existing row is returned instead of
+   * a second immutable legal document being created.
+   */
+  async createClientAcceptance(
+    data: Prisma.AgreementAcceptanceUncheckedCreateInput,
+  ) {
+    try {
+      return await this.prisma.agreementAcceptance.create({ data });
+    } catch (err) {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === UNIQUE_VIOLATION &&
+        data.clientProfileId &&
+        data.agreementType &&
+        data.agreementVersion &&
+        data.agreementHash
+      ) {
+        const existing = await this.findClientAcceptanceByUniqueKey(
+          data.clientProfileId,
+          data.agreementType,
+          data.agreementVersion,
+          data.agreementHash,
+        );
+        if (existing) return existing;
+      }
+      throw err;
+    }
   }
 }

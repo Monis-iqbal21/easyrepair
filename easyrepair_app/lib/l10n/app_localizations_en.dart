@@ -9,7 +9,7 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
-  String get languageSectionTitle => 'Preferences';
+  String get languageSectionTitle => 'Settings';
 
   @override
   String get languageRowLabel => 'Language';
@@ -482,7 +482,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authNewPasswordRequired => 'Please enter a new password.';
 
   @override
-  String get authOr => 'Or';
+  String get authOr => 'OR';
 
   @override
   String get authLoginWithPassword => 'Log In With Password';
@@ -647,9 +647,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get postJobStandardWorkSubtitle => 'Work and price are clear upfront.';
 
   @override
-  String get postJobOr => 'OR';
-
-  @override
   String get postJobIKnowThePart => 'I know the exact part';
 
   @override
@@ -731,6 +728,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String postJobStepIndicator(int current, int total, String title) {
     return 'Step $current of $total  ·  $title';
   }
+
+  @override
+  String get postJobProgressBarTime => 'Time';
+
+  @override
+  String get postJobRecommendedBadge => 'RECOMMENDED';
+
+  @override
+  String get trackLiveBadge => 'LIVE';
 
   @override
   String get clientHomeYourArea => 'Your Area';
@@ -961,9 +967,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String postJobGpsPrefix(String coordinates) {
-    return 'GPS: $coordinates';
-  }
+  String get postJobGpsPrefix => 'Pinned Location';
 
   @override
   String get postJobBookService => 'Book Service';
@@ -1150,7 +1154,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bookingChooseUstaad => 'Choose Ustaad';
 
   @override
-  String get bookingSeeWorkerBids => 'See Worker Bids';
+  String get bookingSeeWorkerBids => 'See Worker Offers';
 
   @override
   String get bookingTrackWorker => 'Track Worker';
@@ -1257,7 +1261,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get trackEtaUnavailable => 'ETA unavailable';
+  String get trackEtaUnavailable => 'Arrival time unavailable';
 
   @override
   String get trackStepHired => 'Hired';
@@ -1305,10 +1309,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get discoveryRefresh => 'Refresh';
 
   @override
-  String get discoveryBidsLoadFailed => 'Could not load bids.';
+  String get discoveryBidsLoadFailed => 'Could not load offers.';
 
   @override
-  String get discoveryNoBidsYet => 'No bids yet';
+  String get discoveryNoBidsYet => 'No offers yet';
 
   @override
   String discoveryPendingCount(int count) {
@@ -1334,20 +1338,20 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String discoveryAcceptBid(String name, String price) {
-    return 'Accept $name\'s bid of $price?';
+    return 'Accept $name\'s offer of $price?';
   }
 
   @override
   String get discoveryInspectionFeeSeparate =>
-      'The inspecting Ustaad\'s inspection fee is paid separately. The new Ustaad will charge the full amount of their own offer, and the inspection fee is not adjusted into it.';
+      'The inspection fee is paid separately.\nThe new Ustaad\'s offer is charged separately.';
 
   @override
   String get discoveryBidLabourOnlyNote =>
-      'This bid covers labour only. Parts and materials will be purchased or charged separately with your approval.';
+      'This offer covers labour only. Parts and materials will be purchased or charged separately with your approval.';
 
   @override
   String get discoveryBidInspectionBasedNote =>
-      'This bid is based on the inspection report and includes labour and the parts or materials required for the reported work.';
+      'This offer is based on the inspection report and includes labour and the parts or materials required for the reported work.';
 
   @override
   String get discoveryWorkerHired => 'Worker hired successfully';
@@ -1706,10 +1710,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get discoveryLoadingBids => 'Loading bids...';
+  String get discoveryLoadingBids => 'Loading offers...';
 
   @override
-  String get discoveryBidsLoadFailedShort => 'Could not load bids';
+  String get discoveryBidsLoadFailedShort => 'Could not load offers';
 
   @override
   String bookingWorkersAvailableNearby(int count) {
@@ -1741,8 +1745,8 @@ class AppLocalizationsEn extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count pending bids · sorted by price',
-      one: '$count pending bid · sorted by price',
+      other: '$count pending offers · sorted by price',
+      one: '$count pending offer · sorted by price',
     );
     return '$_temp0';
   }
@@ -2039,20 +2043,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workerFilterNoOfferSent => 'No offer sent';
 
   @override
-  String get bidPlaceABid => 'Place a Bid';
+  String get bidPlaceABid => 'Send an Offer';
 
   @override
   String get bidChatWithClient => 'Chat with Client';
 
   @override
-  String get bidLiveBids => 'Live Bids';
+  String get bidLiveBids => 'Live Offers';
 
   @override
   String get bidAreaNotAvailable => 'Area not available';
 
   @override
   String get bidExactAddressAfterAccept =>
-      'The exact address is shared once the client accepts your bid.';
+      'The exact address is shared once the client accepts your offer.';
 
   @override
   String get bidStatusAccepted => 'Accepted';
@@ -2064,30 +2068,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bidStatusPending => 'Pending';
 
   @override
-  String get bidYourCurrentBid => 'Your Current Bid';
+  String get bidYourCurrentBid => 'Your Current Offer';
 
   @override
-  String get bidSubmit => 'Submit Bid';
+  String get bidSubmit => 'Submit Offer';
 
   @override
-  String get bidUpdate => 'Update Bid';
+  String get bidUpdate => 'Update Offer';
 
   @override
-  String get bidPlaceYourBid => 'Place Your Bid';
+  String get bidPlaceYourBid => 'Send Your Offer';
 
   @override
-  String get bidUpdateYourBid => 'Update Your Bid';
+  String get bidUpdateYourBid => 'Update Your Offer';
 
   @override
   String bidCanUpdateIn(String seconds) {
-    return 'You can update your bid in ${seconds}s.';
+    return 'You can update your offer in ${seconds}s.';
   }
 
   @override
-  String get bidCanUpdateNow => 'You can update your bid now.';
+  String get bidCanUpdateNow => 'You can update your offer now.';
 
   @override
-  String get bidAmountLabel => 'Bid Amount (PKR) *';
+  String get bidAmountLabel => 'Offer Amount (PKR) *';
 
   @override
   String get bidAmountHint => 'e.g. 2500';
@@ -2109,10 +2113,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get bidBeFirstToBid => 'Be the first to bid on this job';
+  String get bidBeFirstToBid => 'Be the first to send an offer on this job';
 
   @override
-  String get earningBidding => 'Bidding';
+  String get earningBidding => 'Offers';
 
   @override
   String get earningHistoryTitle => 'Earning History';
@@ -2187,10 +2191,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get inspFormWhatWasIssueRequired => 'What was the issue? *';
 
   @override
-  String get inspFormRecommendedRepair => 'Recommended repair';
+  String get inspFormRecommendedRepair => 'Recommended Repair';
 
   @override
-  String get inspFormRecommendedRepairRequired => 'Recommended repair *';
+  String get inspFormRecommendedRepairRequired => 'Recommended Repair *';
 
   @override
   String get inspFormWhatWorkNeeded => 'What work will be needed';
@@ -2318,9 +2322,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get workerStandardDirectHireNote =>
       'This is a Standard job. The client can hire you directly — you do not need to send an offer.';
-
-  @override
-  String get workerBidNow => 'Bid Now';
 
   @override
   String get workerReportSubmittedWaiting =>
@@ -2608,16 +2609,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get inspHintFallback => 'e.g. describe what you found';
 
   @override
-  String get bidAmountRequired => 'Please enter a bid amount.';
+  String get bidAmountRequired => 'Please enter an offer amount.';
 
   @override
-  String get bidAmountRange => 'Bid amount must be between 100 and 500,000.';
+  String get bidAmountRange => 'Offer amount must be between 100 and 500,000.';
 
   @override
-  String get bidSubmitted => 'Bid submitted!';
+  String get bidSubmitted => 'Offer submitted!';
 
   @override
-  String get bidSubmitFailed => 'Failed to submit bid.';
+  String get bidSubmitFailed => 'Failed to submit offer.';
 
   @override
   String get workerViewJobDetails => 'View Details';
@@ -2782,9 +2783,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navBookings => 'Bookings';
 
   @override
-  String get navChats => 'Chats';
-
-  @override
   String get inspectionRowIssueFound => 'Issue found';
 
   @override
@@ -2800,7 +2798,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get inspectionBadgeFindingAnother =>
-      'Finding another Ustaad — open for bidding';
+      'Finding another Ustaad — open for offers';
 
   @override
   String inspStripClosedFeeOnlyWithAmount(String fee) {
@@ -2899,7 +2897,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get postJobStandardTotalFinal =>
-      'Total amount is final — no bidding. You choose your Ustaad in the next step.';
+      'Total amount is final — no offers. You choose your Ustaad in the next step.';
 
   @override
   String get postJobHowInspectionStep1 => 'The inspection fee is fixed.';
@@ -2910,7 +2908,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get postJobHowInspectionStep3 =>
-      'Accept his quote and continue, or get bids from other Ustaads — your choice.';
+      'Accept his quote and continue, or get offers from other Ustaads — your choice.';
 
   @override
   String get cancelReasonNoLongerNeeded => 'I no longer need the service';
@@ -3091,6 +3089,31 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get agreementDownloadFailed =>
       'Could not download the agreement. Please try again.';
+
+  @override
+  String get customerAgreementTitle =>
+      'Customer Terms, Booking Rules & Privacy Notice';
+
+  @override
+  String get customerAgreementCheckboxLabel =>
+      'I have read and agree to these Terms and Privacy Notice.';
+
+  @override
+  String get customerAgreementIAgree => 'I Agree';
+
+  @override
+  String get customerAgreementViewDownloadPdf => 'View/Download PDF';
+
+  @override
+  String get customerAgreementSaveFailed =>
+      'Acceptance could not be saved. Please try again.';
+
+  @override
+  String get customerAgreementEffectiveDateNote =>
+      'Effective from the date you accept below.';
+
+  @override
+  String get customerAgreementHistoryTitle => 'Accepted Agreements';
 
   @override
   String get workerSubmittedDetails => 'Submitted Details';

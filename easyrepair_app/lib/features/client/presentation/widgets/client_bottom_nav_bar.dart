@@ -128,7 +128,7 @@ typedef _NavLabel = String Function(AppLocalizations l10n);
 
 String _navHome(AppLocalizations l10n) => l10n.navHome;
 String _navBookings(AppLocalizations l10n) => l10n.navBookings;
-String _navChats(AppLocalizations l10n) => l10n.navChats;
+String _navChats(AppLocalizations l10n) => l10n.chatTitleFallback;
 String _navProfile(AppLocalizations l10n) => l10n.clientProfileTitle;
 
 class _NavTab {

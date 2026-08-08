@@ -293,6 +293,7 @@ model ClientProfile {
 
   bookings  Booking[]
   addresses ClientAddress[]
+  agreementAcceptances AgreementAcceptance[]
 
   @@map("client_profiles")
 }
@@ -855,10 +856,27 @@ model AgreementTemplate {
 /// profile or the template later changes.
 model AgreementAcceptance {
   id                  String            @id @default(uuid())
-  workerProfileId     String
-  workerProfile       WorkerProfile     @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
-  userId              String
-  user                User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Null for a CLIENT acceptance — exactly one of workerProfileId /
+  /// clientProfileId is set, enforced in application code (Prisma has no
+  /// declarative XOR constraint). Never both, never neither.
+  workerProfileId     String?
+  workerProfile       WorkerProfile?    @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
+  /// Null for a WORKER acceptance — see workerProfileId.
+  ///
+  /// SetNull, not Cascade: this row is permanent legal evidence of an
+  /// electronic acceptance. Deleting/deactivating/closing the Client profile
+  /// must never delete the signed record — it only unlinks it, and every
+  /// identifying fact (name, mobile, account id, hashes, PDF reference,
+  /// timestamps) survives on the immutable snapshot fields below.
+  clientProfileId     String?
+  clientProfile       ClientProfile?    @relation(fields: [clientProfileId], references: [id], onDelete: SetNull)
+  /// Nullable and SetNull for the same legal-preservation reason as
+  /// clientProfileId: a deleted User account must not delete the acceptance
+  /// record it made. userId is still always populated at creation time by
+  /// application code — this is a schema-level survival guarantee, not a
+  /// relaxation of what gets written.
+  userId              String?
+  user                User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
   /// Optional: acceptances created from the file-backed source registry have
   /// no AgreementTemplate row. Legacy rows keep theirs.
   agreementTemplateId String?
@@ -873,14 +891,18 @@ model AgreementAcceptance {
   agreementFileSnapshotStorageKey String?
   agreementHash                   String
 
-  // Snapshot of the worker's identity/profile at acceptance time.
+  // Snapshot of the worker's identity/profile at acceptance time. CNIC and
+  // main skill are Worker-only concepts — null on a CLIENT row.
   fullLegalNameSnapshot String
-  cnicNumberSnapshot    String
+  cnicNumberSnapshot    String?
   mobileSnapshot        String
-  mainSkillSnapshot     String
+  mainSkillSnapshot     String?
   cnicFrontUrlSnapshot  String?
   cnicBackUrlSnapshot   String?
   liveSelfieUrlSnapshot String?
+  /// CLIENT-only: the customer account id shown in the accepted document.
+  /// Null on a WORKER row.
+  clientAccountIdSnapshot String?
 
   acceptedAt       DateTime @db.Timestamptz(3)
   ipAddress        String?
@@ -947,9 +969,17 @@ model AgreementAcceptance {
   /// One acceptance per (worker, template version) — re-submitting against
   /// the same still-active version must not create a duplicate row. A new
   /// template version is a different id, so it naturally requires a new
-  /// acceptance row instead of colliding with this constraint.
+  /// acceptance row instead of colliding with this constraint. NULL columns
+  /// (every CLIENT row) are never considered equal by Postgres, so this never
+  /// blocks a CLIENT acceptance.
   @@unique([workerProfileId, agreementTemplateId])
+  /// One immutable acceptance per Client per exact agreement version + hash —
+  /// the DB-level idempotency guard for the CLIENT flow, mirroring the
+  /// constraint above. NULL clientProfileId (every WORKER row) is never
+  /// considered equal by Postgres, so this never affects Worker rows.
+  @@unique([clientProfileId, agreementType, agreementVersion, agreementHash])
   @@index([workerProfileId])
+  @@index([clientProfileId])
   @@index([userId])
   @@index([agreementTemplateId])
   @@map("agreement_acceptances")

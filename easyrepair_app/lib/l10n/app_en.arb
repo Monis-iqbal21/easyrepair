@@ -1,6 +1,6 @@
 {
   "@@locale": "en",
-  "languageSectionTitle": "Preferences",
+  "languageSectionTitle": "Settings",
   "@languageSectionTitle": {
     "description": "Settings section heading above the language row"
   },
@@ -241,7 +241,7 @@
   "authForgotPasswordPrompt": "Enter your registered mobile number",
   "authSendOtp": "Send OTP",
   "authNewPasswordRequired": "Please enter a new password.",
-  "authOr": "Or",
+  "authOr": "OR",
   "authLoginWithPassword": "Log In With Password",
   "authWorkerRegisterTitle": "Create a new Ustaad\naccount",
   "authCnicNameHint": "Enter your full name exactly as on your CNIC",
@@ -313,7 +313,6 @@
   "postJobUnderstandingIsOurJob": "Understanding the problem is our job — not yours.",
   "postJobStandardWork": "Standard work",
   "postJobStandardWorkSubtitle": "Work and price are clear upfront.",
-  "postJobOr": "OR",
   "postJobIKnowThePart": "I know the exact part",
   "postJobIKnowThePartSubtitle": "Ustaads send their rate, you choose",
   "postJobIKnowThePartWarning": "Only choose this if you are completely sure about the part. If it turns out wrong, the Ustaad visit is wasted and a new rate will apply.",
@@ -351,6 +350,18 @@
         "type": "String"
       }
     }
+  },
+  "postJobProgressBarTime": "Time",
+  "@postJobProgressBarTime": {
+    "description": "Short label under segment 4 of the booking-form progress bar"
+  },
+  "postJobRecommendedBadge": "RECOMMENDED",
+  "@postJobRecommendedBadge": {
+    "description": "Small badge on the inspection lane card in booking-form lane selection"
+  },
+  "trackLiveBadge": "LIVE",
+  "@trackLiveBadge": {
+    "description": "Small badge shown over the live map on the Track Worker screen"
   },
   "clientHomeYourArea": "Your Area",
   "clientHomeSectionRepairs": "Repairs",
@@ -452,14 +463,7 @@
       }
     }
   },
-  "postJobGpsPrefix": "GPS: {coordinates}",
-  "@postJobGpsPrefix": {
-    "placeholders": {
-      "coordinates": {
-        "type": "String"
-      }
-    }
-  },
+  "postJobGpsPrefix": "Pinned Location",
   "postJobBookService": "Book Service",
   "postJobSaveChanges": "Save Changes",
   "postJobBookAService": "Book a Service",
@@ -561,7 +565,7 @@
     }
   },
   "bookingChooseUstaad": "Choose Ustaad",
-  "bookingSeeWorkerBids": "See Worker Bids",
+  "bookingSeeWorkerBids": "See Worker Offers",
   "bookingTrackWorker": "Track Worker",
   "bookingReviewWorker": "Review Worker",
   "bookingYourReview": "Your Review",
@@ -606,7 +610,7 @@
       }
     }
   },
-  "trackEtaUnavailable": "ETA unavailable",
+  "trackEtaUnavailable": "Arrival time unavailable",
   "trackStepHired": "Hired",
   "trackStepUstaadOnTheWay": "Ustaad on the way",
   "trackStepInspectionInProgress": "Inspection in progress",
@@ -622,8 +626,8 @@
   "discoveryJobLocationUnavailable": "Job location not available",
   "discoveryLiveWorkerOffers": "Live Worker Offers",
   "discoveryRefresh": "Refresh",
-  "discoveryBidsLoadFailed": "Could not load bids.",
-  "discoveryNoBidsYet": "No bids yet",
+  "discoveryBidsLoadFailed": "Could not load offers.",
+  "discoveryNoBidsYet": "No offers yet",
   "discoveryPendingCount": "{count, plural, =1{{count} pending} other{{count} pending}}",
   "@discoveryPendingCount": {
     "placeholders": {
@@ -642,7 +646,7 @@
       }
     }
   },
-  "discoveryAcceptBid": "Accept {name}'s bid of {price}?",
+  "discoveryAcceptBid": "Accept {name}'s offer of {price}?",
   "@discoveryAcceptBid": {
     "placeholders": {
       "name": {
@@ -653,9 +657,9 @@
       }
     }
   },
-  "discoveryInspectionFeeSeparate": "The inspecting Ustaad's inspection fee is paid separately. The new Ustaad will charge the full amount of their own offer, and the inspection fee is not adjusted into it.",
-  "discoveryBidLabourOnlyNote": "This bid covers labour only. Parts and materials will be purchased or charged separately with your approval.",
-  "discoveryBidInspectionBasedNote": "This bid is based on the inspection report and includes labour and the parts or materials required for the reported work.",
+  "discoveryInspectionFeeSeparate": "The inspection fee is paid separately.\nThe new Ustaad's offer is charged separately.",
+  "discoveryBidLabourOnlyNote": "This offer covers labour only. Parts and materials will be purchased or charged separately with your approval.",
+  "discoveryBidInspectionBasedNote": "This offer is based on the inspection report and includes labour and the parts or materials required for the reported work.",
   "discoveryWorkerHired": "Worker hired successfully",
   "discoveryHireFailed": "Failed to hire worker.",
   "discoveryInspectedThisJob": "INSPECTED THIS JOB",
@@ -871,8 +875,8 @@
       }
     }
   },
-  "discoveryLoadingBids": "Loading bids...",
-  "discoveryBidsLoadFailedShort": "Could not load bids",
+  "discoveryLoadingBids": "Loading offers...",
+  "discoveryBidsLoadFailedShort": "Could not load offers",
   "bookingWorkersAvailableNearby": "{count, plural, =1{{count} worker available nearby} other{{count} workers available nearby}}",
   "@bookingWorkersAvailableNearby": {
     "placeholders": {
@@ -903,7 +907,7 @@
       }
     }
   },
-  "discoveryPendingBidsSorted": "{count, plural, =1{{count} pending bid · sorted by price} other{{count} pending bids · sorted by price}}",
+  "discoveryPendingBidsSorted": "{count, plural, =1{{count} pending offer · sorted by price} other{{count} pending offers · sorted by price}}",
   "@discoveryPendingBidsSorted": {
     "placeholders": {
       "count": {
@@ -1021,20 +1025,20 @@
   "workerFilterAllWork": "All Work",
   "workerFilterMyOffers": "My Offers",
   "workerFilterNoOfferSent": "No offer sent",
-  "bidPlaceABid": "Place a Bid",
+  "bidPlaceABid": "Send an Offer",
   "bidChatWithClient": "Chat with Client",
-  "bidLiveBids": "Live Bids",
+  "bidLiveBids": "Live Offers",
   "bidAreaNotAvailable": "Area not available",
-  "bidExactAddressAfterAccept": "The exact address is shared once the client accepts your bid.",
+  "bidExactAddressAfterAccept": "The exact address is shared once the client accepts your offer.",
   "bidStatusAccepted": "Accepted",
   "bidStatusRejected": "Rejected",
   "bidStatusPending": "Pending",
-  "bidYourCurrentBid": "Your Current Bid",
-  "bidSubmit": "Submit Bid",
-  "bidUpdate": "Update Bid",
-  "bidPlaceYourBid": "Place Your Bid",
-  "bidUpdateYourBid": "Update Your Bid",
-  "bidCanUpdateIn": "You can update your bid in {seconds}s.",
+  "bidYourCurrentBid": "Your Current Offer",
+  "bidSubmit": "Submit Offer",
+  "bidUpdate": "Update Offer",
+  "bidPlaceYourBid": "Send Your Offer",
+  "bidUpdateYourBid": "Update Your Offer",
+  "bidCanUpdateIn": "You can update your offer in {seconds}s.",
   "@bidCanUpdateIn": {
     "placeholders": {
       "seconds": {
@@ -1042,8 +1046,8 @@
       }
     }
   },
-  "bidCanUpdateNow": "You can update your bid now.",
-  "bidAmountLabel": "Bid Amount (PKR) *",
+  "bidCanUpdateNow": "You can update your offer now.",
+  "bidAmountLabel": "Offer Amount (PKR) *",
   "bidAmountHint": "e.g. 2500",
   "bidLabelWithCountdown": "{label} ({seconds}s)",
   "@bidLabelWithCountdown": {
@@ -1064,8 +1068,8 @@
       }
     }
   },
-  "bidBeFirstToBid": "Be the first to bid on this job",
-  "earningBidding": "Bidding",
+  "bidBeFirstToBid": "Be the first to send an offer on this job",
+  "earningBidding": "Offers",
   "earningHistoryTitle": "Earning History",
   "earningNoneYet": "No earnings yet",
   "earningNoneHint": "Completed jobs will show up here with your daily earnings.",
@@ -1110,8 +1114,8 @@
   "inspFormSubmitFailed": "Failed to submit report.",
   "inspFormWhatWasIssue": "What was the issue?",
   "inspFormWhatWasIssueRequired": "What was the issue? *",
-  "inspFormRecommendedRepair": "Recommended repair",
-  "inspFormRecommendedRepairRequired": "Recommended repair *",
+  "inspFormRecommendedRepair": "Recommended Repair",
+  "inspFormRecommendedRepairRequired": "Recommended Repair *",
   "inspFormWhatWorkNeeded": "What work will be needed",
   "inspFormWriteOrRecord": "Please write the report or record a voice note.",
   "inspFormPartsRequired": "Parts required?",
@@ -1181,7 +1185,6 @@
   "workerJobDetailsTitle": "Job Details",
   "workerJobLoadFailed": "Failed to load job.",
   "workerStandardDirectHireNote": "This is a Standard job. The client can hire you directly — you do not need to send an offer.",
-  "workerBidNow": "Bid Now",
   "workerReportSubmittedWaiting": "Report submitted. Waiting for the client to accept the quote or close after inspection.",
   "workerClientSection": "Client",
   "workerPostedBy": "Posted by",
@@ -1312,10 +1315,10 @@
   "@inspHintFallback": {
     "description": "Issue-example hint shown when the booking's service category has no hint of its own."
   },
-  "bidAmountRequired": "Please enter a bid amount.",
-  "bidAmountRange": "Bid amount must be between 100 and 500,000.",
-  "bidSubmitted": "Bid submitted!",
-  "bidSubmitFailed": "Failed to submit bid.",
+  "bidAmountRequired": "Please enter an offer amount.",
+  "bidAmountRange": "Offer amount must be between 100 and 500,000.",
+  "bidSubmitted": "Offer submitted!",
+  "bidSubmitFailed": "Failed to submit offer.",
   "workerViewJobDetails": "View Details",
   "workerSendOffer": "Send Offer",
   "workerChangeOffer": "Change Offer",
@@ -1462,10 +1465,6 @@
   "@navBookings": {
     "description": "Bottom-navigation tab: the client's bookings list."
   },
-  "navChats": "Chats",
-  "@navChats": {
-    "description": "Bottom-navigation tab: the client's conversation list."
-  },
   "inspectionRowIssueFound": "Issue found",
   "@inspectionRowIssueFound": {
     "description": "Row label above what the Ustaad found during the inspection"
@@ -1482,7 +1481,7 @@
   "@inspectionBadgeQuoteAccepted": {
     "description": "Status badge on the inspection report once the repair quote was accepted"
   },
-  "inspectionBadgeFindingAnother": "Finding another Ustaad — open for bidding",
+  "inspectionBadgeFindingAnother": "Finding another Ustaad — open for offers",
   "@inspectionBadgeFindingAnother": {
     "description": "Status badge on the inspection report after the client chose to re-open bidding"
   },
@@ -1601,7 +1600,7 @@
   "@postJobInspectionHeroStep3": {
     "description": "Inspection explainer, step 3"
   },
-  "postJobStandardTotalFinal": "Total amount is final — no bidding. You choose your Ustaad in the next step.",
+  "postJobStandardTotalFinal": "Total amount is final — no offers. You choose your Ustaad in the next step.",
   "@postJobStandardTotalFinal": {
     "description": "Note under the standard-lane price summary"
   },
@@ -1613,7 +1612,7 @@
   "@postJobHowInspectionStep2": {
     "description": "\"How inspection works\" card, step 2"
   },
-  "postJobHowInspectionStep3": "Accept his quote and continue, or get bids from other Ustaads — your choice.",
+  "postJobHowInspectionStep3": "Accept his quote and continue, or get offers from other Ustaads — your choice.",
   "@postJobHowInspectionStep3": {
     "description": "\"How inspection works\" card, step 3"
   },
@@ -1771,6 +1770,13 @@
     }
   },
   "agreementDownloadFailed": "Could not download the agreement. Please try again.",
+  "customerAgreementTitle": "Customer Terms, Booking Rules & Privacy Notice",
+  "customerAgreementCheckboxLabel": "I have read and agree to these Terms and Privacy Notice.",
+  "customerAgreementIAgree": "I Agree",
+  "customerAgreementViewDownloadPdf": "View/Download PDF",
+  "customerAgreementSaveFailed": "Acceptance could not be saved. Please try again.",
+  "customerAgreementEffectiveDateNote": "Effective from the date you accept below.",
+  "customerAgreementHistoryTitle": "Accepted Agreements",
   "workerSubmittedDetails": "Submitted Details",
   "workerViewSubmittedDetails": "View Submitted Details",
   "workerDetailsReadOnlyNotice": "Your profile is approved. These details are locked and cannot be changed.",

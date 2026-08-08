@@ -1,0 +1,6 @@
+# The approved Customer Terms source document is hash-pinned in
+# customer-agreement-source.registry.ts, and every acceptance record seals
+# that hash as immutable evidence. See ../documents/.gitattributes for why
+# these are pinned to LF.
+*.txt text eol=lf
+INGEST_MANIFEST.json text eol=lf

@@ -213,7 +213,7 @@ class _JobBody extends ConsumerWidget {
                         );
                       },
                       icon: const Icon(Icons.gavel_rounded, size: 16),
-                      label: Text(context.l10n.workerBidNow),
+                      label: Text(context.l10n.workerSendOffer),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _kGreen,
                         foregroundColor: Colors.white,

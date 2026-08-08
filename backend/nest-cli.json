@@ -9,6 +9,10 @@
       {
         "include": "modules/agreements/source/documents/**/*",
         "outDir": "dist/src"
+      },
+      {
+        "include": "modules/agreements/source/customer-documents/**/*",
+        "outDir": "dist/src"
       }
     ]
   }

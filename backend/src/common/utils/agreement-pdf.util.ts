@@ -18,7 +18,8 @@ const AGREEMENT_TYPE_LABEL: Record<AgreementType, string> = {
 export interface AgreementAcceptancePdfInput {
   acceptanceId: string;
   fullLegalName: string;
-  cnicNumber: string;
+  /** Worker-only. Null/omitted for a Client acceptance (a Customer has no CNIC). */
+  cnicNumber?: string | null;
   mobile: string;
   /**
    * Widened from the original two-value union when the third Ustaad document
@@ -106,7 +107,7 @@ export function generateAgreementAcceptancePdf(
     doc
       .fontSize(18)
       .font('Helvetica-Bold')
-      .text('HandyGo — Ustaad Agreement Acceptance Record', {
+      .text('HandyGo — Agreement Acceptance Record', {
         align: 'center',
       });
     doc.moveDown(1.5);
@@ -124,7 +125,7 @@ export function generateAgreementAcceptancePdf(
 
     const acceptanceLines = [
       `Electronically Accepted by: ${input.fullLegalName}`,
-      `CNIC: ${input.cnicNumber}`,
+      ...(input.cnicNumber ? [`CNIC: ${input.cnicNumber}`] : []),
       `Mobile: ${input.mobile}`,
       `Accepted on: ${input.acceptedAt.toISOString()}`,
       `Agreement Version: ${input.agreementVersion}`,
