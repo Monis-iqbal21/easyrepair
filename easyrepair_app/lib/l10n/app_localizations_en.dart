@@ -3243,4 +3243,25 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get goToChatsAction => 'Go to Chats';
+
+  @override
+  String get settingsSupportTitle => 'Support';
+
+  @override
+  String get settingsAboutTitle => 'About HandyGo';
+
+  @override
+  String get settingsAppVersionTitle => 'App Version';
+
+  @override
+  String get aboutAppDescription =>
+      'HandyGo connects clients with nearby verified Ustaads for home repair and maintenance services.';
+
+  @override
+  String get aboutWebsiteLabel => 'Website';
+
+  @override
+  String aboutVersionValue(String version, String build) {
+    return 'Version $version ($build)';
+  }
 }

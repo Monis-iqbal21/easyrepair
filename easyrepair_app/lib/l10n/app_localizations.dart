@@ -5780,6 +5780,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Go to Chats'**
   String get goToChatsAction;
+
+  /// Profile/Settings menu row that opens HandyGo Support (chat and/or phone)
+  ///
+  /// In en, this message translates to:
+  /// **'Support'**
+  String get settingsSupportTitle;
+
+  /// Profile/Settings menu row that opens the About HandyGo page, and that page's title
+  ///
+  /// In en, this message translates to:
+  /// **'About HandyGo'**
+  String get settingsAboutTitle;
+
+  /// Profile/Settings menu row label showing the running app version
+  ///
+  /// In en, this message translates to:
+  /// **'App Version'**
+  String get settingsAppVersionTitle;
+
+  /// Short factual description shown on the About HandyGo page
+  ///
+  /// In en, this message translates to:
+  /// **'HandyGo connects clients with nearby verified Ustaads for home repair and maintenance services.'**
+  String get aboutAppDescription;
+
+  /// Label above the official HandyGo website link on the About page
+  ///
+  /// In en, this message translates to:
+  /// **'Website'**
+  String get aboutWebsiteLabel;
+
+  /// Runtime app version/build shown on the About page and Settings row
+  ///
+  /// In en, this message translates to:
+  /// **'Version {version} ({build})'**
+  String aboutVersionValue(String version, String build);
 }
 
 class _AppLocalizationsDelegate

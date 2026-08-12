@@ -72,6 +72,9 @@ dependencies:
   # External URL / maps launching
   url_launcher: ^6.3.1
 
+  # Runtime app version/build number (About page, Settings)
+  package_info_plus: ^8.1.2
+
   # OTP input / SMS autofill
   pinput: ^6.0.2
   smart_auth: ^3.2.0

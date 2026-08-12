@@ -13,6 +13,16 @@ enum Role {
   ADMIN
 }
 
+/// User-level account access restriction — deliberately separate from
+/// WorkerStatus (Worker-only job-eligibility gate) and from
+/// deletedAt/isActive (account deletion). Only ACTIVE/SUSPENDED by design;
+/// no BLOCKED/BANNED variants. Only ever meaningfully set on CLIENT
+/// accounts — see User.accountStatus doc comment.
+enum AccountStatus {
+  ACTIVE
+  SUSPENDED
+}
+
 enum BookingStatus {
   PENDING
   ACCEPTED
@@ -216,6 +226,17 @@ model User {
   deletedAt     DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+
+  /// Account-level access restriction, distinct from WorkerStatus (which
+  /// governs Worker job-matching eligibility) and from deletedAt/isActive
+  /// (which govern account deletion). Only meaningful for CLIENT accounts
+  /// today — set exclusively via the admin account-status endpoint, never
+  /// by Worker approval/suspension flows. A SUSPENDED client can still
+  /// authenticate (so the app can identify and route them to the
+  /// restricted-account screen) but is blocked from every other app
+  /// surface client-side. updatedAt above doubles as the audit timestamp
+  /// for the last account-status change.
+  accountStatus AccountStatus @default(ACTIVE)
 
   clientProfile        ClientProfile?
   workerProfile        WorkerProfile?

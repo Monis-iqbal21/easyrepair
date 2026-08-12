@@ -20,6 +20,8 @@ import '../../../../core/presentation/widgets/language_selector_sheet.dart';
 import '../../../../core/presentation/pages/general_info_page.dart';
 import '../../../../core/presentation/pages/privacy_policy_page.dart';
 import '../../../../core/presentation/pages/terms_conditions_page.dart';
+import '../../../../core/presentation/pages/about_page.dart';
+import '../../../../core/utils/support_contact.dart';
 import 'client_agreements_page.dart';
 
 const _kOrange = Color(0xFFDB6234);
@@ -369,6 +371,23 @@ class _ClientProfilePageState extends ConsumerState<ClientProfilePage> {
                           onTap: () => Navigator.of(context).push(
                             MaterialPageRoute(
                               builder: (_) => const ClientAgreementsPage(),
+                            ),
+                          ),
+                        ),
+                        _SettingsItem(
+                          icon: Icons.support_agent_rounded,
+                          label: context.l10n.settingsSupportTitle,
+                          onTap: () => showSupportOptionsSheet(
+                            context,
+                            isWorker: false,
+                          ),
+                        ),
+                        _SettingsItem(
+                          icon: Icons.info_outline_rounded,
+                          label: context.l10n.settingsAboutTitle,
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const AboutPage(),
                             ),
                           ),
                           showDivider: false,

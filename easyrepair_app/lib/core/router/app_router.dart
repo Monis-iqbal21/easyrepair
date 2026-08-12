@@ -12,6 +12,7 @@ import '../../features/auth/presentation/pages/client_forgot_password_page.dart'
 import '../../features/auth/presentation/providers/auth_providers.dart';
 import '../../features/auth/domain/entities/user_entity.dart';
 import '../../features/client/presentation/pages/client_home_page.dart';
+import '../../features/client/presentation/pages/client_restricted_page.dart';
 import '../../features/client/domain/entities/customer_agreement_entity.dart';
 import '../../features/client/presentation/pages/customer_agreement_gate_page.dart';
 import '../../features/client/presentation/providers/customer_agreement_providers.dart';
@@ -87,6 +88,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       );
       if (suspensionRedirect != null) return suspensionRedirect;
 
+      // ── Restricted Client lock ─────────────────────────────────────────
+      // Client-side analogue of the Worker-suspension lock above, driven by
+      // the account-level AccountStatus rather than WorkerStatus. Runs
+      // before the agreement gate below so a restricted account is never
+      // routed through (or stuck behind) the agreement flow first.
+      final restrictionRedirect = resolveClientRestrictedRedirect(
+        user: user,
+        matchedLocation: state.matchedLocation,
+      );
+      if (restrictionRedirect != null) return restrictionRedirect;
+
       // ── Mandatory Customer Terms gate ─────────────────────────────────
       // Applies to EVERY authenticated CLIENT route (not just the dispatch
       // above), so a notification, deep link or bottom-nav tap can never
@@ -147,6 +159,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/client/agreement-gate',
         builder: (_, __) => const CustomerAgreementGatePage(),
+      ),
+      GoRoute(
+        path: '/client/restricted',
+        builder: (_, __) => const ClientRestrictedPage(),
       ),
       GoRoute(
         path: '/client/jobs',
@@ -352,6 +368,36 @@ String? resolveWorkerSuspendedRedirect({
     return isSuspendedRoute ? null : '/worker/suspended';
   }
   return isSuspendedRoute ? '/worker/home' : null;
+}
+
+/// Pure decision logic for the Client account-restriction lock — the
+/// Client-side analogue of [resolveWorkerSuspendedRedirect], driven by
+/// `AccountStatus.SUSPENDED` (User-level) rather than `WorkerStatus`.
+///
+/// Extracted from the `redirect` closure so it can be unit-tested directly.
+/// This is the ONLY place Client restriction is enforced — individual
+/// Client pages never duplicate this check.
+///
+/// Rules:
+///  * Never applies when logged out or to a WORKER (`null`).
+///  * A restricted Client anywhere except `/client/restricted` is
+///    redirected there — covers every route, deep link and notification
+///    tap, since they all navigate through GoRouter.
+///  * A Client who is no longer restricted (admin reactivated) sitting on
+///    `/client/restricted` is redirected to `/client/home` — this is what
+///    makes "next session refresh restores normal access" true.
+String? resolveClientRestrictedRedirect({
+  required UserEntity? user,
+  required String matchedLocation,
+}) {
+  if (user == null || user.isWorker) return null;
+
+  final isRestrictedRoute = matchedLocation == '/client/restricted';
+
+  if (user.isRestrictedClient) {
+    return isRestrictedRoute ? null : '/client/restricted';
+  }
+  return isRestrictedRoute ? '/client/home' : null;
 }
 
 /// Pure decision logic for the mandatory Customer Terms gate redirect.

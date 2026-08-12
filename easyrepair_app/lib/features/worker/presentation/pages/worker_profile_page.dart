@@ -21,6 +21,8 @@ import '../../../../core/presentation/widgets/language_selector_sheet.dart';
 import '../../../../core/presentation/pages/general_info_page.dart';
 import '../../../../core/presentation/pages/privacy_policy_page.dart';
 import '../../../../core/presentation/pages/terms_conditions_page.dart';
+import '../../../../core/presentation/pages/about_page.dart';
+import '../../../../core/utils/support_contact.dart';
 import '../pages/worker_reviews_page.dart';
 import '../pages/earning_history_page.dart';
 import '../pages/worker_agreements_page.dart';
@@ -448,6 +450,23 @@ class _WorkerProfilePageState extends ConsumerState<WorkerProfilePage> {
                           onTap: () => Navigator.of(context).push(
                             MaterialPageRoute(
                               builder: (_) => const TermsConditionsPage(),
+                            ),
+                          ),
+                        ),
+                        _SettingsItem(
+                          icon: Icons.support_agent_rounded,
+                          label: context.l10n.settingsSupportTitle,
+                          onTap: () => showSupportOptionsSheet(
+                            context,
+                            isWorker: true,
+                          ),
+                        ),
+                        _SettingsItem(
+                          icon: Icons.info_outline_rounded,
+                          label: context.l10n.settingsAboutTitle,
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const AboutPage(),
                             ),
                           ),
                           showDivider: false,

@@ -3172,6 +3172,27 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get goToChatsAction => 'چیٹس پر جائیں';
+
+  @override
+  String get settingsSupportTitle => 'سپورٹ';
+
+  @override
+  String get settingsAboutTitle => 'HandyGo کے بارے میں';
+
+  @override
+  String get settingsAppVersionTitle => 'ایپ ورژن';
+
+  @override
+  String get aboutAppDescription =>
+      'HandyGo کلائنٹس کو قریبی تصدیق شدہ اُستادوں سے گھر کی مرمت اور دیکھ بھال کی خدمات سے جوڑتا ہے۔';
+
+  @override
+  String get aboutWebsiteLabel => 'ویب سائٹ';
+
+  @override
+  String aboutVersionValue(String version, String build) {
+    return 'ورژن $version ($build)';
+  }
 }
 
 /// The translations for Urdu, using the Latin script (`ur_Latn`).
@@ -6382,4 +6403,25 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get goToChatsAction => 'Chats Par Jayein';
+
+  @override
+  String get settingsSupportTitle => 'Support';
+
+  @override
+  String get settingsAboutTitle => 'HandyGo Ke Baare Mein';
+
+  @override
+  String get settingsAppVersionTitle => 'App Version';
+
+  @override
+  String get aboutAppDescription =>
+      'HandyGo clients ko nearby verified Ustaadon se ghar ki marammat aur maintenance ki khidmat ke liye jorta hai.';
+
+  @override
+  String get aboutWebsiteLabel => 'Website';
+
+  @override
+  String aboutVersionValue(String version, String build) {
+    return 'Version $version ($build)';
+  }
 }

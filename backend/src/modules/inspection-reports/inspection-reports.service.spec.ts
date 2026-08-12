@@ -76,6 +76,10 @@ describe('InspectionReportsService', () => {
         report: { ...BASE_REPORT, decisionStatus: 'ACCEPTED_REPAIR' },
         changed: true,
       }),
+      markAcceptedAndFinalizeRepairPrice: jest.fn().mockResolvedValue({
+        report: { ...BASE_REPORT, decisionStatus: 'ACCEPTED_REPAIR' },
+        changed: true,
+      }),
       markClosed: jest.fn().mockResolvedValue({
         report: { ...BASE_REPORT, decisionStatus: 'CLOSED_AFTER_INSPECTION' },
         changed: true,
@@ -88,7 +92,6 @@ describe('InspectionReportsService', () => {
         .fn()
         .mockResolvedValue('child-1'),
       rehireInspectingWorker: jest.fn().mockResolvedValue(undefined),
-      setInspectionRepairPrice: jest.fn().mockResolvedValue(undefined),
       completeAfterInspectionClose: jest.fn().mockResolvedValue(undefined),
     };
     service = new InspectionReportsService(
@@ -209,8 +212,9 @@ describe('InspectionReportsService', () => {
     });
     const result = await service.acceptQuote('client-user-1', 'booking-1');
     expect(result.decisionStatus).toBe('ACCEPTED_REPAIR');
-    expect(repository.markAccepted).not.toHaveBeenCalled();
-    expect(bookingsService.setInspectionRepairPrice).not.toHaveBeenCalled();
+    expect(
+      repository.markAcceptedAndFinalizeRepairPrice,
+    ).not.toHaveBeenCalled();
     expect(notificationsService.notify).not.toHaveBeenCalled();
   });
 
@@ -225,7 +229,7 @@ describe('InspectionReportsService', () => {
   });
 
   it('losing the accept-quote race to a concurrent identical accept still returns success', async () => {
-    repository.markAccepted.mockResolvedValue({
+    repository.markAcceptedAndFinalizeRepairPrice.mockResolvedValue({
       report: { ...BASE_REPORT, decisionStatus: 'ACCEPTED_REPAIR' },
       changed: false,
     });
@@ -233,7 +237,6 @@ describe('InspectionReportsService', () => {
     const result = await service.acceptQuote('client-user-1', 'booking-1');
 
     expect(result.decisionStatus).toBe('ACCEPTED_REPAIR');
-    expect(bookingsService.setInspectionRepairPrice).not.toHaveBeenCalled();
     expect(notificationsService.notify).not.toHaveBeenCalled();
   });
 
@@ -338,14 +341,13 @@ describe('InspectionReportsService', () => {
   });
 
   // ── #15 Existing Inspection outcomes regression ─────────────────────────
-  it('accept-quote (same inspecting worker continues) sets ACCEPTED_REPAIR and waives the fee via setInspectionRepairPrice', async () => {
+  it('accept-quote (same inspecting worker continues) sets ACCEPTED_REPAIR and waives the fee, commissioning labour only', async () => {
     const result = await service.acceptQuote('client-user-1', 'booking-1');
-    expect(repository.markAccepted).toHaveBeenCalledWith('report-1');
-    expect(bookingsService.setInspectionRepairPrice).toHaveBeenCalledWith(
-      'booking-1',
-      1000,
-      1000,
-    );
+    // BASE_REPORT: labourCost 1000, repairQuoteTotal 1000 → platformFee =
+    // calculatePlatformFee(1000) = 180 (18% of labour, not repairQuoteTotal).
+    expect(
+      repository.markAcceptedAndFinalizeRepairPrice,
+    ).toHaveBeenCalledWith('report-1', 'booking-1', 1000, 180);
     expect(result.decisionStatus).toBe('ACCEPTED_REPAIR');
   });
 

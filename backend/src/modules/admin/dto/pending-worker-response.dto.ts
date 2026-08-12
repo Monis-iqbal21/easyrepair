@@ -40,6 +40,7 @@ export class PendingWorkerResponseDto {
   skills: WorkerSkillDto[];
   documents: WorkerDocumentDto[];
   createdAt: Date;
+  updatedAt: Date;
 
   // ── Onboarding submission ─────────────────────────────────────────────
   fullLegalName: string | null;

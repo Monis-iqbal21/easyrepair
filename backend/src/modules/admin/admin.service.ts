@@ -4,10 +4,18 @@ import {
   CommissionStatus,
   FaceMatchStatus,
   TrainingStatus,
+  WorkerStatus,
+  AccountStatus,
+  Role,
+  Prisma,
 } from '@prisma/client';
 import { AdminRepository, WorkerProfileAdminView } from './admin.repository';
 import { PendingWorkerResponseDto } from './dto/pending-worker-response.dto';
 import { AdminStatsResponseDto } from './dto/admin-stats-response.dto';
+import { ListWorkersQueryDto } from './dto/list-workers-query.dto';
+import { PaginatedWorkersDto } from './dto/worker-list-item.dto';
+import { UpdateWorkerProfileDto } from './dto/update-worker-profile.dto';
+import { UpdateWorkerSkillsDto } from './dto/update-worker-skills.dto';
 import { UstaadAgreementAccessService } from '../agreements/ustaad-agreement-access.service';
 import { NotificationsService } from '../notifications/notifications.service';
 
@@ -66,6 +74,119 @@ export class AdminService {
   /** GET /admin/stats — dashboard counters for the admin panel. */
   async getStats(): Promise<AdminStatsResponseDto> {
     return this.adminRepository.getStats();
+  }
+
+  /** GET /admin/workers — paginated, searchable, filterable Ustaads List. */
+  async getWorkers(query: ListWorkersQueryDto): Promise<PaginatedWorkersDto> {
+    const page = query.page ?? 1;
+    const pageSize = query.pageSize ?? 20;
+    const { items, total } = await this.adminRepository.findWorkersPaginated(query);
+    return {
+      items,
+      meta: {
+        page,
+        pageSize,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / pageSize)),
+      },
+    };
+  }
+
+  /**
+   * PATCH /admin/workers/:id/status
+   * The only mutation of WorkerProfile.status. No transition is restricted —
+   * ACTIVE/INACTIVE/SUSPENDED may all move to one another. The worker app's
+   * existing central routing gate reads this field fresh on every
+   * login/me/refresh call, so flipping it here is the entire suspension
+   * mechanism; nothing else needs to change.
+   */
+  async updateWorkerStatus(
+    workerProfileId: string,
+    status: WorkerStatus,
+  ): Promise<PendingWorkerResponseDto> {
+    await this._ensureExists(workerProfileId);
+    const updated = await this.adminRepository.updateStatus(workerProfileId, status);
+    return this._toDto(updated);
+  }
+
+  /**
+   * PATCH /admin/workers/:id — operational profile fields only (see
+   * UpdateWorkerProfileDto for exactly what's excluded and why). Unlike the
+   * worker's own profile-completion PATCH, this is NOT restricted to
+   * DRAFT/CHANGES_REQUIRED — an admin may correct data at any onboarding
+   * stage, including after approval.
+   */
+  async updateWorkerProfile(
+    workerProfileId: string,
+    dto: UpdateWorkerProfileDto,
+  ): Promise<PendingWorkerResponseDto> {
+    await this._ensureExists(workerProfileId);
+
+    const data: Prisma.WorkerProfileUpdateInput = {};
+    if (dto.firstName !== undefined) data.firstName = dto.firstName;
+    if (dto.lastName !== undefined) data.lastName = dto.lastName;
+    if (dto.fullLegalName !== undefined) data.fullLegalName = dto.fullLegalName;
+    if (dto.cnicNumber !== undefined) data.cnicNumber = dto.cnicNumber;
+    if (dto.residentialAddress !== undefined) {
+      data.residentialAddress = dto.residentialAddress;
+    }
+    if (dto.fatherName !== undefined) data.fatherName = dto.fatherName;
+    if (dto.dateOfBirth !== undefined) {
+      const parsed = new Date(`${dto.dateOfBirth}T00:00:00.000Z`);
+      if (Number.isNaN(parsed.getTime()) || parsed.getTime() > Date.now()) {
+        throw new BadRequestException('Date of birth must be a valid past date.');
+      }
+      data.dateOfBirth = dto.dateOfBirth;
+    }
+    if (dto.emergencyContact !== undefined) {
+      data.emergencyContact = dto.emergencyContact.trim() || null;
+    }
+
+    let updated: WorkerProfileAdminView;
+    try {
+      updated = await this.adminRepository.updateProfile(workerProfileId, data);
+    } catch (err) {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2002' &&
+        (err.meta?.target as string[] | undefined)?.includes('cnicNumber')
+      ) {
+        throw new BadRequestException(
+          'This CNIC number is already registered with another worker account.',
+        );
+      }
+      throw err;
+    }
+    return this._toDto(updated);
+  }
+
+  /**
+   * PATCH /admin/workers/:id/skills
+   * Mirrors WorkersService.updateSkills' validation exactly (one main skill,
+   * real category ids) so an admin edit can never create a state the
+   * worker's own app doesn't already support.
+   */
+  async updateWorkerSkills(
+    workerProfileId: string,
+    dto: UpdateWorkerSkillsDto,
+  ): Promise<PendingWorkerResponseDto> {
+    await this._ensureExists(workerProfileId);
+
+    if (dto.categoryIds.length > 1) {
+      throw new BadRequestException('Only one main skill is allowed.');
+    }
+
+    const found = await this.adminRepository.findCategoriesByIds(dto.categoryIds);
+    if (found.length !== dto.categoryIds.length) {
+      throw new BadRequestException('One or more category IDs are invalid');
+    }
+
+    const updated = await this.adminRepository.replaceSkills(
+      workerProfileId,
+      dto.categoryIds,
+      dto.yearsExperience,
+    );
+    return this._toDto(updated);
   }
 
   /** PATCH /admin/workers/:id/approve */
@@ -209,6 +330,30 @@ export class AdminService {
     return this.adminRepository.updateBookingCommissionStatus(bookingId, status);
   }
 
+  /**
+   * PATCH /admin/users/:userId/account-status
+   * Client-only account-level restriction — completely separate from
+   * WorkerStatus (Worker job-eligibility gate). Deliberately rejects any
+   * non-CLIENT target so this can never be used to accidentally suspend a
+   * Worker or Admin account through the wrong endpoint; Worker suspension
+   * has its own dedicated mechanism and is untouched by this one.
+   */
+  async updateClientAccountStatus(
+    userId: string,
+    status: AccountStatus,
+  ) {
+    const user = await this.adminRepository.findUserRoleAndStatusById(userId);
+    if (!user || user.deletedAt !== null) {
+      throw new NotFoundException('User not found');
+    }
+    if (user.role !== Role.CLIENT) {
+      throw new BadRequestException(
+        'Account-status restriction only applies to CLIENT accounts.',
+      );
+    }
+    return this.adminRepository.updateAccountStatus(userId, status);
+  }
+
   private async _ensureExists(workerProfileId: string): Promise<void> {
     const profile = await this.adminRepository.findById(workerProfileId);
     if (!profile) throw new NotFoundException('Worker profile not found');
@@ -240,6 +385,7 @@ export class AdminService {
         createdAt: d.createdAt,
       })),
       createdAt: w.createdAt,
+      updatedAt: w.updatedAt,
       fullLegalName: w.fullLegalName,
       cnicNumber: w.cnicNumber,
       residentialAddress: w.residentialAddress,

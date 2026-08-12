@@ -208,6 +208,50 @@ export class InspectionReportsRepository {
     return { report, changed: count > 0 };
   }
 
+  /**
+   * Accept-quote's variant of `markAccepted`: the report transition AND the
+   * booking's finalPrice/platformFee overwrite (waiving the inspection fee
+   * for the repair quote — see BookingsService's former
+   * setInspectionRepairPrice, folded in here) happen in ONE transaction.
+   *
+   * Doing these as two separate writes (the report flip, then a later
+   * `booking.update`) left a real window: if the process crashed or errored
+   * between them, the report could end up ACCEPTED_REPAIR while
+   * finalPrice/platformFee stayed at the stale inspection-fee snapshot —
+   * and since acceptQuote's idempotent short-circuit only checks
+   * decisionStatus, a retry would never re-run the price update, silently
+   * pricing the job on the fee forever. Wrapping both writes atomically
+   * makes that impossible: either the whole accept succeeds with correct
+   * pricing, or nothing happens and a retry can complete it properly.
+   */
+  async markAcceptedAndFinalizeRepairPrice(
+    reportId: string,
+    bookingId: string,
+    repairQuoteTotal: number,
+    platformFee: number,
+  ): Promise<{ report: InspectionReportWithRelations; changed: boolean }> {
+    const changed = await this.prisma.$transaction(async (tx) => {
+      const { count } = await tx.inspectionReport.updateMany({
+        where: { id: reportId, decisionStatus: 'PENDING_CLIENT_DECISION' },
+        data: { decisionStatus: 'ACCEPTED_REPAIR', acceptedAt: new Date() },
+      });
+      if (count === 0) return false;
+
+      await tx.booking.update({
+        where: { id: bookingId },
+        data: { finalPrice: repairQuoteTotal, platformFee },
+      });
+
+      return true;
+    });
+
+    const report = await this.prisma.inspectionReport.findUniqueOrThrow({
+      where: { id: reportId },
+      include: INSPECTION_REPORT_INCLUDE,
+    });
+    return { report, changed };
+  }
+
   /** Same guarded-updateMany shape as markAccepted — see its doc comment. */
   async markClosed(
     reportId: string,

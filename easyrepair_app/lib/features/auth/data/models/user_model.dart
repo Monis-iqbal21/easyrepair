@@ -8,6 +8,7 @@ class UserModel {
   final String lastName;
   final String? verificationStatus;
   final String? workerStatus;
+  final String accountStatus;
 
   const UserModel({
     required this.id,
@@ -17,6 +18,7 @@ class UserModel {
     required this.lastName,
     this.verificationStatus,
     this.workerStatus,
+    this.accountStatus = 'ACTIVE',
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -28,6 +30,10 @@ class UserModel {
       lastName: json['lastName'] as String,
       verificationStatus: json['verificationStatus'] as String?,
       workerStatus: json['workerStatus'] as String?,
+      // Defaults to 'ACTIVE' so a cached response from before this field
+      // existed (or any backend that omits it) never gets misread as
+      // restricted.
+      accountStatus: json['accountStatus'] as String? ?? 'ACTIVE',
     );
   }
 
@@ -40,6 +46,7 @@ class UserModel {
       lastName: lastName,
       verificationStatus: verificationStatus,
       workerStatus: workerStatus,
+      accountStatus: accountStatus,
     );
   }
 }

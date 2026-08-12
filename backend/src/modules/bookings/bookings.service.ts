@@ -1403,30 +1403,6 @@ export class BookingsService {
   }
 
   /**
-   * INSPECTION lane: called by InspectionReportsService when the client
-   * accepts the repair quote. The inspection fee is waived once repair
-   * continues â€” the confirmed final amount becomes the repair quote only,
-   * replacing the placeholder `inspectionFeeSnapshot` that was set as
-   * `finalPrice` at assignment time. Does NOT add the inspection fee to the
-   * repair quote; the two are never combined.
-   */
-  async setInspectionRepairPrice(
-    bookingId: string,
-    repairQuoteTotal: number,
-    labourCost: number,
-  ): Promise<void> {
-    // Commission is 18% of labourCost ONLY â€” repairQuoteTotal (the customer's
-    // payable amount) includes parts, which must never be commissioned or
-    // counted toward the worker's earning.
-    const platformFee = calculatePlatformFee(labourCost);
-    await this.bookingsRepository.updateFinalPrice(
-      bookingId,
-      repairQuoteTotal,
-      platformFee,
-    );
-  }
-
-  /**
    * INSPECTION lane, third outcome ("Find Other Ustaad"): atomically marks
    * the report FIND_OTHER_USTAAD, completes the original inspection booking
    * (kept forever on the inspector for stats/earnings/My Jobs), releases the

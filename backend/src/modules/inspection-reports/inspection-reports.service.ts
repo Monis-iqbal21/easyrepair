@@ -19,6 +19,7 @@ import { StorageService } from '../storage/storage.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { BookingsService } from '../bookings/bookings.service';
 import { assertEligibleForInspectionBidding } from '../../common/utils/job-eligibility.util';
+import { calculatePlatformFee } from '../../common/utils/commission.util';
 
 const MAX_PHOTOS = 6;
 
@@ -249,9 +250,19 @@ export class InspectionReportsService {
       );
     }
 
-    const { report: updated, changed } = await this.repository.markAccepted(
-      report.id,
-    );
+    // Commission is 18% of labourCost ONLY — repairQuoteTotal (the
+    // customer's payable amount) includes parts, which must never be
+    // commissioned or counted toward the worker's earning. Computed before
+    // the write so the report transition and the price finalize atomically
+    // together — see markAcceptedAndFinalizeRepairPrice's doc comment.
+    const platformFee = calculatePlatformFee(report.labourCost);
+    const { report: updated, changed } =
+      await this.repository.markAcceptedAndFinalizeRepairPrice(
+        report.id,
+        bookingId,
+        report.repairQuoteTotal,
+        platformFee,
+      );
     if (!changed) {
       if (updated.decisionStatus === 'ACCEPTED_REPAIR') {
         return this._toDto(updated, booking);
@@ -260,14 +271,6 @@ export class InspectionReportsService {
         `This report has already been decided (${updated.decisionStatus}).`,
       );
     }
-
-    // Inspection fee is waived once repair continues — the confirmed final
-    // amount becomes the repair quote only (never combined with the fee).
-    await this.bookingsService.setInspectionRepairPrice(
-      bookingId,
-      updated.repairQuoteTotal,
-      updated.labourCost,
-    );
 
     if (booking.workerProfile?.userId) {
       void this.notificationsService.notify({

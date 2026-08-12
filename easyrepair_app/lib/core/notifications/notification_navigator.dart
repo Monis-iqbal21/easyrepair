@@ -12,12 +12,15 @@ class NotificationNavigator {
   ///   1. conversationId (or entityType == 'conversation') → chat route
   ///   2. bookingId (or entityType == 'booking') → booking/job route
   ///   3. explicit route field (fallback)
-  // Notification event keys that should open the Track Worker page for clients.
+  // Notification event keys that should open the Track Worker page for
+  // clients — hire/assignment plus the worker's "on the way" update, which
+  // is exactly the live-tracking moment this page exists for.
   static const _trackWorkerEventKeys = {
     'bid.accepted',
     'booking.assigned',
     'worker.hired',
     'worker.assigned',
+    'booking.status.en_route',
   };
 
   static String? resolveRoute(

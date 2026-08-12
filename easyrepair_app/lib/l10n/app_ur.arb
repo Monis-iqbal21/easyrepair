@@ -950,5 +950,11 @@
   "resourceConversationUnavailable": "یہ چیٹ اب دستیاب نہیں ہے۔",
   "goToMyBookingsAction": "میری بکنگز پر جائیں",
   "goToMyJobsAction": "میری جابز پر جائیں",
-  "goToChatsAction": "چیٹس پر جائیں"
+  "goToChatsAction": "چیٹس پر جائیں",
+  "settingsSupportTitle": "سپورٹ",
+  "settingsAboutTitle": "HandyGo کے بارے میں",
+  "settingsAppVersionTitle": "ایپ ورژن",
+  "aboutAppDescription": "HandyGo کلائنٹس کو قریبی تصدیق شدہ اُستادوں سے گھر کی مرمت اور دیکھ بھال کی خدمات سے جوڑتا ہے۔",
+  "aboutWebsiteLabel": "ویب سائٹ",
+  "aboutVersionValue": "ورژن {version} ({build})"
 }

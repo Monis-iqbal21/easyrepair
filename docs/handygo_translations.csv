@@ -974,3 +974,9 @@ resourceConversationUnavailable,Uncategorised,This conversation is no longer ava
 goToMyBookingsAction,Uncategorised,Go to My Bookings,میری بکنگز پر جائیں,My Bookings Par Jayein,Safe-navigation button on the client's booking-unavailable state
 goToMyJobsAction,Uncategorised,Go to My Jobs,میری جابز پر جائیں,My Jobs Par Jayein,Safe-navigation button on the worker's job-unavailable state
 goToChatsAction,Uncategorised,Go to Chats,چیٹس پر جائیں,Chats Par Jayein,Safe-navigation button on the chat-unavailable state
+settingsSupportTitle,Settings / Profile,Support,سپورٹ,Support,Profile/Settings menu row that opens HandyGo Support (chat and/or phone)
+settingsAboutTitle,Settings / Profile,About HandyGo,HandyGo کے بارے میں,HandyGo Ke Baare Mein,Profile/Settings menu row that opens the About HandyGo page and that page's title
+settingsAppVersionTitle,Settings / About page,App Version,ایپ ورژن,App Version,Profile/Settings menu row label showing the running app version
+aboutAppDescription,About HandyGo page,HandyGo connects clients with nearby verified Ustaads for home repair and maintenance services.,HandyGo کلائنٹس کو قریبی تصدیق شدہ اُستادوں سے گھر کی مرمت اور دیکھ بھال کی خدمات سے جوڑتا ہے۔,HandyGo clients ko nearby verified Ustaadon se ghar ki marammat aur maintenance ki khidmat ke liye jorta hai.,Short factual description shown on the About HandyGo page
+aboutWebsiteLabel,About HandyGo page,Website,ویب سائٹ,Website,Label above the official HandyGo website link on the About page
+aboutVersionValue,About HandyGo page / Settings,Version {version} ({build}),ورژن {version} ({build}),Version {version} ({build}),Runtime app version/build shown on the About page and Settings row

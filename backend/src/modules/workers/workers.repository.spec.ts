@@ -403,6 +403,71 @@ describe('WorkersRepository.getEarningsHistory — 18% commission breakdown', ()
 });
 
 /**
+ * Chunk 5 commission-accounting hardening: a booking that never reaches
+ * COMPLETED (cancelled, expired while still PENDING, or relisted back to
+ * PENDING after a worker cancellation) must never contribute to earnings or
+ * commission. Both queries filter on `status: COMPLETED` at the database
+ * level — pinning the exact WHERE clause here is what makes "a cancelled
+ * booking can't leak into earnings" a structural guarantee, not just an
+ * assumption about what the mocked rows happen to contain.
+ */
+describe('WorkersRepository — only COMPLETED bookings ever contribute to earnings', () => {
+  let prisma: any;
+  let repo: WorkersRepository;
+
+  beforeEach(() => {
+    prisma = {
+      booking: {
+        findMany: jest.fn().mockResolvedValue([]),
+        count: jest.fn().mockResolvedValue(0),
+      },
+      inspectionReport: {
+        findMany: jest.fn().mockResolvedValue([]),
+        count: jest.fn().mockResolvedValue(0),
+      },
+    };
+    repo = new WorkersRepository(prisma);
+  });
+
+  it("getEarningsHistory's main query is scoped to status: COMPLETED with a non-null completedAt", async () => {
+    await repo.getEarningsHistory('worker-1');
+
+    const call = prisma.booking.findMany.mock.calls.find(
+      (c: any[]) => c[0]?.where?.workerProfileId === 'worker-1',
+    );
+    expect(call).toBeDefined();
+    expect(call[0].where.status).toBe('COMPLETED');
+    expect(call[0].where.completedAt).toEqual({ not: null });
+  });
+
+  it("getJobStats' today-earnings query is scoped to status: COMPLETED — a cancelled or still-PENDING booking is never included", async () => {
+    await repo.getJobStats('worker-1');
+
+    const call = prisma.booking.findMany.mock.calls.find(
+      (c: any[]) => c[0]?.where?.workerProfileId === 'worker-1',
+    );
+    expect(call).toBeDefined();
+    expect(call[0].where.status).toBe('COMPLETED');
+  });
+
+  it('a booking with any non-COMPLETED status (CANCELLED, EXPIRED, PENDING after relist) contributes nothing, since the mocked query returns no rows for those states', async () => {
+    // The repository never post-filters in application code — the DB query
+    // itself is the only gate, exercised above. This test documents the
+    // contract from the caller's side: an empty result set (what a
+    // cancelled/expired/relisted booking's row would produce against the
+    // status:COMPLETED filter) yields zero earnings, not an error or a
+    // stale/partial figure.
+    prisma.booking.findMany.mockResolvedValue([]);
+
+    const stats = await repo.getJobStats('worker-1');
+    const history = await repo.getEarningsHistory('worker-1');
+
+    expect(stats.todayEarnings).toBe(0);
+    expect(history).toEqual([]);
+  });
+});
+
+/**
  * The Home dashboard's "Active Job" card and the activeJobs stat must agree
  * on what "active" means. They used to be written out separately and
  * findOngoingJob omitted ARRIVED, so an Ustaad who had tapped "Arrived"

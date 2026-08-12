@@ -13,6 +13,13 @@ export class AuthUserDto {
    * `resolveWorkerSuspendedRedirect` in the Flutter router.
    */
   workerStatus?: string;
+  /**
+   * Values: 'ACTIVE' | 'SUSPENDED'. Only meaningfully restrictive for CLIENT
+   * accounts — the app's central routing gate reads this on every
+   * login/session-restore to decide whether the Client app is reachable.
+   * Always present (defaults to 'ACTIVE'), unlike workerStatus.
+   */
+  accountStatus: string;
 }
 
 export class AuthResponseDto {

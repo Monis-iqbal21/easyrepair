@@ -110,10 +110,16 @@ describe('Support account cannot be signed into', () => {
 
   it('leaves ordinary numbers completely unaffected', async () => {
     // A real number reaches the normal lookup and fails there, not at the
-    // support guard — proving the guard is not over-broad.
+    // support guard — proving the guard is not over-broad. It gets the
+    // same privacy-safe PHONE_NOT_REGISTERED rejection every other
+    // unregistered-number login attempt gets (see _phoneNotRegisteredError)
+    // — never the password-specific "Invalid phone number or password",
+    // which only fires once a real account was actually found.
     await expect(
       service.login({ phone: '+923001234567', password: 'x' } as any),
-    ).rejects.toThrow('Invalid phone number or password');
+    ).rejects.toMatchObject({
+      response: { error: 'PHONE_NOT_REGISTERED', message: '' },
+    });
     expect(repository.findUserByPhone).toHaveBeenCalledWith('+923001234567');
   });
 });

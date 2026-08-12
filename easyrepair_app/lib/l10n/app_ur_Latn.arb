@@ -950,5 +950,11 @@
   "resourceConversationUnavailable": "Ye chat ab available nahi hai.",
   "goToMyBookingsAction": "My Bookings Par Jayein",
   "goToMyJobsAction": "My Jobs Par Jayein",
-  "goToChatsAction": "Chats Par Jayein"
+  "goToChatsAction": "Chats Par Jayein",
+  "settingsSupportTitle": "Support",
+  "settingsAboutTitle": "HandyGo Ke Baare Mein",
+  "settingsAppVersionTitle": "App Version",
+  "aboutAppDescription": "HandyGo clients ko nearby verified Ustaadon se ghar ki marammat aur maintenance ki khidmat ke liye jorta hai.",
+  "aboutWebsiteLabel": "Website",
+  "aboutVersionValue": "Version {version} ({build})"
 }

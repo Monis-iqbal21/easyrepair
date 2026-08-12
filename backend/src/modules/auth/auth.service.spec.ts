@@ -278,6 +278,59 @@ describe('AuthService — SMS OTP login/registration', () => {
       expect(repository.markPhoneVerified).toHaveBeenCalledWith(CLIENT_USER.id);
     });
 
+    it('rejects a soft-deleted CLIENT account with the same privacy-safe "not registered" message as a nonexistent number', async () => {
+      repository.findUserByPhoneVariants.mockResolvedValue({
+        ...CLIENT_USER,
+        deletedAt: new Date(),
+      });
+      await expect(
+        service.clientOtpLoginOrRegister('Ali Khan', PHONE_RAW, '123456'),
+      ).rejects.toMatchObject({
+        response: { error: 'PHONE_NOT_REGISTERED', message: '' },
+      });
+      expect(repository.markPhoneVerified).not.toHaveBeenCalled();
+      expect(repository.createUserWithProfile).not.toHaveBeenCalled();
+    });
+
+    it('rejects a deactivated (isActive: false) CLIENT account', async () => {
+      repository.findUserByPhoneVariants.mockResolvedValue({
+        ...CLIENT_USER,
+        isActive: false,
+      });
+      await expect(
+        service.clientOtpLoginOrRegister('Ali Khan', PHONE_RAW, '123456'),
+      ).rejects.toThrow('Account is deactivated');
+      expect(repository.markPhoneVerified).not.toHaveBeenCalled();
+    });
+
+    it('includes accountStatus in the response for an existing CLIENT login', async () => {
+      repository.findUserByPhoneVariants.mockResolvedValue({
+        ...CLIENT_USER,
+        accountStatus: 'SUSPENDED',
+      });
+      const result = await service.clientOtpLoginOrRegister(
+        'Ali Khan',
+        PHONE_RAW,
+        '123456',
+      );
+      expect(result.user.accountStatus).toBe('SUSPENDED');
+    });
+
+    it('defaults accountStatus to ACTIVE for a brand-new CLIENT registration', async () => {
+      repository.findUserByPhoneVariants.mockResolvedValue(null);
+      repository.createUserWithProfile.mockResolvedValue({
+        id: 'new-client',
+        phone: PHONE_NORMALIZED,
+        role: Role.CLIENT,
+      });
+      const result = await service.clientOtpLoginOrRegister(
+        'Ali Khan',
+        PHONE_RAW,
+        '123456',
+      );
+      expect(result.user.accountStatus).toBe('ACTIVE');
+    });
+
     it('creates a new CLIENT (passwordless, normalized phone, phoneVerified true) when no account exists', async () => {
       repository.findUserByPhoneVariants.mockResolvedValue(null);
       repository.createUserWithProfile.mockResolvedValue({
@@ -887,6 +940,33 @@ describe('AuthService — SMS OTP login/registration', () => {
       await expect(
         service.forgotPasswordRequest({ phone: PHONE_RAW } as any),
       ).resolves.toHaveProperty('expiresAt'); // never throws
+    });
+  });
+
+  // ── GET /auth/me — the endpoint app-resume session refresh calls ────────
+  describe('getMe', () => {
+    it('returns the live accountStatus for a CLIENT', async () => {
+      repository.findUserById = jest.fn().mockResolvedValue({
+        ...CLIENT_USER,
+        accountStatus: 'SUSPENDED',
+      });
+      const result = await service.getMe(CLIENT_USER.id);
+      expect(result.accountStatus).toBe('SUSPENDED');
+    });
+
+    it('returns the live workerStatus for a WORKER, alongside a default ACTIVE accountStatus', async () => {
+      repository.findUserById = jest.fn().mockResolvedValue({
+        ...WORKER_USER,
+        accountStatus: 'ACTIVE',
+      });
+      const result = await service.getMe(WORKER_USER.id);
+      expect(result.workerStatus).toBe('ACTIVE');
+      expect(result.accountStatus).toBe('ACTIVE');
+    });
+
+    it('rejects when the user no longer exists', async () => {
+      repository.findUserById = jest.fn().mockResolvedValue(null);
+      await expect(service.getMe('missing')).rejects.toThrow('User not found');
     });
   });
 });

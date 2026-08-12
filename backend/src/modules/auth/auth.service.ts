@@ -219,6 +219,7 @@ export class AuthService {
       profile.lastName,
       profile.verificationStatus,
       profile.workerStatus,
+      user.accountStatus,
     );
   }
 
@@ -272,6 +273,7 @@ export class AuthService {
         lastName: profile.lastName,
         verificationStatus: profile.verificationStatus,
         workerStatus: profile.workerStatus,
+        accountStatus: user.accountStatus,
       },
     };
   }
@@ -318,6 +320,7 @@ export class AuthService {
         lastName: profile.lastName,
         verificationStatus: profile.verificationStatus,
         workerStatus: profile.workerStatus,
+        accountStatus: user.accountStatus,
       },
     };
   }
@@ -346,6 +349,7 @@ export class AuthService {
       lastName: profile.lastName,
       verificationStatus: profile.verificationStatus,
       workerStatus: profile.workerStatus,
+      accountStatus: user.accountStatus,
     };
   }
 
@@ -424,6 +428,11 @@ export class AuthService {
     lastName: string,
     verificationStatus?: string,
     workerStatus?: string,
+    // Defaults to ACTIVE — every call site that just created a brand-new
+    // user relies on this (accountStatus's schema default is ACTIVE too),
+    // so only call sites logging into an already-existing user pass their
+    // actual current value explicitly.
+    accountStatus: string = 'ACTIVE',
   ): Promise<AuthResponseDto> {
     const accessToken = this._signAccessToken(userId, phone, role);
 
@@ -451,6 +460,7 @@ export class AuthService {
         lastName,
         verificationStatus,
         workerStatus,
+        accountStatus,
       },
     };
   }
@@ -642,6 +652,22 @@ export class AuthService {
     return { message: 'Password reset successfully.' };
   }
 
+  /**
+   * Soft-delete only — see AuthRepository.softDeleteUser for exactly what
+   * gets written and why legal/business records are never touched.
+   *
+   * Deleted-phone reuse policy: `User.phone` is `@unique` and this delete
+   * never clears/changes it, so the number stays permanently reserved by
+   * the deleted row — a repeat registration attempt with the same number
+   * hits the unique constraint and gets the standard "already registered"
+   * rejection, never a fresh account. This is the existing, unchanged
+   * architecture (true for every account, not something this chunk
+   * introduces) — reported here per the Chunk 4 audit requirement, not
+   * altered. Every login path (including the CLIENT OTP combined
+   * login-or-register flow, fixed alongside this) rejects a soft-deleted
+   * account with the same privacy-safe "not registered" message a
+   * genuinely nonexistent number gets.
+   */
   async deleteAccount(userId: string): Promise<{ message: string }> {
     const user = await this.authRepository.findUserById(userId);
     if (!user) throw new UnauthorizedException('User not found');
@@ -850,6 +876,17 @@ export class AuthService {
         // genuine same-role duplicate gets, never revealing it's a Worker.
         throw this._phoneAlreadyRegisteredError();
       }
+      // A soft-deleted CLIENT account must not be able to log back in via
+      // OTP — same privacy-safe rejection every other login path gives a
+      // deleted/nonexistent number. Phone numbers are deliberately reserved
+      // (User.phone stays unique/occupied) rather than freed for reuse —
+      // see the class-level note on deleted-phone reuse policy.
+      if (existing.deletedAt !== null) {
+        throw this._phoneNotRegisteredError();
+      }
+      if (!existing.isActive) {
+        throw new ForbiddenException('Account is deactivated');
+      }
       // A successful OTP verification just proved control of this phone
       // right now, regardless of how the account was originally created.
       await this.authRepository.markPhoneVerified(existing.id);
@@ -862,6 +899,7 @@ export class AuthService {
         profile.lastName,
         profile.verificationStatus,
         profile.workerStatus,
+        existing.accountStatus,
       );
     }
 
@@ -897,6 +935,7 @@ export class AuthService {
             profile.lastName,
             profile.verificationStatus,
             profile.workerStatus,
+            winner.accountStatus,
           );
         }
       }
@@ -984,6 +1023,7 @@ export class AuthService {
       profile.lastName,
       profile.verificationStatus,
       profile.workerStatus,
+      user.accountStatus,
     );
   }
 
@@ -1047,6 +1087,7 @@ export class AuthService {
             profile.lastName,
             profile.verificationStatus,
             profile.workerStatus,
+            winner.accountStatus,
           );
         }
       }
@@ -1155,6 +1196,7 @@ export class AuthService {
       profile.lastName,
       profile.verificationStatus,
       profile.workerStatus,
+      user.accountStatus,
     );
   }
 }

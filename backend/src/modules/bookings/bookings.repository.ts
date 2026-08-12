@@ -1467,23 +1467,6 @@ export class BookingsRepository {
   }
 
   /**
-   * Overwrite the confirmed final price and its commission fee (e.g.
-   * INSPECTION quote acceptance) — the two are always set together so
-   * `platformFee` never drifts from whatever `finalPrice`/commission base
-   * it was actually computed from.
-   */
-  async updateFinalPrice(
-    bookingId: string,
-    finalPrice: number,
-    platformFee?: number,
-  ): Promise<void> {
-    await this.prisma.booking.update({
-      where: { id: bookingId },
-      data: { finalPrice, platformFee: platformFee ?? undefined },
-    });
-  }
-
-  /**
    * Worker cancels an assigned job (ACCEPTED/EN_ROUTE/ARRIVED): terminally
    * CANCELS the booking — status CANCELLED, cancelledByRole WORKER, reason
    * preserved, workerProfileId left untouched so the cancelling worker still

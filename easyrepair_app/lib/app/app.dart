@@ -10,11 +10,13 @@ import '../core/l10n/locale_provider.dart';
 import '../core/notifications/local_notification_service.dart';
 import '../core/permissions/app_permission_service.dart';
 import '../core/notifications/notification_navigator.dart';
+import '../core/notifications/pending_notification_store.dart';
 import '../core/router/app_router.dart';
 import '../core/services/chat_socket_service.dart';
 import '../core/storage/secure_storage_service.dart';
 import '../core/theme/app_theme.dart';
 import '../core/widgets/app_banner_overlay.dart';
+import '../features/auth/domain/entities/user_entity.dart';
 import '../features/auth/presentation/providers/auth_providers.dart';
 import '../features/bookings/presentation/providers/booking_providers.dart';
 import '../features/bookings/presentation/providers/review_prompt_controller.dart';
@@ -109,6 +111,15 @@ class _EasyRepairAppState extends ConsumerState<EasyRepairApp>
       case AppLifecycleState.resumed:
         final user = ref.read(authStateProvider).valueOrNull;
         if (user != null) {
+          // Re-fetch current-user/session state now that the app is
+          // foreground again, so a Worker suspended/reactivated, a Client
+          // suspended/restricted, or an account deleted/deactivated while
+          // backgrounded is picked up without requiring re-login. GoRouter's
+          // redirect already listens to authStateProvider (see
+          // core/router/app_router.dart) and reacts automatically once this
+          // resolves. A temporary network failure here never logs the user
+          // out — AuthStateNotifier.build only nulls state on a genuine 401.
+          ref.invalidate(authStateProvider);
           _connectChatSocket();
           // Refresh notification badge and chat list once on resume — no polling.
           ref.invalidate(unreadNotificationCountProvider);
@@ -216,13 +227,46 @@ class _EasyRepairAppState extends ConsumerState<EasyRepairApp>
     final user = authState.valueOrNull;
 
     if (user == null) {
-      // Auth is not ready yet (e.g. app cold-started from a notification tap).
-      // Store and process once authentication completes.
+      // Auth is not ready yet (e.g. app cold-started from a notification tap)
+      // or the user is genuinely logged out. Keep it in memory for the
+      // same-process case (unchanged), and also persist a minimal version so
+      // it survives the process being killed before login completes — see
+      // _consumePersistedPendingNotification.
       _pendingNotificationData = data;
+      ref.read(pendingNotificationStoreProvider).save(data);
       return;
     }
 
     _navigateFromData(data, isWorker: user.isWorker);
+  }
+
+  /// Restores a notification destination saved by [_handleNotificationData]
+  /// that survived the app process being killed before login completed.
+  /// Only reached when there was nothing to drain from the in-memory
+  /// [_pendingNotificationData] (that path already handles the same-process
+  /// case unchanged).
+  ///
+  /// Fails closed: a missing, corrupt, expired, or account-mismatched entry
+  /// is discarded without navigating anywhere — see PendingNotificationStore
+  /// for the TTL and PendingNotification.ownerUserIdHint for the mismatch
+  /// check. Always clears the persisted entry so it is never consumed twice.
+  Future<void> _consumePersistedPendingNotification(UserEntity user) async {
+    final store = ref.read(pendingNotificationStoreProvider);
+    final pending = await store.read();
+    if (pending == null) return;
+    await store.clear();
+
+    if (pending.ownerUserIdHint != user.id) {
+      // Saved while a different account (or no known account) was last
+      // authenticated on this device — never navigate a freshly-logged-in
+      // account into another account's booking/chat/job.
+      return;
+    }
+
+    if (!mounted) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _navigateFromData(pending.data, isWorker: user.isWorker);
+    });
   }
 
   void _navigateFromData(
@@ -385,6 +429,13 @@ class _EasyRepairAppState extends ConsumerState<EasyRepairApp>
           _registerFcmToken();
         }
 
+        // Records this device as last used by this account — the only
+        // signal a notification saved later, while logged out, can be
+        // tagged with (see _consumePersistedPendingNotification's
+        // account-mismatch check). Deliberately not awaited; harmless if it
+        // loses a race with an immediate logout.
+        ref.read(pendingNotificationStoreProvider).setLastKnownUserId(user.id);
+
         // Request any missing permissions once per session.
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (context.mounted) {
@@ -392,22 +443,34 @@ class _EasyRepairAppState extends ConsumerState<EasyRepairApp>
           }
         });
 
-        // Drain any notification that arrived before auth was ready.
+        // Drain any notification that arrived before auth was ready —
+        // in-memory first (same-process case, unchanged), else fall back to
+        // whatever survived a process kill in between.
         final pending = _pendingNotificationData;
+        _pendingNotificationData = null;
         if (pending != null) {
-          _pendingNotificationData = null;
           // addPostFrameCallback ensures the router has completed its initial
           // redirect (e.g. from /auth/role-select to the home page) before we
           // attempt to push a booking-detail route on top of it.
           WidgetsBinding.instance.addPostFrameCallback((_) {
             _navigateFromData(pending, isWorker: user.isWorker);
           });
+          // The same notification was also persisted (save() runs
+          // unconditionally in _handleNotificationData) — clear it now so a
+          // later session on this device never replays it a second time.
+          ref.read(pendingNotificationStoreProvider).clear();
+        } else {
+          _consumePersistedPendingNotification(user);
         }
       }
 
       if (user == null) {
         _fcmTokenRegistered = false;
         _pendingNotificationData = null;
+        // A pending destination saved before this logout was, at best,
+        // meant for the account that just signed out — never carry it
+        // forward to whoever logs in next on this device.
+        ref.read(pendingNotificationStoreProvider).clear();
         // Disconnect chat socket on logout.
         ChatSocketService.instance.disconnect();
         // Reset permission session flag so it runs again on next login.

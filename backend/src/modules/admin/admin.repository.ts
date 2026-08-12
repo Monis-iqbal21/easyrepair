@@ -3,12 +3,17 @@ import {
   Prisma,
   VerificationStatus,
   WorkerOnboardingStatus,
+  WorkerStatus,
   FaceMatchStatus,
   TrainingStatus,
   BookingStatus,
   CommissionStatus,
+  AccountStatus,
+  Role,
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ListWorkersQueryDto } from './dto/list-workers-query.dto';
+import { WorkerListItemDto } from './dto/worker-list-item.dto';
 
 const WORKER_PROFILE_ADMIN_INCLUDE = {
   user: { select: { id: true, phone: true } },
@@ -55,6 +60,131 @@ export class AdminRepository {
     return this.prisma.workerProfile.findUnique({
       where: { id: workerProfileId },
       include: WORKER_PROFILE_ADMIN_INCLUDE,
+    });
+  }
+
+  /**
+   * GET /admin/workers — paginated, searchable, filterable Ustaads List.
+   * WorkerProfile only ever exists for Role.WORKER users (1:1 relation), so
+   * CLIENT accounts are structurally excluded — there is nothing to filter.
+   */
+  async findWorkersPaginated(
+    query: ListWorkersQueryDto,
+  ): Promise<{ items: WorkerListItemDto[]; total: number }> {
+    const where: Prisma.WorkerProfileWhereInput = {};
+
+    if (query.status) where.status = query.status;
+    if (query.onboardingStatus) where.onboardingStatus = query.onboardingStatus;
+    if (query.verificationStatus) where.verificationStatus = query.verificationStatus;
+    if (query.categoryId) {
+      where.skills = { some: { categoryId: query.categoryId } };
+    }
+
+    const term = query.search?.trim();
+    if (term) {
+      where.OR = [
+        { firstName: { contains: term, mode: 'insensitive' } },
+        { lastName: { contains: term, mode: 'insensitive' } },
+        { cnicNumber: { contains: term, mode: 'insensitive' } },
+        { user: { phone: { contains: term, mode: 'insensitive' } } },
+      ];
+    }
+
+    const page = query.page ?? 1;
+    const pageSize = query.pageSize ?? 20;
+
+    const [rows, total] = await Promise.all([
+      this.prisma.workerProfile.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        include: {
+          user: { select: { phone: true } },
+          skills: { include: { category: { select: { id: true, name: true } } } },
+        },
+      }),
+      this.prisma.workerProfile.count({ where }),
+    ]);
+
+    const items: WorkerListItemDto[] = rows.map((w) => ({
+      id: w.id,
+      firstName: w.firstName,
+      lastName: w.lastName,
+      phone: w.user.phone,
+      avatarUrl: w.avatarUrl,
+      primarySkill: w.skills[0]?.category.name ?? null,
+      status: w.status,
+      onboardingStatus: w.onboardingStatus,
+      verificationStatus: w.verificationStatus,
+      createdAt: w.createdAt,
+    }));
+
+    return { items, total };
+  }
+
+  /** PATCH /admin/workers/:id/status — the single mechanism that flips WorkerStatus. */
+  async updateStatus(
+    workerProfileId: string,
+    status: WorkerStatus,
+  ): Promise<WorkerProfileAdminView> {
+    return this.prisma.workerProfile.update({
+      where: { id: workerProfileId },
+      data: { status },
+      include: WORKER_PROFILE_ADMIN_INCLUDE,
+    });
+  }
+
+  /** PATCH /admin/workers/:id — operational profile field edits (see UpdateWorkerProfileDto). */
+  async updateProfile(
+    workerProfileId: string,
+    data: Prisma.WorkerProfileUpdateInput,
+  ): Promise<WorkerProfileAdminView> {
+    return this.prisma.workerProfile.update({
+      where: { id: workerProfileId },
+      data,
+      include: WORKER_PROFILE_ADMIN_INCLUDE,
+    });
+  }
+
+  async findCategoriesByIds(ids: string[]): Promise<{ id: string }[]> {
+    return this.prisma.serviceCategory.findMany({
+      where: { id: { in: ids }, isActive: true },
+      select: { id: true },
+    });
+  }
+
+  /**
+   * Replace all skills for a worker. Mirrors
+   * WorkersRepository.replaceSkills exactly (including the profileCompleted
+   * projection, which job-eligibility.util reads) so an admin skill edit can
+   * never diverge from what the worker's own app would produce.
+   */
+  async replaceSkills(
+    workerProfileId: string,
+    categoryIds: string[],
+    yearsExperience?: number,
+  ): Promise<WorkerProfileAdminView> {
+    return this.prisma.$transaction(async (tx) => {
+      await tx.workerSkill.deleteMany({ where: { workerProfileId } });
+
+      await tx.workerSkill.createMany({
+        data: categoryIds.map((categoryId) => ({
+          workerProfileId,
+          categoryId,
+          ...(yearsExperience !== undefined ? { yearsExperience } : {}),
+        })),
+      });
+
+      await tx.workerProfile.update({
+        where: { id: workerProfileId },
+        data: { profileCompleted: categoryIds.length === 1 },
+      });
+
+      return tx.workerProfile.findUniqueOrThrow({
+        where: { id: workerProfileId },
+        include: WORKER_PROFILE_ADMIN_INCLUDE,
+      });
     });
   }
 
@@ -188,6 +318,26 @@ export class AdminRepository {
       where: { id: bookingId },
       data: { commissionStatus: status, commissionStatusUpdatedAt: new Date() },
       select: { id: true, commissionStatus: true, commissionStatusUpdatedAt: true },
+    });
+  }
+
+  async findUserRoleAndStatusById(
+    userId: string,
+  ): Promise<{ id: string; role: Role; accountStatus: AccountStatus; deletedAt: Date | null } | null> {
+    return this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, role: true, accountStatus: true, deletedAt: true },
+    });
+  }
+
+  async updateAccountStatus(
+    userId: string,
+    status: AccountStatus,
+  ): Promise<{ id: string; accountStatus: AccountStatus; updatedAt: Date }> {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { accountStatus: status },
+      select: { id: true, accountStatus: true, updatedAt: true },
     });
   }
 }

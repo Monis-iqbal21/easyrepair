@@ -33,6 +33,7 @@ import { ClientPasswordLoginDto } from './dto/client-password-login.dto';
 import { ClientPasswordRegisterDto } from './dto/client-password-register.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { BypassClientSuspension } from '../../common/decorators/bypass-client-suspension.decorator';
 
 @Controller('auth')
 export class AuthController {
@@ -61,6 +62,7 @@ export class AuthController {
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
+  @BypassClientSuspension()
   logout(
     @CurrentUser() user: { id: string },
     @Body('refreshToken') refreshToken?: string,
@@ -68,8 +70,12 @@ export class AuthController {
     return this.authService.logout(user.id, refreshToken);
   }
 
+  /** A suspended CLIENT must still be able to identify their own restricted
+   * state — this is how the app's router even learns to show the
+   * restricted-account screen in the first place. */
   @Get('me')
   @UseGuards(JwtAuthGuard)
+  @BypassClientSuspension()
   getMe(@CurrentUser() user: { id: string }) {
     return this.authService.getMe(user.id);
   }

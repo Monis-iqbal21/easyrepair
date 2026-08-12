@@ -1918,5 +1918,37 @@
   "goToChatsAction": "Go to Chats",
   "@goToChatsAction": {
     "description": "Safe-navigation button on the chat-unavailable state"
+  },
+  "settingsSupportTitle": "Support",
+  "@settingsSupportTitle": {
+    "description": "Profile/Settings menu row that opens HandyGo Support (chat and/or phone)"
+  },
+  "settingsAboutTitle": "About HandyGo",
+  "@settingsAboutTitle": {
+    "description": "Profile/Settings menu row that opens the About HandyGo page, and that page's title"
+  },
+  "settingsAppVersionTitle": "App Version",
+  "@settingsAppVersionTitle": {
+    "description": "Profile/Settings menu row label showing the running app version"
+  },
+  "aboutAppDescription": "HandyGo connects clients with nearby verified Ustaads for home repair and maintenance services.",
+  "@aboutAppDescription": {
+    "description": "Short factual description shown on the About HandyGo page"
+  },
+  "aboutWebsiteLabel": "Website",
+  "@aboutWebsiteLabel": {
+    "description": "Label above the official HandyGo website link on the About page"
+  },
+  "aboutVersionValue": "Version {version} ({build})",
+  "@aboutVersionValue": {
+    "description": "Runtime app version/build shown on the About page and Settings row",
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "build": {
+        "type": "String"
+      }
+    }
   }
 }

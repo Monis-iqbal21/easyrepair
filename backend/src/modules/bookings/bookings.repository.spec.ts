@@ -328,6 +328,56 @@ describe('BookingsRepository idempotency guards', () => {
     });
   });
 
+  describe('completeBookingLifecycle', () => {
+    // Chunk 5 commission-accounting hardening: completion is a pure status
+    // transition — commission (finalPrice/platformFee) was already fixed at
+    // hire/accept-bid/accept-quote time and must never be touched again
+    // here, no matter how many times completion is retried. Pinning the
+    // exact write payload is what makes "duplicate completion can't
+    // duplicate commission" true structurally, not just by convention.
+    it('only ever writes status/completedAt — never finalPrice or platformFee', async () => {
+      await repo.completeBookingLifecycle('booking-1', 'worker-1', [
+        'ACCEPTED',
+        'EN_ROUTE',
+        'ARRIVED',
+        'IN_PROGRESS',
+      ]);
+
+      expect(tx.booking.updateMany).toHaveBeenCalledWith({
+        where: { id: 'booking-1', status: { in: ['ACCEPTED', 'EN_ROUTE', 'ARRIVED', 'IN_PROGRESS'] } },
+        data: { status: 'COMPLETED', completedAt: expect.any(Date) },
+      });
+      const writtenKeys = Object.keys(tx.booking.updateMany.mock.calls[0][0].data);
+      expect(writtenKeys).not.toContain('finalPrice');
+      expect(writtenKeys).not.toContain('platformFee');
+    });
+
+    it('a retry that loses the atomic guard (already completed) writes nothing — no duplicate history row, no worker-flag reset', async () => {
+      tx.booking.updateMany.mockResolvedValue({ count: 0 });
+
+      const result = await repo.completeBookingLifecycle('booking-1', 'worker-1', [
+        'IN_PROGRESS',
+      ]);
+
+      expect(result.changed).toBe(false);
+      expect(tx.bookingStatusHistory.create).not.toHaveBeenCalled();
+      expect(tx.workerProfile.update).not.toHaveBeenCalled();
+    });
+
+    it('the winning completion writes the history row and frees the worker exactly once', async () => {
+      const result = await repo.completeBookingLifecycle('booking-1', 'worker-1', [
+        'IN_PROGRESS',
+      ]);
+
+      expect(result.changed).toBe(true);
+      expect(tx.bookingStatusHistory.create).toHaveBeenCalledTimes(1);
+      expect(tx.workerProfile.update).toHaveBeenCalledWith({
+        where: { id: 'worker-1' },
+        data: { currentlyWorking: false },
+      });
+    });
+  });
+
   describe('createReview', () => {
     it('a genuine concurrent double-submit (P2002) resolves to the winning booking instead of throwing', async () => {
       tx.review.create.mockRejectedValue(p2002());

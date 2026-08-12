@@ -16,6 +16,7 @@ import '../config/inspection_issue_hints.dart';
 import '../providers/worker_job_providers.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
 import '../../../../core/errors/failure_messages.dart';
+import '../../../../core/permissions/media_permission_helper.dart';
 
 const _kPrimary = Color(0xFFDB6234);
 const _kDark = Color(0xFF1A1A1A);
@@ -218,7 +219,12 @@ class _InspectionReportFormPageState
       ),
     );
     if (source == null || !mounted) return;
-    final file = await _picker.pickImage(source: source, imageQuality: 85);
+    final file = await pickImageWithRecovery(
+      context,
+      picker: _picker,
+      source: source,
+      imageQuality: 85,
+    );
     if (file != null && mounted) setState(() => _photos.add(file));
   }
 
