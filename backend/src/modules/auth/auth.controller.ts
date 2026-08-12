@@ -13,6 +13,7 @@ import {
   UploadedFile,
   UseInterceptors,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Request } from 'express';
@@ -35,6 +36,8 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
 @Controller('auth')
 export class AuthController {
+  private readonly logger = new Logger(AuthController.name);
+
   constructor(private readonly authService: AuthService) {}
 
   @Post('register')
@@ -86,20 +89,17 @@ export class AuthController {
   @Post('otp/request')
   @HttpCode(HttpStatus.OK)
   requestOtp(@Body() dto: RequestOtpDto, @Req() req: Request) {
-    // TEMPORARY DIAGNOSTIC — remove once the proxy/IP behaviour is confirmed
-    // in production. `req.ip` is what the per-IP abuse cap buckets on; when
-    // `trust proxy` is working it should differ per handset and match the
-    // first entry of x-forwarded-for. Identical values across two devices
-    // means the proxy is still being seen as the client.
-    //
-    // Deliberately carries no OTP and no full phone number.
-    const forwarded = req.headers['x-forwarded-for'];
-    console.log('[OTP IP CHECK]', {
-      ip: req.ip,
-      forwardedFor: forwarded,
-      phone: maskPhone(dto.phone),
-      purpose: dto.purpose,
-    });
+    // Opt-in structured debug logging for the resolved rate-limit IP — off
+    // by default so it never spams production, toggled with OTP_IP_DEBUG=true
+    // to verify `trust proxy` is resolving the real client address after a
+    // deploy without needing a code change. Deliberately carries no OTP and
+    // no full phone number.
+    if (process.env.OTP_IP_DEBUG === 'true') {
+      this.logger.debug(
+        `OTP IP check ip=${req.ip} xff=${req.headers['x-forwarded-for'] ?? ''} ` +
+          `phone=${maskPhone(dto.phone)} purpose=${dto.purpose}`,
+      );
+    }
 
     return this.authService.requestOtp(dto.phone, dto.purpose, req.ip ?? '');
   }

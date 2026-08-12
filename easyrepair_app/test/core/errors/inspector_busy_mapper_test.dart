@@ -69,15 +69,9 @@ void main() {
     test('the other controlled conflict codes are unaffected', () {
       expect(
         dioExceptionToFailure(
-          _conflict({'message': 'x', 'error': 'PHONE_IS_WORKER'}),
+          _conflict({'message': '', 'error': 'PHONE_ALREADY_REGISTERED'}),
         ),
-        isA<WorkerPhoneConflictFailure>(),
-      );
-      expect(
-        dioExceptionToFailure(
-          _conflict({'message': 'x', 'error': 'PHONE_IS_CLIENT'}),
-        ),
-        isA<ClientPhoneConflictFailure>(),
+        isA<PhoneAlreadyRegisteredFailure>(),
       );
     });
 

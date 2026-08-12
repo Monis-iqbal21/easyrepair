@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   HttpException,
 } from '@nestjs/common';
@@ -275,9 +276,13 @@ describe('BidsService', () => {
         },
       }),
       acceptBid: jest.fn().mockResolvedValue({
-        id: 'booking-1',
-        clientProfile: { userId: 'client-user-1' },
-        workerProfile: { userId: 'worker-user-2' },
+        booking: {
+          id: 'booking-1',
+          workerProfileId: 'worker-2',
+          clientProfile: { userId: 'client-user-1' },
+          workerProfile: { userId: 'worker-user-2' },
+        },
+        changed: true,
       }),
     };
     const svc = new BidsService(
@@ -326,12 +331,15 @@ describe('BidsService', () => {
         },
       }),
       acceptBid: jest.fn().mockResolvedValue({
-        id: 'booking-2',
-        status: BookingStatus.ACCEPTED,
-        workerProfileId: 'worker-3',
-        finalPrice: 3000,
-        clientProfile: { userId: 'client-user-1' },
-        workerProfile: { userId: 'worker-user-3' },
+        booking: {
+          id: 'booking-2',
+          status: BookingStatus.ACCEPTED,
+          workerProfileId: 'worker-3',
+          finalPrice: 3000,
+          clientProfile: { userId: 'client-user-1' },
+          workerProfile: { userId: 'worker-user-3' },
+        },
+        changed: true,
       }),
     };
     const svc = new BidsService(
@@ -636,5 +644,120 @@ describe('BidsService', () => {
         ['normal-1'],
       );
     });
+  });
+});
+
+// ── Chunk 3: launch-hardening idempotency ─────────────────────────────────
+describe('BidsService.acceptBid idempotency', () => {
+  let bidsRepository: any;
+  let notificationsService: any;
+  let chatService: any;
+  let jobBroadcastService: any;
+  let service: BidsService;
+
+  beforeEach(() => {
+    bidsRepository = {
+      findClientProfileByUserId: jest
+        .fn()
+        .mockResolvedValue({ id: 'client-1' }),
+      findBidById: jest.fn(),
+      acceptBid: jest.fn(),
+    };
+    notificationsService = { notify: jest.fn().mockResolvedValue(undefined) };
+    chatService = {
+      ensureConversationForBooking: jest.fn().mockResolvedValue(undefined),
+    };
+    jobBroadcastService = { matchRadiusKm: 7 };
+    service = new BidsService(
+      bidsRepository,
+      notificationsService,
+      chatService,
+      jobBroadcastService,
+    );
+  });
+
+  it('retrying an already-accepted bid to the same worker returns success without a second write', async () => {
+    bidsRepository.findBidById.mockResolvedValue({
+      id: 'bid-1',
+      status: 'ACCEPTED',
+      amount: 1500,
+      workerProfile: { id: 'worker-1', userId: 'worker-user-1' },
+      booking: {
+        id: 'booking-1',
+        status: BookingStatus.ACCEPTED,
+        clientProfileId: 'client-1',
+        workerProfileId: 'worker-1',
+      },
+    });
+
+    const result = await service.acceptBid('client-user-1', 'bid-1');
+
+    expect(result).toEqual({
+      success: true,
+      message: 'Bid accepted',
+      bookingId: 'booking-1',
+    });
+    expect(bidsRepository.acceptBid).not.toHaveBeenCalled();
+    expect(notificationsService.notify).not.toHaveBeenCalled();
+  });
+
+  it('losing the race to a concurrent accept of the SAME bid still returns success', async () => {
+    bidsRepository.findBidById.mockResolvedValue({
+      id: 'bid-1',
+      status: 'PENDING',
+      amount: 1500,
+      workerProfile: { id: 'worker-1', userId: 'worker-user-1' },
+      booking: {
+        id: 'booking-1',
+        status: BookingStatus.PENDING,
+        clientProfileId: 'client-1',
+        workerProfileId: null,
+      },
+    });
+    bidsRepository.acceptBid.mockResolvedValue({
+      booking: {
+        id: 'booking-1',
+        workerProfileId: 'worker-1',
+        clientProfile: { userId: 'client-user-1' },
+        workerProfile: { userId: 'worker-user-1' },
+      },
+      changed: false,
+    });
+
+    const result = await service.acceptBid('client-user-1', 'bid-1');
+
+    expect(result).toEqual({
+      success: true,
+      message: 'Bid accepted',
+      bookingId: 'booking-1',
+    });
+  });
+
+  it('losing the race to a hire of a DIFFERENT worker throws a conflict', async () => {
+    bidsRepository.findBidById.mockResolvedValue({
+      id: 'bid-1',
+      status: 'PENDING',
+      amount: 1500,
+      workerProfile: { id: 'worker-1', userId: 'worker-user-1' },
+      booking: {
+        id: 'booking-1',
+        status: BookingStatus.PENDING,
+        clientProfileId: 'client-1',
+        workerProfileId: null,
+      },
+    });
+    bidsRepository.acceptBid.mockResolvedValue({
+      booking: {
+        id: 'booking-1',
+        workerProfileId: 'worker-2',
+        clientProfile: { userId: 'client-user-1' },
+        workerProfile: { userId: 'worker-user-2' },
+      },
+      changed: false,
+    });
+
+    await expect(
+      service.acceptBid('client-user-1', 'bid-1'),
+    ).rejects.toThrow(ConflictException);
   });
 });

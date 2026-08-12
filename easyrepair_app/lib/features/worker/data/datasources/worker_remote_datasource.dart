@@ -4,7 +4,11 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/data/cached_result.dart';
 import '../../../../core/network/api_client.dart';
+import '../../../../core/network/cacheable_fetch.dart';
+import '../../../../core/storage/local_cache_service.dart';
+import '../../../../core/storage/secure_storage_service.dart';
 import '../../../bookings/data/models/booking_model.dart';
 import '../models/worker_profile_model.dart';
 import '../models/category_model.dart';
@@ -14,7 +18,7 @@ import '../models/agreement_template_model.dart'
 import '../models/earning_history_model.dart';
 
 abstract class WorkerRemoteDatasource {
-  Future<WorkerProfileModel> getProfile();
+  Future<CachedResult<WorkerProfileModel>> getProfile();
 
   /// Partial update of the profile-completion text/checkbox fields.
   /// Pass only the fields being changed — omitted params are left untouched.
@@ -58,7 +62,7 @@ abstract class WorkerRemoteDatasource {
     required List<Map<String, dynamic>> agreements,
   });
 
-  Future<List<Map<String, dynamic>>> getNewJobs();
+  Future<CachedResult<List<Map<String, dynamic>>>> getNewJobs();
 
   Future<Map<String, dynamic>> updateAvailability({
     required String status,
@@ -73,9 +77,9 @@ abstract class WorkerRemoteDatasource {
 
   Future<List<CategoryModel>> getCategories();
 
-  Future<List<BookingModel>> getWorkerJobs(String? statusFilter);
+  Future<CachedResult<List<BookingModel>>> getWorkerJobs(String? statusFilter);
 
-  Future<BookingModel> getWorkerJobById(String bookingId);
+  Future<CachedResult<BookingModel>> getWorkerJobById(String bookingId);
 
   Future<BookingModel> completeWorkerJob(String bookingId);
 
@@ -84,37 +88,58 @@ abstract class WorkerRemoteDatasource {
   Future<WorkerReviewSummaryModel> getWorkerReviewSummary();
 
   /// All-time completed-job earnings grouped by date (gross, newest first).
-  Future<List<EarningHistoryDayModel>> getEarningsHistory();
+  Future<CachedResult<List<EarningHistoryDayModel>>> getEarningsHistory();
 }
 
 class WorkerRemoteDatasourceImpl implements WorkerRemoteDatasource {
   final Dio _dio;
+  final LocalCacheService _cache;
+  final SecureStorageService _secureStorage;
 
-  WorkerRemoteDatasourceImpl(this._dio);
+  WorkerRemoteDatasourceImpl(this._dio, this._cache, this._secureStorage);
 
   @override
-  Future<WorkerProfileModel> getProfile() async {
-    final response = await _dio.get<Map<String, dynamic>>('/workers/profile');
-    final data = response.data!['data'] as Map<String, dynamic>;
-    return WorkerProfileModel.fromJson(data);
+  Future<CachedResult<WorkerProfileModel>> getProfile() {
+    return fetchWithCache(
+      cache: _cache,
+      secureStorage: _secureStorage,
+      cacheKey: 'worker_profile',
+      request: () async {
+        final response =
+            await _dio.get<Map<String, dynamic>>('/workers/profile');
+        return response.data!['data'];
+      },
+      decode: (json) =>
+          WorkerProfileModel.fromJson(json as Map<String, dynamic>),
+    );
   }
 
   @override
-  Future<List<Map<String, dynamic>>> getNewJobs() async {
-    debugPrint('[NewJobs] → GET /workers/jobs/new');
-    final response = await _dio.get<Map<String, dynamic>>('/workers/jobs/new');
-    final data = response.data!;
-    final list = (data['data'] as List<dynamic>? ?? [])
-        .cast<Map<String, dynamic>>();
-    debugPrint('[NewJobs] ← status=${response.statusCode} raw count=${list.length}');
-    for (final job in list) {
-      debugPrint(
-        '[NewJobs] job id=${job['id']} urgency=${job['urgency']} '
-        'status=${job['status']} category=${job['category']?['name']} '
-        'distanceKm=${job['distanceKm']} hasMyBid=${job['hasMyBid']}',
-      );
-    }
-    return list;
+  Future<CachedResult<List<Map<String, dynamic>>>> getNewJobs() {
+    return fetchWithCache(
+      cache: _cache,
+      secureStorage: _secureStorage,
+      cacheKey: 'new_jobs',
+      request: () async {
+        debugPrint('[NewJobs] → GET /workers/jobs/new');
+        final response =
+            await _dio.get<Map<String, dynamic>>('/workers/jobs/new');
+        final data = response.data!;
+        final list = (data['data'] as List<dynamic>? ?? [])
+            .cast<Map<String, dynamic>>();
+        debugPrint(
+            '[NewJobs] ← status=${response.statusCode} raw count=${list.length}');
+        for (final job in list) {
+          debugPrint(
+            '[NewJobs] job id=${job['id']} urgency=${job['urgency']} '
+            'status=${job['status']} category=${job['category']?['name']} '
+            'distanceKm=${job['distanceKm']} hasMyBid=${job['hasMyBid']}',
+          );
+        }
+        return list;
+      },
+      decode: (json) => (json as List<dynamic>).cast<Map<String, dynamic>>(),
+    );
   }
 
   @override
@@ -271,35 +296,52 @@ class WorkerRemoteDatasourceImpl implements WorkerRemoteDatasource {
   }
 
   @override
-  Future<List<BookingModel>> getWorkerJobs(String? statusFilter) async {
-    final queryParams = <String, dynamic>{};
-    if (statusFilter != null) queryParams['filter'] = statusFilter;
+  Future<CachedResult<List<BookingModel>>> getWorkerJobs(String? statusFilter) {
+    return fetchWithCache(
+      cache: _cache,
+      secureStorage: _secureStorage,
+      cacheKey: 'worker_jobs:${statusFilter ?? 'all'}',
+      request: () async {
+        final queryParams = <String, dynamic>{};
+        if (statusFilter != null) queryParams['filter'] = statusFilter;
 
-    final response = await _dio.get<Map<String, dynamic>>(
-      '/workers/jobs',
-      queryParameters: queryParams.isEmpty ? null : queryParams,
+        final response = await _dio.get<Map<String, dynamic>>(
+          '/workers/jobs',
+          queryParameters: queryParams.isEmpty ? null : queryParams,
+        );
+        return response.data!['data'];
+      },
+      decode: (json) => (json as List<dynamic>)
+          .map((e) => BookingModel.fromJson(e as Map<String, dynamic>))
+          .toList(),
     );
-    final list = response.data!['data'] as List<dynamic>;
-    return list
-        .map((e) => BookingModel.fromJson(e as Map<String, dynamic>))
-        .toList();
   }
 
   @override
-  Future<BookingModel> getWorkerJobById(String bookingId) async {
-    debugPrint('[WorkerDatasource] getWorkerJobById called with bookingId=$bookingId');
-    debugPrint('[WorkerDatasource] API endpoint: GET /workers/jobs/$bookingId');
-    final response = await _dio.get<Map<String, dynamic>>(
-      '/workers/jobs/$bookingId',
+  Future<CachedResult<BookingModel>> getWorkerJobById(String bookingId) {
+    return fetchWithCache(
+      cache: _cache,
+      secureStorage: _secureStorage,
+      cacheKey: 'worker_job_detail:$bookingId',
+      request: () async {
+        debugPrint('[WorkerDatasource] getWorkerJobById called with bookingId=$bookingId');
+        debugPrint('[WorkerDatasource] API endpoint: GET /workers/jobs/$bookingId');
+        final response = await _dio.get<Map<String, dynamic>>(
+          '/workers/jobs/$bookingId',
+        );
+        final data = response.data!['data'] as Map<String, dynamic>;
+        debugPrint('[WorkerDatasource] getWorkerJobById success, returned id=${data['id']} status=${data['status']}');
+        return data;
+      },
+      decode: (json) {
+        final model = BookingModel.fromJson(json as Map<String, dynamic>);
+        debugPrint('[WorkerJobDetail] attachments count = ${model.attachments.length}');
+        if (model.attachments.isNotEmpty) {
+          debugPrint('[WorkerJobDetail] attachment types = ${model.attachments.map((a) => a.type).toList()}');
+        }
+        return model;
+      },
     );
-    final data = response.data!['data'] as Map<String, dynamic>;
-    debugPrint('[WorkerDatasource] getWorkerJobById success, returned id=${data['id']} status=${data['status']}');
-    final model = BookingModel.fromJson(data);
-    debugPrint('[WorkerJobDetail] attachments count = ${model.attachments.length}');
-    if (model.attachments.isNotEmpty) {
-      debugPrint('[WorkerJobDetail] attachment types = ${model.attachments.map((a) => a.type).toList()}');
-    }
-    return model;
   }
 
   @override
@@ -336,17 +378,28 @@ class WorkerRemoteDatasourceImpl implements WorkerRemoteDatasource {
   }
 
   @override
-  Future<List<EarningHistoryDayModel>> getEarningsHistory() async {
-    final response = await _dio.get<Map<String, dynamic>>(
-      '/workers/earnings/history',
+  Future<CachedResult<List<EarningHistoryDayModel>>> getEarningsHistory() {
+    return fetchWithCache(
+      cache: _cache,
+      secureStorage: _secureStorage,
+      cacheKey: 'earnings_history',
+      request: () async {
+        final response = await _dio.get<Map<String, dynamic>>(
+          '/workers/earnings/history',
+        );
+        return response.data!['data'];
+      },
+      decode: (json) => (json as List<dynamic>)
+          .map((e) => EarningHistoryDayModel.fromJson(e as Map<String, dynamic>))
+          .toList(),
     );
-    final list = response.data!['data'] as List<dynamic>;
-    return list
-        .map((e) => EarningHistoryDayModel.fromJson(e as Map<String, dynamic>))
-        .toList();
   }
 }
 
 final workerRemoteDatasourceProvider = Provider<WorkerRemoteDatasource>((ref) {
-  return WorkerRemoteDatasourceImpl(ref.watch(dioProvider));
+  return WorkerRemoteDatasourceImpl(
+    ref.watch(dioProvider),
+    ref.watch(localCacheServiceProvider),
+    ref.watch(secureStorageServiceProvider),
+  );
 });

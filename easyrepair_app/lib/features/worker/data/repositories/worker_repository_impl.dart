@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/data/cached_result.dart';
 import '../../../../core/errors/dio_failure_mapper.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../bookings/data/models/booking_model.dart';
@@ -26,14 +27,14 @@ class WorkerRepositoryImpl implements WorkerRepository {
   const WorkerRepositoryImpl(this._datasource);
 
   @override
-  Future<Either<Failure, WorkerProfileEntity>> getProfile() async {
+  Future<Either<Failure, CachedResult<WorkerProfileEntity>>> getProfile() async {
     try {
-      final model = await _datasource.getProfile();
-      return Right(model.toEntity());
+      final result = await _datasource.getProfile();
+      return Right(CachedResult(result.data.toEntity(), isStale: result.isStale));
     } on DioException catch (e) {
       return Left(dioExceptionToFailure(e));
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
@@ -63,7 +64,7 @@ class WorkerRepositoryImpl implements WorkerRepository {
     } on DioException catch (e) {
       return Left(dioExceptionToFailure(e));
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
@@ -81,7 +82,7 @@ class WorkerRepositoryImpl implements WorkerRepository {
     } on AgreementResponseFormatException catch (e) {
       return Left(_malformedAgreementFailure(e));
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
@@ -96,7 +97,7 @@ class WorkerRepositoryImpl implements WorkerRepository {
     } on AgreementResponseFormatException catch (e) {
       return Left(_malformedAgreementFailure(e));
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
@@ -118,7 +119,7 @@ class WorkerRepositoryImpl implements WorkerRepository {
     } on DioException catch (e) {
       return Left(dioExceptionToFailure(e));
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
@@ -129,7 +130,7 @@ class WorkerRepositoryImpl implements WorkerRepository {
     } on DioException catch (e) {
       return Left(dioExceptionToFailure(e));
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
@@ -140,7 +141,7 @@ class WorkerRepositoryImpl implements WorkerRepository {
     } on DioException catch (e) {
       return Left(dioExceptionToFailure(e));
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
@@ -151,7 +152,7 @@ class WorkerRepositoryImpl implements WorkerRepository {
     } on DioException catch (e) {
       return Left(dioExceptionToFailure(e));
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
@@ -184,7 +185,7 @@ class WorkerRepositoryImpl implements WorkerRepository {
     } on DioException catch (e) {
       return Left(dioExceptionToFailure(e));
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
@@ -205,7 +206,7 @@ class WorkerRepositoryImpl implements WorkerRepository {
     } on DioException catch (e) {
       return Left(dioExceptionToFailure(e));
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
@@ -220,7 +221,7 @@ class WorkerRepositoryImpl implements WorkerRepository {
     } on DioException catch (e) {
       return Left(dioExceptionToFailure(e));
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
@@ -234,7 +235,7 @@ class WorkerRepositoryImpl implements WorkerRepository {
     } on DioException catch (e) {
       return Left(dioExceptionToFailure(e));
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
@@ -246,19 +247,22 @@ class WorkerRepositoryImpl implements WorkerRepository {
     } on DioException catch (e) {
       return Left(dioExceptionToFailure(e));
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
   @override
-  Future<Either<Failure, List<NewJobEntity>>> getNewJobs() async {
+  Future<Either<Failure, CachedResult<List<NewJobEntity>>>> getNewJobs() async {
     try {
-      final maps = await _datasource.getNewJobs();
-      return Right(maps.map(_parseNewJob).toList());
+      final result = await _datasource.getNewJobs();
+      return Right(CachedResult(
+        result.data.map(_parseNewJob).toList(),
+        isStale: result.isStale,
+      ));
     } on DioException catch (e) {
       return Left(dioExceptionToFailure(e));
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
@@ -327,30 +331,33 @@ class WorkerRepositoryImpl implements WorkerRepository {
   }
 
   @override
-  Future<Either<Failure, List<BookingEntity>>> getWorkerJobs(
+  Future<Either<Failure, CachedResult<List<BookingEntity>>>> getWorkerJobs(
     String? statusFilter,
   ) async {
     try {
-      final models = await _datasource.getWorkerJobs(statusFilter);
-      return Right(models.map((m) => m.toEntity()).toList());
+      final result = await _datasource.getWorkerJobs(statusFilter);
+      return Right(CachedResult(
+        result.data.map((m) => m.toEntity()).toList(),
+        isStale: result.isStale,
+      ));
     } on DioException catch (e) {
       return Left(dioExceptionToFailure(e));
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
   @override
-  Future<Either<Failure, BookingEntity>> getWorkerJobById(
+  Future<Either<Failure, CachedResult<BookingEntity>>> getWorkerJobById(
     String bookingId,
   ) async {
     try {
-      final model = await _datasource.getWorkerJobById(bookingId);
-      return Right(model.toEntity());
+      final result = await _datasource.getWorkerJobById(bookingId);
+      return Right(CachedResult(result.data.toEntity(), isStale: result.isStale));
     } on DioException catch (e) {
       return Left(dioExceptionToFailure(e));
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
@@ -364,7 +371,7 @@ class WorkerRepositoryImpl implements WorkerRepository {
     } on DioException catch (e) {
       return Left(dioExceptionToFailure(e));
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
@@ -378,7 +385,7 @@ class WorkerRepositoryImpl implements WorkerRepository {
     } on DioException catch (e) {
       return Left(dioExceptionToFailure(e));
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
@@ -391,20 +398,23 @@ class WorkerRepositoryImpl implements WorkerRepository {
     } on DioException catch (e) {
       return Left(dioExceptionToFailure(e));
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
   @override
-  Future<Either<Failure, List<EarningHistoryDayEntity>>>
+  Future<Either<Failure, CachedResult<List<EarningHistoryDayEntity>>>>
       getEarningsHistory() async {
     try {
-      final models = await _datasource.getEarningsHistory();
-      return Right(models.map((m) => m.toEntity()).toList());
+      final result = await _datasource.getEarningsHistory();
+      return Right(CachedResult(
+        result.data.map((m) => m.toEntity()).toList(),
+        isStale: result.isStale,
+      ));
     } on DioException catch (e) {
       return Left(dioExceptionToFailure(e));
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 }

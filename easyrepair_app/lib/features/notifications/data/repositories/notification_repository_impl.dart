@@ -21,7 +21,7 @@ class NotificationRepositoryImpl implements NotificationRepository {
     } on DioException catch (e) {
       return Left(dioExceptionToFailure(e));
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
@@ -33,7 +33,7 @@ class NotificationRepositoryImpl implements NotificationRepository {
     } on DioException catch (e) {
       return Left(dioExceptionToFailure(e));
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
@@ -45,7 +45,7 @@ class NotificationRepositoryImpl implements NotificationRepository {
     } on DioException catch (e) {
       return Left(dioExceptionToFailure(e));
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
@@ -57,7 +57,7 @@ class NotificationRepositoryImpl implements NotificationRepository {
     } on DioException catch (e) {
       return Left(dioExceptionToFailure(e));
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
@@ -69,7 +69,7 @@ class NotificationRepositoryImpl implements NotificationRepository {
     } on DioException catch (e) {
       return Left(dioExceptionToFailure(e));
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 }

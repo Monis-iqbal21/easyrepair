@@ -89,6 +89,25 @@ export class BookingsService {
     }
     this.logger.log(`[createBooking] clientProfileId=${profile.id}`);
 
+    // Retry of the same submission attempt (network timeout, lost response)
+    // reuses the same idempotencyKey — short-circuit before re-running any
+    // validation/lookups and return the already-created booking as-is,
+    // rather than creating a second identical booking.
+    if (dto.idempotencyKey) {
+      const existing = await this.bookingsRepository.findBookingByIdempotencyKey(
+        dto.idempotencyKey,
+      );
+      if (existing) {
+        if (existing.clientProfileId !== profile.id) {
+          throw new ForbiddenException('Client profile not found');
+        }
+        this.logger.log(
+          `[createBooking] idempotent replay bookingId=${existing.id} idempotencyKey=${dto.idempotencyKey}`,
+        );
+        return this._toDto(existing);
+      }
+    }
+
     const category = await this.bookingsRepository.findCategoryByName(
       dto.serviceCategory,
     );
@@ -209,6 +228,7 @@ export class BookingsService {
       estimatedPrice,
       expiresAt,
       liveStartedAt: now,
+      idempotencyKey: dto.idempotencyKey,
     });
 
     this.logger.log(
@@ -295,18 +315,42 @@ export class BookingsService {
       BookingStatus.PENDING,
       BookingStatus.ACCEPTED,
     ];
+
+    // A retry of an already-successful cancel (client's first response was
+    // lost, or a double-tap raced past the disabled button) lands here with
+    // the booking already CANCELLED. That is exactly the outcome the caller
+    // wanted, so return the current state as success instead of a conflict
+    // error, and skip re-running the expiry-cancel / notification below.
+    if (booking.status === BookingStatus.CANCELLED) {
+      return this._toDto(booking);
+    }
+
     if (!clientCancellableStatuses.includes(booking.status)) {
       throw new BadRequestException(
         `Cannot cancel a booking with status ${booking.status}. Cancellation is only allowed before the worker is on the way.`,
       );
     }
 
-    const updated = await this.bookingsRepository.cancelBooking(
-      bookingId,
-      reason,
-      booking.workerProfile?.id ?? null,
-      'CLIENT',
-    );
+    const { booking: updated, changed } =
+      await this.bookingsRepository.cancelBooking(
+        bookingId,
+        clientCancellableStatuses,
+        reason,
+        booking.workerProfile?.id ?? null,
+        'CLIENT',
+      );
+
+    if (!changed) {
+      // Lost the race to a concurrent request on the same booking. If the
+      // winner also cancelled it, this is a safe idempotent retry outcome;
+      // any other status is a genuine conflict.
+      if (updated.status === BookingStatus.CANCELLED) {
+        return this._toDto(updated);
+      }
+      throw new BadRequestException(
+        `Cannot cancel a booking with status ${updated.status}. Cancellation is only allowed before the worker is on the way.`,
+      );
+    }
 
     // Booking is no longer PENDING â€” cancel its auto-expiry job. Fire-and-forget.
     void this._cancelExpiry(bookingId).catch((err) => {
@@ -874,6 +918,12 @@ export class BookingsService {
     if (booking.clientProfileId !== profile.id)
       throw new ForbiddenException('Not your booking');
 
+    // Retry of an already-successful hire to this same worker (lost
+    // response, double-tap that raced the disabled button) — return the
+    // current booking as success instead of a conflict.
+    if (booking.workerProfileId === workerProfileId) {
+      return this._toDto(booking);
+    }
     if (booking.status !== BookingStatus.PENDING) {
       throw new BadRequestException(
         'Can only assign a worker to a PENDING booking.',
@@ -952,13 +1002,15 @@ export class BookingsService {
       finalPrice !== undefined ? calculatePlatformFee(finalPrice) : undefined;
 
     let updated: BookingWithRelations;
+    let changed: boolean;
     try {
-      updated = await this.bookingsRepository.assignWorkerToBooking(
-        bookingId,
-        workerProfileId,
-        finalPrice,
-        platformFee,
-      );
+      ({ booking: updated, changed } =
+        await this.bookingsRepository.assignWorkerToBooking(
+          bookingId,
+          workerProfileId,
+          finalPrice,
+          platformFee,
+        ));
     } catch (err) {
       if (err instanceof WorkerUnavailableError) {
         throw new ConflictException(
@@ -966,6 +1018,15 @@ export class BookingsService {
         );
       }
       throw err;
+    }
+    if (!changed) {
+      // Lost the race to a concurrent assign/acceptBid on the same booking.
+      if (updated.workerProfileId === workerProfileId) {
+        return this._toDto(updated);
+      }
+      throw new ConflictException(
+        'This booking already has an assigned worker.',
+      );
     }
 
     // Booking is no longer PENDING â€” cancel its auto-expiry job. Fire-and-forget.
@@ -1029,13 +1090,29 @@ export class BookingsService {
     bookingId: string,
   ): Promise<BookingResponseDto> {
     const booking = await this._authorizeAssignedWorker(userId, bookingId);
+
+    // Retry of an already-successful transition (lost response, double-tap
+    // that raced the disabled button) — return current state, no duplicate
+    // history row or notification.
+    if (booking.status === BookingStatus.EN_ROUTE) {
+      return this._toDto(booking);
+    }
     if (booking.status !== BookingStatus.ACCEPTED) {
       throw new BadRequestException(
         `Cannot mark on-the-way from status ${booking.status}. Expected ACCEPTED.`,
       );
     }
 
-    const updated = await this.bookingsRepository.markEnRoute(bookingId);
+    const { booking: updated, changed } =
+      await this.bookingsRepository.markEnRoute(bookingId);
+    if (!changed) {
+      if (updated.status === BookingStatus.EN_ROUTE) {
+        return this._toDto(updated);
+      }
+      throw new BadRequestException(
+        `Cannot mark on-the-way from status ${updated.status}. Expected ACCEPTED.`,
+      );
+    }
 
     if (updated.clientProfile?.userId) {
       void this.notificationsService.notify({
@@ -1061,13 +1138,26 @@ export class BookingsService {
     bookingId: string,
   ): Promise<BookingResponseDto> {
     const booking = await this._authorizeAssignedWorker(userId, bookingId);
+
+    if (booking.status === BookingStatus.ARRIVED) {
+      return this._toDto(booking);
+    }
     if (booking.status !== BookingStatus.EN_ROUTE) {
       throw new BadRequestException(
         `Cannot mark arrived from status ${booking.status}. Expected EN_ROUTE.`,
       );
     }
 
-    const updated = await this.bookingsRepository.markArrived(bookingId);
+    const { booking: updated, changed } =
+      await this.bookingsRepository.markArrived(bookingId);
+    if (!changed) {
+      if (updated.status === BookingStatus.ARRIVED) {
+        return this._toDto(updated);
+      }
+      throw new BadRequestException(
+        `Cannot mark arrived from status ${updated.status}. Expected EN_ROUTE.`,
+      );
+    }
 
     if (updated.clientProfile?.userId) {
       void this.notificationsService.notify({
@@ -1093,13 +1183,26 @@ export class BookingsService {
     bookingId: string,
   ): Promise<BookingResponseDto> {
     const booking = await this._authorizeAssignedWorker(userId, bookingId);
+
+    if (booking.status === BookingStatus.IN_PROGRESS) {
+      return this._toDto(booking);
+    }
     if (booking.status !== BookingStatus.ARRIVED) {
       throw new BadRequestException(
         `Cannot start job from status ${booking.status}. Expected ARRIVED.`,
       );
     }
 
-    const updated = await this.bookingsRepository.markInProgress(bookingId);
+    const { booking: updated, changed } =
+      await this.bookingsRepository.markInProgress(bookingId);
+    if (!changed) {
+      if (updated.status === BookingStatus.IN_PROGRESS) {
+        return this._toDto(updated);
+      }
+      throw new BadRequestException(
+        `Cannot start job from status ${updated.status}. Expected ARRIVED.`,
+      );
+    }
 
     if (updated.clientProfile?.userId) {
       void this.notificationsService.notify({
@@ -1131,6 +1234,15 @@ export class BookingsService {
     bookingId: string,
   ): Promise<BookingResponseDto> {
     const booking = await this._authorizeAssignedWorker(userId, bookingId);
+
+    // Retry of an already-successful completion (lost response, double-tap
+    // that raced the disabled button, or the sibling legacy
+    // /workers/jobs/:id/complete endpoint already completed it) — return
+    // current state, no duplicate earnings/commission recompute or
+    // notification.
+    if (booking.status === BookingStatus.COMPLETED) {
+      return this._toDto(booking);
+    }
 
     // INSPECTION lane: worker cannot complete without submitting a report,
     // and cannot complete while the client hasn't decided or has already
@@ -1180,10 +1292,20 @@ export class BookingsService {
 
     const workerProfile =
       await this.bookingsRepository.findWorkerProfileByUserId(userId);
-    const updated = await this.bookingsRepository.completeBookingLifecycle(
-      bookingId,
-      workerProfile!.id,
-    );
+    const { booking: updated, changed } =
+      await this.bookingsRepository.completeBookingLifecycle(
+        bookingId,
+        workerProfile!.id,
+        completable,
+      );
+    if (!changed) {
+      if (updated.status === BookingStatus.COMPLETED) {
+        return this._toDto(updated);
+      }
+      throw new BadRequestException(
+        `Cannot complete a job with status ${updated.status}`,
+      );
+    }
 
     // Single shared, deduplicated completion notice â€” see
     // JobCompletionNotifierService. Every completion path routes here so the
@@ -1231,6 +1353,9 @@ export class BookingsService {
         'Only INSPECTION bookings can be closed after inspection.',
       );
     }
+    if (booking.status === BookingStatus.COMPLETED) {
+      return this._toDto(booking);
+    }
     if (booking.status !== BookingStatus.IN_PROGRESS) {
       throw new BadRequestException(
         `Cannot close booking with status ${booking.status}. Expected IN_PROGRESS.`,
@@ -1240,10 +1365,20 @@ export class BookingsService {
       throw new BadRequestException('Booking has no assigned worker.');
     }
 
-    const updated = await this.bookingsRepository.completeBookingLifecycle(
-      bookingId,
-      booking.workerProfileId,
-    );
+    const { booking: updated, changed } =
+      await this.bookingsRepository.completeBookingLifecycle(
+        bookingId,
+        booking.workerProfileId,
+        [BookingStatus.IN_PROGRESS],
+      );
+    if (!changed) {
+      if (updated.status === BookingStatus.COMPLETED) {
+        return this._toDto(updated);
+      }
+      throw new BadRequestException(
+        `Cannot close booking with status ${updated.status}. Expected IN_PROGRESS.`,
+      );
+    }
 
     void this.jobCompletionNotifier.notifyClientJobCompleted(
       bookingId,

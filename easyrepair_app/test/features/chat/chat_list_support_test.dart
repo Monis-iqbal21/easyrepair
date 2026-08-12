@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import '../../support/l10n_test_app.dart';
 import 'package:fpdart/fpdart.dart';
+import 'package:handygo_app/core/data/cached_result.dart';
 import 'package:handygo_app/core/errors/failures.dart';
 import 'package:handygo_app/features/chat/domain/entities/chat_entities.dart';
 import 'package:handygo_app/features/chat/domain/repositories/chat_repository.dart';
@@ -28,8 +29,9 @@ class _FakeChatRepository implements ChatRepository {
   }
 
   @override
-  Future<Either<Failure, List<ConversationEntity>>> getConversations() async {
-    return Right(conversations);
+  Future<Either<Failure, CachedResult<List<ConversationEntity>>>>
+      getConversations() async {
+    return Right(CachedResult(conversations));
   }
 
   @override

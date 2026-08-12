@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:fpdart/fpdart.dart';
 
+import '../../../../core/data/cached_result.dart';
 import '../../../../core/errors/failures.dart';
 import '../../domain/entities/booking_entity.dart';
 import '../../domain/entities/create_booking_request.dart';
@@ -26,33 +27,37 @@ class BookingRepositoryImpl implements BookingRepository {
     } on Failure catch (f) {
       return Left(f);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
   @override
-  Future<Either<Failure, List<BookingEntity>>> getClientBookings() async {
+  Future<Either<Failure, CachedResult<List<BookingEntity>>>>
+      getClientBookings() async {
     try {
-      final models = await _dataSource.getClientBookings();
-      return Right(models.map((m) => m.toEntity()).toList());
+      final result = await _dataSource.getClientBookings();
+      return Right(CachedResult(
+        result.data.map((m) => m.toEntity()).toList(),
+        isStale: result.isStale,
+      ));
     } on Failure catch (f) {
       return Left(f);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
   @override
-  Future<Either<Failure, BookingEntity>> getBookingById(
+  Future<Either<Failure, CachedResult<BookingEntity>>> getBookingById(
     String bookingId,
   ) async {
     try {
-      final model = await _dataSource.getBookingById(bookingId);
-      return Right(model.toEntity());
+      final result = await _dataSource.getBookingById(bookingId);
+      return Right(CachedResult(result.data.toEntity(), isStale: result.isStale));
     } on Failure catch (f) {
       return Left(f);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
@@ -64,7 +69,7 @@ class BookingRepositoryImpl implements BookingRepository {
     } on Failure catch (f) {
       return Left(f);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
@@ -78,7 +83,7 @@ class BookingRepositoryImpl implements BookingRepository {
     } on Failure catch (f) {
       return Left(f);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
@@ -93,7 +98,7 @@ class BookingRepositoryImpl implements BookingRepository {
     } on Failure catch (f) {
       return Left(f);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
@@ -107,7 +112,7 @@ class BookingRepositoryImpl implements BookingRepository {
     } on Failure catch (f) {
       return Left(f);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
@@ -129,7 +134,7 @@ class BookingRepositoryImpl implements BookingRepository {
     } on Failure catch (f) {
       return Left(f);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
@@ -144,7 +149,7 @@ class BookingRepositoryImpl implements BookingRepository {
     } on Failure catch (f) {
       return Left(f);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
@@ -159,7 +164,7 @@ class BookingRepositoryImpl implements BookingRepository {
     } on Failure catch (f) {
       return Left(f);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
@@ -174,7 +179,7 @@ class BookingRepositoryImpl implements BookingRepository {
     } on Failure catch (f) {
       return Left(f);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
@@ -188,7 +193,7 @@ class BookingRepositoryImpl implements BookingRepository {
     } on Failure catch (f) {
       return Left(f);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
@@ -203,7 +208,7 @@ class BookingRepositoryImpl implements BookingRepository {
     } on Failure catch (f) {
       return Left(f);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
@@ -215,7 +220,7 @@ class BookingRepositoryImpl implements BookingRepository {
     } on Failure catch (f) {
       return Left(f);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
@@ -227,7 +232,7 @@ class BookingRepositoryImpl implements BookingRepository {
     } on Failure catch (f) {
       return Left(f);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
@@ -239,7 +244,7 @@ class BookingRepositoryImpl implements BookingRepository {
     } on Failure catch (f) {
       return Left(f);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
@@ -253,7 +258,7 @@ class BookingRepositoryImpl implements BookingRepository {
     } on Failure catch (f) {
       return Left(f);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
@@ -268,7 +273,7 @@ class BookingRepositoryImpl implements BookingRepository {
     } on Failure catch (f) {
       return Left(f);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
@@ -302,7 +307,7 @@ class BookingRepositoryImpl implements BookingRepository {
     } on Failure catch (f) {
       return Left(f);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
@@ -316,7 +321,7 @@ class BookingRepositoryImpl implements BookingRepository {
     } on Failure catch (f) {
       return Left(f);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
@@ -330,7 +335,7 @@ class BookingRepositoryImpl implements BookingRepository {
     } on Failure catch (f) {
       return Left(f);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
@@ -344,7 +349,7 @@ class BookingRepositoryImpl implements BookingRepository {
     } on Failure catch (f) {
       return Left(f);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
@@ -358,7 +363,7 @@ class BookingRepositoryImpl implements BookingRepository {
     } on Failure catch (f) {
       return Left(f);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
@@ -372,7 +377,7 @@ class BookingRepositoryImpl implements BookingRepository {
     } on Failure catch (f) {
       return Left(f);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 }

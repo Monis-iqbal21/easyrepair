@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:handygo_app/core/l10n/app_locale.dart';
 import '../../support/l10n_test_app.dart';
 import 'package:fpdart/fpdart.dart';
+import 'package:handygo_app/core/data/cached_result.dart';
 import 'package:handygo_app/core/errors/failures.dart';
 import 'package:handygo_app/features/auth/presentation/providers/auth_providers.dart';
 import 'package:handygo_app/features/chat/domain/entities/chat_entities.dart';
@@ -23,18 +24,18 @@ class _FakeChatRepository implements ChatRepository {
       const Right(null);
 
   @override
-  Future<Either<Failure, List<ConversationEntity>>> getConversations() async =>
-      Right(conversations);
+  Future<Either<Failure, CachedResult<List<ConversationEntity>>>>
+      getConversations() async => Right(CachedResult(conversations));
 
   @override
-  Future<Either<Failure, List<MessageEntity>>> getMessages(
+  Future<Either<Failure, CachedResult<List<MessageEntity>>>> getMessages(
     String conversationId, {
     int limit = 30,
     String? before,
   }) async {
     // Deliberately empty: the banner must appear without any persisted
     // message backing it.
-    return const Right(<MessageEntity>[]);
+    return const Right(CachedResult(<MessageEntity>[]));
   }
 
   @override

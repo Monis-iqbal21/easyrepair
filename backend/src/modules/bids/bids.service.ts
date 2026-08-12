@@ -409,6 +409,21 @@ export class BidsService {
       throw new ForbiddenException('You do not own this booking');
     }
 
+    // Retry of an already-successful accept of this same bid (lost response,
+    // double-tap that raced the disabled button) — this bid is ACCEPTED and
+    // its worker is already the one hired, so return success instead of the
+    // "no longer available" conflict below.
+    if (
+      bid.status === 'ACCEPTED' &&
+      bid.booking.workerProfileId === bid.workerProfile.id
+    ) {
+      return {
+        success: true,
+        message: 'Bid accepted',
+        bookingId: bid.booking.id,
+      };
+    }
+
     if (bid.booking.status !== BookingStatus.PENDING) {
       throw new BadRequestException(
         `Cannot accept a bid on a booking that is no longer PENDING (current status: ${bid.booking.status})`,
@@ -424,15 +439,18 @@ export class BidsService {
     const finalPrice = Number(bid.amount);
     const platformFee = calculatePlatformFee(finalPrice);
 
-    let booking: Awaited<ReturnType<typeof this.bidsRepository.acceptBid>>;
+    let booking: Awaited<
+      ReturnType<typeof this.bidsRepository.acceptBid>
+    >['booking'];
+    let changed: boolean;
     try {
-      booking = await this.bidsRepository.acceptBid(
+      ({ booking, changed } = await this.bidsRepository.acceptBid(
         bidId,
         bid.booking.id,
         bid.workerProfile.id,
         finalPrice,
         platformFee,
-      );
+      ));
     } catch (err) {
       if (err instanceof WorkerUnavailableError) {
         throw new ConflictException(
@@ -440,6 +458,20 @@ export class BidsService {
         );
       }
       throw err;
+    }
+
+    if (!changed) {
+      // Lost the race to a concurrent accept/assign on the same booking.
+      if (booking.workerProfileId === bid.workerProfile.id) {
+        return {
+          success: true,
+          message: 'Bid accepted',
+          bookingId: bid.booking.id,
+        };
+      }
+      throw new ConflictException(
+        'This Ustaad just got another job. Please choose another Ustaad.',
+      );
     }
 
     // Fire-and-forget notification to the winning worker.

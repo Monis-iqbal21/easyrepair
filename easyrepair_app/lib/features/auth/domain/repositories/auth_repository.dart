@@ -18,14 +18,18 @@ extension OtpPurposeApiValue on OtpPurpose {
 }
 
 /// Result of `/auth/client/phone-check` — drives which sub-form the Client
-/// password mode shows.
-enum ClientPhoneStatus { client, worker, newAccount }
+/// password mode shows. Role-privacy safe: a Worker-owned phone reports as
+/// [newAccount], exactly like a genuinely new number — see backend
+/// `AuthService.checkClientPhoneStatus`. The subsequent registration attempt
+/// on that phone correctly rejects with "already registered" without ever
+/// revealing it belongs to a Worker.
+enum ClientPhoneStatus { client, newAccount }
 
 abstract class AuthRepository {
   /// Classifies [phone] before any password is entered — existing Client
-  /// (show login), Worker (show the Ustaad-login redirect), or unregistered
-  /// (show registration). Deliberately not enumeration-safe by design (see
-  /// backend `AuthService.checkClientPhoneStatus`).
+  /// (show login) or not (show registration). Deliberately reveals only
+  /// whether a CLIENT account exists, never whether a Worker owns the
+  /// number.
   Future<Either<Failure, ClientPhoneStatus>> checkClientPhoneStatus(
     String phone,
   );

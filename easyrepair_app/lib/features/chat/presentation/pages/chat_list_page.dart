@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/errors/failure_messages.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
+import '../../../../core/network/offline_banner.dart';
 import '../../../../core/utils/support_search.dart';
 import '../../domain/entities/chat_entities.dart';
 import '../providers/chat_providers.dart';
@@ -88,6 +90,8 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
   @override
   Widget build(BuildContext context) {
     final conversationsAsync = ref.watch(chatConversationsProvider);
+    final isShowingCachedData = ref.watch(chatConversationsIsOfflineProvider) &&
+        conversationsAsync.hasValue;
 
     return PopScope(
       canPop: false,
@@ -159,6 +163,7 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
                 ),
               ),
             ),
+            if (isShowingCachedData) const OfflineDataBanner(),
             Expanded(
               child: conversationsAsync.when(
                 loading: () => const Center(
@@ -167,7 +172,7 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
                   ),
                 ),
                 error: (err, _) => _ErrorView(
-                  message: err.toString(),
+                  message: failureMessage(context.l10n, err),
                   onRetry: () => ref
                       .read(chatConversationsProvider.notifier)
                       .refresh(),

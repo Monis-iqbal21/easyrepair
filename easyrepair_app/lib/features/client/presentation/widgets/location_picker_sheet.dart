@@ -7,6 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
+import '../../../../core/location/location_availability.dart';
+import '../../../../core/location/location_recovery_snack.dart';
 
 // ── API key (dart-define) ──────────────────────────────────────────────────────
 const _kMapsApiKey = String.fromEnvironment('GOOGLE_MAPS_API_KEY');
@@ -160,26 +162,21 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
   Future<void> _goToCurrentLocation() async {
     setState(() => _gpsLoading = true);
     try {
-      var perm = await Geolocator.checkPermission();
-      if (perm == LocationPermission.denied) {
-        perm = await Geolocator.requestPermission();
-      }
-      if (perm == LocationPermission.denied ||
-          perm == LocationPermission.deniedForever) {
-        if (mounted) _showSnack(context.l10n.workerLocationPermissionDenied);
+      final result = await resolveCurrentLocation();
+      if (!result.isAvailable) {
+        if (mounted) {
+          showLocationRecoverySnack(
+            context,
+            result.status,
+            onRetry: _goToCurrentLocation,
+          );
+        }
         return;
       }
-      final pos = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-          timeLimit: Duration(seconds: 10),
-        ),
-      );
+      final pos = result.position!;
       final latlng = LatLng(pos.latitude, pos.longitude);
       _moveMap(latlng);
       await _resolveAndSet(latlng);
-    } catch (_) {
-      if (mounted) _showSnack(context.l10n.locationCurrentFailed);
     } finally {
       if (mounted) setState(() => _gpsLoading = false);
     }

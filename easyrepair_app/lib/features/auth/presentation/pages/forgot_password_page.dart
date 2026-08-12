@@ -26,12 +26,20 @@ class _RequestNotifier extends AutoDisposeAsyncNotifier<DateTime?> {
   Future<DateTime?> build() async => null;
 
   Future<bool> request(String phone) async {
-    state = const AsyncLoading();
+    // .copyWithPrevious carries the last known expiresAt through loading and
+    // error states, so a resend that fails (e.g. a genuine SMS provider
+    // hiccup) doesn't drop the already-showing OTP box back to the phone
+    // form — see OtpRequestNotifier.request for the full rationale. The
+    // backend's own rate-limit/cooldown are enumeration-safe here and never
+    // surface as an error (they silently return the still-valid expiresAt),
+    // so this only matters for genuine send failures.
+    state = const AsyncLoading<DateTime?>().copyWithPrevious(state);
     final result =
         await ref.read(authRepositoryProvider).forgotPasswordRequest(phone);
     return result.fold(
       (f) {
-        state = AsyncError(f, StackTrace.current);
+        state = AsyncError<DateTime?>(f, StackTrace.current)
+            .copyWithPrevious(state);
         return false;
       },
       (expiresAt) {

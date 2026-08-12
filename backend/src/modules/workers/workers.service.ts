@@ -914,6 +914,15 @@ export class WorkersService {
     );
     if (!job) throw new NotFoundException('Job not found');
 
+    // Retry of an already-successful completion (lost response, double-tap
+    // that raced the disabled button, or the sibling bookings-module
+    // /bookings/:id/complete endpoint already completed it) — return
+    // current state, no duplicate earnings/commission recompute or
+    // notification.
+    if (job.status === BookingStatus.COMPLETED) {
+      return this._toJobDto(job, profile.id);
+    }
+
     const completable: BookingStatus[] = [
       BookingStatus.ACCEPTED,
       BookingStatus.EN_ROUTE,
@@ -925,10 +934,20 @@ export class WorkersService {
       );
     }
 
-    const updated = await this.workersRepository.completeBooking(
-      bookingId,
-      profile.id,
-    );
+    const { job: updated, changed } =
+      await this.workersRepository.completeBooking(
+        bookingId,
+        profile.id,
+        completable,
+      );
+    if (!changed) {
+      if (updated.status === BookingStatus.COMPLETED) {
+        return this._toJobDto(updated, profile.id);
+      }
+      throw new BadRequestException(
+        `Cannot complete a job with status ${updated.status}`,
+      );
+    }
 
     // Single shared, deduplicated completion notice (Roman Urdu) — the same
     // helper BookingsService.completeJob uses, so the two overlapping

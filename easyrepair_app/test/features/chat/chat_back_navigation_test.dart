@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:go_router/go_router.dart';
+import 'package:handygo_app/core/data/cached_result.dart';
 import 'package:handygo_app/core/errors/failures.dart';
 import 'package:handygo_app/core/l10n/l10n_config.dart';
 import 'package:handygo_app/features/auth/presentation/providers/auth_providers.dart';
@@ -28,16 +29,16 @@ class _FakeChatRepository implements ChatRepository {
       const Right(null);
 
   @override
-  Future<Either<Failure, List<ConversationEntity>>> getConversations() async =>
-      Right(conversations);
+  Future<Either<Failure, CachedResult<List<ConversationEntity>>>>
+      getConversations() async => Right(CachedResult(conversations));
 
   @override
-  Future<Either<Failure, List<MessageEntity>>> getMessages(
+  Future<Either<Failure, CachedResult<List<MessageEntity>>>> getMessages(
     String conversationId, {
     int limit = 30,
     String? before,
   }) async =>
-      const Right(<MessageEntity>[]);
+      const Right(CachedResult(<MessageEntity>[]));
 
   @override
   dynamic noSuchMethod(Invocation invocation) =>

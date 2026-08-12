@@ -3,8 +3,11 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 
-import '../../../../core/errors/failures.dart';
+import '../../../../core/data/cached_result.dart';
 import '../../../../core/network/api_client.dart';
+import '../../../../core/network/cacheable_fetch.dart';
+import '../../../../core/storage/local_cache_service.dart';
+import '../../../../core/storage/secure_storage_service.dart';
 import '../../domain/entities/booking_entity.dart';
 import '../../domain/entities/create_booking_request.dart';
 import '../../domain/entities/inspection_report_entity.dart';
@@ -15,8 +18,8 @@ import '../models/nearby_worker_model.dart';
 
 abstract class BookingRemoteDataSource {
   Future<BookingModel> createBooking(CreateBookingRequest request);
-  Future<List<BookingModel>> getClientBookings();
-  Future<BookingModel> getBookingById(String bookingId);
+  Future<CachedResult<List<BookingModel>>> getClientBookings();
+  Future<CachedResult<BookingModel>> getBookingById(String bookingId);
   Future<List<BookingModel>> getPendingReviews();
   Future<BookingModel> updateBooking(UpdateBookingRequest request);
   Future<BookingModel> cancelBooking(String bookingId, String reason);
@@ -67,8 +70,10 @@ abstract class BookingRemoteDataSource {
 
 class BookingRemoteDataSourceImpl implements BookingRemoteDataSource {
   final Dio _dio;
+  final LocalCacheService _cache;
+  final SecureStorageService _secureStorage;
 
-  const BookingRemoteDataSourceImpl(this._dio);
+  const BookingRemoteDataSourceImpl(this._dio, this._cache, this._secureStorage);
 
   @override
   Future<BookingModel> createBooking(CreateBookingRequest request) async {
@@ -107,27 +112,33 @@ class BookingRemoteDataSourceImpl implements BookingRemoteDataSource {
   }
 
   @override
-  Future<List<BookingModel>> getClientBookings() async {
-    try {
-      final response = await _dio.get('/bookings/my');
-      final data = response.data['data'] as List<dynamic>;
-      return data
+  Future<CachedResult<List<BookingModel>>> getClientBookings() {
+    return fetchWithCache(
+      cache: _cache,
+      secureStorage: _secureStorage,
+      cacheKey: 'client_bookings',
+      request: () async {
+        final response = await _dio.get('/bookings/my');
+        return response.data['data'];
+      },
+      decode: (json) => (json as List<dynamic>)
           .map((e) => BookingModel.fromJson(e as Map<String, dynamic>))
-          .toList();
-    } on DioException catch (e) {
-      throw dioExceptionToFailure(e);
-    }
+          .toList(),
+    );
   }
 
   @override
-  Future<BookingModel> getBookingById(String bookingId) async {
-    try {
-      final response = await _dio.get('/bookings/$bookingId');
-      final data = response.data['data'] as Map<String, dynamic>;
-      return BookingModel.fromJson(data);
-    } on DioException catch (e) {
-      throw dioExceptionToFailure(e);
-    }
+  Future<CachedResult<BookingModel>> getBookingById(String bookingId) {
+    return fetchWithCache(
+      cache: _cache,
+      secureStorage: _secureStorage,
+      cacheKey: 'booking_detail:$bookingId',
+      request: () async {
+        final response = await _dio.get('/bookings/$bookingId');
+        return response.data['data'];
+      },
+      decode: (json) => BookingModel.fromJson(json as Map<String, dynamic>),
+    );
   }
 
   @override
@@ -443,7 +454,7 @@ class BookingRemoteDataSourceImpl implements BookingRemoteDataSource {
       await _dio.post('/bookings/$bookingId/inspection-report/accept');
       // The accept endpoint returns the report DTO, not the booking — re-fetch
       // the booking so the caller gets the updated lane/status fields.
-      return getBookingById(bookingId);
+      return (await getBookingById(bookingId)).data;
     } on DioException catch (e) {
       throw dioExceptionToFailure(e);
     }
@@ -453,7 +464,7 @@ class BookingRemoteDataSourceImpl implements BookingRemoteDataSource {
   Future<BookingModel> closeAfterInspection(String bookingId) async {
     try {
       await _dio.post('/bookings/$bookingId/inspection-report/close');
-      return getBookingById(bookingId);
+      return (await getBookingById(bookingId)).data;
     } on DioException catch (e) {
       throw dioExceptionToFailure(e);
     }
@@ -463,7 +474,7 @@ class BookingRemoteDataSourceImpl implements BookingRemoteDataSource {
   Future<BookingModel> findOtherUstaad(String bookingId) async {
     try {
       await _dio.post('/bookings/$bookingId/inspection-report/find-other-ustaad');
-      return getBookingById(bookingId);
+      return (await getBookingById(bookingId)).data;
     } on DioException catch (e) {
       throw dioExceptionToFailure(e);
     }
@@ -473,7 +484,7 @@ class BookingRemoteDataSourceImpl implements BookingRemoteDataSource {
   Future<BookingModel> hireInspectingWorker(String bookingId) async {
     try {
       await _dio.post('/bookings/$bookingId/inspection-report/hire-inspector');
-      return getBookingById(bookingId);
+      return (await getBookingById(bookingId)).data;
     } on DioException catch (e) {
       throw dioExceptionToFailure(e);
     }

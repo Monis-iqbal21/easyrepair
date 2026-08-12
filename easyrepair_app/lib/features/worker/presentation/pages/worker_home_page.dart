@@ -6,6 +6,10 @@ import 'package:go_router/go_router.dart';
 
 import 'package:intl/intl.dart';
 
+import '../../../../core/errors/failure_messages.dart';
+import '../../../../core/location/location_availability.dart';
+import '../../../../core/location/location_recovery_snack.dart';
+import '../../../../core/network/offline_banner.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../../notifications/presentation/providers/notification_providers.dart';
 import '../../data/repositories/worker_repository_impl.dart';
@@ -61,6 +65,8 @@ class _WorkerHomePageState extends ConsumerState<WorkerHomePage>
   @override
   Widget build(BuildContext context) {
     final profileAsync = ref.watch(workerProfileProvider);
+    final isShowingCachedData =
+        ref.watch(workerProfileIsOfflineProvider) && profileAsync.hasValue;
 
     // Show the "complete your profile" modal once per app session — fires on
     // the first Home build after login/registration/resume-triggered refresh
@@ -87,11 +93,14 @@ class _WorkerHomePageState extends ConsumerState<WorkerHomePage>
             child: CircularProgressIndicator(color: _kOrange),
           ),
           error: (err, _) => _ErrorView(
-            message: err.toString(),
+            message: failureMessage(context.l10n, err),
             onRetry: () => ref.read(workerProfileProvider.notifier).refresh(),
           ),
-          data: (profile) => _HomeBody(
-            profile: profile,
+          data: (profile) => Column(
+            children: [
+              if (isShowingCachedData) const OfflineDataBanner(),
+              Expanded(child: _HomeBody(profile: profile)),
+            ],
           ),
         ),
       ),
@@ -650,13 +659,33 @@ class _HeroCard extends ConsumerWidget {
       _showSnack(context, context.l10n.workerApprovalRequired);
       return;
     }
+
+    // Pre-flight check so a denied permission or disabled GPS shows the
+    // specific, actionable message below instead of silently going online
+    // with no coordinates and letting the backend's generic validation
+    // error surface instead (see LocationTrackerNotifier.startTracking,
+    // which is left untouched — this is purely an additional UX gate in
+    // front of it).
+    final locationCheck = await resolveCurrentLocation();
+    if (!locationCheck.isAvailable) {
+      if (context.mounted) {
+        showLocationRecoverySnack(
+          context,
+          locationCheck.status,
+          onRetry: () => _handleGoOnline(context, ref),
+        );
+      }
+      return;
+    }
+
+    if (!context.mounted) return;
     final result =
         await ref.read(availabilityNotifierProvider.notifier).goOnline();
     if (result == AvailabilityToggleResult.needsSkills && context.mounted) {
       await showSkillsSheet(context, ref);
     } else if (context.mounted) {
       final err = ref.read(availabilityNotifierProvider).error;
-      if (err != null) _showSnack(context, err.toString());
+      if (err != null) _showSnack(context, failureMessage(context.l10n, err));
     }
   }
 
@@ -693,7 +722,7 @@ class _HeroCard extends ConsumerWidget {
       await ref.read(availabilityNotifierProvider.notifier).goOffline();
       if (context.mounted) {
         final err = ref.read(availabilityNotifierProvider).error;
-        if (err != null) _showSnack(context, err.toString());
+        if (err != null) _showSnack(context, failureMessage(context.l10n, err));
       }
     }
   }
@@ -1619,8 +1648,10 @@ class _SkillsSheet extends ConsumerWidget {
                               ref.read(skillsNotifierProvider).error;
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text(err?.toString() ??
-                                  context.l10n.workerSkillsSaveFailed),
+                              content: Text(err == null
+                                  ? context.l10n.workerSkillsSaveFailed
+                                  : failureMessage(context.l10n, err,
+                                      fallback: context.l10n.workerSkillsSaveFailed)),
                               behavior: SnackBarBehavior.floating,
                               backgroundColor: Colors.red.shade700,
                             ),

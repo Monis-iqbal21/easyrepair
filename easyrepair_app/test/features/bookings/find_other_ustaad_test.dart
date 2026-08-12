@@ -4,8 +4,10 @@ import 'package:flutter_test/flutter_test.dart';
 import '../../support/l10n_test_app.dart';
 import 'package:handygo_app/core/l10n/l10n_config.dart';
 import 'package:handygo_app/core/l10n/app_locale.dart';
+import 'package:handygo_app/core/l10n/locale_provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:handygo_app/core/errors/failures.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:handygo_app/features/bookings/domain/entities/booking_entity.dart';
 import 'package:handygo_app/features/bookings/domain/entities/inspection_report_entity.dart';
 import 'package:handygo_app/features/bookings/presentation/pages/inspection_report_page.dart';
@@ -164,6 +166,7 @@ Widget _wrapWorkerJobs(List<BookingEntity> jobs) {
   );
   return ProviderScope(
     overrides: [
+      sharedPreferencesProvider.overrideWithValue(_testPrefs),
       workerJobsProvider.overrideWith(() => _FakeWorkerJobsNotifier(jobs)),
       workerProfileProvider.overrideWith(_FakeWorkerProfileNotifier.new),
     ],
@@ -184,6 +187,7 @@ Widget _wrapReportPage({
 }) {
   return ProviderScope(
     overrides: [
+      sharedPreferencesProvider.overrideWithValue(_testPrefs),
       inspectionReportProvider('booking-1').overrideWith((_) async => report),
       if (decisionNotifier != null)
         inspectionDecisionNotifierProvider.overrideWith(() => decisionNotifier),
@@ -197,7 +201,18 @@ Widget _wrapReportPage({
   );
 }
 
+late SharedPreferences _testPrefs;
+
 void main() {
+  // bookingRepositoryProvider's real datasource chain now reaches
+  // LocalCacheService, which needs sharedPreferencesProvider — every
+  // ProviderScope below that doesn't fully override bookingRepositoryProvider
+  // needs this in scope too, even though these tests never exercise caching.
+  setUpAll(() async {
+    SharedPreferences.setMockInitialValues({});
+    _testPrefs = await SharedPreferences.getInstance();
+  });
+
   // ── #1 Inspector completion card wording in Completed and All ────────────
   group('Worker My Jobs — completed inspection-only card', () {
     // The default 800x600 test surface is shorter than any real phone and

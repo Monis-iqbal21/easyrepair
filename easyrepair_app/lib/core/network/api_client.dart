@@ -113,26 +113,40 @@ class AuthInterceptor extends Interceptor {
         final retryResponse = await _retryWithToken(err.requestOptions, token);
         handler.resolve(retryResponse);
       } catch (e) {
-        handler.next(err);
+        // The retry's own failure — not the original 401 — is what actually
+        // happened here. A transient network blip on the retry must surface
+        // as that (a NetworkFailure/timeout), never silently reappear as
+        // the stale original 401 — that's exactly the shape of failure that
+        // must never be mistaken for "the session is over".
+        handler.next(e is DioException ? e : err);
       }
       return;
     }
 
     _isRefreshing = true;
-    _refreshCompleter = Completer<void>();
+    // Captured once, up front, and used for every completion below instead
+    // of re-reading the `_refreshCompleter` field later. `resetRefreshState`
+    // (called on logout) can null that field out from under a refresh that
+    // is still in flight — completing/erroring THIS local reference instead
+    // means that late finish can never null-check-crash, while a fresh
+    // request started after the reset still correctly starts its own
+    // refresh rather than waiting on this orphaned one (it only ever reads
+    // the instance field, which the reset already cleared).
+    final completer = Completer<void>();
+    _refreshCompleter = completer;
     // A completer that errors with nothing ever listening to its `.future`
     // surfaces as an unhandled async error — harmless in production (Dio's
     // own error still reaches the caller via `handler.next` below) but worth
     // silencing at the source rather than relying on a follower always being
     // there to observe it.
-    unawaited(_refreshCompleter!.future.catchError((_) {}));
+    unawaited(completer.future.catchError((_) {}));
 
     String accessToken;
     try {
       final refreshToken = await _storage.getRefreshToken();
       if (refreshToken == null) {
         await _storage.clearTokens();
-        _refreshCompleter!.complete();
+        completer.complete();
         handler.next(err);
         return;
       }
@@ -149,7 +163,7 @@ class AuthInterceptor extends Interceptor {
         refreshToken: data['refreshToken'] as String,
       );
 
-      _refreshCompleter!.complete();
+      completer.complete();
     } catch (e) {
       // Only a definitive rejection from the refresh endpoint itself — it
       // responds 401 specifically when the refresh token is invalid,
@@ -163,12 +177,18 @@ class AuthInterceptor extends Interceptor {
       if (isDefiniteAuthRejection) {
         await _storage.clearTokens();
       }
-      _refreshCompleter!.completeError('refresh_failed');
+      completer.completeError('refresh_failed');
       handler.next(err);
       return;
     } finally {
-      _isRefreshing = false;
-      _refreshCompleter = null;
+      // Only clear bookkeeping that still belongs to THIS refresh — a
+      // concurrent reset (logout) or a newer refresh that started after
+      // this one was orphaned must never have its state clobbered by this
+      // one finishing late.
+      if (identical(_refreshCompleter, completer)) {
+        _isRefreshing = false;
+        _refreshCompleter = null;
+      }
     }
 
     // The refresh itself succeeded — retrying the original request from
@@ -179,8 +199,33 @@ class AuthInterceptor extends Interceptor {
     try {
       final retryResponse = await _retryWithToken(err.requestOptions, accessToken);
       handler.resolve(retryResponse);
-    } catch (_) {
-      handler.next(err);
+    } catch (e) {
+      // Same reasoning as the shared-refresh branch above: the retry's own
+      // exception (e.g. a timeout right after a successful refresh) must
+      // propagate as itself, not as the stale pre-refresh 401 — otherwise a
+      // one-off network blip on the retry reads exactly like an expired
+      // session even though the refresh that just happened proves it isn't.
+      handler.next(e is DioException ? e : err);
+    }
+  }
+
+  /// Clears in-flight refresh bookkeeping. Called on logout so a refresh
+  /// that was starting (or running) right as the user signed out can never
+  /// leave this interceptor believing a refresh is still in progress for
+  /// the next session.
+  void resetRefreshState() {
+    _isRefreshing = false;
+    _refreshCompleter = null;
+  }
+}
+
+extension DioAuthReset on Dio {
+  /// Resets [AuthInterceptor]'s in-memory refresh state, if one is attached
+  /// to this client's interceptor chain. A no-op otherwise (e.g. the public,
+  /// pre-login Dio never has one).
+  void resetAuthRefreshState() {
+    for (final interceptor in interceptors) {
+      if (interceptor is AuthInterceptor) interceptor.resetRefreshState();
     }
   }
 }

@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:fpdart/fpdart.dart';
 
+import '../../../../core/data/cached_result.dart';
 import '../../../../core/errors/failures.dart';
 import '../entities/booking_entity.dart';
 import '../entities/create_booking_request.dart';
@@ -10,11 +11,16 @@ import '../entities/nearby_worker_entity.dart';
 import '../entities/update_booking_request.dart';
 
 abstract class BookingRepository {
-  /// Fetch all bookings for the currently authenticated client.
-  Future<Either<Failure, List<BookingEntity>>> getClientBookings();
+  /// Fetch all bookings for the currently authenticated client. Falls back
+  /// to the last cached list (`CachedResult.isStale == true`) when the live
+  /// request fails and something was cached.
+  Future<Either<Failure, CachedResult<List<BookingEntity>>>> getClientBookings();
 
-  /// Fetch a single booking by id.
-  Future<Either<Failure, BookingEntity>> getBookingById(String bookingId);
+  /// Fetch a single booking by id. Falls back to cache on failure — see
+  /// [getClientBookings].
+  Future<Either<Failure, CachedResult<BookingEntity>>> getBookingById(
+    String bookingId,
+  );
 
   /// Completed bookings this client still owes a review for.
   ///

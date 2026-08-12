@@ -21,6 +21,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     let statusCode = HttpStatus.INTERNAL_SERVER_ERROR;
     let error = 'InternalServerError';
     let message = 'An unexpected error occurred';
+    let retryAfterSeconds: number | undefined;
 
     if (exception instanceof HttpException) {
       statusCode = exception.getStatus();
@@ -35,6 +36,12 @@ export class GlobalExceptionFilter implements ExceptionFilter {
           ? (resp.message as string[]).join(', ')
           : ((resp.message as string) ?? message);
         error = (resp.error as string) ?? exception.name;
+        // Only ever set deliberately (see ApiErrorResponse) — never echoes
+        // arbitrary exception payload fields beyond this one allow-listed
+        // name.
+        if (typeof resp.retryAfterSeconds === 'number') {
+          retryAfterSeconds = resp.retryAfterSeconds;
+        }
       }
     } else if (exception instanceof Error) {
       message = exception.message;
@@ -51,6 +58,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       statusCode,
       timestamp: new Date().toISOString(),
       path: request.url,
+      ...(retryAfterSeconds !== undefined && { retryAfterSeconds }),
     };
 
     response.status(statusCode).json(body);

@@ -699,6 +699,9 @@ class _BidOfferCard extends ConsumerWidget {
     );
 
     if (confirm != true || !context.mounted) return;
+    // Re-entry guard — a tap that raced past the disabled button must not
+    // fire a second hire request.
+    if (ref.read(acceptBidProvider).isLoading) return;
 
     try {
       await ref.read(acceptBidProvider.notifier).accept(
@@ -1087,7 +1090,7 @@ class _ChatButtonState extends ConsumerState<_ChatButton> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e.toString()),
+            content: Text(failureMessage(context.l10n, e)),
             backgroundColor: const Color(0xFFEF4444),
           ),
         );

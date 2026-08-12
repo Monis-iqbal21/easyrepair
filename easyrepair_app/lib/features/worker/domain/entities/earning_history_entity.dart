@@ -1,8 +1,18 @@
+/// Mirrors backend `CommissionStatus` — belongs to the individual job, not
+/// to the whole Worker account (see WorkersRepository.getEarningsHistory).
+enum CommissionStatus { pending, paid }
+
 class EarningHistoryJobEntity {
   final String bookingId;
   final String lane;
   final String serviceCategory;
   final double grossEarning;
+  /// HandyGo's 18% commission on [grossEarning] — computed backend-side by
+  /// the one shared commission.util.ts source, never recomputed here.
+  final double commissionAmount;
+  /// grossEarning - commissionAmount, irrespective of commissionStatus.
+  final double ustaadEarning;
+  final CommissionStatus commissionStatus;
   final DateTime completedAt;
   final bool isInspectionOnly;
 
@@ -11,6 +21,9 @@ class EarningHistoryJobEntity {
     required this.lane,
     required this.serviceCategory,
     required this.grossEarning,
+    required this.commissionAmount,
+    required this.ustaadEarning,
+    required this.commissionStatus,
     required this.completedAt,
     required this.isInspectionOnly,
   });

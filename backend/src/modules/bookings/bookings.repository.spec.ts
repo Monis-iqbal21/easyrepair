@@ -182,3 +182,164 @@ describe('BookingsRepository.closeInspectionAndOpenRepairBidding', () => {
     });
   });
 });
+
+// ── Chunk 3: launch-hardening idempotency ─────────────────────────────────
+describe('BookingsRepository idempotency guards', () => {
+  let tx: any;
+  let prisma: any;
+  let repo: BookingsRepository;
+
+  beforeEach(() => {
+    tx = {
+      booking: {
+        create: jest.fn().mockResolvedValue({ id: 'booking-1' }),
+        update: jest.fn().mockResolvedValue({}),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
+      bookingStandardServiceItem: { createMany: jest.fn() },
+      bookingStatusHistory: { create: jest.fn().mockResolvedValue({}) },
+      workerProfile: {
+        update: jest.fn().mockResolvedValue({}),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
+      review: { create: jest.fn().mockResolvedValue({}) },
+    };
+    prisma = {
+      $transaction: jest.fn(async (cb: any) => cb(tx)),
+      booking: {
+        findUniqueOrThrow: jest.fn().mockResolvedValue({ id: 'booking-1' }),
+        findUnique: jest.fn(),
+      },
+      workerProfile: {
+        findUniqueOrThrow: jest
+          .fn()
+          .mockResolvedValue({ rating: 4.5, totalRatings: 2 }),
+      },
+    };
+    const config = { get: jest.fn().mockReturnValue(false) };
+    repo = new BookingsRepository(prisma, config as any);
+  });
+
+  function p2002() {
+    const err = Object.assign(new Error('Unique constraint failed'), {
+      code: 'P2002',
+      name: 'PrismaClientKnownRequestError',
+    });
+    Object.setPrototypeOf(
+      err,
+      require('@prisma/client').Prisma.PrismaClientKnownRequestError.prototype,
+    );
+    return err;
+  }
+
+  describe('createBooking', () => {
+    it('a retried submission with the same idempotencyKey racing itself returns the winning booking instead of throwing', async () => {
+      tx.booking.create.mockRejectedValue(p2002());
+      prisma.booking.findUnique.mockResolvedValue({ id: 'existing-booking' });
+
+      const result = await repo.createBooking({
+        clientProfileId: 'client-1',
+        categoryId: 'cat-1',
+        urgency: 'NORMAL' as any,
+        description: 'Fix sink',
+        addressLine: '123 Street',
+        city: 'Karachi',
+        latitude: 24.86,
+        longitude: 67.0,
+        idempotencyKey: 'req-1',
+      });
+
+      expect(result).toEqual({ id: 'existing-booking' });
+      expect(prisma.booking.findUnique).toHaveBeenCalledWith({
+        where: { idempotencyKey: 'req-1' },
+        include: expect.anything(),
+      });
+    });
+
+    it('a genuine unique-constraint error with no idempotencyKey still throws', async () => {
+      tx.booking.create.mockRejectedValue(p2002());
+
+      await expect(
+        repo.createBooking({
+          clientProfileId: 'client-1',
+          categoryId: 'cat-1',
+          urgency: 'NORMAL' as any,
+          description: 'Fix sink',
+          addressLine: '123 Street',
+          city: 'Karachi',
+          latitude: 24.86,
+          longitude: 67.0,
+        }),
+      ).rejects.toThrow('Unique constraint failed');
+    });
+  });
+
+  describe('cancelBooking', () => {
+    it('flips status and writes history/worker-release when the guard matches (changed: true)', async () => {
+      tx.booking.updateMany.mockResolvedValue({ count: 1 });
+
+      const result = await repo.cancelBooking(
+        'booking-1',
+        ['PENDING', 'ACCEPTED'],
+        'Changed my mind',
+        'worker-1',
+        'CLIENT',
+      );
+
+      expect(result.changed).toBe(true);
+      expect(tx.bookingStatusHistory.create).toHaveBeenCalled();
+      expect(tx.workerProfile.update).toHaveBeenCalledWith({
+        where: { id: 'worker-1' },
+        data: { currentlyWorking: false },
+      });
+    });
+
+    it('skips history/worker-release when a concurrent request already flipped the status (changed: false)', async () => {
+      tx.booking.updateMany.mockResolvedValue({ count: 0 });
+
+      const result = await repo.cancelBooking(
+        'booking-1',
+        ['PENDING', 'ACCEPTED'],
+        'Changed my mind',
+        'worker-1',
+        'CLIENT',
+      );
+
+      expect(result.changed).toBe(false);
+      expect(tx.bookingStatusHistory.create).not.toHaveBeenCalled();
+      expect(tx.workerProfile.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('assignWorkerToBooking', () => {
+    it('never touches the worker busy-flag when the booking guard already lost the race', async () => {
+      tx.booking.updateMany.mockResolvedValue({ count: 0 });
+
+      const result = await repo.assignWorkerToBooking(
+        'booking-1',
+        'worker-1',
+        1500,
+        270,
+      );
+
+      expect(result.changed).toBe(false);
+      expect(tx.workerProfile.updateMany).not.toHaveBeenCalled();
+      expect(tx.bookingStatusHistory.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('createReview', () => {
+    it('a genuine concurrent double-submit (P2002) resolves to the winning booking instead of throwing', async () => {
+      tx.review.create.mockRejectedValue(p2002());
+
+      const result = await repo.createReview('booking-1', {
+        rating: 5,
+        comment: 'Great',
+        workerProfileId: 'worker-1',
+      });
+
+      expect(result).toEqual({ id: 'booking-1' });
+      expect(tx.workerProfile.update).not.toHaveBeenCalled();
+    });
+  });
+});

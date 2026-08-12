@@ -1,5 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { FaceMatchStatus, TrainingStatus } from '@prisma/client';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BookingStatus,
+  CommissionStatus,
+  FaceMatchStatus,
+  TrainingStatus,
+} from '@prisma/client';
 import { AdminRepository, WorkerProfileAdminView } from './admin.repository';
 import { PendingWorkerResponseDto } from './dto/pending-worker-response.dto';
 import { AdminStatsResponseDto } from './dto/admin-stats-response.dto';
@@ -180,6 +185,28 @@ export class AdminService {
       status,
     );
     return this._toDto(updated);
+  }
+
+  /**
+   * PATCH /admin/bookings/:bookingId/commission-status
+   * Admin-only settlement tracking for HandyGo's 18% commission on one
+   * completed job — belongs to the individual booking, never to the whole
+   * Worker account. Only a booking that has actually reached COMPLETED can
+   * carry a meaningful commission status; anything else (still open,
+   * cancelled, expired) is rejected rather than silently accepted.
+   */
+  async updateBookingCommissionStatus(
+    bookingId: string,
+    status: CommissionStatus,
+  ) {
+    const booking = await this.adminRepository.findCompletedBookingById(bookingId);
+    if (!booking) throw new NotFoundException('Booking not found');
+    if (booking.status !== BookingStatus.COMPLETED) {
+      throw new BadRequestException(
+        'Commission status can only be set on a completed booking',
+      );
+    }
+    return this.adminRepository.updateBookingCommissionStatus(bookingId, status);
   }
 
   private async _ensureExists(workerProfileId: string): Promise<void> {

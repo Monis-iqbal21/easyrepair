@@ -143,6 +143,16 @@ enum PaymentStatus {
   REFUNDED
 }
 
+/// Whether HandyGo's 18% platform commission for one completed job has been
+/// settled/recorded by admin. Independent of PaymentStatus (which tracks the
+/// client's payment for the job itself) and independent of the Ustaad
+/// earning formula — Ustaad earning is always Gross - Commission regardless
+/// of whether this is PENDING or PAID.
+enum CommissionStatus {
+  PENDING
+  PAID
+}
+
 enum AttachmentType {
   IMAGE
   VIDEO
@@ -275,6 +285,15 @@ model RefreshToken {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   expiresAt DateTime
   createdAt DateTime @default(now())
+
+  /// Set the instant this token is rotated away (replaced by a newer one)
+  /// instead of being deleted outright. Kept for a short grace window so a
+  /// client that crashed/was killed after the backend rotated but before it
+  /// could persist the new pair locally can safely retry with this same
+  /// (now-superseded) token and recover — see AuthService.refreshTokens.
+  replacedByToken String?
+  /// When this token was superseded. Null means it has never been rotated.
+  supersededAt    DateTime?
 
   @@index([userId])
   @@map("refresh_tokens")
@@ -518,6 +537,17 @@ model Booking {
   finalPrice     Float?
   platformFee    Float?
 
+  /// Whether HandyGo's 18% platform commission on this job has been
+  /// settled/recorded by admin. Belongs to this individual completed job,
+  /// never to the whole Worker account — three completed jobs for the same
+  /// worker can carry three independent statuses. Set only by the admin
+  /// commission-status endpoint; defaults PENDING for every booking
+  /// (irrelevant until the booking actually completes).
+  commissionStatus          CommissionStatus @default(PENDING)
+  /// When commissionStatus was last changed by an admin. Null until the
+  /// first update.
+  commissionStatusUpdatedAt DateTime?        @db.Timestamptz(3)
+
   /// Set only on a new BIDDING-lane booking spawned when "Find Other Ustaad"
   /// closes an inspection — points back to the now-COMPLETED inspection
   /// booking this repair job was created from. Null for every other booking,
@@ -528,6 +558,13 @@ model Booking {
   repairBooking             Booking? @relation("InspectionRepairLink")
 
   paymentStatus PaymentStatus @default(PENDING)
+
+  /// Client-generated UUID for one booking-creation submission attempt.
+  /// A retried "Create Booking" request (timeout, lost response) reuses the
+  /// same key, so the second request returns the already-created booking
+  /// instead of creating a duplicate. Null for bookings created before this
+  /// field existed and for any client that omits it.
+  idempotencyKey String? @unique
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

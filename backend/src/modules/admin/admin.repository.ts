@@ -5,6 +5,8 @@ import {
   WorkerOnboardingStatus,
   FaceMatchStatus,
   TrainingStatus,
+  BookingStatus,
+  CommissionStatus,
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -165,6 +167,27 @@ export class AdminRepository {
       where: { id: workerProfileId },
       data: { trainingStatus: status },
       include: WORKER_PROFILE_ADMIN_INCLUDE,
+    });
+  }
+
+  /** Existence + completion check before a commission-status update. */
+  async findCompletedBookingById(
+    bookingId: string,
+  ): Promise<{ id: string; status: BookingStatus } | null> {
+    return this.prisma.booking.findUnique({
+      where: { id: bookingId },
+      select: { id: true, status: true },
+    });
+  }
+
+  async updateBookingCommissionStatus(
+    bookingId: string,
+    status: CommissionStatus,
+  ): Promise<{ id: string; commissionStatus: CommissionStatus; commissionStatusUpdatedAt: Date | null }> {
+    return this.prisma.booking.update({
+      where: { id: bookingId },
+      data: { commissionStatus: status, commissionStatusUpdatedAt: new Date() },
+      select: { id: true, commissionStatus: true, commissionStatusUpdatedAt: true },
     });
   }
 }

@@ -12,6 +12,8 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/config/app_config.dart';
+import '../../../../core/network/offline_banner.dart';
+import '../../../../core/presentation/widgets/resource_unavailable_view.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../../bookings/domain/entities/booking_entity.dart';
 import '../../../bookings/presentation/providers/booking_providers.dart';
@@ -65,6 +67,8 @@ class WorkerJobDetailPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     debugPrint('[WorkerJobDetailPage] build — jobId received=$jobId');
     final jobAsync = ref.watch(workerJobDetailProvider(jobId));
+    final isShowingCachedData =
+        ref.watch(workerJobDetailIsOfflineProvider(jobId)) && jobAsync.hasValue;
 
     return Scaffold(
       backgroundColor: _kBg,
@@ -74,11 +78,22 @@ class WorkerJobDetailPage extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator(
           color: _kGreen,
         )),
-        error: (err, _) => _ErrorScreen(
-          message: failureMessage(context.l10n, err, fallback: context.l10n.workerJobLoadFailed),
-          onRetry: () => ref.invalidate(workerJobDetailProvider(jobId)),
+        error: (err, _) => isResourceUnavailableFailure(err)
+            ? ResourceUnavailableView(
+                message: context.l10n.resourceJobUnavailable,
+                actionLabel: context.l10n.goToMyJobsAction,
+                onAction: () => context.go('/worker/jobs'),
+              )
+            : _ErrorScreen(
+                message: failureMessage(context.l10n, err, fallback: context.l10n.workerJobLoadFailed),
+                onRetry: () => ref.invalidate(workerJobDetailProvider(jobId)),
+              ),
+        data: (job) => Column(
+          children: [
+            if (isShowingCachedData) const OfflineDataBanner(),
+            Expanded(child: _JobBody(job: job, openMapOnLoad: openMapOnLoad)),
+          ],
         ),
-        data: (job) => _JobBody(job: job, openMapOnLoad: openMapOnLoad),
       ),
     );
   }
@@ -598,6 +613,10 @@ class _StandardLifecycleSection extends ConsumerWidget {
       Future<void> Function() action, {
       String? successMessage,
     }) async {
+      // Re-entry guard: a second tap that raced past the disabled button
+      // (isLoading only updates on the next rebuild) must never fire a
+      // duplicate lifecycle transition.
+      if (ref.read(workerLifecycleNotifierProvider).isLoading) return;
       try {
         await action();
         if (successMessage != null && context.mounted) {
@@ -723,6 +742,10 @@ class _InspectionLifecycleSection extends ConsumerWidget {
       Future<void> Function() action, {
       String? successMessage,
     }) async {
+      // Re-entry guard: a second tap that raced past the disabled button
+      // (isLoading only updates on the next rebuild) must never fire a
+      // duplicate lifecycle transition.
+      if (ref.read(workerLifecycleNotifierProvider).isLoading) return;
       try {
         await action();
         if (successMessage != null && context.mounted) {
@@ -1461,14 +1484,19 @@ class _CompleteJobBar extends ConsumerWidget {
       ),
     );
 
-    if (confirmed == true && context.mounted) {
+    // Re-entry guard: the confirm dialog's async gap means a second tap
+    // that raced the disabled button could reach here before this call's
+    // own AsyncLoading state has rendered — never fire a duplicate complete.
+    if (confirmed == true &&
+        context.mounted &&
+        !ref.read(completeJobProvider).isLoading) {
       await ref.read(completeJobProvider.notifier).complete(jobId);
       if (context.mounted) {
         final err = ref.read(completeJobProvider).error;
         if (err != null) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(err.toString()),
+              content: Text(failureMessage(context.l10n, err)),
               behavior: SnackBarBehavior.floating,
             ),
           );

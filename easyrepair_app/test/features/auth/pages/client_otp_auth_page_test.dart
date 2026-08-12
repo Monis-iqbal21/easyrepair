@@ -18,6 +18,11 @@ class _FakeAuthRepository implements AuthRepository {
   Failure? requestOtpFailure;
   Failure? clientOtpLoginFailure;
   DateTime? lastExpiresAt;
+  /// How far in the future the next successful requestOtp's expiresAt is
+  /// set — defaults to a fresh 5-minute code. Tests that need the resend
+  /// cooldown already elapsed (without waiting on the widget's own 1s
+  /// ticker) shorten this, mirroring OtpInputSection's own tests.
+  Duration nextExpiresIn = const Duration(minutes: 5);
 
   int phoneCheckCalls = 0;
   ClientPhoneStatus phoneCheckResult = ClientPhoneStatus.newAccount;
@@ -102,7 +107,7 @@ class _FakeAuthRepository implements AuthRepository {
     // (the actual race the app's `_sendInFlight` guard defends against).
     await Future<void>.delayed(const Duration(milliseconds: 30));
     if (requestOtpFailure != null) return Left(requestOtpFailure!);
-    lastExpiresAt = DateTime.now().add(const Duration(minutes: 5));
+    lastExpiresAt = DateTime.now().add(nextExpiresIn);
     return Right(lastExpiresAt!);
   }
 
@@ -318,41 +323,72 @@ void main() {
       },
     );
 
-    testWidgets('shows the Ustaad Login redirect when the phone belongs to a Worker', (
-      tester,
-    ) async {
-      final repo = _FakeAuthRepository()
-        ..clientOtpLoginFailure = const WorkerPhoneConflictFailure(
-          'Ye mobile number Ustaad account ke saath registered hai. Ustaad Login use karein.',
-        );
-      await tester.pumpWidget(_wrap(repo));
+    testWidgets(
+      'a failed resend keeps the OTP box visible instead of reverting to the phone form',
+      (tester) async {
+        final repo = _FakeAuthRepository()
+          // Backdate the first send's expiresAt so the resend cooldown has
+          // already elapsed by the time it renders — same technique
+          // otp_input_section_test.dart uses, avoids depending on the
+          // widget's own 1s ticker firing during a large tester.pump.
+          ..nextExpiresIn = const Duration(minutes: 5) - const Duration(seconds: 61);
+        await tester.pumpWidget(_wrap(repo));
 
-      await tester.enterText(find.byType(TextFormField).at(0), 'Ali Khan');
-      await tester.enterText(find.byType(TextFormField).at(1), '03378372427');
-      await tester.tap(find.text('Code Bhejein'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 50));
+        await tester.enterText(find.byType(TextFormField).at(0), 'Ali Khan');
+        await tester.enterText(find.byType(TextFormField).at(1), '03378372427');
+        await tester.tap(find.text('Code Bhejein'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+        expect(find.text('Verify Karke Aage Barhein'), findsOneWidget);
+        expect(find.text('Code dobara bhejein'), findsOneWidget);
 
-      // Pinput renders its input capture via a raw EditableText (not a
-      // Material TextField) — target it directly. It is the LAST EditableText
-      // in the tree: the name and phone fields precede it and both now stay
-      // editable through the OTP step, so `.first` would type into the name
-      // field (and typing into the phone field deliberately cancels the
-      // pending OTP).
-      await tester.enterText(find.byType(EditableText).last, '123456');
-      await tester.pump();
+        // The resend itself is rejected (e.g. a race against the backend's
+        // own cooldown, or a provider hiccup) — the OTP box must stay put.
+        repo.requestOtpFailure = const OtpResendTooSoonFailure('too soon');
+        await tester.ensureVisible(find.text('Code dobara bhejein'));
+        await tester.tap(find.text('Code dobara bhejein'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
 
-      await tester.ensureVisible(find.text('Verify Karke Aage Barhein'));
-      await tester.tap(find.text('Verify Karke Aage Barhein'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 50));
+        expect(repo.requestOtpCalls, 2);
+        expect(find.text('Verify Karke Aage Barhein'), findsOneWidget);
+      },
+    );
 
-      expect(find.text('Ustaad Login'), findsOneWidget);
-      await tester.ensureVisible(find.text('Ustaad Login'));
-      await tester.tap(find.text('Ustaad Login'));
-      await tester.pumpAndSettle();
-      expect(find.text('WORKER_LOGIN_PAGE'), findsOneWidget);
-    });
+    testWidgets(
+      'a Worker-owned phone through the OTP flow shows the generic '
+      '"already registered" message — never a role-revealing redirect',
+      (tester) async {
+        final repo = _FakeAuthRepository()
+          ..clientOtpLoginFailure = const PhoneAlreadyRegisteredFailure('');
+        await tester.pumpWidget(_wrap(repo));
+
+        await tester.enterText(find.byType(TextFormField).at(0), 'Ali Khan');
+        await tester.enterText(find.byType(TextFormField).at(1), '03378372427');
+        await tester.tap(find.text('Code Bhejein'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        // Pinput renders its input capture via a raw EditableText (not a
+        // Material TextField) — target it directly. It is the LAST
+        // EditableText in the tree: the name and phone fields precede it and
+        // both now stay editable through the OTP step, so `.first` would
+        // type into the name field (and typing into the phone field
+        // deliberately cancels the pending OTP).
+        await tester.enterText(find.byType(EditableText).last, '123456');
+        await tester.pump();
+
+        await tester.ensureVisible(find.text('Verify Karke Aage Barhein'));
+        await tester.tap(find.text('Verify Karke Aage Barhein'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        // The role-privacy-required copy, shown as a plain snackbar — no
+        // "Ustaad Login" button, no navigation, no role hint anywhere.
+        expect(find.text('Ye number pehle se registered hai.'), findsOneWidget);
+        expect(find.text('Ustaad Login'), findsNothing);
+      },
+    );
   });
 
   group('Client password fallback', () {
@@ -441,29 +477,38 @@ void main() {
       expect(repo.passwordRegisterCalls, 0);
     });
 
-    testWidgets('a Worker phone shows the Ustaad Login redirect in password mode too', (
-      tester,
-    ) async {
-      final repo = _FakeAuthRepository()
-        ..phoneCheckResult = ClientPhoneStatus.worker
-        ..phoneCheckFailure = const WorkerPhoneConflictFailure(
-          'Ye mobile number Ustaad account ke saath registered hai. Ustaad Login use karein.',
-        );
-      await tester.pumpWidget(_wrap(repo));
+    testWidgets(
+      'a Worker-owned phone in password mode is classified NEW (never '
+      'WORKER) and the resulting registration attempt shows the generic '
+      '"already registered" message — never a role-revealing redirect',
+      (tester) async {
+        final repo = _FakeAuthRepository()
+          ..phoneCheckResult = ClientPhoneStatus.newAccount
+          ..passwordRegisterFailure = const PhoneAlreadyRegisteredFailure('');
+        await tester.pumpWidget(_wrap(repo));
 
-      await tester.tap(find.text('Password se Continue'));
-      await tester.pumpAndSettle();
-      await tester.enterText(find.byType(TextFormField).first, '03378372427');
-      await tester.tap(find.text('Aage Barhein'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 50));
+        await tester.tap(find.text('Password se Continue'));
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byType(TextFormField).first, '03378372427');
+        await tester.tap(find.text('Aage Barhein'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
 
-      expect(find.text('Ustaad Login'), findsOneWidget);
-      await tester.ensureVisible(find.text('Ustaad Login'));
-      await tester.tap(find.text('Ustaad Login'));
-      await tester.pumpAndSettle();
-      expect(find.text('WORKER_LOGIN_PAGE'), findsOneWidget);
-    });
+        // Classified exactly like a genuinely new number — the register
+        // sub-form shows, never a Worker-specific redirect.
+        final fields = find.byType(TextFormField);
+        await tester.enterText(fields.at(1), 'Ali Khan');
+        await tester.enterText(fields.at(2), 'password123');
+        await tester.enterText(fields.at(3), 'password123');
+        await tester.ensureVisible(find.text('Account Banayein'));
+        await tester.tap(find.text('Account Banayein'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        expect(find.text('Ye number pehle se registered hai.'), findsOneWidget);
+        expect(find.text('Ustaad Login'), findsNothing);
+      },
+    );
 
     testWidgets(
       'the phone-check button disables itself while in flight (no duplicate submission)',

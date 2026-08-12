@@ -6,10 +6,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:handygo_app/core/errors/failures.dart';
+import 'package:handygo_app/core/l10n/locale_provider.dart';
 import 'package:handygo_app/core/network/api_client.dart';
 import 'package:handygo_app/core/storage/secure_storage_service.dart';
 import 'package:handygo_app/features/auth/data/datasources/auth_remote_datasource.dart';
 import 'package:handygo_app/features/auth/data/repositories/auth_repository_impl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Covers the password-login-shows-"Session expired" bug end to end:
 ///  * Password login (Client and Worker) must work with no tokens at all —
@@ -183,6 +185,112 @@ void main() {
         expect(result.isRight(), isTrue);
       },
     );
+  });
+
+  group('literal logout → password login sequence (the exact reported bug)', () {
+    test('Client: logout, then immediately log back in with password', () async {
+      final storage = _FakeSecureStorage()
+        ..accessToken = 'old-access'
+        ..refreshToken = 'old-refresh';
+      final protectedDio = _dio(
+        (options) async => ResponseBody.fromString(
+          '{}',
+          200,
+          headers: {
+            Headers.contentTypeHeader: [Headers.jsonContentType],
+          },
+        ),
+      );
+      final publicDio = _dio((options) async => _jsonBody(200, _authPayload()));
+      final repo = AuthRepositoryImpl(
+        AuthRemoteDatasource(publicDio, protectedDio),
+        storage,
+      );
+
+      final logoutResult = await repo.logout();
+      expect(logoutResult.isRight(), isTrue);
+      expect(storage.accessToken, isNull);
+      expect(storage.refreshToken, isNull);
+
+      final loginResult = await repo.clientPasswordLogin(
+        phone: '03001234567',
+        password: 'correct-password',
+      );
+
+      expect(loginResult.isRight(), isTrue);
+      expect(storage.accessToken, 'access-1');
+      expect(storage.refreshToken, 'refresh-1');
+    });
+
+    test('Worker: logout, then immediately log back in with password', () async {
+      final storage = _FakeSecureStorage()
+        ..accessToken = 'old-access'
+        ..refreshToken = 'old-refresh';
+      final protectedDio = _dio(
+        (options) async => ResponseBody.fromString(
+          '{}',
+          200,
+          headers: {
+            Headers.contentTypeHeader: [Headers.jsonContentType],
+          },
+        ),
+      );
+      final publicDio = _dio(
+        (options) async => _jsonBody(200, _authPayload(role: 'WORKER')),
+      );
+      final repo = AuthRepositoryImpl(
+        AuthRemoteDatasource(publicDio, protectedDio),
+        storage,
+      );
+
+      final logoutResult = await repo.logout();
+      expect(logoutResult.isRight(), isTrue);
+
+      final loginResult = await repo.login(
+        phone: '03001234567',
+        password: 'correct-password',
+      );
+
+      expect(loginResult.isRight(), isTrue);
+      expect(storage.accessToken, 'access-1');
+    });
+
+    test('Client and Worker behave identically for this sequence', () async {
+      Future<void> runFor(String role) async {
+        final storage = _FakeSecureStorage()
+          ..accessToken = 'old-access'
+          ..refreshToken = 'old-refresh';
+        final protectedDio = _dio(
+          (options) async => ResponseBody.fromString(
+            '{}',
+            200,
+            headers: {
+              Headers.contentTypeHeader: [Headers.jsonContentType],
+            },
+          ),
+        );
+        final publicDio =
+            _dio((options) async => _jsonBody(200, _authPayload(role: role)));
+        final repo = AuthRepositoryImpl(
+          AuthRemoteDatasource(publicDio, protectedDio),
+          storage,
+        );
+
+        await repo.logout();
+        final result = role == 'WORKER'
+            ? await repo.login(phone: '03001234567', password: 'x')
+            : await repo.clientPasswordLogin(
+                phone: '03001234567',
+                password: 'x',
+              );
+
+        expect(result.isRight(), isTrue, reason: '$role login after logout failed');
+        expect(storage.accessToken, 'access-1', reason: '$role token not saved');
+      }
+
+      await runFor('CLIENT');
+      await runFor('WORKER');
+    });
   });
 
   group('wrong credentials show the real reason, never "session expired"', () {
@@ -362,6 +470,42 @@ void main() {
       expect(storage.accessToken, isNull);
       expect(storage.refreshToken, isNull);
     });
+
+    test(
+      'logout never touches the saved language preference — it lives in '
+      'SharedPreferences, a completely separate storage system from the '
+      'secure-storage tokens logout clears',
+      () async {
+        SharedPreferences.setMockInitialValues({kLocalePrefsKey: 'ur_Latn'});
+        final prefs = await SharedPreferences.getInstance();
+
+        final storage = _FakeSecureStorage()
+          ..accessToken = 'a1'
+          ..refreshToken = 'r1';
+        final protectedDio = _dio(
+          (options) async => ResponseBody.fromString(
+            '{}',
+            200,
+            headers: {
+              Headers.contentTypeHeader: [Headers.jsonContentType],
+            },
+          ),
+        );
+        final repo = AuthRepositoryImpl(
+          AuthRemoteDatasource(Dio(BaseOptions(baseUrl: 'http://test')), protectedDio),
+          storage,
+        );
+
+        await repo.logout();
+
+        expect(storage.accessToken, isNull, reason: 'tokens must be cleared');
+        expect(
+          prefs.getString(kLocalePrefsKey),
+          'ur_Latn',
+          reason: 'the language choice must survive logout untouched',
+        );
+      },
+    );
   });
 
   group('the account role only ever comes from the login response', () {

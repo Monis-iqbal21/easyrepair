@@ -7,6 +7,7 @@ class UserModel {
   final String firstName;
   final String lastName;
   final String? verificationStatus;
+  final String? workerStatus;
 
   const UserModel({
     required this.id,
@@ -15,6 +16,7 @@ class UserModel {
     required this.firstName,
     required this.lastName,
     this.verificationStatus,
+    this.workerStatus,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -25,6 +27,7 @@ class UserModel {
       firstName: json['firstName'] as String,
       lastName: json['lastName'] as String,
       verificationStatus: json['verificationStatus'] as String?,
+      workerStatus: json['workerStatus'] as String?,
     );
   }
 
@@ -36,6 +39,7 @@ class UserModel {
       firstName: firstName,
       lastName: lastName,
       verificationStatus: verificationStatus,
+      workerStatus: workerStatus,
     );
   }
 }

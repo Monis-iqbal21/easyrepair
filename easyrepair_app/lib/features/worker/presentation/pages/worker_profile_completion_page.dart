@@ -15,6 +15,7 @@ import '../utils/agreement_labels.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../core/errors/failure_messages.dart';
+import '../../../../core/permissions/media_permission_helper.dart';
 
 // ── Palette (matches the rest of the worker app) ────────────────────────────
 const _kOrange = Color(0xFFDB6234);
@@ -278,7 +279,9 @@ class _WorkerProfileCompletionPageState
     final source = forceSource ?? await _chooseImageSource();
     if (source == null || !mounted) return;
 
-    final picked = await _picker.pickImage(
+    final picked = await pickImageWithRecovery(
+      context,
+      picker: _picker,
       source: source,
       imageQuality: 85,
       maxWidth: 1600,

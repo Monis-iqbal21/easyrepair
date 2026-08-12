@@ -30,7 +30,7 @@ class BidRepositoryImpl implements BidRepository {
     } on Failure catch (f) {
       return Left(f);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
@@ -52,7 +52,7 @@ class BidRepositoryImpl implements BidRepository {
     } on Failure catch (f) {
       return Left(f);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
@@ -66,7 +66,7 @@ class BidRepositoryImpl implements BidRepository {
     } on Failure catch (f) {
       return Left(f);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
@@ -82,7 +82,7 @@ class BidRepositoryImpl implements BidRepository {
     } on Failure catch (f) {
       return Left(f);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
@@ -96,7 +96,7 @@ class BidRepositoryImpl implements BidRepository {
     } on Failure catch (f) {
       return Left(f);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 }

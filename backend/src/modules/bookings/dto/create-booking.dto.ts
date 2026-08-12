@@ -121,4 +121,14 @@ export class CreateBookingDto {
   @ArrayMinSize(1)
   @IsUUID('4', { each: true })
   standardServiceIds?: string[];
+
+  // Client-generated UUID for one booking-creation submission attempt. The
+  // app reuses the same value while retrying that attempt (e.g. after a
+  // timeout); the backend returns the already-created booking instead of
+  // creating a duplicate. Optional for backward compatibility with older
+  // app builds that don't send it.
+  @IsOptional()
+  @IsString()
+  @IsUUID()
+  idempotencyKey?: string;
 }

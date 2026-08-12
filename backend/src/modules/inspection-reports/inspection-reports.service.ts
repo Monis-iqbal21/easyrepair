@@ -227,11 +227,39 @@ export class InspectionReportsService {
     userId: string,
     bookingId: string,
   ): Promise<InspectionReportResponseDto> {
-    const { booking, report } = await this._authorizeClientDecision(
-      userId,
-      bookingId,
+    const booking = await this.repository.findBookingContext(bookingId);
+    if (!booking) throw new NotFoundException('Booking not found');
+    if (booking.clientProfile?.userId !== userId) {
+      throw new ForbiddenException('Not your booking');
+    }
+    const report = await this.repository.findByBookingId(bookingId);
+    if (!report) {
+      throw new NotFoundException('No inspection report for this booking yet.');
+    }
+
+    // Retry of an already-successful accept (lost response, double-tap that
+    // raced the disabled button) — return current state, no duplicate
+    // finalPrice recompute or notification.
+    if (report.decisionStatus === 'ACCEPTED_REPAIR') {
+      return this._toDto(report, booking);
+    }
+    if (report.decisionStatus !== 'PENDING_CLIENT_DECISION') {
+      throw new BadRequestException(
+        `This report has already been decided (${report.decisionStatus}).`,
+      );
+    }
+
+    const { report: updated, changed } = await this.repository.markAccepted(
+      report.id,
     );
-    const updated = await this.repository.markAccepted(report.id);
+    if (!changed) {
+      if (updated.decisionStatus === 'ACCEPTED_REPAIR') {
+        return this._toDto(updated, booking);
+      }
+      throw new BadRequestException(
+        `This report has already been decided (${updated.decisionStatus}).`,
+      );
+    }
 
     // Inspection fee is waived once repair continues — the confirmed final
     // amount becomes the repair quote only (never combined with the fee).
@@ -264,11 +292,39 @@ export class InspectionReportsService {
     userId: string,
     bookingId: string,
   ): Promise<InspectionReportResponseDto> {
-    const { booking, report } = await this._authorizeClientDecision(
-      userId,
-      bookingId,
+    const booking = await this.repository.findBookingContext(bookingId);
+    if (!booking) throw new NotFoundException('Booking not found');
+    if (booking.clientProfile?.userId !== userId) {
+      throw new ForbiddenException('Not your booking');
+    }
+    const report = await this.repository.findByBookingId(bookingId);
+    if (!report) {
+      throw new NotFoundException('No inspection report for this booking yet.');
+    }
+
+    // Retry of an already-successful close — return current state, no
+    // duplicate booking-completion write or notification.
+    if (report.decisionStatus === 'CLOSED_AFTER_INSPECTION') {
+      return this._toDto(report, booking);
+    }
+    if (report.decisionStatus !== 'PENDING_CLIENT_DECISION') {
+      throw new BadRequestException(
+        `This report has already been decided (${report.decisionStatus}).`,
+      );
+    }
+
+    const { report: updated, changed } = await this.repository.markClosed(
+      report.id,
     );
-    const updated = await this.repository.markClosed(report.id);
+    if (!changed) {
+      if (updated.decisionStatus === 'CLOSED_AFTER_INSPECTION') {
+        return this._toDto(updated, booking);
+      }
+      throw new BadRequestException(
+        `This report has already been decided (${updated.decisionStatus}).`,
+      );
+    }
+
     // Booking completion + client/worker notifications for the close path
     // live in BookingsService, reusing its existing completion write.
     await this.bookingsService.completeAfterInspectionClose(bookingId);
@@ -399,8 +455,15 @@ export class InspectionReportsService {
       // The new linked flow must NOT do this — the completed inspection's
       // earning derives from decisionStatus staying FIND_OTHER_USTAAD
       // (inspection-fee base, see commission.util.ts); the rehired repair
-      // is tracked entirely by the child booking.
-      updated = await this.repository.markAccepted(report.id);
+      // is tracked entirely by the child booking. Guarded from
+      // FIND_OTHER_USTAAD specifically — a retry that already collapsed
+      // this report to ACCEPTED_REPAIR is a safe idempotent no-op (the
+      // decisionStatus check above already guarantees `report` here is
+      // still FIND_OTHER_USTAAD on the winning path).
+      const result = await this.repository.markAccepted(report.id, [
+        'FIND_OTHER_USTAAD',
+      ]);
+      updated = result.report;
     }
 
     const freshBooking = await this.repository.findBookingContext(booking.id);
@@ -440,24 +503,6 @@ export class InspectionReportsService {
     );
 
     return this._toSanitizedDto(report);
-  }
-
-  private async _authorizeClientDecision(userId: string, bookingId: string) {
-    const booking = await this.repository.findBookingContext(bookingId);
-    if (!booking) throw new NotFoundException('Booking not found');
-    if (booking.clientProfile?.userId !== userId) {
-      throw new ForbiddenException('Not your booking');
-    }
-    const report = await this.repository.findByBookingId(bookingId);
-    if (!report) {
-      throw new NotFoundException('No inspection report for this booking yet.');
-    }
-    if (report.decisionStatus !== 'PENDING_CLIENT_DECISION') {
-      throw new BadRequestException(
-        `This report has already been decided (${report.decisionStatus}).`,
-      );
-    }
-    return { booking, report };
   }
 
   private _toDto(

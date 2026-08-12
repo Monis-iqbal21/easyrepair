@@ -7,6 +7,8 @@ import '../../domain/usecases/login_usecase.dart';
 import '../../domain/usecases/logout_usecase.dart';
 import '../../domain/usecases/register_usecase.dart';
 import '../../../../core/errors/failures.dart';
+import '../../../../core/network/api_client.dart';
+import '../../../../core/storage/local_cache_service.dart';
 import '../../../../core/storage/secure_storage_service.dart';
 
 // ── Use case providers ────────────────────────────────────────────────────────
@@ -25,14 +27,40 @@ final logoutUseCaseProvider = Provider<LogoutUseCase>(
 
 // ── Auth state (drives GoRouter redirect) ────────────────────────────────────
 
-final authStateProvider = FutureProvider<UserEntity?>((ref) async {
-  final storage = ref.watch(secureStorageServiceProvider);
-  final token = await storage.getAccessToken();
-  if (token == null) return null;
+/// The signed-in user, or null when definitely signed out.
+///
+/// Only a genuine authentication rejection ([UnauthorizedFailure] — the
+/// authenticated Dio already tried a silent token refresh internally, and it
+/// definitively failed, or there was never a token at all) resolves to null.
+/// Any other failure from `/auth/me` — no internet, a timeout, a 5xx — is
+/// transient: [AuthInterceptor] never clears stored tokens for those, so the
+/// session is still intact and this must not claim otherwise. Rethrowing
+/// those lets Riverpod's own "keep the previous value visible across a
+/// failed rebuild" behaviour take over — `AsyncValue.hasValue`/`value` keep
+/// pointing at the last confirmed user even while `hasError` is also true,
+/// so app_router.dart's redirect (which checks `hasValue` before `hasError`)
+/// never mistakes a network hiccup for a logout. Only a cold-start check
+/// that fails before ever resolving once has no previous value to fall back
+/// on — see app_router.dart for how that case is handled.
+class AuthStateNotifier extends AsyncNotifier<UserEntity?> {
+  @override
+  Future<UserEntity?> build() async {
+    final storage = ref.watch(secureStorageServiceProvider);
+    final token = await storage.getAccessToken();
+    if (token == null) return null;
 
-  final result = await ref.watch(authRepositoryProvider).getCurrentUser();
-  return result.fold((_) => null, (user) => user);
-});
+    final result = await ref.watch(authRepositoryProvider).getCurrentUser();
+    return result.fold((failure) {
+      if (failure is UnauthorizedFailure) return null;
+      throw failure;
+    }, (user) => user);
+  }
+}
+
+final authStateProvider =
+    AsyncNotifierProvider<AuthStateNotifier, UserEntity?>(
+  AuthStateNotifier.new,
+);
 
 // ── Login notifier ────────────────────────────────────────────────────────────
 
@@ -108,7 +136,24 @@ class LogoutNotifier extends AsyncNotifier<void> {
 
   Future<void> logout() async {
     state = const AsyncLoading();
+    // Captured before the use case clears tokens below — getCurrentUserId()
+    // reads it back out of the (still-present) access token.
+    final userId =
+        await ref.read(secureStorageServiceProvider).getCurrentUserId();
     final result = await ref.read(logoutUseCaseProvider).call();
+    // Unconditional, regardless of outcome — same as the token clearing
+    // AuthRepositoryImpl.logout() already does on every path (backend call
+    // succeeds, fails, or throws). A refresh that was starting/in-flight
+    // right as the user signed out must never resurrect stale bookkeeping
+    // for whoever logs in next.
+    ref.read(dioProvider).resetAuthRefreshState();
+    // Also unconditional — belt-and-suspenders alongside per-user cache
+    // namespacing (see LocalCacheService), so a different account signing in
+    // next on this device never has this user's cached bookings/jobs/chat
+    // left over to stumble onto.
+    if (userId != null) {
+      await ref.read(localCacheServiceProvider).clearUser(userId);
+    }
     result.fold(
       (failure) => state = AsyncError(failure, StackTrace.current),
       (_) {

@@ -65,9 +65,29 @@ Failure dioExceptionToFailure(
         return SmsSendFailure(message ?? '', diagnostic: diagnostic);
       }
 
+      if (errorCode == 'OTP_RESEND_TOO_SOON') {
+        // retryAfterSeconds lets the OTP page resume its countdown from the
+        // backend's own cooldown clock rather than guessing — see
+        // OtpRequestNotifier.request.
+        return OtpResendTooSoonFailure(
+          message ?? '',
+          retryAfterSeconds: _extractRetryAfterSeconds(data),
+          diagnostic: diagnostic,
+        );
+      }
+
       if (statusCode == 400) {
         return ValidationFailure(message ?? '', diagnostic: diagnostic);
       } else if (statusCode == 401) {
+        if (errorCode == 'PHONE_NOT_REGISTERED') {
+          // A public login endpoint rejecting a phone that either doesn't
+          // exist or belongs to the opposite role. Always mapped to its own
+          // FailureCode (never the generic "session expired" one) regardless
+          // of [preserveUnauthorizedMessage] — the backend sends an empty
+          // message for this code by design, so failure_messages.dart
+          // renders it through AppLocalizations in the user's own language.
+          return PhoneNotRegisteredFailure(message ?? '', diagnostic: diagnostic);
+        }
         return UnauthorizedFailure(
           preserveUnauthorizedMessage ? (message ?? '') : '',
           diagnostic: diagnostic,
@@ -83,14 +103,8 @@ Failure dioExceptionToFailure(
           // open (see InspectorBusyFailure).
           return InspectorBusyFailure(message ?? '', diagnostic: diagnostic);
         }
-        if (errorCode == 'PHONE_IS_WORKER') {
-          return WorkerPhoneConflictFailure(
-            message ?? '',
-            diagnostic: diagnostic,
-          );
-        }
-        if (errorCode == 'PHONE_IS_CLIENT') {
-          return ClientPhoneConflictFailure(
+        if (errorCode == 'PHONE_ALREADY_REGISTERED') {
+          return PhoneAlreadyRegisteredFailure(
             message ?? '',
             diagnostic: diagnostic,
           );
@@ -172,12 +186,22 @@ String? _extractMessage(dynamic data) {
 }
 
 /// The backend's `error` field doubles as a machine-checkable code (e.g.
-/// `PHONE_IS_WORKER`) for the handful of cases where a plain message string
+/// `PHONE_ALREADY_REGISTERED`) for the handful of cases where a plain message string
 /// isn't enough to drive different UI (see `GlobalExceptionFilter`, which
 /// passes a thrown exception's `error` field through verbatim).
 String? _extractErrorCode(dynamic data) {
   if (data is Map<String, dynamic> && data['error'] != null) {
     return data['error'].toString();
+  }
+  return null;
+}
+
+/// The backend's optional `retryAfterSeconds` (currently only sent with
+/// OTP_RESEND_TOO_SOON) — null when absent or not a number.
+int? _extractRetryAfterSeconds(dynamic data) {
+  if (data is Map<String, dynamic>) {
+    final value = data['retryAfterSeconds'];
+    if (value is num) return value.round();
   }
   return null;
 }

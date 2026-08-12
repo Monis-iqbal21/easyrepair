@@ -1376,21 +1376,33 @@
   "@errorSmsSendFailed": {
     "description": "Backend SMS provider could not deliver the OTP"
   },
+  "errorOtpResendTooSoon": "Please wait a moment before requesting the OTP again.",
+  "@errorOtpResendTooSoon": {
+    "description": "Backend code OTP_RESEND_TOO_SOON — fallback only; the backend's own message is shown when present, this covers the rare case it's empty"
+  },
   "errorInspectorBusy": "The inspecting Ustaad is busy on another job right now. Please choose another Ustaad from the list below.",
   "@errorInspectorBusy": {
     "description": "Backend code INSPECTOR_BUSY on a rehire attempt"
   },
-  "errorPhoneIsWorker": "This mobile number is already registered as an Ustaad account.",
-  "@errorPhoneIsWorker": {
-    "description": "Backend code PHONE_IS_WORKER"
+  "errorPhoneNotRegistered": "This number is not registered.",
+  "@errorPhoneNotRegistered": {
+    "description": "Backend code PHONE_NOT_REGISTERED — login with a phone that either doesn't exist or belongs to the opposite role. Deliberately identical wording for both cases (role-privacy)."
   },
-  "errorPhoneIsClient": "This mobile number is already registered as a Client account.",
-  "@errorPhoneIsClient": {
-    "description": "Backend code PHONE_IS_CLIENT"
+  "errorPhoneAlreadyRegistered": "This number is already registered.",
+  "@errorPhoneAlreadyRegistered": {
+    "description": "Backend code PHONE_ALREADY_REGISTERED — registration with a phone that already has an account, regardless of role."
   },
   "errorUnknown": "Something went wrong. Please try again.",
   "@errorUnknown": {
     "description": "Last-resort wording when nothing more specific is known"
+  },
+  "errorOfflineActionBlocked": "No internet connection. Connect to the internet to continue.",
+  "@errorOfflineActionBlocked": {
+    "description": "A server-changing action (create/cancel booking, send message, etc.) was blocked client-side because the device has no network"
+  },
+  "offlineCachedDataBanner": "Offline — showing saved data",
+  "@offlineCachedDataBanner": {
+    "description": "Small non-blocking banner shown when a screen is displaying cached data because the live fetch failed"
   },
   "authForgotPasswordTitle": "Forgot your\npassword?",
   "@authForgotPasswordTitle": {
@@ -1781,5 +1793,130 @@
   "workerViewSubmittedDetails": "View Submitted Details",
   "workerDetailsReadOnlyNotice": "Your profile is approved. These details are locked and cannot be changed.",
   "workerVerificationStatus": "Verification Status",
-  "workerMainTrade": "Main Trade"
+  "workerMainTrade": "Main Trade",
+  "workerSuspendedMessage": "Your HandyGo account has been suspended. Please contact Support for more information.",
+  "@workerSuspendedMessage": {
+    "description": "Full-screen lock shown to a WorkerStatus.SUSPENDED Ustaad — the only content on that screen"
+  },
+  "workerSuspendedContactSupport": "Contact Support",
+  "@workerSuspendedContactSupport": {
+    "description": "Button on the suspended-account screen that dials HandyGo Support"
+  },
+  "earningGrossEarnings": "Gross Earnings",
+  "@earningGrossEarnings": {
+    "description": "Label for the pre-commission total on Worker Earning History"
+  },
+  "earningCommissionLabel": "HandyGo Commission (18%)",
+  "@earningCommissionLabel": {
+    "description": "Label for HandyGo's 18% platform commission line"
+  },
+  "earningUstaadEarnings": "Ustaad Earnings",
+  "@earningUstaadEarnings": {
+    "description": "Label for Gross - Commission, the amount the Ustaad actually keeps"
+  },
+  "earningCommissionStatusLabel": "Commission Status",
+  "@earningCommissionStatusLabel": {
+    "description": "Label above the Pending/Paid chip on each earning history job"
+  },
+  "earningStatusPaid": "Paid",
+  "@earningStatusPaid": {
+    "description": "Commission settled by admin for this job"
+  },
+
+  "notificationsPermissionOffMessage": "Notifications are off. Allow notifications to receive booking and job updates.",
+  "@notificationsPermissionOffMessage": {
+    "description": "Shown as a non-blocking recovery row in Profile/Settings when notification permission is denied or permanently denied"
+  },
+  "notificationsAllowAction": "Allow Notifications",
+  "@notificationsAllowAction": {
+    "description": "Button that (re)requests notification permission from the Profile/Settings recovery row"
+  },
+
+  "locationPermissionRequiredMessage": "Location permission is required.",
+  "@locationPermissionRequiredMessage": {
+    "description": "Shown when location permission was denied but can still be requested again"
+  },
+  "locationAllowAction": "Allow Location",
+  "@locationAllowAction": {
+    "description": "Button that (re)requests location permission"
+  },
+  "locationPermanentlyDeniedMessage": "Allow location permission from Settings.",
+  "@locationPermanentlyDeniedMessage": {
+    "description": "Shown when location permission was permanently denied — the OS will not show the request dialog again"
+  },
+  "locationGpsOffMessage": "Your phone's Location/GPS is off. Turn it on to continue.",
+  "@locationGpsOffMessage": {
+    "description": "Shown when location permission is granted but the device's location service itself is disabled"
+  },
+  "locationTurnOnAction": "Turn On Location",
+  "@locationTurnOnAction": {
+    "description": "Button that opens the location-services settings screen"
+  },
+  "locationUnavailableRetryMessage": "Unable to get your location. Please try again.",
+  "@locationUnavailableRetryMessage": {
+    "description": "Shown when a location fix could not be obtained (timeout/failure) despite permission and GPS both being available"
+  },
+  "locationStaleMessage": "Your current location is required. Please update your location.",
+  "@locationStaleMessage": {
+    "description": "Shown when a cached worker location is too old to use for live job/discovery decisions"
+  },
+
+  "cameraPermissionDeniedMessage": "Allow camera permission to continue.",
+  "@cameraPermissionDeniedMessage": {
+    "description": "Shown when camera permission is denied or permanently denied"
+  },
+  "galleryPermissionDeniedMessage": "Allow photo access to select files.",
+  "@galleryPermissionDeniedMessage": {
+    "description": "Shown when photo library/gallery permission is denied or permanently denied"
+  },
+  "unsupportedFileMessage": "This file type is not supported. Select another file.",
+  "@unsupportedFileMessage": {
+    "description": "Shown when a picked file's type is not accepted by the upload target"
+  },
+  "fileTooLargeMessage": "The file is too large. Select a smaller file.",
+  "@fileTooLargeMessage": {
+    "description": "Shown when a picked file exceeds the upload size limit"
+  },
+  "commonChooseAgain": "Choose Again",
+  "@commonChooseAgain": {
+    "description": "Button that reopens the file/photo picker after a failed selection"
+  },
+
+  "pageNotAvailableTitle": "Page Not Available",
+  "@pageNotAvailableTitle": {
+    "description": "Title of the global screen shown for an unknown/invalid route"
+  },
+  "pageNotAvailableBody": "This page is no longer available.",
+  "@pageNotAvailableBody": {
+    "description": "Body of the global screen shown for an unknown/invalid route"
+  },
+  "commonGoHome": "Go to Home",
+  "@commonGoHome": {
+    "description": "Button that navigates back to the caller's role-appropriate home screen"
+  },
+
+  "resourceBookingUnavailable": "This booking is no longer available.",
+  "@resourceBookingUnavailable": {
+    "description": "Shown on the booking detail screen when the booking has been deleted, or is otherwise no longer accessible to this account (404/403 from the API)"
+  },
+  "resourceJobUnavailable": "This job is no longer assigned to you.",
+  "@resourceJobUnavailable": {
+    "description": "Shown on the worker job detail screen when the job is no longer assigned to this worker (404/403 from the API)"
+  },
+  "resourceConversationUnavailable": "This conversation is no longer available.",
+  "@resourceConversationUnavailable": {
+    "description": "Shown on the chat detail screen when the conversation has been deleted, or is otherwise no longer accessible to this account (404/403 from the API)"
+  },
+  "goToMyBookingsAction": "Go to My Bookings",
+  "@goToMyBookingsAction": {
+    "description": "Safe-navigation button on the client's booking-unavailable state"
+  },
+  "goToMyJobsAction": "Go to My Jobs",
+  "@goToMyJobsAction": {
+    "description": "Safe-navigation button on the worker's job-unavailable state"
+  },
+  "goToChatsAction": "Go to Chats",
+  "@goToChatsAction": {
+    "description": "Safe-navigation button on the chat-unavailable state"
+  }
 }

@@ -7,6 +7,7 @@ import '../../../../../core/notifications/notification_navigator.dart';
 import '../../../../../features/auth/presentation/providers/auth_providers.dart';
 import '../../domain/entities/notification_entity.dart';
 import '../providers/notification_providers.dart';
+import '../../../../core/errors/failure_messages.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
 
 const _kOrange = Color(0xFFDB6234);
@@ -73,7 +74,7 @@ class NotificationListPage extends ConsumerWidget {
               const Icon(Icons.error_outline_rounded,
                   size: 48, color: Color(0xFFCBD5E1)),
               const SizedBox(height: 12),
-              Text(err.toString(),
+              Text(failureMessage(context.l10n, err),
                   style: const TextStyle(color: _kGray, fontSize: 14),
                   textAlign: TextAlign.center),
               const SizedBox(height: 16),

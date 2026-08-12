@@ -208,6 +208,28 @@ void main() {
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
       await tester.pumpAndSettle();
     });
+
+    // Chunk 3 launch-hardening: a double-tap that races past the disabled
+    // button (both taps land before the first rebuild shows the spinner)
+    // must still only fire one accept request.
+    testWidgets('repeated tap before the spinner renders triggers only one accept request', (
+      tester,
+    ) async {
+      final notifier = _FakeAcceptNotifier();
+      await _pump(tester, acceptNotifier: notifier);
+
+      await tester.tap(find.byType(Checkbox));
+      await tester.pumpAndSettle();
+
+      final button = find.widgetWithText(ElevatedButton, 'I Agree');
+      // Two taps back-to-back, no pump in between — simulates a real
+      // double-tap landing before the widget rebuilds with isLoading:true.
+      await tester.tap(button);
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+
+      expect(notifier.calls, 1);
+    });
   });
 
   group('reading the agreement', () {

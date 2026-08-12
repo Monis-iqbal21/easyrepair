@@ -4875,29 +4875,47 @@ abstract class AppLocalizations {
   /// **'The SMS could not be sent. Please try again.'**
   String get errorSmsSendFailed;
 
+  /// Backend code OTP_RESEND_TOO_SOON — fallback only; the backend's own message is shown when present, this covers the rare case it's empty
+  ///
+  /// In en, this message translates to:
+  /// **'Please wait a moment before requesting the OTP again.'**
+  String get errorOtpResendTooSoon;
+
   /// Backend code INSPECTOR_BUSY on a rehire attempt
   ///
   /// In en, this message translates to:
   /// **'The inspecting Ustaad is busy on another job right now. Please choose another Ustaad from the list below.'**
   String get errorInspectorBusy;
 
-  /// Backend code PHONE_IS_WORKER
+  /// Backend code PHONE_NOT_REGISTERED — login with a phone that either doesn't exist or belongs to the opposite role. Deliberately identical wording for both cases (role-privacy).
   ///
   /// In en, this message translates to:
-  /// **'This mobile number is already registered as an Ustaad account.'**
-  String get errorPhoneIsWorker;
+  /// **'This number is not registered.'**
+  String get errorPhoneNotRegistered;
 
-  /// Backend code PHONE_IS_CLIENT
+  /// Backend code PHONE_ALREADY_REGISTERED — registration with a phone that already has an account, regardless of role.
   ///
   /// In en, this message translates to:
-  /// **'This mobile number is already registered as a Client account.'**
-  String get errorPhoneIsClient;
+  /// **'This number is already registered.'**
+  String get errorPhoneAlreadyRegistered;
 
   /// Last-resort wording when nothing more specific is known
   ///
   /// In en, this message translates to:
   /// **'Something went wrong. Please try again.'**
   String get errorUnknown;
+
+  /// A server-changing action (create/cancel booking, send message, etc.) was blocked client-side because the device has no network
+  ///
+  /// In en, this message translates to:
+  /// **'No internet connection. Connect to the internet to continue.'**
+  String get errorOfflineActionBlocked;
+
+  /// Small non-blocking banner shown when a screen is displaying cached data because the live fetch failed
+  ///
+  /// In en, this message translates to:
+  /// **'Offline — showing saved data'**
+  String get offlineCachedDataBanner;
 
   /// Forgot-password screen, step 1 heading
   ///
@@ -5582,6 +5600,186 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Main Trade'**
   String get workerMainTrade;
+
+  /// Full-screen lock shown to a WorkerStatus.SUSPENDED Ustaad — the only content on that screen
+  ///
+  /// In en, this message translates to:
+  /// **'Your HandyGo account has been suspended. Please contact Support for more information.'**
+  String get workerSuspendedMessage;
+
+  /// Button on the suspended-account screen that dials HandyGo Support
+  ///
+  /// In en, this message translates to:
+  /// **'Contact Support'**
+  String get workerSuspendedContactSupport;
+
+  /// Label for the pre-commission total on Worker Earning History
+  ///
+  /// In en, this message translates to:
+  /// **'Gross Earnings'**
+  String get earningGrossEarnings;
+
+  /// Label for HandyGo's 18% platform commission line
+  ///
+  /// In en, this message translates to:
+  /// **'HandyGo Commission (18%)'**
+  String get earningCommissionLabel;
+
+  /// Label for Gross - Commission, the amount the Ustaad actually keeps
+  ///
+  /// In en, this message translates to:
+  /// **'Ustaad Earnings'**
+  String get earningUstaadEarnings;
+
+  /// Label above the Pending/Paid chip on each earning history job
+  ///
+  /// In en, this message translates to:
+  /// **'Commission Status'**
+  String get earningCommissionStatusLabel;
+
+  /// Commission settled by admin for this job
+  ///
+  /// In en, this message translates to:
+  /// **'Paid'**
+  String get earningStatusPaid;
+
+  /// Shown as a non-blocking recovery row in Profile/Settings when notification permission is denied or permanently denied
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications are off. Allow notifications to receive booking and job updates.'**
+  String get notificationsPermissionOffMessage;
+
+  /// Button that (re)requests notification permission from the Profile/Settings recovery row
+  ///
+  /// In en, this message translates to:
+  /// **'Allow Notifications'**
+  String get notificationsAllowAction;
+
+  /// Shown when location permission was denied but can still be requested again
+  ///
+  /// In en, this message translates to:
+  /// **'Location permission is required.'**
+  String get locationPermissionRequiredMessage;
+
+  /// Button that (re)requests location permission
+  ///
+  /// In en, this message translates to:
+  /// **'Allow Location'**
+  String get locationAllowAction;
+
+  /// Shown when location permission was permanently denied — the OS will not show the request dialog again
+  ///
+  /// In en, this message translates to:
+  /// **'Allow location permission from Settings.'**
+  String get locationPermanentlyDeniedMessage;
+
+  /// Shown when location permission is granted but the device's location service itself is disabled
+  ///
+  /// In en, this message translates to:
+  /// **'Your phone\'s Location/GPS is off. Turn it on to continue.'**
+  String get locationGpsOffMessage;
+
+  /// Button that opens the location-services settings screen
+  ///
+  /// In en, this message translates to:
+  /// **'Turn On Location'**
+  String get locationTurnOnAction;
+
+  /// Shown when a location fix could not be obtained (timeout/failure) despite permission and GPS both being available
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to get your location. Please try again.'**
+  String get locationUnavailableRetryMessage;
+
+  /// Shown when a cached worker location is too old to use for live job/discovery decisions
+  ///
+  /// In en, this message translates to:
+  /// **'Your current location is required. Please update your location.'**
+  String get locationStaleMessage;
+
+  /// Shown when camera permission is denied or permanently denied
+  ///
+  /// In en, this message translates to:
+  /// **'Allow camera permission to continue.'**
+  String get cameraPermissionDeniedMessage;
+
+  /// Shown when photo library/gallery permission is denied or permanently denied
+  ///
+  /// In en, this message translates to:
+  /// **'Allow photo access to select files.'**
+  String get galleryPermissionDeniedMessage;
+
+  /// Shown when a picked file's type is not accepted by the upload target
+  ///
+  /// In en, this message translates to:
+  /// **'This file type is not supported. Select another file.'**
+  String get unsupportedFileMessage;
+
+  /// Shown when a picked file exceeds the upload size limit
+  ///
+  /// In en, this message translates to:
+  /// **'The file is too large. Select a smaller file.'**
+  String get fileTooLargeMessage;
+
+  /// Button that reopens the file/photo picker after a failed selection
+  ///
+  /// In en, this message translates to:
+  /// **'Choose Again'**
+  String get commonChooseAgain;
+
+  /// Title of the global screen shown for an unknown/invalid route
+  ///
+  /// In en, this message translates to:
+  /// **'Page Not Available'**
+  String get pageNotAvailableTitle;
+
+  /// Body of the global screen shown for an unknown/invalid route
+  ///
+  /// In en, this message translates to:
+  /// **'This page is no longer available.'**
+  String get pageNotAvailableBody;
+
+  /// Button that navigates back to the caller's role-appropriate home screen
+  ///
+  /// In en, this message translates to:
+  /// **'Go to Home'**
+  String get commonGoHome;
+
+  /// Shown on the booking detail screen when the booking has been deleted, or is otherwise no longer accessible to this account (404/403 from the API)
+  ///
+  /// In en, this message translates to:
+  /// **'This booking is no longer available.'**
+  String get resourceBookingUnavailable;
+
+  /// Shown on the worker job detail screen when the job is no longer assigned to this worker (404/403 from the API)
+  ///
+  /// In en, this message translates to:
+  /// **'This job is no longer assigned to you.'**
+  String get resourceJobUnavailable;
+
+  /// Shown on the chat detail screen when the conversation has been deleted, or is otherwise no longer accessible to this account (404/403 from the API)
+  ///
+  /// In en, this message translates to:
+  /// **'This conversation is no longer available.'**
+  String get resourceConversationUnavailable;
+
+  /// Safe-navigation button on the client's booking-unavailable state
+  ///
+  /// In en, this message translates to:
+  /// **'Go to My Bookings'**
+  String get goToMyBookingsAction;
+
+  /// Safe-navigation button on the worker's job-unavailable state
+  ///
+  /// In en, this message translates to:
+  /// **'Go to My Jobs'**
+  String get goToMyJobsAction;
+
+  /// Safe-navigation button on the chat-unavailable state
+  ///
+  /// In en, this message translates to:
+  /// **'Go to Chats'**
+  String get goToChatsAction;
 }
 
 class _AppLocalizationsDelegate

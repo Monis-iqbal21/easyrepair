@@ -27,6 +27,8 @@ import 'track_worker_page.dart';
 import 'worker_discovery_map_page.dart';
 import '../utils/booking_labels.dart';
 import '../../../../core/errors/failure_messages.dart';
+import '../../../../core/network/offline_banner.dart';
+import '../../../../core/presentation/widgets/resource_unavailable_view.dart';
 
 /// Statuses during which the client detail page polls GET /bookings/:id
 /// every few seconds to reflect the worker's live progress/location.
@@ -68,6 +70,9 @@ class _BookingDetailPageState extends ConsumerState<BookingDetailPage> {
   @override
   Widget build(BuildContext context) {
     final bookingAsync = ref.watch(bookingDetailProvider(widget.bookingId));
+    final isShowingCachedData =
+        ref.watch(bookingDetailIsOfflineProvider(widget.bookingId)) &&
+            bookingAsync.hasValue;
 
     return PopScope(
       canPop: false,
@@ -79,11 +84,22 @@ class _BookingDetailPageState extends ConsumerState<BookingDetailPage> {
         body: bookingAsync.when(
           skipError: true,
           loading: () => _LoadingSkeleton(bookingId: widget.bookingId),
-          error: (err, _) => _ErrorScreen(
-            message: failureMessage(context.l10n, err, fallback: context.l10n.bookingLoadFailed),
-            onRetry: () => ref.invalidate(bookingDetailProvider(widget.bookingId)),
+          error: (err, _) => isResourceUnavailableFailure(err)
+              ? ResourceUnavailableView(
+                  message: context.l10n.resourceBookingUnavailable,
+                  actionLabel: context.l10n.goToMyBookingsAction,
+                  onAction: () => _goBack(context),
+                )
+              : _ErrorScreen(
+                  message: failureMessage(context.l10n, err, fallback: context.l10n.bookingLoadFailed),
+                  onRetry: () => ref.invalidate(bookingDetailProvider(widget.bookingId)),
+                ),
+          data: (booking) => Column(
+            children: [
+              if (isShowingCachedData) const OfflineDataBanner(),
+              Expanded(child: _DetailBody(booking: booking)),
+            ],
           ),
-          data: (booking) => _DetailBody(booking: booking),
         ),
       ),
     );

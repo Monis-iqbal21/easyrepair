@@ -2711,19 +2711,29 @@ class AppLocalizationsEn extends AppLocalizations {
       'The SMS could not be sent. Please try again.';
 
   @override
+  String get errorOtpResendTooSoon =>
+      'Please wait a moment before requesting the OTP again.';
+
+  @override
   String get errorInspectorBusy =>
       'The inspecting Ustaad is busy on another job right now. Please choose another Ustaad from the list below.';
 
   @override
-  String get errorPhoneIsWorker =>
-      'This mobile number is already registered as an Ustaad account.';
+  String get errorPhoneNotRegistered => 'This number is not registered.';
 
   @override
-  String get errorPhoneIsClient =>
-      'This mobile number is already registered as a Client account.';
+  String get errorPhoneAlreadyRegistered =>
+      'This number is already registered.';
 
   @override
   String get errorUnknown => 'Something went wrong. Please try again.';
+
+  @override
+  String get errorOfflineActionBlocked =>
+      'No internet connection. Connect to the internet to continue.';
+
+  @override
+  String get offlineCachedDataBanner => 'Offline — showing saved data';
 
   @override
   String get authForgotPasswordTitle => 'Forgot your\npassword?';
@@ -3130,4 +3140,107 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get workerMainTrade => 'Main Trade';
+
+  @override
+  String get workerSuspendedMessage =>
+      'Your HandyGo account has been suspended. Please contact Support for more information.';
+
+  @override
+  String get workerSuspendedContactSupport => 'Contact Support';
+
+  @override
+  String get earningGrossEarnings => 'Gross Earnings';
+
+  @override
+  String get earningCommissionLabel => 'HandyGo Commission (18%)';
+
+  @override
+  String get earningUstaadEarnings => 'Ustaad Earnings';
+
+  @override
+  String get earningCommissionStatusLabel => 'Commission Status';
+
+  @override
+  String get earningStatusPaid => 'Paid';
+
+  @override
+  String get notificationsPermissionOffMessage =>
+      'Notifications are off. Allow notifications to receive booking and job updates.';
+
+  @override
+  String get notificationsAllowAction => 'Allow Notifications';
+
+  @override
+  String get locationPermissionRequiredMessage =>
+      'Location permission is required.';
+
+  @override
+  String get locationAllowAction => 'Allow Location';
+
+  @override
+  String get locationPermanentlyDeniedMessage =>
+      'Allow location permission from Settings.';
+
+  @override
+  String get locationGpsOffMessage =>
+      'Your phone\'s Location/GPS is off. Turn it on to continue.';
+
+  @override
+  String get locationTurnOnAction => 'Turn On Location';
+
+  @override
+  String get locationUnavailableRetryMessage =>
+      'Unable to get your location. Please try again.';
+
+  @override
+  String get locationStaleMessage =>
+      'Your current location is required. Please update your location.';
+
+  @override
+  String get cameraPermissionDeniedMessage =>
+      'Allow camera permission to continue.';
+
+  @override
+  String get galleryPermissionDeniedMessage =>
+      'Allow photo access to select files.';
+
+  @override
+  String get unsupportedFileMessage =>
+      'This file type is not supported. Select another file.';
+
+  @override
+  String get fileTooLargeMessage =>
+      'The file is too large. Select a smaller file.';
+
+  @override
+  String get commonChooseAgain => 'Choose Again';
+
+  @override
+  String get pageNotAvailableTitle => 'Page Not Available';
+
+  @override
+  String get pageNotAvailableBody => 'This page is no longer available.';
+
+  @override
+  String get commonGoHome => 'Go to Home';
+
+  @override
+  String get resourceBookingUnavailable =>
+      'This booking is no longer available.';
+
+  @override
+  String get resourceJobUnavailable => 'This job is no longer assigned to you.';
+
+  @override
+  String get resourceConversationUnavailable =>
+      'This conversation is no longer available.';
+
+  @override
+  String get goToMyBookingsAction => 'Go to My Bookings';
+
+  @override
+  String get goToMyJobsAction => 'Go to My Jobs';
+
+  @override
+  String get goToChatsAction => 'Go to Chats';
 }

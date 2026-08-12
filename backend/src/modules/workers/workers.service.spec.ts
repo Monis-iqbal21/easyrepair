@@ -366,6 +366,90 @@ describe('WorkersService.cancelJob', () => {
   });
 });
 
+// ── Chunk 3: launch-hardening idempotency ─────────────────────────────────
+describe('WorkersService.completeJob idempotency', () => {
+  let workersRepository: any;
+  let notificationsService: any;
+  let jobBroadcastService: any;
+  let jobCompletionNotifier: any;
+  let service: WorkersService;
+
+  beforeEach(() => {
+    workersRepository = {
+      findByUserId: jest.fn().mockResolvedValue({ id: 'worker-1' }),
+      findJobByIdAndWorkerProfileId: jest.fn(),
+      completeBooking: jest.fn(),
+    };
+    notificationsService = { notify: jest.fn().mockResolvedValue(undefined) };
+    jobBroadcastService = { matchOpenJobsForWorker: jest.fn() };
+    jobCompletionNotifier = { notifyClientJobCompleted: jest.fn() };
+    service = new WorkersService(
+      workersRepository,
+      notificationsService,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      jobBroadcastService as any,
+      jobCompletionNotifier as any,
+    );
+  });
+
+  it('retrying an already-completed job (e.g. the sibling /bookings/:id/complete endpoint already completed it) returns current state without duplicating earnings/notifications', async () => {
+    workersRepository.findJobByIdAndWorkerProfileId.mockResolvedValue(
+      makeCancelJobFixture('COMPLETED'),
+    );
+
+    const result = await service.completeJob('user-1', 'booking-1');
+
+    expect(result).toBeDefined();
+    expect(workersRepository.completeBooking).not.toHaveBeenCalled();
+    expect(
+      jobCompletionNotifier.notifyClientJobCompleted,
+    ).not.toHaveBeenCalled();
+    expect(jobBroadcastService.matchOpenJobsForWorker).not.toHaveBeenCalled();
+  });
+
+  it('losing the race to a concurrent completion (changed: false) still returns success, no duplicate notification', async () => {
+    workersRepository.findJobByIdAndWorkerProfileId.mockResolvedValue(
+      makeCancelJobFixture('IN_PROGRESS'),
+    );
+    workersRepository.completeBooking.mockResolvedValue({
+      job: makeCancelJobFixture('COMPLETED'),
+      changed: false,
+    });
+
+    const result = await service.completeJob('user-1', 'booking-1');
+
+    expect(result).toBeDefined();
+    expect(
+      jobCompletionNotifier.notifyClientJobCompleted,
+    ).not.toHaveBeenCalled();
+  });
+
+  it('completing a fresh IN_PROGRESS job writes exactly once and notifies', async () => {
+    workersRepository.findJobByIdAndWorkerProfileId.mockResolvedValue(
+      makeCancelJobFixture('IN_PROGRESS'),
+    );
+    workersRepository.completeBooking.mockResolvedValue({
+      job: makeCancelJobFixture('COMPLETED'),
+      changed: true,
+    });
+
+    await service.completeJob('user-1', 'booking-1');
+
+    expect(workersRepository.completeBooking).toHaveBeenCalledWith(
+      'booking-1',
+      'worker-1',
+      expect.arrayContaining(['ACCEPTED', 'EN_ROUTE', 'IN_PROGRESS']),
+    );
+    expect(
+      jobCompletionNotifier.notifyClientJobCompleted,
+    ).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('WorkersService.getWorkerJobById — inspection role detection', () => {
   let workersRepository: any;
   let notificationsService: any;

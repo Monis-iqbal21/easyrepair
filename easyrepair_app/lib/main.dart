@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app/app.dart';
 import 'core/l10n/locale_provider.dart';
+import 'core/network/connectivity_service.dart';
 import 'core/notifications/local_notification_service.dart';
 import 'firebase_options.dart';
 
@@ -65,6 +66,11 @@ Future<void> main() async {
   // known on the first frame — otherwise the app would render one language
   // and then visibly switch.
   final prefs = await SharedPreferences.getInstance();
+
+  // Resolved before runApp so the offline banner and write-action guards
+  // have a real reading from the very first frame instead of the optimistic
+  // "online" default.
+  await ConnectivityService.instance.init();
 
   runApp(
     ProviderScope(

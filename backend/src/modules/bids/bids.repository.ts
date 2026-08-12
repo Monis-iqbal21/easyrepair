@@ -20,6 +20,7 @@ export const BID_INCLUDE = {
       id: true,
       status: true,
       clientProfileId: true,
+      workerProfileId: true,
     },
   },
 } satisfies Prisma.BidInclude;
@@ -104,25 +105,51 @@ export class BidsRepository {
     });
   }
 
+  /**
+   * `Bid @@unique([bookingId, workerProfileId])` backs "one active bid per
+   * worker/job". A genuine concurrent double-submit (the caller's own
+   * findExistingBid check raced another request creating the row first)
+   * hits that constraint (P2002) — return the winning row instead of
+   * surfacing a raw 500 or creating a duplicate bid.
+   */
   async createBid(data: {
     bookingId: string;
     workerProfileId: string;
     amount: number;
     message?: string;
   }): Promise<BidWithRelations> {
-    const bid = await this.prisma.bid.create({
-      data: {
-        bookingId: data.bookingId,
-        workerProfileId: data.workerProfileId,
-        amount: data.amount,
-        message: data.message ?? null,
-        status: BidStatus.PENDING,
-      },
-    });
-    return this.prisma.bid.findUniqueOrThrow({
-      where: { id: bid.id },
-      include: BID_INCLUDE,
-    });
+    try {
+      const bid = await this.prisma.bid.create({
+        data: {
+          bookingId: data.bookingId,
+          workerProfileId: data.workerProfileId,
+          amount: data.amount,
+          message: data.message ?? null,
+          status: BidStatus.PENDING,
+        },
+      });
+      return await this.prisma.bid.findUniqueOrThrow({
+        where: { id: bid.id },
+        include: BID_INCLUDE,
+      });
+    } catch (err) {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2002'
+      ) {
+        const existing = await this.prisma.bid.findUnique({
+          where: {
+            bookingId_workerProfileId: {
+              bookingId: data.bookingId,
+              workerProfileId: data.workerProfileId,
+            },
+          },
+          include: BID_INCLUDE,
+        });
+        if (existing) return existing;
+      }
+      throw err;
+    }
   }
 
   async updateBid(
@@ -237,27 +264,16 @@ export class BidsRepository {
     platformFee: number,
   ) {
     return this.prisma.$transaction(async (tx) => {
-      // Accept the chosen bid
-      await tx.bid.update({
-        where: { id: bidId },
-        data: { status: BidStatus.ACCEPTED },
-      });
-
-      // Reject all other bids on this booking
-      await tx.bid.updateMany({
-        where: { bookingId, id: { not: bidId } },
-        data: { status: BidStatus.REJECTED },
-      });
-
-      // Assign worker and transition booking to ACCEPTED.
+      // Assign worker and transition booking to ACCEPTED FIRST — this atomic
+      // gate (conditional on workerProfileId still being null AND status
+      // still PENDING) is what actually decides whether this accept "wins".
+      // Doing it before touching the bid rows means a losing request never
+      // mutates bid status at all, so a retry that loses this race leaves
+      // every bid exactly as the winning request left it.
+      //
       // finalPrice/platformFee are set here (mirroring assignWorkerToBooking's
       // STANDARD/INSPECTION behavior) so completion and worker earnings read
       // the accepted bid amount instead of staying null.
-      // Conditional on workerProfileId still being null AND status still
-      // PENDING — closes a race where this booking was reassigned by
-      // another concurrent hire (e.g. the INSPECTION "Find Other Ustaad"
-      // flow's re-hire-the-inspector path) between this bid's creation and
-      // its acceptance; whichever transaction commits first wins.
       const bookingRes = await tx.booking.updateMany({
         where: {
           id: bookingId,
@@ -272,17 +288,38 @@ export class BidsRepository {
           platformFee,
         },
       });
-      if (bookingRes.count === 0) throw new WorkerUnavailableError();
+
+      const bookingInclude = {
+        category: { select: { name: true } },
+        clientProfile: { select: { userId: true } },
+        workerProfile: {
+          select: { userId: true, firstName: true, lastName: true },
+        },
+      } as const;
+
+      if (bookingRes.count === 0) {
+        const booking = await tx.booking.findUniqueOrThrow({
+          where: { id: bookingId },
+          include: bookingInclude,
+        });
+        return { booking, changed: false };
+      }
+
+      // Accept the chosen bid
+      await tx.bid.update({
+        where: { id: bidId },
+        data: { status: BidStatus.ACCEPTED },
+      });
+
+      // Reject all other bids on this booking
+      await tx.bid.updateMany({
+        where: { bookingId, id: { not: bidId } },
+        data: { status: BidStatus.REJECTED },
+      });
 
       const booking = await tx.booking.findUniqueOrThrow({
         where: { id: bookingId },
-        include: {
-          category: { select: { name: true } },
-          clientProfile: { select: { userId: true } },
-          workerProfile: {
-            select: { userId: true, firstName: true, lastName: true },
-          },
-        },
+        include: bookingInclude,
       });
 
       // Record status history
@@ -313,7 +350,7 @@ export class BidsRepository {
       });
       if (res.count === 0) throw new WorkerUnavailableError();
 
-      return booking;
+      return { booking, changed: true };
     });
   }
 

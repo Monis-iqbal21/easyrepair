@@ -12,6 +12,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
 import '../widgets/client_bottom_nav_bar.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
+import '../../../../core/notifications/notification_permission_card.dart';
+import '../../../../core/permissions/media_permission_helper.dart';
 import '../../../../core/l10n/locale_provider.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/presentation/widgets/language_selector_sheet.dart';
@@ -140,7 +142,9 @@ class _ClientProfilePageState extends ConsumerState<ClientProfilePage> {
         ? ImageSource.camera
         : ImageSource.gallery;
 
-    final file = await _picker.pickImage(
+    final file = await pickImageWithRecovery(
+      context,
+      picker: _picker,
       source: source,
       imageQuality: 80,
       maxWidth: 600,
@@ -306,6 +310,7 @@ class _ClientProfilePageState extends ConsumerState<ClientProfilePage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    const NotificationPermissionCard(),
                     _SectionLabel(label: context.l10n.settingsSectionAccount),
                     const SizedBox(height: 10),
                     _SettingsCard(

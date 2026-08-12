@@ -42,9 +42,11 @@ String failureCodeMessage(
     FailureCode.tooManyRequests => l10n.errorTooManyRequests,
     FailureCode.server => l10n.errorServer,
     FailureCode.smsSendFailed => l10n.errorSmsSendFailed,
+    FailureCode.otpResendTooSoon => l10n.errorOtpResendTooSoon,
     FailureCode.inspectorBusy => l10n.errorInspectorBusy,
-    FailureCode.phoneIsWorker => l10n.errorPhoneIsWorker,
-    FailureCode.phoneIsClient => l10n.errorPhoneIsClient,
+    FailureCode.phoneNotRegistered => l10n.errorPhoneNotRegistered,
+    FailureCode.phoneAlreadyRegistered => l10n.errorPhoneAlreadyRegistered,
+    FailureCode.offlineActionBlocked => l10n.errorOfflineActionBlocked,
     // Nothing specific is known — the screen knows better than this file
     // which action the user was trying to complete.
     FailureCode.unknown => fallback ?? l10n.errorUnknown,

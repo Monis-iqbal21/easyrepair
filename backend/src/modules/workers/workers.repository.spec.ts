@@ -215,6 +215,194 @@ describe('WorkersRepository.getJobStats / getEarningsHistory narrowing', () => {
 });
 
 /**
+ * Pins the 18% commission breakdown getEarningsHistory now attaches to
+ * every job — Gross / HandyGo Commission / Ustaad Earning, all via the one
+ * shared commission.util.ts source, plus the per-job (never per-worker)
+ * commissionStatus read straight off the underlying Booking row.
+ */
+describe('WorkersRepository.getEarningsHistory — 18% commission breakdown', () => {
+  let prisma: any;
+  let repo: WorkersRepository;
+
+  beforeEach(() => {
+    prisma = {
+      booking: { findMany: jest.fn().mockResolvedValue([]) },
+      inspectionReport: { findMany: jest.fn().mockResolvedValue([]) },
+    };
+    repo = new WorkersRepository(prisma);
+  });
+
+  it('computes exactly 18% commission and Gross - Commission as the Ustaad earning', async () => {
+    prisma.booking.findMany.mockResolvedValue([
+      {
+        id: 'b-1',
+        lane: 'STANDARD',
+        finalPrice: 10000,
+        completedAt: new Date('2026-08-01T09:00:00Z'),
+        commissionStatus: 'PENDING',
+        category: { name: 'AC Repair' },
+        inspectionReport: null,
+        sourceInspectionBooking: null,
+      },
+    ]);
+
+    const history = await repo.getEarningsHistory('worker-1');
+    const job = history[0].jobs[0];
+
+    expect(job.grossEarning).toBe(10000);
+    expect(job.commissionAmount).toBe(1800);
+    expect(job.ustaadEarning).toBe(8200);
+  });
+
+  it('defaults a completed job to commission status PENDING', async () => {
+    prisma.booking.findMany.mockResolvedValue([
+      {
+        id: 'b-1',
+        lane: 'STANDARD',
+        finalPrice: 5000,
+        completedAt: new Date('2026-08-01T09:00:00Z'),
+        commissionStatus: 'PENDING',
+        category: { name: 'Plumbing' },
+        inspectionReport: null,
+        sourceInspectionBooking: null,
+      },
+    ]);
+
+    const history = await repo.getEarningsHistory('worker-1');
+
+    expect(history[0].jobs[0].commissionStatus).toBe('PENDING');
+  });
+
+  it('surfaces commissionStatus PAID once admin has settled it', async () => {
+    prisma.booking.findMany.mockResolvedValue([
+      {
+        id: 'b-1',
+        lane: 'STANDARD',
+        finalPrice: 5000,
+        completedAt: new Date('2026-08-01T09:00:00Z'),
+        commissionStatus: 'PAID',
+        category: { name: 'Plumbing' },
+        inspectionReport: null,
+        sourceInspectionBooking: null,
+      },
+    ]);
+
+    const history = await repo.getEarningsHistory('worker-1');
+
+    expect(history[0].jobs[0].commissionStatus).toBe('PAID');
+  });
+
+  it('keeps each job\'s commission status independent — updating one never affects another on the same day', async () => {
+    prisma.booking.findMany.mockResolvedValue([
+      {
+        id: 'job-A',
+        lane: 'STANDARD',
+        finalPrice: 1000,
+        completedAt: new Date('2026-08-01T09:00:00Z'),
+        commissionStatus: 'PAID',
+        category: { name: 'AC Repair' },
+        inspectionReport: null,
+        sourceInspectionBooking: null,
+      },
+      {
+        id: 'job-B',
+        lane: 'STANDARD',
+        finalPrice: 2000,
+        completedAt: new Date('2026-08-01T11:00:00Z'),
+        commissionStatus: 'PENDING',
+        category: { name: 'Plumbing' },
+        inspectionReport: null,
+        sourceInspectionBooking: null,
+      },
+      {
+        id: 'job-C',
+        lane: 'STANDARD',
+        finalPrice: 3000,
+        completedAt: new Date('2026-08-01T13:00:00Z'),
+        commissionStatus: 'PENDING',
+        category: { name: 'Carpentry' },
+        inspectionReport: null,
+        sourceInspectionBooking: null,
+      },
+    ]);
+
+    const history = await repo.getEarningsHistory('worker-1');
+    const byId = Object.fromEntries(
+      history[0].jobs.map((j: any) => [j.bookingId, j.commissionStatus]),
+    );
+
+    expect(byId['job-A']).toBe('PAID');
+    expect(byId['job-B']).toBe('PENDING');
+    expect(byId['job-C']).toBe('PENDING');
+  });
+
+  it('sums gross correctly across multiple jobs, each keeping its own correct 18%/82% split', async () => {
+    prisma.booking.findMany.mockResolvedValue([
+      {
+        id: 'job-A',
+        lane: 'STANDARD',
+        finalPrice: 10000,
+        completedAt: new Date('2026-08-01T09:00:00Z'),
+        commissionStatus: 'PAID',
+        category: { name: 'AC Repair' },
+        inspectionReport: null,
+        sourceInspectionBooking: null,
+      },
+      {
+        id: 'job-B',
+        lane: 'STANDARD',
+        finalPrice: 90000,
+        completedAt: new Date('2026-08-01T11:00:00Z'),
+        commissionStatus: 'PENDING',
+        category: { name: 'Plumbing' },
+        inspectionReport: null,
+        sourceInspectionBooking: null,
+      },
+    ]);
+
+    const history = await repo.getEarningsHistory('worker-1');
+
+    expect(history[0].grossTotal).toBe(100000);
+    const [jobA, jobB] = [
+      history[0].jobs.find((j: any) => j.bookingId === 'job-A'),
+      history[0].jobs.find((j: any) => j.bookingId === 'job-B'),
+    ];
+    expect(jobA!.commissionAmount).toBe(1800);
+    expect(jobA!.ustaadEarning).toBe(8200);
+    expect(jobB!.commissionAmount).toBe(16200);
+    expect(jobB!.ustaadEarning).toBe(73800);
+    // Ustaad earning is Gross - Commission regardless of PAID vs PENDING.
+    const totalUstaad = history[0].jobs.reduce(
+      (sum: number, j: any) => sum + j.ustaadEarning,
+      0,
+    );
+    expect(Math.round(totalUstaad)).toBe(82000);
+  });
+
+  it('an inspection-fee-only job (worker inspected for another Ustaad) still carries its own commissionStatus', async () => {
+    prisma.inspectionReport.findMany.mockResolvedValue([
+      {
+        booking: {
+          id: 'inspection-1',
+          completedAt: new Date('2026-08-02T09:00:00Z'),
+          inspectionFeeSnapshot: 1000,
+          commissionStatus: 'PAID',
+          category: { name: 'Electrical' },
+        },
+      },
+    ]);
+
+    const history = await repo.getEarningsHistory('inspector-1');
+    const job = history[0].jobs[0];
+
+    expect(job.grossEarning).toBe(1000);
+    expect(job.commissionAmount).toBe(180);
+    expect(job.ustaadEarning).toBe(820);
+    expect(job.commissionStatus).toBe('PAID');
+  });
+});
+
+/**
  * The Home dashboard's "Active Job" card and the activeJobs stat must agree
  * on what "active" means. They used to be written out separately and
  * findOngoingJob omitted ARRIVED, so an Ustaad who had tapped "Arrived"

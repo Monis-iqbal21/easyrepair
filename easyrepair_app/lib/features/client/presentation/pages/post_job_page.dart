@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
@@ -15,6 +16,10 @@ import 'package:video_player/video_player.dart';
 
 import '../../../../core/config/app_config.dart';
 import '../../../../core/errors/failures.dart';
+import '../../../../core/location/location_availability.dart';
+import '../../../../core/location/location_recovery_snack.dart';
+import '../../../../core/permissions/file_validation_helper.dart';
+import '../../../../core/permissions/media_permission_helper.dart';
 import '../../../../core/presentation/responsive_utils.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../../../features/bookings/domain/entities/booking_entity.dart';
@@ -349,12 +354,14 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     XFile? file;
     switch (choice) {
       case 'gallery_image':
-        file = await _picker.pickImage(
+        file = await pickImageWithRecovery(
+          context,
+          picker: _picker,
           source: ImageSource.gallery,
           imageQuality: 85,
         );
       case 'gallery_video':
-        file = await _picker.pickVideo(source: ImageSource.gallery);
+        file = await _pickVideoWithRecovery(source: ImageSource.gallery);
         if (file != null && !await _checkVideoDuration(file)) {
           if (mounted) {
             _showError(context.l10n.postJobVideoTooLong(_kMaxVideoSecs));
@@ -362,17 +369,102 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
           return;
         }
       case 'camera_photo':
-        file = await _picker.pickImage(
+        file = await pickImageWithRecovery(
+          context,
+          picker: _picker,
           source: ImageSource.camera,
           imageQuality: 85,
         );
       case 'camera_video':
-        file = await _picker.pickVideo(
+        file = await _pickVideoWithRecovery(
           source: ImageSource.camera,
           maxDuration: const Duration(seconds: _kMaxVideoSecs),
         );
     }
-    if (file != null && mounted) setState(() => _newAttachments.add(file!));
+    if (file == null || !mounted) return;
+
+    final validationError = await validateBookingAttachment(
+      File(file.path),
+      _mimeTypeForFile(file),
+    );
+    if (validationError != null) {
+      if (mounted) {
+        _showError(
+          validationError == FileValidationError.tooLarge
+              ? context.l10n.fileTooLargeMessage
+              : context.l10n.unsupportedFileMessage,
+        );
+      }
+      return;
+    }
+
+    setState(() => _newAttachments.add(file!));
+  }
+
+  /// [pickVideo] has the same permission-failure shape as [pickImage] but
+  /// image_picker doesn't expose a shared helper for it — mirrors
+  /// [pickImageWithRecovery]'s permission handling for video capture.
+  Future<XFile?> _pickVideoWithRecovery({
+    required ImageSource source,
+    Duration? maxDuration,
+  }) async {
+    final kind = source == ImageSource.camera
+        ? MediaPermissionKind.camera
+        : MediaPermissionKind.gallery;
+    final permission = kind == MediaPermissionKind.camera
+        ? Permission.camera
+        : Permission.photos;
+
+    if ((await permission.status).isPermanentlyDenied) {
+      if (mounted) {
+        _showMediaPermissionSnack(kind, permanentlyDenied: true);
+      }
+      return null;
+    }
+
+    try {
+      return await _picker.pickVideo(source: source, maxDuration: maxDuration);
+    } on PlatformException catch (e) {
+      final isPermissionIssue = e.code == 'camera_access_denied' ||
+          e.code == 'photo_access_denied' ||
+          e.code == 'no_available_camera';
+      if (!mounted) return null;
+      if (isPermissionIssue) {
+        final nowStatus = await permission.status;
+        if (mounted) {
+          _showMediaPermissionSnack(
+            kind,
+            permanentlyDenied: nowStatus.isPermanentlyDenied,
+          );
+        }
+      } else {
+        _showError(context.l10n.errorUnknown);
+      }
+      return null;
+    }
+  }
+
+  void _showMediaPermissionSnack(
+    MediaPermissionKind kind, {
+    required bool permanentlyDenied,
+  }) {
+    final message = kind == MediaPermissionKind.camera
+        ? context.l10n.cameraPermissionDeniedMessage
+        : context.l10n.galleryPermissionDeniedMessage;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: _kRed,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        action: permanentlyDenied
+            ? SnackBarAction(
+                label: context.l10n.commonOpenSettings,
+                onPressed: openAppSettings,
+                textColor: Colors.white,
+              )
+            : null,
+      ),
+    );
   }
 
   Future<bool> _checkVideoDuration(XFile file) async {
@@ -564,20 +656,18 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
   Future<void> _captureCurrentLocation() async {
     setState(() => _locationLoading = true);
     try {
-      var permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
-        if (mounted) _showError(context.l10n.workerLocationPermissionDenied);
+      final locationResult = await resolveCurrentLocation();
+      if (!locationResult.isAvailable) {
+        if (mounted) {
+          showLocationRecoverySnack(
+            context,
+            locationResult.status,
+            onRetry: _captureCurrentLocation,
+          );
+        }
         return;
       }
-      final pos = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-        ),
-      );
+      final pos = locationResult.position!;
       debugPrint(
         '[CaptureLocation] GPS position: lat=${pos.latitude}, lng=${pos.longitude}',
       );

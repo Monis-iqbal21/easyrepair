@@ -8,6 +8,7 @@ import 'package:geolocator/geolocator.dart';
 
 import '../../../../core/errors/failures.dart';
 import '../../../../core/l10n/locale_provider.dart';
+import '../../../../core/network/connectivity_service.dart';
 import '../../data/repositories/worker_repository_impl.dart';
 import '../../domain/entities/worker_profile_entity.dart';
 import '../../domain/entities/worker_skill_entity.dart';
@@ -17,13 +18,20 @@ import '../../domain/repositories/worker_repository.dart';
 
 // ── Worker Profile ────────────────────────────────────────────────────────────
 
+/// True while [workerProfileProvider] is showing the last cached profile
+/// because the live fetch failed.
+final workerProfileIsOfflineProvider = StateProvider<bool>((ref) => false);
+
 class WorkerProfileNotifier extends AsyncNotifier<WorkerProfileEntity> {
   @override
   Future<WorkerProfileEntity> build() async {
     final result = await ref.watch(workerRepositoryProvider).getProfile();
     return result.fold(
       (failure) => throw failure,
-      (profile) => profile,
+      (cached) {
+        ref.read(workerProfileIsOfflineProvider.notifier).state = cached.isStale;
+        return cached.data;
+      },
     );
   }
 
@@ -41,7 +49,10 @@ class WorkerProfileNotifier extends AsyncNotifier<WorkerProfileEntity> {
     final result = await ref.read(workerRepositoryProvider).getProfile();
     result.fold(
       (_) {}, // ignore transient errors; dashboard keeps showing current data
-      (profile) => state = AsyncData(profile),
+      (cached) {
+        ref.read(workerProfileIsOfflineProvider.notifier).state = cached.isStale;
+        state = AsyncData(cached.data);
+      },
     );
   }
 }
@@ -636,6 +647,11 @@ class ProfileCompletionNotifier extends AsyncNotifier<void> {
     int? experienceYears,
     bool? legalNameConfirmed,
   }) async {
+    final offline = offlineActionGuard();
+    if (offline != null) {
+      state = AsyncError(offline, StackTrace.current);
+      return false;
+    }
     state = const AsyncLoading();
     final result = await ref.read(workerRepositoryProvider).updateProfileCompletion(
           fullLegalName: fullLegalName,
@@ -703,6 +719,11 @@ class ProfileCompletionNotifier extends AsyncNotifier<void> {
     required String submissionAttemptId,
     required List<AgreementEvidence> agreements,
   }) async {
+    final offline = offlineActionGuard();
+    if (offline != null) {
+      state = AsyncError(offline, StackTrace.current);
+      return null;
+    }
     state = const AsyncLoading();
     final result =
         await ref.read(workerRepositoryProvider).submitProfileForReview(

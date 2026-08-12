@@ -147,6 +147,75 @@ void main() {
     });
   });
 
+  group('OtpRequestNotifier preserves state across a failed resend', () {
+    // A resend that fails (cooldown race, rate limit, provider hiccup) must
+    // not blank `expiresAt` back to null: the OtpInputSection is already on
+    // screen for a still-live code, and losing `expiresAt` collapses that
+    // section back to the phone-entry form, stranding the user mid-flow over
+    // a rejected *resend* rather than a failure of the original request.
+
+    test('a failed resend keeps the expiresAt from the earlier success',
+        () async {
+      final firstExpiry = DateTime.utc(2026, 8, 3, 12, 5);
+      var callCount = 0;
+      final repo = _FakeAuthRepository(() {
+        callCount++;
+        return callCount == 1
+            ? Right(firstExpiry)
+            : const Left(OtpResendTooSoonFailure('too soon'));
+      });
+      final container = _containerFor(repo);
+      final notifier = container.read(otpRequestNotifierProvider.notifier);
+
+      expect(await notifier.request('03378372427', OtpPurpose.workerLogin),
+          isTrue);
+      expect(container.read(otpRequestNotifierProvider).valueOrNull,
+          firstExpiry);
+
+      final resendOk =
+          await notifier.request('03378372427', OtpPurpose.workerLogin);
+
+      // The resend itself was rejected...
+      expect(resendOk, isFalse);
+      final state = container.read(otpRequestNotifierProvider);
+      expect(state.hasError, isTrue);
+      // ...but the OTP box must stay on screen for the still-live code.
+      expect(state.valueOrNull, firstExpiry);
+    });
+
+    test(
+        'OTP_RESEND_TOO_SOON with retryAfterSeconds reconstructs expiresAt when nothing was known yet',
+        () async {
+      // Simulates the page-remount case: otpRequestNotifierProvider was
+      // reset (see the OTP pages' initState) so this provider has never held
+      // a value, then "Send Code" hits the backend's cooldown from an
+      // earlier, now-forgotten request.
+      final repo = _FakeAuthRepository(
+        () => const Left(
+          OtpResendTooSoonFailure('too soon', retryAfterSeconds: 37),
+        ),
+      );
+      final container = _containerFor(repo);
+
+      final before = DateTime.now();
+      final ok = await container
+          .read(otpRequestNotifierProvider.notifier)
+          .request('03378372427', OtpPurpose.workerLogin);
+
+      // Recovered into a usable OTP session, not left as an error.
+      expect(ok, isTrue);
+      final state = container.read(otpRequestNotifierProvider);
+      expect(state.hasError, isFalse);
+      final expiresAt = state.valueOrNull;
+      expect(expiresAt, isNotNull);
+      // requestedAt = now - (60 - 37) = now - 23s; expiresAt = requestedAt + 5min.
+      expect(
+        expiresAt!.difference(before).inSeconds,
+        closeTo(const Duration(minutes: 5).inSeconds - 23, 2),
+      );
+    });
+  });
+
   group('the token-refresh client is bounded', () {
     test('the default /auth/refresh client has timeouts', () {
       // An unbounded refresh holds _isRefreshing true, and every later 401

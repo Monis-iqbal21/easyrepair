@@ -6,6 +6,9 @@ import 'package:fpdart/fpdart.dart';
 
 import '../../../../core/errors/failures.dart';
 import '../../../../core/network/api_client.dart';
+import '../../../../core/network/connectivity_service.dart';
+import '../../../../core/storage/local_cache_service.dart';
+import '../../../../core/storage/secure_storage_service.dart';
 import '../../data/datasources/booking_remote_datasource.dart';
 import '../../data/repositories/booking_repository_impl.dart';
 import '../../domain/entities/booking_entity.dart';
@@ -24,7 +27,11 @@ import '../../../worker/presentation/providers/worker_job_providers.dart';
 final bookingRemoteDataSourceProvider = Provider<BookingRemoteDataSource>((
   ref,
 ) {
-  return BookingRemoteDataSourceImpl(ref.watch(dioProvider));
+  return BookingRemoteDataSourceImpl(
+    ref.watch(dioProvider),
+    ref.watch(localCacheServiceProvider),
+    ref.watch(secureStorageServiceProvider),
+  );
 });
 
 final bookingRepositoryProvider = Provider<BookingRepository>((ref) {
@@ -49,13 +56,21 @@ final cancelBookingUseCaseProvider = Provider<CancelBookingUseCase>((ref) {
 
 // ── Bookings list notifier ────────────────────────────────────────────────────
 
+/// True while [bookingsNotifierProvider] is showing the last cached list
+/// because the live fetch failed — drives the offline banner on
+/// [MyBookingsPage]. Server data always wins the moment a fetch succeeds.
+final bookingsIsOfflineProvider = StateProvider<bool>((ref) => false);
+
 class BookingsNotifier extends AsyncNotifier<List<BookingEntity>> {
   @override
   Future<List<BookingEntity>> build() => _fetch();
 
   Future<List<BookingEntity>> _fetch() async {
     final result = await ref.read(getClientBookingsUseCaseProvider).call();
-    return result.fold((failure) => throw failure, (bookings) => bookings);
+    return result.fold((failure) => throw failure, (cached) {
+      ref.read(bookingsIsOfflineProvider.notifier).state = cached.isStale;
+      return cached.data;
+    });
   }
 
   /// Background/pull-to-refresh reload. Uses ref.invalidateSelf() rather than
@@ -96,6 +111,8 @@ class BookingsNotifier extends AsyncNotifier<List<BookingEntity>> {
   /// Cancel a booking: patches the list item and syncs the detail provider.
   /// [reason] is required — the backend rejects an empty reason.
   Future<void> cancelBooking(String bookingId, String reason) async {
+    final offline = offlineActionGuard();
+    if (offline != null) throw offline;
     final result =
         await ref.read(cancelBookingUseCaseProvider).call(bookingId, reason);
     result.fold((failure) => throw failure, (updated) {
@@ -121,13 +138,22 @@ final bookingsNotifierProvider =
 // always finds the provider ready, and navigating back to the same detail page
 // is instant.
 
+/// True while [bookingDetailProvider] for a given booking id is showing the
+/// last cached detail because the live fetch failed.
+final bookingDetailIsOfflineProvider =
+    StateProvider.family<bool, String>((ref, bookingId) => false);
+
 class BookingDetailNotifier
     extends FamilyAsyncNotifier<BookingEntity, String> {
   @override
   Future<BookingEntity> build(String arg) async {
     final result =
         await ref.read(bookingRepositoryProvider).getBookingById(arg);
-    return result.fold((f) => throw f, (b) => b);
+    return result.fold((f) => throw f, (cached) {
+      ref.read(bookingDetailIsOfflineProvider(arg).notifier).state =
+          cached.isStale;
+      return cached.data;
+    });
   }
 
   /// Push a fresh booking directly into state.
@@ -150,6 +176,11 @@ class CreateBookingNotifier extends AsyncNotifier<BookingEntity?> {
   Future<BookingEntity?> build() async => null;
 
   Future<BookingEntity> submit(CreateBookingRequest request) async {
+    final offline = offlineActionGuard();
+    if (offline != null) {
+      state = AsyncError(offline, StackTrace.current);
+      throw offline;
+    }
     state = const AsyncLoading();
     final result = await ref.read(createBookingUseCaseProvider).call(request);
 
@@ -323,6 +354,11 @@ class ReviewNotifier extends AsyncNotifier<void> {
   Future<void> build() async {}
 
   Future<BookingEntity> submit(ReviewRequest request) async {
+    final offline = offlineActionGuard();
+    if (offline != null) {
+      state = AsyncError(offline, StackTrace.current);
+      throw offline;
+    }
     state = const AsyncLoading();
     final result = await ref
         .read(bookingRepositoryProvider)
@@ -797,6 +833,11 @@ class AssignWorkerNotifier extends AsyncNotifier<void> {
   Future<void> build() async {}
 
   Future<void> assign(String bookingId, String workerProfileId) async {
+    final offline = offlineActionGuard();
+    if (offline != null) {
+      state = AsyncError(offline, StackTrace.current);
+      throw offline;
+    }
     state = const AsyncLoading();
     final result = await ref
         .read(bookingRepositoryProvider)
@@ -894,6 +935,11 @@ class WorkerLifecycleNotifier extends AsyncNotifier<void> {
     String bookingId,
     Future<Either<Failure, BookingEntity>> Function() call,
   ) async {
+    final offline = offlineActionGuard();
+    if (offline != null) {
+      state = AsyncError(offline, StackTrace.current);
+      throw offline;
+    }
     state = const AsyncLoading();
     final result = await call();
     result.fold(
@@ -1019,6 +1065,11 @@ class InspectionReportSubmitNotifier extends AsyncNotifier<void> {
     File? voiceNoteFile,
     double? voiceNoteDurationSeconds,
   }) async {
+    final offline = offlineActionGuard();
+    if (offline != null) {
+      state = AsyncError(offline, StackTrace.current);
+      throw offline;
+    }
     state = const AsyncLoading();
     final result = await ref.read(bookingRepositoryProvider).submitInspectionReport(
           bookingId,
@@ -1062,6 +1113,11 @@ class InspectionDecisionNotifier extends AsyncNotifier<void> {
     String bookingId,
     Future<Either<Failure, BookingEntity>> Function() call,
   ) async {
+    final offline = offlineActionGuard();
+    if (offline != null) {
+      state = AsyncError(offline, StackTrace.current);
+      throw offline;
+    }
     state = const AsyncLoading();
     final result = await call();
     result.fold(

@@ -2647,19 +2647,29 @@ class AppLocalizationsUr extends AppLocalizations {
       'ایس ایم ایس نہیں بھیجا جا سکا۔ دوبارہ کوشش کریں۔';
 
   @override
+  String get errorOtpResendTooSoon =>
+      'دوبارہ او ٹی پی منگوانے سے پہلے تھوڑی دیر انتظار کریں۔';
+
+  @override
   String get errorInspectorBusy =>
       'معائنہ کرنے والا استاد ابھی دوسرے کام میں مصروف ہے۔ نیچے سے کوئی اور استاد منتخب کریں۔';
 
   @override
-  String get errorPhoneIsWorker =>
-      'یہ موبائل نمبر پہلے سے استاد اکاؤنٹ کے ساتھ رجسٹرڈ ہے۔';
+  String get errorPhoneNotRegistered => 'یہ نمبر رجسٹرڈ نہیں ہے۔';
 
   @override
-  String get errorPhoneIsClient =>
-      'یہ موبائل نمبر پہلے سے کلائنٹ اکاؤنٹ کے ساتھ رجسٹرڈ ہے۔';
+  String get errorPhoneAlreadyRegistered => 'یہ نمبر پہلے سے رجسٹرڈ ہے۔';
 
   @override
   String get errorUnknown => 'کچھ گڑبڑ ہو گئی۔ دوبارہ کوشش کریں۔';
+
+  @override
+  String get errorOfflineActionBlocked =>
+      'انٹرنیٹ کنکشن موجود نہیں ہے۔ جاری رکھنے کے لیے انٹرنیٹ سے منسلک ہوں۔';
+
+  @override
+  String get offlineCachedDataBanner =>
+      'آف لائن — محفوظ شدہ معلومات دکھائی جا رہی ہیں';
 
   @override
   String get authForgotPasswordTitle => 'پاس ورڈ بھول\nگئے؟';
@@ -3062,6 +3072,106 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get workerMainTrade => 'مرکزی ہنر';
+
+  @override
+  String get workerSuspendedMessage =>
+      'آپ کا HandyGo اکاؤنٹ معطل کر دیا گیا ہے۔ مزید معلومات کے لیے سپورٹ سے رابطہ کریں۔';
+
+  @override
+  String get workerSuspendedContactSupport => 'سپورٹ سے رابطہ کریں';
+
+  @override
+  String get earningGrossEarnings => 'کل کمائی';
+
+  @override
+  String get earningCommissionLabel => 'HandyGo کمیشن (18%)';
+
+  @override
+  String get earningUstaadEarnings => 'اُستاد کی کمائی';
+
+  @override
+  String get earningCommissionStatusLabel => 'کمیشن اسٹیٹس';
+
+  @override
+  String get earningStatusPaid => 'ادا شدہ';
+
+  @override
+  String get notificationsPermissionOffMessage =>
+      'نوٹیفکیشن بند ہیں۔ بکنگ اور جاب اپ ڈیٹس حاصل کرنے کے لیے نوٹیفکیشن کی اجازت دیں۔';
+
+  @override
+  String get notificationsAllowAction => 'نوٹیفکیشن کی اجازت دیں';
+
+  @override
+  String get locationPermissionRequiredMessage => 'لوکیشن کی اجازت ضروری ہے۔';
+
+  @override
+  String get locationAllowAction => 'لوکیشن کی اجازت دیں';
+
+  @override
+  String get locationPermanentlyDeniedMessage =>
+      'لوکیشن کی اجازت سیٹنگز سے فعال کریں۔';
+
+  @override
+  String get locationGpsOffMessage =>
+      'آپ کے فون کی لوکیشن/GPS بند ہے۔ جاری رکھنے کے لیے اسے آن کریں۔';
+
+  @override
+  String get locationTurnOnAction => 'لوکیشن آن کریں';
+
+  @override
+  String get locationUnavailableRetryMessage =>
+      'لوکیشن حاصل نہیں ہو سکی۔ دوبارہ کوشش کریں۔';
+
+  @override
+  String get locationStaleMessage =>
+      'آپ کی موجودہ لوکیشن ضروری ہے۔ براہ کرم اپنی لوکیشن اپ ڈیٹ کریں۔';
+
+  @override
+  String get cameraPermissionDeniedMessage =>
+      'جاری رکھنے کے لیے کیمرہ کی اجازت دیں۔';
+
+  @override
+  String get galleryPermissionDeniedMessage =>
+      'تصاویر منتخب کرنے کے لیے اجازت دیں۔';
+
+  @override
+  String get unsupportedFileMessage =>
+      'یہ فائل سپورٹڈ نہیں ہے۔ دوسری فائل منتخب کریں۔';
+
+  @override
+  String get fileTooLargeMessage =>
+      'فائل کا سائز زیادہ ہے۔ چھوٹی فائل منتخب کریں۔';
+
+  @override
+  String get commonChooseAgain => 'دوبارہ منتخب کریں';
+
+  @override
+  String get pageNotAvailableTitle => 'صفحہ دستیاب نہیں ہے';
+
+  @override
+  String get pageNotAvailableBody => 'یہ صفحہ اب دستیاب نہیں ہے۔';
+
+  @override
+  String get commonGoHome => 'ہوم پر جائیں';
+
+  @override
+  String get resourceBookingUnavailable => 'یہ بکنگ اب دستیاب نہیں ہے۔';
+
+  @override
+  String get resourceJobUnavailable => 'یہ جاب اب آپ کو اسائن نہیں ہے۔';
+
+  @override
+  String get resourceConversationUnavailable => 'یہ چیٹ اب دستیاب نہیں ہے۔';
+
+  @override
+  String get goToMyBookingsAction => 'میری بکنگز پر جائیں';
+
+  @override
+  String get goToMyJobsAction => 'میری جابز پر جائیں';
+
+  @override
+  String get goToChatsAction => 'چیٹس پر جائیں';
 }
 
 /// The translations for Urdu, using the Latin script (`ur_Latn`).
@@ -5738,19 +5848,30 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
       'SMS bhejne mein masla hua. Dobara koshish karein.';
 
   @override
+  String get errorOtpResendTooSoon =>
+      'OTP dobara mangwane se pehle thori dair intezar karein.';
+
+  @override
   String get errorInspectorBusy =>
       'Muaina karne wala Ustaad abhi doosre kaam mein masroof hai. Neeche se koi aur Ustaad choose karein.';
 
   @override
-  String get errorPhoneIsWorker =>
-      'Ye mobile number Ustaad account ke saath registered hai.';
+  String get errorPhoneNotRegistered => 'Ye number registered nahi hai.';
 
   @override
-  String get errorPhoneIsClient =>
-      'Ye number Client account ke saath registered hai.';
+  String get errorPhoneAlreadyRegistered =>
+      'Ye number pehle se registered hai.';
 
   @override
   String get errorUnknown => 'Kuch masla ho gaya. Dobara koshish karein.';
+
+  @override
+  String get errorOfflineActionBlocked =>
+      'Internet connection nahi hai. Yeh action karne ke liye internet se connect karein.';
+
+  @override
+  String get offlineCachedDataBanner =>
+      'Offline — saved data dikhaya ja raha hai';
 
   @override
   String get authForgotPasswordTitle => 'Password bhool\ngaye?';
@@ -6159,4 +6280,106 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get workerMainTrade => 'Markazi hunar';
+
+  @override
+  String get workerSuspendedMessage =>
+      'Aapka HandyGo account suspend kar diya gaya hai. Mazeed maloomat ke liye Support se rabta karein.';
+
+  @override
+  String get workerSuspendedContactSupport => 'Support se Rabta Karein';
+
+  @override
+  String get earningGrossEarnings => 'Total Kamai';
+
+  @override
+  String get earningCommissionLabel => 'HandyGo Commission (18%)';
+
+  @override
+  String get earningUstaadEarnings => 'Ustaad Ki Kamai';
+
+  @override
+  String get earningCommissionStatusLabel => 'Commission Status';
+
+  @override
+  String get earningStatusPaid => 'Paid';
+
+  @override
+  String get notificationsPermissionOffMessage =>
+      'Notifications band hain. Booking aur job updates hasil karne ke liye notifications allow karein.';
+
+  @override
+  String get notificationsAllowAction => 'Notifications Allow Karein';
+
+  @override
+  String get locationPermissionRequiredMessage =>
+      'Location ki permission zaroori hai.';
+
+  @override
+  String get locationAllowAction => 'Location Allow Karein';
+
+  @override
+  String get locationPermanentlyDeniedMessage =>
+      'Location permission Settings se allow karein.';
+
+  @override
+  String get locationGpsOffMessage =>
+      'Phone ki Location/GPS band hai. Location on karein.';
+
+  @override
+  String get locationTurnOnAction => 'Location On Karein';
+
+  @override
+  String get locationUnavailableRetryMessage =>
+      'Location hasil nahi ho saki. Dobara koshish karein.';
+
+  @override
+  String get locationStaleMessage =>
+      'Aapki maujooda location zaroori hai. Location update karein.';
+
+  @override
+  String get cameraPermissionDeniedMessage =>
+      'Camera use karne ke liye permission allow karein.';
+
+  @override
+  String get galleryPermissionDeniedMessage =>
+      'Photos select karne ke liye permission allow karein.';
+
+  @override
+  String get unsupportedFileMessage =>
+      'Ye file supported nahi hai. Doosri file select karein.';
+
+  @override
+  String get fileTooLargeMessage =>
+      'File size zyada hai. Choti file select karein.';
+
+  @override
+  String get commonChooseAgain => 'Dobara Chunein';
+
+  @override
+  String get pageNotAvailableTitle => 'Page Available Nahi Hai';
+
+  @override
+  String get pageNotAvailableBody => 'Ye page ab available nahi hai.';
+
+  @override
+  String get commonGoHome => 'Home Par Jayein';
+
+  @override
+  String get resourceBookingUnavailable => 'Ye booking ab available nahi hai.';
+
+  @override
+  String get resourceJobUnavailable => 'Ye job ab aapko assigned nahi hai.';
+
+  @override
+  String get resourceConversationUnavailable =>
+      'Ye chat ab available nahi hai.';
+
+  @override
+  String get goToMyBookingsAction => 'My Bookings Par Jayein';
+
+  @override
+  String get goToMyJobsAction => 'My Jobs Par Jayein';
+
+  @override
+  String get goToChatsAction => 'Chats Par Jayein';
 }

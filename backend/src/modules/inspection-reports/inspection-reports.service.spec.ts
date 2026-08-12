@@ -73,12 +73,12 @@ describe('InspectionReportsService', () => {
       findWorkerProfileByUserId: jest.fn(),
       findWorkerProfileWithSkillsByUserId: jest.fn(),
       markAccepted: jest.fn().mockResolvedValue({
-        ...BASE_REPORT,
-        decisionStatus: 'ACCEPTED_REPAIR',
+        report: { ...BASE_REPORT, decisionStatus: 'ACCEPTED_REPAIR' },
+        changed: true,
       }),
       markClosed: jest.fn().mockResolvedValue({
-        ...BASE_REPORT,
-        decisionStatus: 'CLOSED_AFTER_INSPECTION',
+        report: { ...BASE_REPORT, decisionStatus: 'CLOSED_AFTER_INSPECTION' },
+        changed: true,
       }),
     };
     storageService = {};
@@ -202,14 +202,57 @@ describe('InspectionReportsService', () => {
     ).not.toHaveBeenCalled();
   });
 
-  it('rejects a repeat "Accept Quote" request the same way (decision already made)', async () => {
+  it('a retried "Accept Quote" request after it already succeeded returns the current state instead of erroring', async () => {
     repository.findByBookingId.mockResolvedValue({
       ...BASE_REPORT,
       decisionStatus: 'ACCEPTED_REPAIR',
     });
+    const result = await service.acceptQuote('client-user-1', 'booking-1');
+    expect(result.decisionStatus).toBe('ACCEPTED_REPAIR');
+    expect(repository.markAccepted).not.toHaveBeenCalled();
+    expect(bookingsService.setInspectionRepairPrice).not.toHaveBeenCalled();
+    expect(notificationsService.notify).not.toHaveBeenCalled();
+  });
+
+  it('rejects "Accept Quote" when the report was decided a different way (genuine conflict)', async () => {
+    repository.findByBookingId.mockResolvedValue({
+      ...BASE_REPORT,
+      decisionStatus: 'CLOSED_AFTER_INSPECTION',
+    });
     await expect(
       service.acceptQuote('client-user-1', 'booking-1'),
     ).rejects.toThrow(BadRequestException);
+  });
+
+  it('losing the accept-quote race to a concurrent identical accept still returns success', async () => {
+    repository.markAccepted.mockResolvedValue({
+      report: { ...BASE_REPORT, decisionStatus: 'ACCEPTED_REPAIR' },
+      changed: false,
+    });
+
+    const result = await service.acceptQuote('client-user-1', 'booking-1');
+
+    expect(result.decisionStatus).toBe('ACCEPTED_REPAIR');
+    expect(bookingsService.setInspectionRepairPrice).not.toHaveBeenCalled();
+    expect(notificationsService.notify).not.toHaveBeenCalled();
+  });
+
+  it('a retried "Close After Inspection" request after it already succeeded returns current state', async () => {
+    repository.findByBookingId.mockResolvedValue({
+      ...BASE_REPORT,
+      decisionStatus: 'CLOSED_AFTER_INSPECTION',
+    });
+
+    const result = await service.closeAfterInspection(
+      'client-user-1',
+      'booking-1',
+    );
+
+    expect(result.decisionStatus).toBe('CLOSED_AFTER_INSPECTION');
+    expect(repository.markClosed).not.toHaveBeenCalled();
+    expect(
+      bookingsService.completeAfterInspectionClose,
+    ).not.toHaveBeenCalled();
   });
 
   // ── #10 Inspector rehired (old-style same-row records) ──────────────────
@@ -237,7 +280,9 @@ describe('InspectionReportsService', () => {
       1000, // repairQuoteTotal
       1000, // labourCost
     );
-    expect(repository.markAccepted).toHaveBeenCalledWith('report-1');
+    expect(repository.markAccepted).toHaveBeenCalledWith('report-1', [
+      'FIND_OTHER_USTAAD',
+    ]);
     expect(result.decisionStatus).toBe('ACCEPTED_REPAIR');
   });
 

@@ -1,6 +1,8 @@
 import 'package:fpdart/fpdart.dart';
 
+import '../../../../core/data/cached_result.dart';
 import '../../../../core/errors/failures.dart';
+import '../../../../core/network/connectivity_service.dart';
 import '../../domain/entities/chat_entities.dart';
 import '../../domain/repositories/chat_repository.dart';
 import '../datasources/chat_remote_datasource.dart';
@@ -24,7 +26,7 @@ class ChatRepositoryImpl implements ChatRepository {
     } on Failure catch (f) {
       return Left(f);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
@@ -39,7 +41,7 @@ class ChatRepositoryImpl implements ChatRepository {
     } on Failure catch (f) {
       return Left(f);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
@@ -51,39 +53,46 @@ class ChatRepositoryImpl implements ChatRepository {
     } on Failure catch (f) {
       return Left(f);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
   @override
-  Future<Either<Failure, List<ConversationEntity>>> getConversations() async {
+  Future<Either<Failure, CachedResult<List<ConversationEntity>>>>
+      getConversations() async {
     try {
-      final models = await _dataSource.getConversations();
-      return Right(models.map((m) => m.toEntity()).toList());
+      final result = await _dataSource.getConversations();
+      return Right(CachedResult(
+        result.data.map((m) => m.toEntity()).toList(),
+        isStale: result.isStale,
+      ));
     } on Failure catch (f) {
       return Left(f);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
   @override
-  Future<Either<Failure, List<MessageEntity>>> getMessages(
+  Future<Either<Failure, CachedResult<List<MessageEntity>>>> getMessages(
     String conversationId, {
     int limit = 50,
     String? before,
   }) async {
     try {
-      final models = await _dataSource.getMessages(
+      final result = await _dataSource.getMessages(
         conversationId,
         limit: limit,
         before: before,
       );
-      return Right(models.map((m) => m.toEntity()).toList());
+      return Right(CachedResult(
+        result.data.map((m) => m.toEntity()).toList(),
+        isStale: result.isStale,
+      ));
     } on Failure catch (f) {
       return Left(f);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
@@ -92,13 +101,15 @@ class ChatRepositoryImpl implements ChatRepository {
     String conversationId,
     String text,
   ) async {
+    final offline = offlineActionGuard();
+    if (offline != null) return Left(offline);
     try {
       final model = await _dataSource.sendMessage(conversationId, text);
       return Right(model.toEntity());
     } on Failure catch (f) {
       return Left(f);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
@@ -108,6 +119,8 @@ class ChatRepositoryImpl implements ChatRepository {
     String filePath,
     String mimeType,
   ) async {
+    final offline = offlineActionGuard();
+    if (offline != null) return Left(offline);
     try {
       final model =
           await _dataSource.sendMediaMessage(conversationId, filePath, mimeType);
@@ -115,7 +128,7 @@ class ChatRepositoryImpl implements ChatRepository {
     } on Failure catch (f) {
       return Left(f);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
@@ -124,13 +137,15 @@ class ChatRepositoryImpl implements ChatRepository {
     String conversationId,
     String filePath,
   ) async {
+    final offline = offlineActionGuard();
+    if (offline != null) return Left(offline);
     try {
       final model = await _dataSource.sendVoiceMessage(conversationId, filePath);
       return Right(model.toEntity());
     } on Failure catch (f) {
       return Left(f);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
@@ -140,6 +155,8 @@ class ChatRepositoryImpl implements ChatRepository {
     double latitude,
     double longitude,
   ) async {
+    final offline = offlineActionGuard();
+    if (offline != null) return Left(offline);
     try {
       final model = await _dataSource.sendLocationMessage(
         conversationId,
@@ -150,7 +167,7 @@ class ChatRepositoryImpl implements ChatRepository {
     } on Failure catch (f) {
       return Left(f);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
@@ -167,7 +184,7 @@ class ChatRepositoryImpl implements ChatRepository {
     } on Failure catch (f) {
       return Left(f);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 
@@ -182,7 +199,7 @@ class ChatRepositoryImpl implements ChatRepository {
     } on Failure catch (f) {
       return Left(f);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 }

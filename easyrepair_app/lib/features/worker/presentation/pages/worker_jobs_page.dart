@@ -13,6 +13,7 @@ import '../providers/worker_providers.dart';
 import '../widgets/onboarding_gate.dart';
 import '../widgets/worker_bottom_nav_bar.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
+import '../../../../core/network/offline_banner.dart';
 import '../../../bookings/presentation/utils/status_labels.dart';
 import '../utils/worker_status_labels.dart';
 import '../../../../core/errors/failure_messages.dart';
@@ -62,6 +63,8 @@ class _WorkerJobsPageState extends ConsumerState<WorkerJobsPage>
   @override
   Widget build(BuildContext context) {
     final jobsAsync = ref.watch(workerJobsProvider);
+    final isShowingCachedData =
+        ref.watch(workerJobsIsOfflineProvider) && jobsAsync.hasValue;
     final notifier  = ref.read(workerJobsProvider.notifier);
     final filter    = ref.watch(workerJobsProvider.notifier
         .select((n) => n.currentFilter));
@@ -110,6 +113,7 @@ class _WorkerJobsPageState extends ConsumerState<WorkerJobsPage>
 
               const SizedBox(height: 4),
 
+              if (isShowingCachedData) const OfflineDataBanner(),
               if (jobsAsync.hasError && jobsAsync.hasValue)
                 const _RefreshFailedBanner(),
 
@@ -662,14 +666,19 @@ class _CompleteBtn extends ConsumerWidget {
       ),
     );
 
-    if (confirmed == true && context.mounted) {
+    // Re-entry guard: the confirm dialog's async gap means a second tap
+    // that raced the disabled button could reach here before this call's
+    // own AsyncLoading state has rendered — never fire a duplicate complete.
+    if (confirmed == true &&
+        context.mounted &&
+        !ref.read(completeJobProvider).isLoading) {
       await ref.read(completeJobProvider.notifier).complete(jobId);
       if (context.mounted) {
         final err = ref.read(completeJobProvider).error;
         if (err != null) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(err.toString()),
+              content: Text(failureMessage(context.l10n, err)),
               behavior: SnackBarBehavior.floating,
             ),
           );
@@ -744,6 +753,10 @@ class _StandardActionBtn extends ConsumerWidget {
   }
 
   Future<void> _run(BuildContext context, WidgetRef ref) async {
+    // Re-entry guard: a second tap that raced past the disabled button
+    // (isLoading only updates on the next rebuild) must never fire a
+    // duplicate lifecycle transition.
+    if (ref.read(workerLifecycleNotifierProvider).isLoading) return;
     try {
       await action.invoke(ref, jobId);
       if (context.mounted) {

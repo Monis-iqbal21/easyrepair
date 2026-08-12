@@ -96,6 +96,32 @@ export class AuthRepository {
     });
   }
 
+  /**
+   * Rotates a refresh token: creates the replacement row and marks the old
+   * one as superseded (rather than deleting it) in one transaction, so a
+   * reader can never observe the old token gone without the new one already
+   * existing. Keeping the old row (instead of deleting it) is what lets
+   * AuthService.refreshTokens recover a client that crashed between the
+   * backend committing this rotation and Flutter persisting the new pair —
+   * see the grace-window handling there.
+   */
+  async rotateRefreshToken(
+    oldToken: string,
+    newToken: string,
+    userId: string,
+    newExpiresAt: Date,
+  ): Promise<void> {
+    await this.prisma.$transaction([
+      this.prisma.refreshToken.create({
+        data: { userId, token: newToken, expiresAt: newExpiresAt },
+      }),
+      this.prisma.refreshToken.update({
+        where: { token: oldToken },
+        data: { replacedByToken: newToken, supersededAt: new Date() },
+      }),
+    ]);
+  }
+
   async findRefreshToken(token: string) {
     return this.prisma.refreshToken.findUnique({ where: { token } });
   }
@@ -118,7 +144,12 @@ export class AuthRepository {
   async findWorkerProfile(userId: string) {
     return this.prisma.workerProfile.findUnique({
       where: { userId },
-      select: { firstName: true, lastName: true, verificationStatus: true },
+      select: {
+        firstName: true,
+        lastName: true,
+        verificationStatus: true,
+        status: true,
+      },
     });
   }
 

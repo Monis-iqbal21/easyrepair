@@ -38,14 +38,27 @@ enum FailureCode {
   /// The backend's SMS provider could not deliver the OTP.
   smsSendFailed,
 
+  /// A resend was attempted before the backend's 60-second cooldown elapsed.
+  otpResendTooSoon,
+
   /// Rehire attempted while the original inspecting Ustaad is on another job.
   inspectorBusy,
 
-  /// The phone number already belongs to an Ustaad account.
-  phoneIsWorker,
+  /// Login: the phone either doesn't exist at all or belongs to the
+  /// opposite role. Deliberately the same code/message for both cases —
+  /// see PhoneNotRegisteredFailure.
+  phoneNotRegistered,
 
-  /// The phone number already belongs to a Client account.
-  phoneIsClient,
+  /// Registration: the phone already has an account, regardless of role.
+  phoneAlreadyRegistered,
+
+  /// A server-changing action (create/cancel booking, send message, accept
+  /// job, submit review, …) was attempted while the device has no network —
+  /// blocked client-side before ever reaching the backend. Deliberately
+  /// distinct from [noInternet]: that code means "a request was attempted
+  /// and failed"; this one means "the app refused to even try", which reads
+  /// differently to the user (see failure_messages.dart).
+  offlineActionBlocked,
 
   /// Anything else. The screen's own fallback wording wins for this one.
   unknown,
@@ -135,23 +148,25 @@ class ValidationFailure extends Failure {
   });
 }
 
-/// The phone entered on the Client OTP login/register page already belongs
-/// to a WORKER account — the Client page shows a distinct "Ustaad Login"
-/// button instead of a plain error snackbar for this case.
-class WorkerPhoneConflictFailure extends Failure {
-  const WorkerPhoneConflictFailure(
+/// Login rejected because the phone either doesn't exist at all or belongs
+/// to the opposite role (Client entering a Worker-owned number, or vice
+/// versa). Both cases render identically — this app never reveals which one
+/// actually happened, and never suggests "use the other login" (see the
+/// role-privacy requirement this failure exists for).
+class PhoneNotRegisteredFailure extends Failure {
+  const PhoneNotRegisteredFailure(
     super.message, {
-    super.code = FailureCode.phoneIsWorker,
+    super.code = FailureCode.phoneNotRegistered,
     super.diagnostic,
   });
 }
 
-/// The phone entered on the Worker OTP registration page already belongs to
-/// a CLIENT account.
-class ClientPhoneConflictFailure extends Failure {
-  const ClientPhoneConflictFailure(
+/// Registration rejected because the phone already has an account —
+/// regardless of which role owns it (User.phone is globally unique).
+class PhoneAlreadyRegisteredFailure extends Failure {
+  const PhoneAlreadyRegisteredFailure(
     super.message, {
-    super.code = FailureCode.phoneIsClient,
+    super.code = FailureCode.phoneAlreadyRegistered,
     super.diagnostic,
   });
 }
@@ -168,6 +183,22 @@ class SmsSendFailure extends Failure {
   });
 }
 
+/// A resend was rejected because the backend's 60-second cooldown from the
+/// previous request hasn't elapsed yet. [retryAfterSeconds], when the
+/// backend includes it, is how many seconds remain — used to resume the
+/// countdown UI instead of leaving the user stuck on a generic error (see
+/// `expiresAtFromRetryAfter` in `otp_input_section.dart`).
+class OtpResendTooSoonFailure extends Failure {
+  final int? retryAfterSeconds;
+
+  const OtpResendTooSoonFailure(
+    super.message, {
+    this.retryAfterSeconds,
+    super.code = FailureCode.otpResendTooSoon,
+    super.diagnostic,
+  });
+}
+
 /// "Dobara Hire Karein" was tapped but the original inspecting Ustaad is
 /// currently busy on another active job (backend error code INSPECTOR_BUSY).
 /// The bidding page shows the specific message and MUST stay on the bidding
@@ -179,4 +210,11 @@ class InspectorBusyFailure extends Failure {
     super.code = FailureCode.inspectorBusy,
     super.diagnostic,
   });
+}
+
+/// A write action's notifier refused to even attempt the request because
+/// [isDeviceOnline] reported no connectivity. See [FailureCode.offlineActionBlocked].
+class OfflineActionBlockedFailure extends Failure {
+  const OfflineActionBlockedFailure()
+      : super('', code: FailureCode.offlineActionBlocked);
 }

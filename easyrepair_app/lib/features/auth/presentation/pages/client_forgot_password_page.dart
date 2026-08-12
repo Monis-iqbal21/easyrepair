@@ -27,13 +27,16 @@ class _RequestNotifier extends AutoDisposeAsyncNotifier<DateTime?> {
   Future<DateTime?> build() async => null;
 
   Future<bool> request(String phone) async {
-    state = const AsyncLoading();
+    // See ForgotPasswordPage's identical notifier / OtpRequestNotifier.request
+    // for why the previous expiresAt must survive a failed resend.
+    state = const AsyncLoading<DateTime?>().copyWithPrevious(state);
     final result = await ref
         .read(authRepositoryProvider)
         .clientForgotPasswordRequest(phone);
     return result.fold(
       (f) {
-        state = AsyncError(f, StackTrace.current);
+        state = AsyncError<DateTime?>(f, StackTrace.current)
+            .copyWithPrevious(state);
         return false;
       },
       (expiresAt) {

@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/network/api_client.dart';
 import '../../../../core/services/chat_socket_service.dart';
+import '../../../../core/storage/local_cache_service.dart';
+import '../../../../core/storage/secure_storage_service.dart';
 import '../../data/datasources/chat_remote_datasource.dart';
 import '../../data/models/chat_models.dart';
 import '../../data/repositories/chat_repository_impl.dart';
@@ -13,7 +15,11 @@ import '../../domain/repositories/chat_repository.dart';
 // ── Infrastructure ─────────────────────────────────────────────────────────────
 
 final chatRemoteDataSourceProvider = Provider<ChatRemoteDataSource>((ref) {
-  return ChatRemoteDataSourceImpl(ref.watch(dioProvider));
+  return ChatRemoteDataSourceImpl(
+    ref.watch(dioProvider),
+    ref.watch(localCacheServiceProvider),
+    ref.watch(secureStorageServiceProvider),
+  );
 });
 
 final chatRepositoryProvider = Provider<ChatRepository>((ref) {
@@ -21,6 +27,10 @@ final chatRepositoryProvider = Provider<ChatRepository>((ref) {
 });
 
 // ── Conversations list notifier ────────────────────────────────────────────────
+
+/// True while [chatConversationsProvider] is showing the last cached list
+/// because the live fetch failed.
+final chatConversationsIsOfflineProvider = StateProvider<bool>((ref) => false);
 
 class ChatConversationsNotifier
     extends AsyncNotifier<List<ConversationEntity>> {
@@ -71,7 +81,11 @@ class ChatConversationsNotifier
     // better than an unusable Chat tab.
     await ref.read(chatRepositoryProvider).ensureSupportConversation();
     final result = await ref.read(chatRepositoryProvider).getConversations();
-    return result.fold((f) => throw f, (list) => list);
+    return result.fold((f) => throw f, (cached) {
+      ref.read(chatConversationsIsOfflineProvider.notifier).state =
+          cached.isStale;
+      return cached.data;
+    });
   }
 
   Future<void> refresh() async {
@@ -100,6 +114,11 @@ final chatConversationsProvider =
 );
 
 // ── Messages notifier ──────────────────────────────────────────────────────────
+
+/// True while [chatMessagesProvider] for a given conversation is showing the
+/// last cached messages because the live fetch failed.
+final chatMessagesIsOfflineProvider =
+    StateProvider.family<bool, String>((ref, conversationId) => false);
 
 class ChatMessagesNotifier
     extends FamilyAsyncNotifier<List<MessageEntity>, String> {
@@ -182,9 +201,11 @@ class ChatMessagesNotifier
     final result = await ref
         .read(chatRepositoryProvider)
         .getMessages(conversationId);
-    return result.fold((f) => throw f, (list) {
+    return result.fold((f) => throw f, (cached) {
+      ref.read(chatMessagesIsOfflineProvider(conversationId).notifier).state =
+          cached.isStale;
       // Backend returns newest-first; reverse for display (oldest first).
-      return list.reversed.toList();
+      return cached.data.reversed.toList();
     });
   }
 

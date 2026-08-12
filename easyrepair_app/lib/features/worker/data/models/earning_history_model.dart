@@ -5,6 +5,9 @@ class EarningHistoryJobModel {
   final String lane;
   final String serviceCategory;
   final double grossEarning;
+  final double commissionAmount;
+  final double ustaadEarning;
+  final CommissionStatus commissionStatus;
   final DateTime completedAt;
   final bool isInspectionOnly;
 
@@ -13,16 +16,33 @@ class EarningHistoryJobModel {
     required this.lane,
     required this.serviceCategory,
     required this.grossEarning,
+    required this.commissionAmount,
+    required this.ustaadEarning,
+    required this.commissionStatus,
     required this.completedAt,
     required this.isInspectionOnly,
   });
 
   factory EarningHistoryJobModel.fromJson(Map<String, dynamic> json) {
+    final grossEarning = (json['grossEarning'] as num?)?.toDouble() ?? 0.0;
+    // Defensive fallbacks for commissionAmount/ustaadEarning mirror the
+    // 18% platform rate only as a last resort (e.g. an older cached
+    // response) — the backend's own computed values are always preferred.
+    final commissionAmount =
+        (json['commissionAmount'] as num?)?.toDouble() ?? grossEarning * 0.18;
     return EarningHistoryJobModel(
       bookingId: json['bookingId'] as String,
       lane: json['lane'] as String? ?? 'STANDARD',
       serviceCategory: json['serviceCategory'] as String? ?? 'Service',
-      grossEarning: (json['grossEarning'] as num?)?.toDouble() ?? 0.0,
+      grossEarning: grossEarning,
+      commissionAmount: commissionAmount,
+      ustaadEarning: (json['ustaadEarning'] as num?)?.toDouble() ??
+          (grossEarning - commissionAmount),
+      commissionStatus:
+          (json['commissionStatus'] as String? ?? 'PENDING').toUpperCase() ==
+                  'PAID'
+              ? CommissionStatus.paid
+              : CommissionStatus.pending,
       completedAt:
           DateTime.tryParse(json['completedAt'] as String? ?? '') ??
               DateTime.now(),
@@ -35,6 +55,9 @@ class EarningHistoryJobModel {
         lane: lane,
         serviceCategory: serviceCategory,
         grossEarning: grossEarning,
+        commissionAmount: commissionAmount,
+        ustaadEarning: ustaadEarning,
+        commissionStatus: commissionStatus,
         completedAt: completedAt,
         isInspectionOnly: isInspectionOnly,
       );

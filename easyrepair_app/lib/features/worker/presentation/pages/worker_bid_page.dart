@@ -78,6 +78,10 @@ class _WorkerBidPageState extends ConsumerState<WorkerBidPage> {
   }
 
   Future<void> _submit() async {
+    // Re-entry guard: a second tap that raced past the disabled button
+    // (isSubmitting only updates on the next rebuild) must never fire a
+    // duplicate bid submission.
+    if (ref.read(submitBidProvider).isLoading) return;
     if (!ensureApprovedOrWarn(context, ref)) return;
     // Resolved before the await below so no message crosses an async gap.
     final l10n = context.l10n;

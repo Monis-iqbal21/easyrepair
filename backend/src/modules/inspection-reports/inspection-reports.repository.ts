@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { InspectionDecisionStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 
 export const INSPECTION_REPORT_INCLUDE = {
@@ -131,55 +131,96 @@ export class InspectionReportsRepository {
     voiceNoteMimeType?: string | null;
     voiceNoteDurationSeconds?: number | null;
   }): Promise<InspectionReportWithRelations> {
-    return this.prisma.inspectionReport.create({
-      data: {
-        bookingId: data.bookingId,
-        workerProfileId: data.workerProfileId,
-        issueFound: data.issueFound,
-        recommendedRepair: data.recommendedRepair,
-        labourCost: data.labourCost,
-        partsNeeded: data.partsNeeded,
-        partsTotal: data.partsTotal,
-        repairQuoteTotal: data.repairQuoteTotal,
-        notes: data.notes ?? null,
-        voiceNoteUrl: data.voiceNoteUrl ?? null,
-        voiceNoteStorageKey: data.voiceNoteStorageKey ?? null,
-        voiceNoteMimeType: data.voiceNoteMimeType ?? null,
-        voiceNoteDurationSeconds: data.voiceNoteDurationSeconds ?? null,
-        parts: {
-          create: data.parts.map((p) => ({
-            name: p.name,
-            quantity: p.quantity,
-            unitPrice: p.unitPrice,
-            warranty: p.warranty ?? null,
-            lineTotal: p.lineTotal,
-          })),
+    try {
+      return await this.prisma.inspectionReport.create({
+        data: {
+          bookingId: data.bookingId,
+          workerProfileId: data.workerProfileId,
+          issueFound: data.issueFound,
+          recommendedRepair: data.recommendedRepair,
+          labourCost: data.labourCost,
+          partsNeeded: data.partsNeeded,
+          partsTotal: data.partsTotal,
+          repairQuoteTotal: data.repairQuoteTotal,
+          notes: data.notes ?? null,
+          voiceNoteUrl: data.voiceNoteUrl ?? null,
+          voiceNoteStorageKey: data.voiceNoteStorageKey ?? null,
+          voiceNoteMimeType: data.voiceNoteMimeType ?? null,
+          voiceNoteDurationSeconds: data.voiceNoteDurationSeconds ?? null,
+          parts: {
+            create: data.parts.map((p) => ({
+              name: p.name,
+              quantity: p.quantity,
+              unitPrice: p.unitPrice,
+              warranty: p.warranty ?? null,
+              lineTotal: p.lineTotal,
+            })),
+          },
+          photos: {
+            create: data.photos.map((ph) => ({
+              url: ph.url,
+              storageKey: ph.storageKey ?? null,
+            })),
+          },
         },
-        photos: {
-          create: data.photos.map((ph) => ({
-            url: ph.url,
-            storageKey: ph.storageKey ?? null,
-          })),
-        },
-      },
-      include: INSPECTION_REPORT_INCLUDE,
-    });
+        include: INSPECTION_REPORT_INCLUDE,
+      });
+    } catch (err) {
+      // `InspectionReport.bookingId @unique` backs "one report per booking".
+      // A genuine concurrent double-submit (the caller's own pre-check raced
+      // another request creating the row first) hits that constraint
+      // (P2002) — return the winning row instead of surfacing a raw 500 or
+      // creating a duplicate report.
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2002'
+      ) {
+        const existing = await this.findByBookingId(data.bookingId);
+        if (existing) return existing;
+      }
+      throw err;
+    }
   }
 
-  async markAccepted(reportId: string): Promise<InspectionReportWithRelations> {
-    return this.prisma.inspectionReport.update({
-      where: { id: reportId },
+  /**
+   * Guarded by `decisionStatus IN fromStatuses` so two concurrent accept
+   * requests (double-tap, a retry racing the original) can never both
+   * "win" — only the request that actually flips the decision returns
+   * `changed: true`; the caller decides whether the loser's outcome is a
+   * safe idempotent no-op or a genuine conflict.
+   *
+   * `fromStatuses` varies by caller: acceptQuote transitions from
+   * PENDING_CLIENT_DECISION; hireInspectingWorker's old-style-row branch
+   * collapses back from FIND_OTHER_USTAAD.
+   */
+  async markAccepted(
+    reportId: string,
+    fromStatuses: InspectionDecisionStatus[] = ['PENDING_CLIENT_DECISION'],
+  ): Promise<{ report: InspectionReportWithRelations; changed: boolean }> {
+    const { count } = await this.prisma.inspectionReport.updateMany({
+      where: { id: reportId, decisionStatus: { in: fromStatuses } },
       data: { decisionStatus: 'ACCEPTED_REPAIR', acceptedAt: new Date() },
+    });
+    const report = await this.prisma.inspectionReport.findUniqueOrThrow({
+      where: { id: reportId },
       include: INSPECTION_REPORT_INCLUDE,
     });
+    return { report, changed: count > 0 };
   }
 
-  async markClosed(reportId: string): Promise<InspectionReportWithRelations> {
-    return this.prisma.inspectionReport.update({
-      where: { id: reportId },
+  /** Same guarded-updateMany shape as markAccepted — see its doc comment. */
+  async markClosed(
+    reportId: string,
+  ): Promise<{ report: InspectionReportWithRelations; changed: boolean }> {
+    const { count } = await this.prisma.inspectionReport.updateMany({
+      where: { id: reportId, decisionStatus: 'PENDING_CLIENT_DECISION' },
       data: { decisionStatus: 'CLOSED_AFTER_INSPECTION', closedAt: new Date() },
+    });
+    const report = await this.prisma.inspectionReport.findUniqueOrThrow({
+      where: { id: reportId },
       include: INSPECTION_REPORT_INCLUDE,
     });
+    return { report, changed: count > 0 };
   }
 
   // NOTE: the FIND_OTHER_USTAAD decision transition deliberately has no

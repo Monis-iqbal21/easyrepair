@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../domain/entities/worker_review_entity.dart';
 import '../providers/worker_review_providers.dart';
+import '../../../../core/errors/failure_messages.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
 
 // ── Palette (matches existing worker UI) ─────────────────────────────────────
@@ -51,7 +52,7 @@ class WorkerReviewsPage extends ConsumerWidget {
       body: reviewsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, _) => _ErrorState(
-          message: err.toString(),
+          message: failureMessage(context.l10n, err),
           onRetry: () => ref.invalidate(workerAllReviewsProvider),
         ),
         data: (reviews) => reviews.isEmpty

@@ -1,8 +1,11 @@
 import 'package:dio/dio.dart';
 import 'package:http_parser/http_parser.dart';
 
-import '../../../../core/errors/failures.dart';
+import '../../../../core/data/cached_result.dart';
 import '../../../../core/network/api_client.dart';
+import '../../../../core/network/cacheable_fetch.dart';
+import '../../../../core/storage/local_cache_service.dart';
+import '../../../../core/storage/secure_storage_service.dart';
 import '../models/chat_models.dart';
 
 abstract class ChatRemoteDataSource {
@@ -16,8 +19,8 @@ abstract class ChatRemoteDataSource {
 
   /// Idempotent on the backend — safe to call on every Chat-tab load.
   Future<void> ensureSupportConversation();
-  Future<List<ConversationModel>> getConversations();
-  Future<List<MessageModel>> getMessages(
+  Future<CachedResult<List<ConversationModel>>> getConversations();
+  Future<CachedResult<List<MessageModel>>> getMessages(
     String conversationId, {
     int limit,
     String? before,
@@ -50,8 +53,10 @@ abstract class ChatRemoteDataSource {
 
 class ChatRemoteDataSourceImpl implements ChatRemoteDataSource {
   final Dio _dio;
+  final LocalCacheService _cache;
+  final SecureStorageService _secureStorage;
 
-  const ChatRemoteDataSourceImpl(this._dio);
+  const ChatRemoteDataSourceImpl(this._dio, this._cache, this._secureStorage);
 
   @override
   Future<ConversationModel> getOrCreateConversation(
@@ -96,25 +101,28 @@ class ChatRemoteDataSourceImpl implements ChatRemoteDataSource {
   }
 
   @override
-  Future<List<ConversationModel>> getConversations() async {
-    try {
-      final response = await _dio.get('/chat/conversations');
-      final data = response.data['data'] as List<dynamic>;
-      return data
+  Future<CachedResult<List<ConversationModel>>> getConversations() {
+    return fetchWithCache(
+      cache: _cache,
+      secureStorage: _secureStorage,
+      cacheKey: 'chat_conversations',
+      request: () async {
+        final response = await _dio.get('/chat/conversations');
+        return response.data['data'];
+      },
+      decode: (json) => (json as List<dynamic>)
           .map((e) => ConversationModel.fromJson(e as Map<String, dynamic>))
-          .toList();
-    } on DioException catch (e) {
-      throw dioExceptionToFailure(e);
-    }
+          .toList(),
+    );
   }
 
   @override
-  Future<List<MessageModel>> getMessages(
+  Future<CachedResult<List<MessageModel>>> getMessages(
     String conversationId, {
     int limit = 50,
     String? before,
-  }) async {
-    try {
+  }) {
+    Future<dynamic> request() async {
       final response = await _dio.get(
         '/chat/conversations/$conversationId/messages',
         queryParameters: {
@@ -122,10 +130,35 @@ class ChatRemoteDataSourceImpl implements ChatRemoteDataSource {
           if (before != null) 'before': before,
         },
       );
-      final data = response.data['data'] as List<dynamic>;
-      return data
-          .map((e) => MessageModel.fromJson(e as Map<String, dynamic>))
-          .toList();
+      return response.data['data'];
+    }
+
+    List<MessageModel> decode(dynamic json) => (json as List<dynamic>)
+        .map((e) => MessageModel.fromJson(e as Map<String, dynamic>))
+        .toList();
+
+    // Only the most-recent page (no `before` cursor) is cached for offline
+    // read — a paginated "load older messages" request always needs the
+    // network and never falls back to (necessarily different) cached data.
+    if (before != null) {
+      return _fetchPageUncached(request, decode);
+    }
+
+    return fetchWithCache(
+      cache: _cache,
+      secureStorage: _secureStorage,
+      cacheKey: 'chat_messages:$conversationId',
+      request: request,
+      decode: decode,
+    );
+  }
+
+  static Future<CachedResult<List<MessageModel>>> _fetchPageUncached(
+    Future<dynamic> Function() request,
+    List<MessageModel> Function(dynamic) decode,
+  ) async {
+    try {
+      return CachedResult(decode(await request()));
     } on DioException catch (e) {
       throw dioExceptionToFailure(e);
     }

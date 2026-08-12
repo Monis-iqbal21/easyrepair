@@ -9,8 +9,10 @@ import 'package:handygo_app/features/bids/domain/repositories/bid_repository.dar
 import 'package:handygo_app/features/bids/presentation/providers/bid_providers.dart';
 import 'package:handygo_app/features/bookings/domain/entities/booking_entity.dart';
 import 'package:handygo_app/features/bookings/domain/entities/inspection_report_entity.dart';
+import 'package:handygo_app/core/l10n/locale_provider.dart';
 import 'package:handygo_app/features/bookings/presentation/pages/worker_discovery_map_page.dart';
 import 'package:handygo_app/features/bookings/presentation/providers/booking_providers.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 const _kBusyMessage =
     'Inspection karne wala Ustaad abhi doosre kaam mein masroof hai. '
@@ -107,6 +109,16 @@ class _BusyInspectorDecisionNotifier extends InspectionDecisionNotifier {
 
 void main() {
   late _BusyInspectorDecisionNotifier decisionNotifier;
+  late SharedPreferences testPrefs;
+
+  // bookingRepositoryProvider's real datasource chain now reaches
+  // LocalCacheService, which needs sharedPreferencesProvider — this
+  // ProviderScope doesn't fully override bookingRepositoryProvider, so it
+  // needs this in scope too, even though this test never exercises caching.
+  setUpAll(() async {
+    SharedPreferences.setMockInitialValues({});
+    testPrefs = await SharedPreferences.getInstance();
+  });
 
   setUp(() {
     decisionNotifier = _BusyInspectorDecisionNotifier();
@@ -135,6 +147,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          sharedPreferencesProvider.overrideWithValue(testPrefs),
           bookingBidsProvider(
             booking.id,
           ).overrideWith((_) async => bids ?? [_otherBid()]),

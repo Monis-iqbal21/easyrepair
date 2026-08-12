@@ -3,7 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-import '../../../../core/errors/failures.dart';
+import '../../../../core/errors/failure_messages.dart';
+import '../../../../core/network/offline_banner.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../../bookings/domain/entities/booking_entity.dart';
 import '../../../bookings/presentation/widgets/inspection_badge.dart';
@@ -62,6 +63,8 @@ class _WorkerNewJobsPageState extends ConsumerState<WorkerNewJobsPage>
   @override
   Widget build(BuildContext context) {
     final jobsAsync = ref.watch(newJobsProvider);
+    final isShowingCachedData =
+        ref.watch(newJobsIsOfflineProvider) && jobsAsync.hasValue;
     final notifier  = ref.read(newJobsProvider.notifier);
     final workerProfile = ref.watch(workerProfileProvider).valueOrNull;
     // Unknown-yet counts as approved so the page doesn't flash the
@@ -140,6 +143,7 @@ class _WorkerNewJobsPageState extends ConsumerState<WorkerNewJobsPage>
 
               const SizedBox(height: 8),
 
+              if (isShowingCachedData) const OfflineDataBanner(),
               if (jobsAsync.hasError && jobsAsync.hasValue)
                 const _RefreshFailedBanner(),
 
@@ -152,9 +156,8 @@ class _WorkerNewJobsPageState extends ConsumerState<WorkerNewJobsPage>
                     child: BookingSkeleton(),
                   ),
                   error: (err, _) => _ErrorState(
-                    message: err is Failure
-                        ? err.message
-                        : context.l10n.workerNewJobsLoadFailed,
+                    message: failureMessage(context.l10n, err,
+                        fallback: context.l10n.workerNewJobsLoadFailed),
                     onRetry: notifier.refresh,
                   ),
                   data: (jobs) => jobs.isEmpty

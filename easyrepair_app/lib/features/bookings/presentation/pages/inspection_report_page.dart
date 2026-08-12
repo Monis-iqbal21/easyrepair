@@ -376,6 +376,10 @@ class _ReportBody extends ConsumerWidget {
       ),
     );
     if (confirmed != true || !context.mounted) return;
+    // Re-entry guard: the confirm dialog's async gap means a second tap
+    // that raced the disabled button could reach here before this call's
+    // own AsyncLoading state has rendered — never fire a duplicate decision.
+    if (ref.read(inspectionDecisionNotifierProvider).isLoading) return;
 
     try {
       final notifier = ref.read(inspectionDecisionNotifierProvider.notifier);

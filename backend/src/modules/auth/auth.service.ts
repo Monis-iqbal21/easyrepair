@@ -34,7 +34,38 @@ import {
 const OTP_EXPIRY_MS = 5 * 60 * 1000;
 const OTP_RESEND_COOLDOWN_MS = 60 * 1000;
 const OTP_MAX_ATTEMPTS = 5;
-const OTP_MAX_PER_PHONE_PER_WINDOW = 3;
+const OTP_MAX_PER_PHONE_PER_WINDOW = 5;
+
+/**
+ * How long a just-rotated refresh token stays honourable after being
+ * superseded. Exists purely to recover a client that crashed/was killed
+ * between this backend committing a rotation and Flutter persisting the new
+ * pair locally — see AuthService.refreshTokens. Deliberately short: reusing
+ * a superseded token within this window never grants anything beyond what
+ * the rotation that already happened granted (no new refresh token is
+ * issued, only a fresh access token bound to the existing replacement), so
+ * it does not meaningfully extend a stolen token's usefulness.
+ */
+const REFRESH_TOKEN_GRACE_MS = 60 * 1000;
+
+const DURATION_UNIT_MS: Record<string, number> = {
+  s: 1000,
+  m: 60 * 1000,
+  h: 60 * 60 * 1000,
+  d: 24 * 60 * 60 * 1000,
+  w: 7 * 24 * 60 * 60 * 1000,
+  y: 365 * 24 * 60 * 60 * 1000,
+};
+
+/** Parses a duration string like '30d', '15m', '1y' into milliseconds. */
+function parseDurationMs(value: string): number {
+  const match = /^(\d+)\s*([smhdwy])$/i.exec(value.trim());
+  if (!match) {
+    throw new Error(`Invalid duration string: "${value}"`);
+  }
+  const [, amount, unit] = match;
+  return Number(amount) * DURATION_UNIT_MS[unit.toLowerCase()];
+}
 /**
  * Abuse backstop only — the per-phone cap above is the precise control.
  *
@@ -134,9 +165,12 @@ export class AuthService {
       categoryId: dto.categoryId,
     });
 
-    // New workers always start as PENDING verification
+    // New workers always start as PENDING verification and ACTIVE status
+    // (WorkerProfile.status schema default) — hardcoded here rather than
+    // re-queried, since createUserWithProfile just created exactly that row.
     const verificationStatus =
       (dto.role as Role) === Role.WORKER ? 'PENDING' : undefined;
+    const workerStatus = (dto.role as Role) === Role.WORKER ? 'ACTIVE' : undefined;
     return this._buildAuthResponse(
       user.id,
       user.phone,
@@ -144,14 +178,23 @@ export class AuthService {
       dto.firstName,
       dto.lastName,
       verificationStatus,
+      workerStatus,
     );
   }
 
+  /**
+   * POST /auth/login — Worker password login. This is the only real caller
+   * of this endpoint (the Worker login page's password field); scoped to
+   * WORKER only so a Client's correct phone+password can never silently
+   * authenticate through the Worker screen. A Client-owned or genuinely
+   * nonexistent phone gets the same role-privacy-safe rejection as every
+   * other login path — see `_phoneNotRegisteredError`.
+   */
   async login(dto: LoginDto): Promise<AuthResponseDto> {
     this._assertNotSupportAccount(dto.phone);
     const user = await this.authRepository.findUserByPhone(dto.phone);
-    if (!user || user.deletedAt !== null) {
-      throw new UnauthorizedException('Invalid phone number or password');
+    if (!user || user.deletedAt !== null || user.role !== Role.WORKER) {
+      throw this._phoneNotRegisteredError();
     }
 
     if (!user.isActive) {
@@ -175,12 +218,28 @@ export class AuthService {
       profile.firstName,
       profile.lastName,
       profile.verificationStatus,
+      profile.workerStatus,
     );
   }
 
   async refreshTokens(dto: RefreshTokenDto): Promise<AuthResponseDto> {
     const stored = await this.authRepository.findRefreshToken(dto.refreshToken);
-    if (!stored || stored.expiresAt < new Date()) {
+    if (!stored) {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+
+    // This exact token was already rotated away by an earlier refresh.
+    // Within a short grace window this almost always means the client
+    // crashed/was killed after we committed that rotation but before it
+    // could persist the new pair locally — resolve to the already-issued
+    // replacement instead of rejecting, so the retry recovers the session
+    // instead of stranding the device. Outside the grace window (or if the
+    // chain has nowhere further to go), this is a genuine rejection.
+    if (stored.replacedByToken) {
+      return this._reissueFromGraceWindow(stored.replacedByToken, stored.supersededAt);
+    }
+
+    if (stored.expiresAt < new Date()) {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
 
@@ -189,18 +248,78 @@ export class AuthService {
       throw new UnauthorizedException('User not found or inactive');
     }
 
-    await this.authRepository.deleteRefreshToken(dto.refreshToken);
+    const profile = await this._getProfileName(user.id, user.role);
+    const accessToken = this._signAccessToken(user.id, user.phone, user.role);
+    const newRefreshToken = uuidv4();
+
+    await this.authRepository.rotateRefreshToken(
+      stored.token,
+      newRefreshToken,
+      user.id,
+      this._refreshTokenExpiresAt(),
+    );
+
+    void this.chatService.ensureSupportConversation(user.id, user.role);
+
+    return {
+      accessToken,
+      refreshToken: newRefreshToken,
+      user: {
+        id: user.id,
+        phone: user.phone,
+        role: user.role,
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        verificationStatus: profile.verificationStatus,
+        workerStatus: profile.workerStatus,
+      },
+    };
+  }
+
+  /**
+   * Re-resolves a refresh call that presented an already-superseded token.
+   * Never rotates again here — that would let a retry loop keep spawning
+   * new tokens from one stale presentation. Only ever hands back a fresh
+   * access token bound to the SAME replacement token that a successful
+   * first attempt would already have produced.
+   */
+  private async _reissueFromGraceWindow(
+    replacedByToken: string,
+    supersededAt: Date | null,
+  ): Promise<AuthResponseDto> {
+    const withinGrace =
+      supersededAt !== null &&
+      Date.now() - supersededAt.getTime() < REFRESH_TOKEN_GRACE_MS;
+    if (!withinGrace) {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+
+    const replacement = await this.authRepository.findRefreshToken(replacedByToken);
+    if (!replacement || replacement.expiresAt < new Date()) {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+
+    const user = await this.authRepository.findUserById(replacement.userId);
+    if (!user || !user.isActive) {
+      throw new UnauthorizedException('User not found or inactive');
+    }
 
     const profile = await this._getProfileName(user.id, user.role);
+    const accessToken = this._signAccessToken(user.id, user.phone, user.role);
 
-    return this._buildAuthResponse(
-      user.id,
-      user.phone,
-      user.role,
-      profile.firstName,
-      profile.lastName,
-      profile.verificationStatus,
-    );
+    return {
+      accessToken,
+      refreshToken: replacement.token,
+      user: {
+        id: user.id,
+        phone: user.phone,
+        role: user.role,
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        verificationStatus: profile.verificationStatus,
+        workerStatus: profile.workerStatus,
+      },
+    };
   }
 
   async logout(userId: string, refreshToken?: string): Promise<void> {
@@ -226,6 +345,7 @@ export class AuthService {
       firstName: profile.firstName,
       lastName: profile.lastName,
       verificationStatus: profile.verificationStatus,
+      workerStatus: profile.workerStatus,
     };
   }
 
@@ -236,6 +356,9 @@ export class AuthService {
     firstName: string;
     lastName: string;
     verificationStatus?: string;
+    /** Only ever set for WORKER — the central Worker-suspension routing gate
+     * in the app reads this on every login/session-restore/refresh. */
+    workerStatus?: string;
   }> {
     if (role === Role.CLIENT) {
       const p = await this.authRepository.findClientProfile(userId);
@@ -247,8 +370,50 @@ export class AuthService {
         firstName: p.firstName,
         lastName: p.lastName,
         verificationStatus: p.verificationStatus,
+        workerStatus: p.status,
       };
     }
+  }
+
+  /**
+   * Stable, role-privacy-safe rejection for a login attempt against a phone
+   * that either doesn't exist at all or belongs to the OPPOSITE role. These
+   * two cases must be indistinguishable to the caller — see the class doc
+   * above `clientPasswordLogin` for why. `message` is deliberately empty:
+   * Flutter's `failureCodeMessage()` renders `error` through
+   * `AppLocalizations` instead, so the same rejection reads correctly in
+   * English, Urdu and Roman Urdu rather than a single hardcoded sentence.
+   */
+  private _phoneNotRegisteredError(): UnauthorizedException {
+    return new UnauthorizedException({ message: '', error: 'PHONE_NOT_REGISTERED' });
+  }
+
+  /**
+   * Stable, role-privacy-safe rejection for a registration attempt against a
+   * phone that already has an account — regardless of which role owns it.
+   * `User.phone` is globally unique, so this is also what a same-role
+   * duplicate hits. See `_phoneNotRegisteredError` for the empty-message
+   * reasoning.
+   */
+  private _phoneAlreadyRegisteredError(): ConflictException {
+    return new ConflictException({ message: '', error: 'PHONE_ALREADY_REGISTERED' });
+  }
+
+  private _signAccessToken(userId: string, phone: string, role: Role): string {
+    return this.jwtService.sign(
+      { sub: userId, phone, role } as object,
+      {
+        expiresIn: this.config.getOrThrow<string>('jwt.accessExpires') as
+          | `${number}${'s' | 'm' | 'h' | 'd' | 'w' | 'y'}`
+          | number,
+      },
+    );
+  }
+
+  /** Refresh-token lifetime, driven by JWT_REFRESH_EXPIRES (default 30d). */
+  private _refreshTokenExpiresAt(): Date {
+    const raw = this.config.getOrThrow<string>('jwt.refreshExpires');
+    return new Date(Date.now() + parseDurationMs(raw));
   }
 
   private async _buildAuthResponse(
@@ -258,24 +423,15 @@ export class AuthService {
     firstName: string,
     lastName: string,
     verificationStatus?: string,
+    workerStatus?: string,
   ): Promise<AuthResponseDto> {
-    const accessToken = this.jwtService.sign(
-      { sub: userId, phone, role } as object,
-      {
-        expiresIn: this.config.getOrThrow<string>('jwt.accessExpires') as
-          | `${number}${'s' | 'm' | 'h' | 'd' | 'w' | 'y'}`
-          | number,
-      },
-    );
+    const accessToken = this._signAccessToken(userId, phone, role);
 
     const refreshToken = uuidv4();
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 30);
-
     await this.authRepository.createRefreshToken(
       userId,
       refreshToken,
-      expiresAt,
+      this._refreshTokenExpiresAt(),
     );
 
     // Every successful login/registration funnels through here, so this is
@@ -294,6 +450,7 @@ export class AuthService {
         firstName,
         lastName,
         verificationStatus,
+        workerStatus,
       },
     };
   }
@@ -562,14 +719,20 @@ export class AuthService {
       normalized,
       purpose,
     );
-    if (
-      mostRecent &&
-      Date.now() - mostRecent.createdAt.getTime() < OTP_RESEND_COOLDOWN_MS
-    ) {
-      throw new BadRequestException({
-        message: 'Thori dair intezaar karein, phir dobara code mangwayein.',
-        error: 'OTP_RESEND_TOO_SOON',
-      });
+    if (mostRecent) {
+      const elapsedMs = Date.now() - mostRecent.createdAt.getTime();
+      if (elapsedMs < OTP_RESEND_COOLDOWN_MS) {
+        // Ceil, never 0: the client's countdown must never show "0s left"
+        // while the backend would still reject an immediate resend.
+        const retryAfterSeconds = Math.ceil(
+          (OTP_RESEND_COOLDOWN_MS - elapsedMs) / 1000,
+        );
+        throw new BadRequestException({
+          message: 'Thori dair intezaar karein, phir dobara code mangwayein.',
+          error: 'OTP_RESEND_TOO_SOON',
+          retryAfterSeconds,
+        });
+      }
     }
 
     const otp = crypto.randomInt(100000, 1000000).toString();
@@ -589,9 +752,9 @@ export class AuthService {
       const sent = await this.smsOtp.sendOtp(normalized, otp);
       if (!sent) {
         // The Ustaad never got this code, so it must not sit there burning
-        // their 60s resend cooldown and their 3-per-30-minutes quota. Without
-        // this, three provider hiccups lock a real user out for half an hour
-        // over codes that were never delivered.
+        // their 60s resend cooldown and their 5-per-30-minutes quota. Without
+        // this, repeated provider hiccups lock a real user out for half an
+        // hour over codes that were never delivered.
         await this.authRepository.deleteAuthOtp(otpId).catch(() => undefined);
         throw new ServiceUnavailableException({
           message: 'SMS bhejne mein masla hua. Dobara koshish karein.',
@@ -680,11 +843,12 @@ export class AuthService {
 
     if (existing) {
       if (existing.role === Role.WORKER) {
-        throw new ConflictException({
-          message:
-            'Ye mobile number Ustaad account ke saath registered hai. Ustaad Login use karein.',
-          error: 'PHONE_IS_WORKER',
-        });
+        // checkClientPhoneStatus already classified this phone as 'NEW' to
+        // the Client auth page (see below), so from the app's perspective
+        // this OTP verification is a registration attempt that just
+        // discovered the phone already has an account — same rejection a
+        // genuine same-role duplicate gets, never revealing it's a Worker.
+        throw this._phoneAlreadyRegisteredError();
       }
       // A successful OTP verification just proved control of this phone
       // right now, regardless of how the account was originally created.
@@ -697,6 +861,7 @@ export class AuthService {
         profile.firstName,
         profile.lastName,
         profile.verificationStatus,
+        profile.workerStatus,
       );
     }
 
@@ -731,6 +896,7 @@ export class AuthService {
             profile.firstName,
             profile.lastName,
             profile.verificationStatus,
+            profile.workerStatus,
           );
         }
       }
@@ -744,15 +910,20 @@ export class AuthService {
 
   /**
    * POST /auth/client/phone-check — drives which sub-form the Client auth
-   * page shows (login / register / Ustaad-redirect) before any password is
-   * typed. Deliberately not enumeration-safe: telling the UI "this number
-   * already has an account" is the entire point, exactly like the OTP flow
-   * already reveals the same classification after verification — this just
-   * does it a step earlier, without requiring OTP possession first.
+   * page shows (login vs. register) before any password is typed.
+   *
+   * Role-privacy safe: a Worker-owned phone is reported exactly like a
+   * genuinely new number ('NEW'), never as its own classification — the
+   * Client page then shows the registration sub-form, and the actual
+   * registration attempt correctly rejects with the generic "already
+   * registered" outcome once it hits the real account (see
+   * `clientPasswordRegister`). This intentionally reveals only whether a
+   * CLIENT account already exists, never whether the number belongs to a
+   * Worker.
    */
   async checkClientPhoneStatus(
     rawPhone: string,
-  ): Promise<{ status: 'CLIENT' | 'WORKER' | 'NEW' }> {
+  ): Promise<{ status: 'CLIENT' | 'NEW' }> {
     this._assertNotSupportAccount(rawPhone);
     const normalized = normalizePakistaniPhone(rawPhone);
     if (!normalized) {
@@ -764,8 +935,8 @@ export class AuthService {
     const user = await this.authRepository.findUserByPhoneVariants(
       phoneLookupVariants(normalized),
     );
-    if (!user) return { status: 'NEW' };
-    return { status: user.role === Role.WORKER ? 'WORKER' : 'CLIENT' };
+    if (!user || user.role === Role.WORKER) return { status: 'NEW' };
+    return { status: 'CLIENT' };
   }
 
   /** POST /auth/client/password-login — existing CLIENT only. */
@@ -785,15 +956,12 @@ export class AuthService {
     const user = await this.authRepository.findUserByPhoneVariants(
       phoneLookupVariants(normalized),
     );
-    if (!user || user.deletedAt !== null) {
-      throw new UnauthorizedException('Invalid phone number or password');
-    }
-    if (user.role === Role.WORKER) {
-      throw new ConflictException({
-        message:
-          'Ye mobile number Ustaad account ke saath registered hai. Ustaad Login use karein.',
-        error: 'PHONE_IS_WORKER',
-      });
+    // Wrong role and genuinely nonexistent are indistinguishable — both get
+    // the same rejection. Only a real CLIENT account continues to a
+    // password check, so "wrong password" (below) never gets conflated with
+    // "this phone has no CLIENT account".
+    if (!user || user.deletedAt !== null || user.role === Role.WORKER) {
+      throw this._phoneNotRegisteredError();
     }
     if (!user.isActive) {
       throw new ForbiddenException('Account is deactivated');
@@ -815,6 +983,7 @@ export class AuthService {
       profile.firstName,
       profile.lastName,
       profile.verificationStatus,
+      profile.workerStatus,
     );
   }
 
@@ -840,17 +1009,10 @@ export class AuthService {
     const variants = phoneLookupVariants(normalized);
     const existing = await this.authRepository.findUserByPhoneVariants(variants);
     if (existing) {
-      if (existing.role === Role.WORKER) {
-        throw new ConflictException({
-          message:
-            'Ye mobile number Ustaad account ke saath registered hai. Ustaad Login use karein.',
-          error: 'PHONE_IS_WORKER',
-        });
-      }
-      throw new ConflictException({
-        message: 'Ye number pehle se Client account ke saath registered hai. Login karein.',
-        error: 'PHONE_IS_CLIENT',
-      });
+      // Same rejection regardless of which role already owns the number —
+      // User.phone is globally unique, so this is the only outcome that
+      // never reveals whether the existing account is a Client or a Worker.
+      throw this._phoneAlreadyRegisteredError();
     }
 
     const { firstName, lastName } = this._splitFullName(fullName);
@@ -884,6 +1046,7 @@ export class AuthService {
             profile.firstName,
             profile.lastName,
             profile.verificationStatus,
+            profile.workerStatus,
           );
         }
       }
@@ -915,16 +1078,9 @@ export class AuthService {
     const variants = phoneLookupVariants(normalized);
     const existing = await this.authRepository.findUserByPhoneVariants(variants);
     if (existing) {
-      if (existing.role === Role.WORKER) {
-        throw new ConflictException({
-          message: 'Is number ka Ustaad account pehle se mojood hai. Login karein.',
-          error: 'PHONE_IS_WORKER',
-        });
-      }
-      throw new ConflictException({
-        message: 'Ye number Client account ke saath registered hai.',
-        error: 'PHONE_IS_CLIENT',
-      });
+      // Same rejection regardless of which role already owns the number —
+      // never reveals whether it's a Client or an existing Worker account.
+      throw this._phoneAlreadyRegisteredError();
     }
 
     const { firstName, lastName } = this._splitFullName(fullName);
@@ -946,14 +1102,14 @@ export class AuthService {
         err instanceof Prisma.PrismaClientKnownRequestError &&
         err.code === 'P2002'
       ) {
-        throw new ConflictException({
-          message: 'Is number ka Ustaad account pehle se mojood hai. Login karein.',
-          error: 'PHONE_IS_WORKER',
-        });
+        throw this._phoneAlreadyRegisteredError();
       }
       throw err;
     }
 
+    // New workers always start ACTIVE (WorkerProfile.status schema default)
+    // — hardcoded rather than re-queried, since createUserWithProfile just
+    // created exactly that row.
     return this._buildAuthResponse(
       user.id,
       user.phone,
@@ -961,6 +1117,7 @@ export class AuthService {
       firstName,
       lastName,
       'PENDING',
+      'ACTIVE',
     );
   }
 
@@ -979,11 +1136,10 @@ export class AuthService {
 
     const variants = phoneLookupVariants(normalized);
     const user = await this.authRepository.findUserByPhoneVariants(variants);
+    // Wrong role and nonexistent are indistinguishable — same rejection as
+    // every other login path, never revealing this phone belongs to a Client.
     if (!user || user.role !== Role.WORKER || user.deletedAt !== null) {
-      throw new UnauthorizedException({
-        message: 'Is number ka Ustaad account nahi mila.',
-        error: 'WORKER_NOT_FOUND',
-      });
+      throw this._phoneNotRegisteredError();
     }
     if (!user.isActive) {
       throw new ForbiddenException('Account is deactivated');
@@ -998,6 +1154,7 @@ export class AuthService {
       profile.firstName,
       profile.lastName,
       profile.verificationStatus,
+      profile.workerStatus,
     );
   }
 }

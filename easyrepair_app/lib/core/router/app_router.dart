@@ -10,6 +10,7 @@ import '../../features/auth/presentation/pages/worker_login_page.dart';
 import '../../features/auth/presentation/pages/forgot_password_page.dart';
 import '../../features/auth/presentation/pages/client_forgot_password_page.dart';
 import '../../features/auth/presentation/providers/auth_providers.dart';
+import '../../features/auth/domain/entities/user_entity.dart';
 import '../../features/client/presentation/pages/client_home_page.dart';
 import '../../features/client/domain/entities/customer_agreement_entity.dart';
 import '../../features/client/presentation/pages/customer_agreement_gate_page.dart';
@@ -30,10 +31,12 @@ import '../../features/worker/presentation/pages/worker_job_detail_page.dart';
 import '../../features/worker/presentation/pages/inspection_report_form_page.dart';
 import '../../features/worker/presentation/pages/worker_new_jobs_page.dart';
 import '../../features/worker/presentation/pages/worker_reviews_page.dart';
+import '../../features/worker/presentation/pages/worker_suspended_page.dart';
 import '../../features/notifications/presentation/pages/notification_list_page.dart';
 import '../../features/chat/presentation/pages/chat_detail_page.dart';
 import '../../features/bookings/presentation/pages/track_worker_page.dart';
 import '../presentation/pages/splash_page.dart';
+import 'page_not_available_page.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final refreshNotifier = ValueNotifier<bool>(false);
@@ -52,31 +55,37 @@ final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/splash',
     refreshListenable: refreshNotifier,
+    // Any unknown/invalid path (unmatched route, garbled deep link, a
+    // notification pointing at an id-based route GoRouter can't match)
+    // lands here instead of the framework's bare default error page. The
+    // top-level `redirect` below still runs first for this location like
+    // any other — a suspended Worker or a logged-out user is redirected
+    // away before this is ever built, so this page is only ever reached by
+    // a session that's actually allowed to be here.
+    errorBuilder: (context, state) => const PageNotAvailablePage(),
     redirect: (context, state) {
       final authState = ref.read(authStateProvider);
-      final isSplash = state.matchedLocation == '/splash';
-      final isAuthRoute = state.matchedLocation.startsWith('/auth');
 
-      // Auth still resolving → show splash
-      if (authState.isLoading) {
-        return isSplash ? null : '/splash';
-      }
+      final authRedirect = resolveAuthRedirect(
+        authState: authState,
+        matchedLocation: state.matchedLocation,
+      );
+      if (authRedirect != null) return authRedirect;
 
       final user = authState.valueOrNull;
       final isLoggedIn = user != null;
 
-      // From splash or auth route: dispatch to correct home.
-      // Workers always land on Home regardless of onboarding/approval status
-      // — the profile-completion modal/banner and action-level gating (Go
-      // Online, bid, apply) handle the "not approved yet" case there, rather
-      // than hard-blocking the whole app on a dead-end page.
-      if (isSplash || (isLoggedIn && isAuthRoute)) {
-        if (!isLoggedIn) return '/auth/role-select';
-        if (user!.isWorker) return '/worker/home';
-        return '/client/home';
-      }
-
-      if (!isLoggedIn && !isAuthRoute) return '/auth/role-select';
+      // ── Suspended Worker lock ──────────────────────────────────────────
+      // Central enforcement point — every Worker route, deep link and
+      // notification tap navigates through GoRouter, so this one check is
+      // enough; individual Worker pages never need their own suspension
+      // check. Only WorkerStatus.SUSPENDED locks the app (ACTIVE/INACTIVE
+      // are normal access).
+      final suspensionRedirect = resolveWorkerSuspendedRedirect(
+        user: user,
+        matchedLocation: state.matchedLocation,
+      );
+      if (suspensionRedirect != null) return suspensionRedirect;
 
       // ── Mandatory Customer Terms gate ─────────────────────────────────
       // Applies to EVERY authenticated CLIENT route (not just the dispatch
@@ -86,10 +95,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       // authStateProvider, which this redirect already re-evaluates on),
       // and on session restore — there is no separate trigger to wire per
       // flow because they all funnel through this one redirect.
-      if (isLoggedIn) {
+      if (user != null) {
         final gateRedirect = resolveClientAgreementRedirect(
           isLoggedIn: isLoggedIn,
-          isWorker: user!.isWorker,
+          isWorker: user.isWorker,
           matchedLocation: state.matchedLocation,
           agreementAsync: ref.read(requiredCustomerAgreementProvider),
         );
@@ -252,6 +261,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, __) => const WorkerReviewsPage(),
       ),
       GoRoute(
+        path: '/worker/suspended',
+        builder: (_, __) => const WorkerSuspendedPage(),
+      ),
+      GoRoute(
         path: '/client/track/:id',
         builder: (_, state) =>
             TrackWorkerPage(bookingId: state.pathParameters['id']!),
@@ -263,6 +276,83 @@ final routerProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
+
+/// Pure decision logic for the top-level login/logout redirect — splash
+/// dispatch and the logged-out gate.
+///
+/// Extracted from the `redirect` closure so it can be unit-tested directly,
+/// without booting a full GoRouter/widget tree.
+///
+/// Rules:
+///  * [authState] still resolving, OR errored with nothing previously
+///    confirmed (`hasError && !hasValue` — a transient failure on the very
+///    first check, before any user was ever confirmed) → splash. An errored
+///    [authState] that DOES still carry a previous value falls through
+///    instead (Riverpod preserves it across a failed rebuild — see
+///    AuthStateNotifier), so a network blip after a confirmed login is never
+///    read as logged out here.
+///  * From splash, or a still-logged-in user sitting on an `/auth` route →
+///    dispatch to the correct home, or back to role-select if logged out.
+///  * A logged-out user anywhere else → role-select.
+///  * Otherwise `null` — leave navigation alone (the caller applies further
+///    redirects, e.g. the Customer Terms gate).
+String? resolveAuthRedirect({
+  required AsyncValue<UserEntity?> authState,
+  required String matchedLocation,
+}) {
+  final isSplash = matchedLocation == '/splash';
+  final isAuthRoute = matchedLocation.startsWith('/auth');
+
+  if (authState.isLoading || (authState.hasError && !authState.hasValue)) {
+    return isSplash ? null : '/splash';
+  }
+
+  final user = authState.valueOrNull;
+  final isLoggedIn = user != null;
+
+  // Workers always land on Home regardless of onboarding/approval status —
+  // the profile-completion modal/banner and action-level gating (Go Online,
+  // bid, apply) handle the "not approved yet" case there, rather than
+  // hard-blocking the whole app on a dead-end page.
+  if (isSplash || (isLoggedIn && isAuthRoute)) {
+    if (user == null) return '/auth/role-select';
+    return user.isWorker ? '/worker/home' : '/client/home';
+  }
+
+  if (!isLoggedIn && !isAuthRoute) return '/auth/role-select';
+
+  return null;
+}
+
+/// Pure decision logic for the Worker-suspension lock — the central gate
+/// that fully blocks the Worker app for `WorkerStatus.SUSPENDED` while
+/// leaving ACTIVE/INACTIVE untouched.
+///
+/// Extracted from the `redirect` closure so it can be unit-tested directly.
+/// This is the ONLY place suspension is enforced — individual Worker pages
+/// never duplicate this check.
+///
+/// Rules:
+///  * Never applies when logged out or to a CLIENT (`null`).
+///  * A suspended Worker anywhere except `/worker/suspended` is redirected
+///    there — covers every route, deep link and notification tap, since
+///    they all navigate through GoRouter.
+///  * A Worker who is no longer suspended (admin restored ACTIVE/INACTIVE)
+///    sitting on `/worker/suspended` is redirected to `/worker/home` — this
+///    is what makes "next session refresh restores normal access" true.
+String? resolveWorkerSuspendedRedirect({
+  required UserEntity? user,
+  required String matchedLocation,
+}) {
+  if (user == null || !user.isWorker) return null;
+
+  final isSuspendedRoute = matchedLocation == '/worker/suspended';
+
+  if (user.isSuspendedWorker) {
+    return isSuspendedRoute ? null : '/worker/suspended';
+  }
+  return isSuspendedRoute ? '/worker/home' : null;
+}
 
 /// Pure decision logic for the mandatory Customer Terms gate redirect.
 ///

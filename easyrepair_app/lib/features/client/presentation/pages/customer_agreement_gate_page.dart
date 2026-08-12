@@ -59,6 +59,10 @@ class _CustomerAgreementGatePageState
   }
 
   Future<void> _submit() async {
+    // Re-entry guard: a second tap that raced past the disabled button
+    // (isLoading only updates on the next rebuild) must never fire a
+    // duplicate acceptance request.
+    if (ref.read(acceptCustomerAgreementProvider).isLoading) return;
     // Fire-and-forget from the widget's perspective: success closes the gate
     // via the invalidated requiredCustomerAgreementProvider triggering the
     // router redirect; failure surfaces through acceptCustomerAgreementProvider's

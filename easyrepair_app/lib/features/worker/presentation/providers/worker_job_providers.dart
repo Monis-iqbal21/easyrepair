@@ -25,6 +25,10 @@ extension WorkerJobFilterX on WorkerJobFilter {
 
 // ── Jobs list notifier ────────────────────────────────────────────────────────
 
+/// True while [workerJobsProvider] is showing the last cached list because
+/// the live fetch failed.
+final workerJobsIsOfflineProvider = StateProvider<bool>((ref) => false);
+
 class WorkerJobsNotifier extends AsyncNotifier<List<BookingEntity>> {
   WorkerJobFilter _filter = WorkerJobFilter.all;
 
@@ -43,7 +47,10 @@ class WorkerJobsNotifier extends AsyncNotifier<List<BookingEntity>> {
     final result = await ref
         .read(workerRepositoryProvider)
         .getWorkerJobs(_filter.apiValue);
-    return result.fold((f) => throw f, (jobs) => jobs);
+    return result.fold((f) => throw f, (cached) {
+      ref.read(workerJobsIsOfflineProvider.notifier).state = cached.isStale;
+      return cached.data;
+    });
   }
 
   void setFilter(WorkerJobFilter newFilter) {
@@ -74,6 +81,11 @@ final workerJobsProvider =
 
 // ── Single job detail ─────────────────────────────────────────────────────────
 
+/// True while [workerJobDetailProvider] for a given job id is showing the
+/// last cached detail because the live fetch failed.
+final workerJobDetailIsOfflineProvider =
+    StateProvider.family<bool, String>((ref, jobId) => false);
+
 final workerJobDetailProvider =
     FutureProvider.family<BookingEntity, String>((ref, jobId) async {
   debugPrint('[workerJobDetailProvider] fetching job detail for jobId=$jobId');
@@ -84,7 +96,10 @@ final workerJobDetailProvider =
       debugPrint('[workerJobDetailProvider] failed for jobId=$jobId error=${f.message}');
       throw f;
     },
-    (job) {
+    (cached) {
+      ref.read(workerJobDetailIsOfflineProvider(jobId).notifier).state =
+          cached.isStale;
+      final job = cached.data;
       debugPrint('[workerJobDetailProvider] success jobId=$jobId status=${job.status}');
       return job;
     },
@@ -124,6 +139,10 @@ enum NewJobFilter { all, myBids, notBidYet }
 
 // Visible wording: newJobFilterLabel() in presentation/utils/worker_labels.dart.
 
+/// True while [newJobsProvider] is showing the last cached list because the
+/// live fetch failed.
+final newJobsIsOfflineProvider = StateProvider<bool>((ref) => false);
+
 /// Fetches PENDING bookings matching the worker's skills via GET /workers/jobs/new.
 /// Auto-refreshes every 30 s while the provider is alive.
 class NewJobsNotifier extends AsyncNotifier<List<NewJobEntity>> {
@@ -142,7 +161,10 @@ class NewJobsNotifier extends AsyncNotifier<List<NewJobEntity>> {
 
   Future<List<NewJobEntity>> _fetch() async {
     final result = await ref.read(workerRepositoryProvider).getNewJobs();
-    return result.fold((f) => throw f, (jobs) => _applyFilter(jobs));
+    return result.fold((f) => throw f, (cached) {
+      ref.read(newJobsIsOfflineProvider.notifier).state = cached.isStale;
+      return _applyFilter(cached.data);
+    });
   }
 
   List<NewJobEntity> _applyFilter(List<NewJobEntity> jobs) {

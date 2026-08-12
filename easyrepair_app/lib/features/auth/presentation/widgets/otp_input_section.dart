@@ -9,8 +9,29 @@ import 'auth_primary_button.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
 
 const _otpLength = 6;
-const _otpValidity = Duration(minutes: 5);
-const _resendCooldown = Duration(seconds: 60);
+
+/// How long a requested OTP stays valid — must match backend OTP_EXPIRY_MS.
+const otpValidityDuration = Duration(minutes: 5);
+
+/// The backend's resend cooldown — must match backend OTP_RESEND_COOLDOWN_MS.
+const otpResendCooldownDuration = Duration(seconds: 60);
+
+/// Reconstructs a still-valid OTP's `expiresAt` from a fresh
+/// OTP_RESEND_TOO_SOON rejection's `retryAfterSeconds`.
+///
+/// Needed when the local `expiresAt` was lost (e.g. the OTP page was
+/// remounted, which intentionally clears the request notifier so a stale
+/// "code sent" state never blocks correcting the phone number — see the OTP
+/// pages' `initState`) but the backend confirms a code requested less than a
+/// minute ago is still live. The resend cooldown and the OTP's own validity
+/// share one anchor (the request time), so the remaining validity is
+/// recoverable from how much of the cooldown is left.
+DateTime expiresAtFromRetryAfter(int retryAfterSeconds) {
+  final elapsedSinceRequest =
+      otpResendCooldownDuration - Duration(seconds: retryAfterSeconds);
+  final requestedAt = DateTime.now().subtract(elapsedSinceRequest);
+  return requestedAt.add(otpValidityDuration);
+}
 
 /// Reads the OTP via Android's SMS User Consent API — a system consent
 /// dialog appears when a matching SMS arrives, no `READ_SMS`/`RECEIVE_SMS`
@@ -70,7 +91,7 @@ class _OtpInputSectionState extends State<OtpInputSection>
   Timer? _ticker;
   Duration _remaining = Duration.zero;
 
-  DateTime get _requestedAt => widget.expiresAt.subtract(_otpValidity);
+  DateTime get _requestedAt => widget.expiresAt.subtract(otpValidityDuration);
 
   @override
   void initState() {
@@ -128,7 +149,7 @@ class _OtpInputSectionState extends State<OtpInputSection>
     final expired = _remaining <= Duration.zero;
     final secondsSinceRequest =
         DateTime.now().difference(_requestedAt).inSeconds;
-    final canResend = secondsSinceRequest >= _resendCooldown.inSeconds;
+    final canResend = secondsSinceRequest >= otpResendCooldownDuration.inSeconds;
 
     final defaultTheme = PinTheme(
       width: 46,
@@ -211,7 +232,7 @@ class _OtpInputSectionState extends State<OtpInputSection>
                             onTap: widget.onResend,
                           )
                         : Text(
-                            context.l10n.authOtpResendCooldown(_resendCooldown.inSeconds - secondsSinceRequest),
+                            context.l10n.authOtpResendCooldown(otpResendCooldownDuration.inSeconds - secondsSinceRequest),
                             style: const TextStyle(
                               fontSize: 13,
                               color: kAuthGray,

@@ -47,8 +47,6 @@ class _ClientOtpAuthPageState extends ConsumerState<ClientOtpAuthPage> {
   bool _pwCheckInFlight = false;
   bool _pwSubmitInFlight = false;
 
-  String? _workerConflictMessage;
-
   @override
   void initState() {
     super.initState();
@@ -92,9 +90,6 @@ class _ClientOtpAuthPageState extends ConsumerState<ClientOtpAuthPage> {
   /// number that was checked, so editing it must invalidate the result rather
   /// than locking the field.
   void _onPasswordPhoneChanged(String _) {
-    if (_workerConflictMessage != null) {
-      setState(() => _workerConflictMessage = null);
-    }
     if (ref.read(clientPhoneCheckNotifierProvider).valueOrNull != null) {
       ref.read(clientPhoneCheckNotifierProvider.notifier).reset();
     }
@@ -123,10 +118,7 @@ class _ClientOtpAuthPageState extends ConsumerState<ClientOtpAuthPage> {
 
   void _switchMode(_ClientAuthMode mode) {
     if (_mode == mode) return;
-    setState(() {
-      _mode = mode;
-      _workerConflictMessage = null;
-    });
+    setState(() => _mode = mode);
     ref.read(clientPhoneCheckNotifierProvider.notifier).reset();
   }
 
@@ -134,10 +126,7 @@ class _ClientOtpAuthPageState extends ConsumerState<ClientOtpAuthPage> {
 
   Future<void> _sendCode() async {
     if (!_formKey.currentState!.validate() || _sendInFlight) return;
-    setState(() {
-      _workerConflictMessage = null;
-      _sendInFlight = true;
-    });
+    setState(() => _sendInFlight = true);
     try {
       await ref.read(otpRequestNotifierProvider.notifier).request(
             _phoneCtrl.text.trim(),
@@ -150,10 +139,7 @@ class _ClientOtpAuthPageState extends ConsumerState<ClientOtpAuthPage> {
 
   Future<void> _verify() async {
     if (_otp.length != 6 || _verifyInFlight) return;
-    setState(() {
-      _workerConflictMessage = null;
-      _verifyInFlight = true;
-    });
+    setState(() => _verifyInFlight = true);
     try {
       await ref.read(clientOtpAuthNotifierProvider.notifier).verify(
             _nameCtrl.text.trim(),
@@ -169,10 +155,7 @@ class _ClientOtpAuthPageState extends ConsumerState<ClientOtpAuthPage> {
 
   Future<void> _checkPhone() async {
     if (!_pwPhoneKey.currentState!.validate() || _pwCheckInFlight) return;
-    setState(() {
-      _workerConflictMessage = null;
-      _pwCheckInFlight = true;
-    });
+    setState(() => _pwCheckInFlight = true);
     try {
       await ref
           .read(clientPhoneCheckNotifierProvider.notifier)
@@ -212,26 +195,25 @@ class _ClientOtpAuthPageState extends ConsumerState<ClientOtpAuthPage> {
   @override
   Widget build(BuildContext context) {
     ref.listen(clientOtpAuthNotifierProvider, (_, state) {
-      if (state is AsyncError) _handleAuthFailure(state.error);
+      if (state is AsyncError) _showSnackBar(state.error);
     });
     ref.listen(clientPasswordLoginNotifierProvider, (_, state) {
-      if (state is AsyncError) _handleAuthFailure(state.error);
+      if (state is AsyncError) _showSnackBar(state.error);
     });
     ref.listen(clientPasswordRegisterNotifierProvider, (_, state) {
-      if (state is AsyncError) _handleAuthFailure(state.error);
+      if (state is AsyncError) _showSnackBar(state.error);
     });
     ref.listen(otpRequestNotifierProvider, (_, state) {
       if (state is AsyncError) _showSnackBar(state.error);
     });
     ref.listen(clientPhoneCheckNotifierProvider, (_, state) {
-      if (state is AsyncError) _handleAuthFailure(state.error);
+      if (state is AsyncError) _showSnackBar(state.error);
     });
 
     final expiresAt = ref.watch(otpRequestNotifierProvider).valueOrNull;
     final showOtp = expiresAt != null;
     final verifyState = ref.watch(clientOtpAuthNotifierProvider);
-    final hasOtpError =
-        verifyState is AsyncError && verifyState.error is! WorkerPhoneConflictFailure;
+    final hasOtpError = verifyState is AsyncError;
 
     final phoneStatus = ref.watch(clientPhoneCheckNotifierProvider).valueOrNull;
     final pwLoginLoading = ref.watch(clientPasswordLoginNotifierProvider).isLoading;
@@ -283,10 +265,6 @@ class _ClientOtpAuthPageState extends ConsumerState<ClientOtpAuthPage> {
                               pwLoginLoading,
                               pwRegisterLoading,
                             ),
-                          if (_workerConflictMessage != null) ...[
-                            const SizedBox(height: 16),
-                            _WorkerConflictBanner(message: _workerConflictMessage!),
-                          ],
                         ],
                       ),
                     ),
@@ -298,16 +276,6 @@ class _ClientOtpAuthPageState extends ConsumerState<ClientOtpAuthPage> {
         ),
       ),
     );
-  }
-
-  void _handleAuthFailure(Object? error) {
-    if (error is WorkerPhoneConflictFailure) {
-      setState(
-        () => _workerConflictMessage = failureMessage(context.l10n, error),
-      );
-      return;
-    }
-    _showSnackBar(error);
   }
 
   void _showSnackBar(Object? error) {
@@ -592,34 +560,3 @@ class _ModeSegment extends StatelessWidget {
   }
 }
 
-class _WorkerConflictBanner extends StatelessWidget {
-  final String message;
-
-  const _WorkerConflictBanner({required this.message});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFEF2F2),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFFCA5A5)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            message,
-            style: const TextStyle(color: Color(0xFFB91C1C), fontSize: 13.5),
-          ),
-          const SizedBox(height: 12),
-          AuthSecondaryButton(
-            label: context.l10n.authButtonUstaadLogin,
-            onPressed: () => context.push('/auth/worker/login'),
-          ),
-        ],
-      ),
-    );
-  }
-}

@@ -274,63 +274,99 @@ export class BookingsRepository {
     /** 72h auto-expiry window — set for all lanes on creation. */
     expiresAt?: Date;
     liveStartedAt?: Date;
+    /** Client-generated dedup key for this creation attempt. See schema doc. */
+    idempotencyKey?: string;
   }): Promise<BookingWithRelations> {
-    // Step 1 — transactional write (no include needed here).
-    const created = await this.prisma.$transaction(async (tx) => {
-      const booking = await tx.booking.create({
-        data: {
-          clientProfileId: data.clientProfileId,
-          categoryId: data.categoryId,
-          urgency: data.urgency,
-          timeSlot: data.timeSlot ?? null,
-          title: data.title ?? null,
-          description: data.description,
-          addressLine: data.addressLine,
-          city: data.city,
-          latitude: data.latitude,
-          longitude: data.longitude,
-          scheduledAt: data.scheduledAt ?? null,
-          inspection: data.inspection ?? false,
-          urgentWindow: data.urgentWindow ?? null,
-          status: BookingStatus.PENDING,
-          lane: data.lane ?? BookingLane.BIDDING,
-          standardServiceId: data.standardServiceId ?? null,
-          standardServiceNameSnapshot: data.standardServiceNameSnapshot ?? null,
-          standardServicePriceSnapshot:
-            data.standardServicePriceSnapshot ?? null,
-          inspectionFeeSnapshot: data.inspectionFeeSnapshot ?? null,
-          estimatedPrice: data.estimatedPrice ?? null,
-          expiresAt: data.expiresAt ?? null,
-          liveStartedAt: data.liveStartedAt ?? null,
-        },
-      });
-
-      if (data.standardServiceItems && data.standardServiceItems.length > 0) {
-        await tx.bookingStandardServiceItem.createMany({
-          data: data.standardServiceItems.map((item) => ({
-            bookingId: booking.id,
-            standardServiceId: item.standardServiceId,
-            nameSnapshot: item.nameSnapshot,
-            priceSnapshot: item.priceSnapshot,
-            quantity: item.quantity ?? 1,
-          })),
+    let createdId: string;
+    try {
+      // Step 1 — transactional write (no include needed here).
+      const created = await this.prisma.$transaction(async (tx) => {
+        const booking = await tx.booking.create({
+          data: {
+            clientProfileId: data.clientProfileId,
+            categoryId: data.categoryId,
+            urgency: data.urgency,
+            timeSlot: data.timeSlot ?? null,
+            title: data.title ?? null,
+            description: data.description,
+            addressLine: data.addressLine,
+            city: data.city,
+            latitude: data.latitude,
+            longitude: data.longitude,
+            scheduledAt: data.scheduledAt ?? null,
+            inspection: data.inspection ?? false,
+            urgentWindow: data.urgentWindow ?? null,
+            status: BookingStatus.PENDING,
+            lane: data.lane ?? BookingLane.BIDDING,
+            standardServiceId: data.standardServiceId ?? null,
+            standardServiceNameSnapshot:
+              data.standardServiceNameSnapshot ?? null,
+            standardServicePriceSnapshot:
+              data.standardServicePriceSnapshot ?? null,
+            inspectionFeeSnapshot: data.inspectionFeeSnapshot ?? null,
+            estimatedPrice: data.estimatedPrice ?? null,
+            expiresAt: data.expiresAt ?? null,
+            liveStartedAt: data.liveStartedAt ?? null,
+            idempotencyKey: data.idempotencyKey ?? null,
+          },
         });
-      }
 
-      await tx.bookingStatusHistory.create({
-        data: {
-          bookingId: booking.id,
-          status: BookingStatus.PENDING,
-          note: 'Booking created',
-        },
+        if (
+          data.standardServiceItems &&
+          data.standardServiceItems.length > 0
+        ) {
+          await tx.bookingStandardServiceItem.createMany({
+            data: data.standardServiceItems.map((item) => ({
+              bookingId: booking.id,
+              standardServiceId: item.standardServiceId,
+              nameSnapshot: item.nameSnapshot,
+              priceSnapshot: item.priceSnapshot,
+              quantity: item.quantity ?? 1,
+            })),
+          });
+        }
+
+        await tx.bookingStatusHistory.create({
+          data: {
+            bookingId: booking.id,
+            status: BookingStatus.PENDING,
+            note: 'Booking created',
+          },
+        });
+
+        return booking;
       });
-
-      return booking;
-    });
+      createdId = created.id;
+    } catch (err) {
+      // A retried "Create Booking" submission (same idempotencyKey) racing
+      // against itself hits the unique constraint — return the winning row
+      // instead of surfacing a raw 500 or creating a duplicate booking.
+      if (
+        data.idempotencyKey &&
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2002'
+      ) {
+        const existing = await this.findBookingByIdempotencyKey(
+          data.idempotencyKey,
+        );
+        if (existing) return existing;
+      }
+      throw err;
+    }
 
     // Step 2 — re-fetch with full relations so the caller gets BookingWithRelations.
     return this.prisma.booking.findUniqueOrThrow({
-      where: { id: created.id },
+      where: { id: createdId },
+      include: BOOKING_INCLUDE,
+    });
+  }
+
+  /** Look up a booking by its client-generated creation-attempt dedup key. */
+  async findBookingByIdempotencyKey(
+    idempotencyKey: string,
+  ): Promise<BookingWithRelations | null> {
+    return this.prisma.booking.findUnique({
+      where: { idempotencyKey },
       include: BOOKING_INCLUDE,
     });
   }
@@ -528,37 +564,55 @@ export class BookingsRepository {
     bookingId: string,
     data: { rating: number; comment?: string; workerProfileId: string },
   ): Promise<BookingWithRelations> {
-    await this.prisma.$transaction(async (tx) => {
-      // 1. Persist the review.
-      await tx.review.create({
-        data: {
-          bookingId,
-          rating: data.rating,
-          comment: data.comment ?? null,
-        },
-      });
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        // 1. Persist the review.
+        await tx.review.create({
+          data: {
+            bookingId,
+            rating: data.rating,
+            comment: data.comment ?? null,
+          },
+        });
 
-      // 2. Read current worker stats inside the transaction for consistency.
-      const worker = await tx.workerProfile.findUniqueOrThrow({
-        where: { id: data.workerProfileId },
-        select: { rating: true, totalRatings: true },
-      });
+        // 2. Read current worker stats inside the transaction for consistency.
+        const worker = await tx.workerProfile.findUniqueOrThrow({
+          where: { id: data.workerProfileId },
+          select: { rating: true, totalRatings: true },
+        });
 
-      const oldCount = worker.totalRatings;
-      const oldAvg = worker.rating;
-      const newCount = oldCount + 1;
-      const newAvg =
-        Math.round(((oldAvg * oldCount + data.rating) / newCount) * 10) / 10;
+        const oldCount = worker.totalRatings;
+        const oldAvg = worker.rating;
+        const newCount = oldCount + 1;
+        const newAvg =
+          Math.round(((oldAvg * oldCount + data.rating) / newCount) * 10) /
+          10;
 
-      // 3. Write updated stats.
-      await tx.workerProfile.update({
-        where: { id: data.workerProfileId },
-        data: {
-          rating: newAvg,
-          totalRatings: newCount,
-        },
+        // 3. Write updated stats.
+        await tx.workerProfile.update({
+          where: { id: data.workerProfileId },
+          data: {
+            rating: newAvg,
+            totalRatings: newCount,
+          },
+        });
       });
-    });
+    } catch (err) {
+      // `Review.bookingId @unique` backs "one review per booking". A
+      // genuine concurrent double-submit (the caller's own pre-check raced
+      // another request creating the row first) hits that constraint
+      // (P2002) — the whole transaction (including the rating recompute)
+      // rolls back automatically, so it's safe to just return the winning
+      // booking instead of surfacing a raw 500 or double-counting the rating.
+      if (
+        !(
+          err instanceof Prisma.PrismaClientKnownRequestError &&
+          err.code === 'P2002'
+        )
+      ) {
+        throw err;
+      }
+    }
 
     return this.prisma.booking.findUniqueOrThrow({
       where: { id: bookingId },
@@ -570,19 +624,26 @@ export class BookingsRepository {
    * Transition a booking to CANCELLED and record the history entry.
    * If the booking had an assigned worker, resets their currentlyWorking flag
    * so they become available for new jobs again.
-   * Same two-step pattern: write in transaction, re-fetch with include.
+   *
+   * The status flip is an atomic `updateMany` guarded by `fromStatuses`, so
+   * two concurrent cancel requests (double-tap, a retry racing the original)
+   * can never both "win" — only the request that actually flips the status
+   * writes the history row and releases the worker. The loser gets
+   * `changed: false`; the caller decides whether that's a safe idempotent
+   * no-op or a genuine conflict by inspecting the re-fetched booking status.
    */
   async cancelBooking(
     bookingId: string,
+    fromStatuses: BookingStatus[],
     reason?: string,
     workerProfileId?: string | null,
     cancelledByRole: 'CLIENT' | 'WORKER' = 'CLIENT',
-  ): Promise<BookingWithRelations> {
+  ): Promise<{ booking: BookingWithRelations; changed: boolean }> {
     const note = reason ?? 'Cancelled by client';
 
-    await this.prisma.$transaction(async (tx) => {
-      await tx.booking.update({
-        where: { id: bookingId },
+    const changed = await this.prisma.$transaction(async (tx) => {
+      const { count } = await tx.booking.updateMany({
+        where: { id: bookingId, status: { in: fromStatuses } },
         data: {
           status: BookingStatus.CANCELLED,
           cancelledAt: new Date(),
@@ -590,6 +651,8 @@ export class BookingsRepository {
           cancelledByRole,
         },
       });
+
+      if (count === 0) return false;
 
       await tx.bookingStatusHistory.create({
         data: {
@@ -606,12 +669,15 @@ export class BookingsRepository {
           data: { currentlyWorking: false },
         });
       }
+
+      return true;
     });
 
-    return this.prisma.booking.findUniqueOrThrow({
+    const booking = await this.prisma.booking.findUniqueOrThrow({
       where: { id: bookingId },
       include: BOOKING_INCLUDE,
     });
+    return { booking, changed };
   }
 
   // ── Nearby workers ───────────────────────────────────────────────────────────
@@ -1022,10 +1088,14 @@ export class BookingsRepository {
     workerProfileId: string,
     finalPrice?: number,
     platformFee?: number,
-  ): Promise<BookingWithRelations> {
-    await this.prisma.$transaction(async (tx) => {
-      await tx.booking.update({
-        where: { id: bookingId },
+  ): Promise<{ booking: BookingWithRelations; changed: boolean }> {
+    const changed = await this.prisma.$transaction(async (tx) => {
+      // Guarded by status: PENDING, workerProfileId: null so two different
+      // assigns racing on the same booking (assignWorker/assignWorker or
+      // assignWorker/acceptBid) can never both win — the loser gets
+      // changed: false and never touches the worker's busy flag below.
+      const bookingRes = await tx.booking.updateMany({
+        where: { id: bookingId, status: BookingStatus.PENDING, workerProfileId: null },
         data: {
           workerProfileId,
           status: BookingStatus.ACCEPTED,
@@ -1034,6 +1104,7 @@ export class BookingsRepository {
           platformFee: platformFee ?? undefined,
         },
       });
+      if (bookingRes.count === 0) return false;
 
       await tx.bookingStatusHistory.create({
         data: {
@@ -1056,12 +1127,15 @@ export class BookingsRepository {
         data: { currentlyWorking: true },
       });
       if (res.count === 0) throw new WorkerUnavailableError();
+
+      return true;
     });
 
-    return this.prisma.booking.findUniqueOrThrow({
+    const booking = await this.prisma.booking.findUniqueOrThrow({
       where: { id: bookingId },
       include: BOOKING_INCLUDE,
     });
+    return { booking, changed };
   }
 
   /**
@@ -1268,67 +1342,83 @@ export class BookingsRepository {
 
   // ── Lifecycle transitions (assigned worker) ─────────────────────────────────
 
-  /** Transition ACCEPTED → EN_ROUTE. */
-  async markEnRoute(bookingId: string): Promise<BookingWithRelations> {
-    await this.prisma.$transaction(async (tx) => {
-      await tx.booking.update({
-        where: { id: bookingId },
-        data: { status: BookingStatus.EN_ROUTE, enRouteAt: new Date() },
+  /**
+   * Every lifecycle transition below flips status via an atomic `updateMany`
+   * guarded by `fromStatus`, so two concurrent requests for the same
+   * transition (double-tap, a retry racing the original) can never both
+   * "win" — only the request that actually flips the status writes the
+   * history row (and any extra side-effect data). The loser gets
+   * `changed: false`; the caller decides whether the re-fetched booking's
+   * current status makes that a safe idempotent no-op or a genuine conflict.
+   */
+  private async _guardedTransition(
+    bookingId: string,
+    fromStatus: BookingStatus,
+    data: Prisma.BookingUpdateInput,
+    historyStatus: BookingStatus,
+    historyNote: string,
+    extra?: (tx: Prisma.TransactionClient) => Promise<void>,
+  ): Promise<{ booking: BookingWithRelations; changed: boolean }> {
+    const changed = await this.prisma.$transaction(async (tx) => {
+      const { count } = await tx.booking.updateMany({
+        where: { id: bookingId, status: fromStatus },
+        data,
       });
+      if (count === 0) return false;
+
       await tx.bookingStatusHistory.create({
-        data: {
-          bookingId,
-          status: BookingStatus.EN_ROUTE,
-          note: 'Worker is on the way',
-        },
+        data: { bookingId, status: historyStatus, note: historyNote },
       });
+
+      if (extra) await extra(tx);
+
+      return true;
     });
-    return this.prisma.booking.findUniqueOrThrow({
+
+    const booking = await this.prisma.booking.findUniqueOrThrow({
       where: { id: bookingId },
       include: BOOKING_INCLUDE,
     });
+    return { booking, changed };
+  }
+
+  /** Transition ACCEPTED → EN_ROUTE. */
+  async markEnRoute(
+    bookingId: string,
+  ): Promise<{ booking: BookingWithRelations; changed: boolean }> {
+    return this._guardedTransition(
+      bookingId,
+      BookingStatus.ACCEPTED,
+      { status: BookingStatus.EN_ROUTE, enRouteAt: new Date() },
+      BookingStatus.EN_ROUTE,
+      'Worker is on the way',
+    );
   }
 
   /** Transition EN_ROUTE → ARRIVED. */
-  async markArrived(bookingId: string): Promise<BookingWithRelations> {
-    await this.prisma.$transaction(async (tx) => {
-      await tx.booking.update({
-        where: { id: bookingId },
-        data: { status: BookingStatus.ARRIVED, arrivedAt: new Date() },
-      });
-      await tx.bookingStatusHistory.create({
-        data: {
-          bookingId,
-          status: BookingStatus.ARRIVED,
-          note: 'Worker has arrived',
-        },
-      });
-    });
-    return this.prisma.booking.findUniqueOrThrow({
-      where: { id: bookingId },
-      include: BOOKING_INCLUDE,
-    });
+  async markArrived(
+    bookingId: string,
+  ): Promise<{ booking: BookingWithRelations; changed: boolean }> {
+    return this._guardedTransition(
+      bookingId,
+      BookingStatus.EN_ROUTE,
+      { status: BookingStatus.ARRIVED, arrivedAt: new Date() },
+      BookingStatus.ARRIVED,
+      'Worker has arrived',
+    );
   }
 
   /** Transition ARRIVED → IN_PROGRESS. Reuses the existing startedAt field. */
-  async markInProgress(bookingId: string): Promise<BookingWithRelations> {
-    await this.prisma.$transaction(async (tx) => {
-      await tx.booking.update({
-        where: { id: bookingId },
-        data: { status: BookingStatus.IN_PROGRESS, startedAt: new Date() },
-      });
-      await tx.bookingStatusHistory.create({
-        data: {
-          bookingId,
-          status: BookingStatus.IN_PROGRESS,
-          note: 'Job started by worker',
-        },
-      });
-    });
-    return this.prisma.booking.findUniqueOrThrow({
-      where: { id: bookingId },
-      include: BOOKING_INCLUDE,
-    });
+  async markInProgress(
+    bookingId: string,
+  ): Promise<{ booking: BookingWithRelations; changed: boolean }> {
+    return this._guardedTransition(
+      bookingId,
+      BookingStatus.ARRIVED,
+      { status: BookingStatus.IN_PROGRESS, startedAt: new Date() },
+      BookingStatus.IN_PROGRESS,
+      'Job started by worker',
+    );
   }
 
   /**
@@ -1337,16 +1427,23 @@ export class BookingsRepository {
    * separate because the new /bookings/:id/complete endpoint lives in this
    * module per the product spec, while the legacy /workers/jobs/:id/complete
    * endpoint (still supported) uses the workers module's own copy.
+   *
+   * `fromStatuses` accepts several starting statuses (ACCEPTED, EN_ROUTE,
+   * ARRIVED, IN_PROGRESS — see BookingsService.completeJob), so the guard is
+   * an `updateMany` on `status IN (...)` rather than a single fromStatus.
    */
   async completeBookingLifecycle(
     bookingId: string,
     workerProfileId: string,
-  ): Promise<BookingWithRelations> {
-    await this.prisma.$transaction(async (tx) => {
-      await tx.booking.update({
-        where: { id: bookingId },
+    fromStatuses: BookingStatus[],
+  ): Promise<{ booking: BookingWithRelations; changed: boolean }> {
+    const changed = await this.prisma.$transaction(async (tx) => {
+      const { count } = await tx.booking.updateMany({
+        where: { id: bookingId, status: { in: fromStatuses } },
         data: { status: BookingStatus.COMPLETED, completedAt: new Date() },
       });
+      if (count === 0) return false;
+
       await tx.bookingStatusHistory.create({
         data: {
           bookingId,
@@ -1358,11 +1455,15 @@ export class BookingsRepository {
         where: { id: workerProfileId },
         data: { currentlyWorking: false },
       });
+
+      return true;
     });
-    return this.prisma.booking.findUniqueOrThrow({
+
+    const booking = await this.prisma.booking.findUniqueOrThrow({
       where: { id: bookingId },
       include: BOOKING_INCLUDE,
     });
+    return { booking, changed };
   }
 
   /**

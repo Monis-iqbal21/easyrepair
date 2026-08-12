@@ -1,5 +1,5 @@
 Key,Screen/Context,English,Urdu,Roman Urdu,Notes
-languageSectionTitle,Settings / Language selector,Preferences,ترجیحات,Settings,Settings section heading above the language row
+languageSectionTitle,Settings / Language selector,Settings,سیٹنگز,Settings,Settings section heading above the language row
 languageRowLabel,Settings / Language selector,Language,زبان,Zaban,Settings row that opens the language selector
 languageSheetTitle,Settings / Language selector,Choose your language,اپنی زبان منتخب کریں,Apni zaban chunein,Title of the language selector bottom sheet
 authRoleQuestion,Authentication,What would you like to do on HandyGo?,HandyGo پر آپ کیا کرنا چاہتے ہیں؟,HandyGo par aap kya karna chahte hain?,Role selection screen heading
@@ -39,9 +39,9 @@ authClientLoginTitle,Authentication,"Log in to book
 an Ustaad","استاد بک کرنے کے لیے
 لاگ اِن کریں","Ustaad book karne ke liye
 login karein",Client sign-in heading. The line break is deliberate.
-authClientOtpSubtitle,Authentication,Enter your name and mobile number. We will send a verification code.,اپنا نام اور موبائل نمبر لکھیں۔ ہم ویریفیکیشن کوڈ بھیجیں گے۔,Apna naam aur mobile number dalain. Hum verification code bhejein ge.,
+authClientOtpSubtitle,Authentication,Enter your name and mobile number. We will send a verification code.,اپنا نام اور موبائل نمبر لکھیں۔ ہم تصدیقی کوڈ بھیجیں گے۔,Apna naam aur mobile number dalain. Hum verification code bhejein ge.,
 authClientPasswordSubtitle,Authentication,Continue with your mobile number and password.,اپنے موبائل نمبر اور پاس ورڈ سے آگے بڑھیں۔,Apna mobile number aur password se continue karein.,
-authOtpWillBeSentNotice,Authentication,A verification code will be sent to this number.,اس نمبر پر ویریفیکیشن کوڈ بھیجا جائے گا۔,Is number par verification code bheja jayega.,
+authOtpWillBeSentNotice,Authentication,A verification code will be sent to this number.,اس نمبر پر تصدیقی کوڈ بھیجا جائے گا۔,Is number par verification code bheja jayega.,
 authButtonSendCode,Authentication,Send Code,کوڈ بھیجیں,Code Bhejein,
 authButtonVerifyAndContinue,Authentication,Verify and Continue,ویریفائی کر کے آگے بڑھیں,Verify Karke Aage Barhein,
 authButtonLogIn,Authentication,Log In,لاگ اِن کریں,Login Karein,
@@ -112,7 +112,7 @@ notificationsTitle,Notifications,Notifications,اطلاعات,Notifications,
 notificationsMarkAllRead,Notifications,Mark all read,سب پڑھا ہوا نشان زد کریں,Sab read mark karein,
 notificationsEmptyTitle,Notifications,No notifications yet,ابھی کوئی اطلاع نہیں,Abhi koi notification nahi,
 notificationsEmptySubtitle,Notifications,"You will be notified about job updates,
-reviews, and more.",کام کی اپ ڈیٹس، ریویوز اور مزید کی اطلاع آپ کو دی جائے گی۔,"Kaam ki updates, reviews aur mazeed ki ittila aap ko di jayegi.",
+reviews, and more.",کام کی اپ ڈیٹس، ریویوز اور دیگر معلومات یہاں نظر آئیں گی۔,"Kaam ki updates, reviews aur mazeed ki ittila aap ko di jayegi.",
 timeJustNow,Core / Relative time,Just now,ابھی ابھی,Abhi abhi,
 timeMinutesAgo,Core / Relative time,{minutes}m ago,{minutes} منٹ پہلے,{minutes}m pehle,Placeholders: {minutes}
 timeHoursAgo,Core / Relative time,{hours}h ago,{hours} گھنٹے پہلے,{hours}h pehle,Placeholders: {hours}
@@ -148,7 +148,7 @@ authPasswordResetSuccess,Authentication,Your password has been changed successfu
 authForgotPasswordPrompt,Authentication,Enter your registered mobile number,اپنا رجسٹرڈ موبائل نمبر لکھیں,Apna registered mobile number dalain,
 authSendOtp,Authentication,Send OTP,OTP بھیجیں,OTP Bhejein,
 authNewPasswordRequired,Authentication,Please enter a new password.,نیا پاس ورڈ لکھیں۔,Naya password likhein.,
-authOr,Authentication,Or,یا,Ya phir,
+authOr,Authentication,OR,یا پھر,OR,
 authLoginWithPassword,Authentication,Log In With Password,پاس ورڈ سے لاگ اِن کریں,Password Se Login Karein,
 authWorkerRegisterTitle,Authentication,"Create a new Ustaad
 account","نیا استاد اکاؤنٹ
@@ -199,13 +199,12 @@ postJobChooseOneOption,Uncategorised,Choose one option,ایک آپشن چنیں,
 postJobUnderstandingIsOurJob,Uncategorised,Understanding the problem is our job — not yours.,مسئلہ سمجھنا ہمارا کام ہے — آپ کا نہیں۔,Masla samajhna hamara kaam hai — aapka nahi.,
 postJobStandardWork,Uncategorised,Standard work,اسٹینڈرڈ کام,Standard kaam,
 postJobStandardWorkSubtitle,Uncategorised,Work and price are clear upfront.,کام اور قیمت پہلے سے واضح۔,Kaam aur qeemat pehle se clear.,
-postJobOr,Uncategorised,OR,یا,YA PHIR,
 postJobIKnowThePart,Uncategorised,I know the exact part,مجھے پرزہ بالکل معلوم ہے,Mujhe exact part pata hai,
 postJobIKnowThePartSubtitle,Uncategorised,"Ustaads send their rate, you choose",استاد اپنا ریٹ بھیجیں گے، آپ چنیں,"Ustaad rate bhejenge, aap chunain",
 postJobIKnowThePartWarning,Uncategorised,"Only choose this if you are completely sure about the part. If it turns out wrong, the Ustaad visit is wasted and a new rate will apply.",یہ صرف اسی صورت میں چنیں جب پرزے کا پورا یقین ہو۔ غلط نکلا تو استاد کا چکر ضائع جائے گا اور نیا ریٹ لگے گا۔,Sirf tab chunain jab part ka poora yaqeen ho. Ghalat nikla to Ustaad ka chakkar zaya jayega aur naya rate lagega.,
 postJobSomethingIsBroken,Uncategorised,Something is broken,کچھ خراب ہے,Kuch kharab hai,
 postJobDontKnowIssue,Uncategorised,I do not know what the problem is,مسئلہ کیا ہے، یہ معلوم نہیں,"Masla kya hai, ye pata nahi",
-postJobInspectionFeeTitle,Uncategorised,Inspection Fee,انسپیکشن فیس,Inspection Fee,
+postJobInspectionFeeTitle,Uncategorised,Inspection Fee,معائنہ فیس,Muaina Fee,
 postJobChooseStandardService,Uncategorised,Choose a standard service,اسٹینڈرڈ سروس منتخب کریں,Standard service chunain,
 postJobServicesUnavailable,Uncategorised,Unable to load services. Please go back and try again.,سروسز لوڈ نہیں ہو سکیں۔ واپس جا کر دوبارہ کوشش کریں۔,Services load nahi ho sakin. Wapas jaa kar dobara koshish karein.,
 postJobSelectCategoryFirst,Uncategorised,Select a service category first.,پہلے سروس کیٹیگری منتخب کریں۔,Pehle service category chunain.,
@@ -213,9 +212,9 @@ postJobStandardServicesUnavailable,Uncategorised,Unable to load standard service
 postJobNoStandardServices,Uncategorised,No standard services are available for this service yet. Please choose another option above.,اس سروس کے لیے ابھی کوئی اسٹینڈرڈ سروس دستیاب نہیں۔ اوپر سے کوئی اور آپشن منتخب کریں۔,Is service ke liye abhi koi standard service available nahi. Ooper se koi aur option chunain.,
 postJobMultiSelectHint,Uncategorised,You can choose more than one service.,آپ ایک سے زیادہ سروسز چن سکتے ہیں۔,Aap ek se zyada services chun sakte hain.,
 postJobTotal,Uncategorised,Total,کل,Total,
-postJobInspectionFeeLower,Uncategorised,Inspection fee,انسپیکشن فیس,Inspection fee,
-postJobInspectionFeeLoadFailed,Uncategorised,Unable to load the inspection fee.,انسپیکشن فیس لوڈ نہیں ہو سکی۔,Inspection fee load nahi ho saki.,
-postJobHowInspectionWorks,Uncategorised,How inspection works,انسپیکشن کیسے ہوتی ہے,Inspection kaise hoti hai,
+postJobInspectionFeeLower,Uncategorised,Inspection fee,معائنہ فیس,Muaina fee,
+postJobInspectionFeeLoadFailed,Uncategorised,Unable to load the inspection fee.,معائنہ فیس لوڈ نہیں ہو سکی۔,Muaina fee load nahi ho saki.,
+postJobHowInspectionWorks,Uncategorised,How inspection works,معائنہ کیسے ہوتا ہے,Muaina kaise hota hai,
 postJobWhatDoYouSee,Uncategorised,What do you see? (optional),آپ کو کیا نظر آ رہا ہے؟ (اختیاری),Aap ko kya nazar aa raha hai? (optional),
 postJobWhatDoYouSeeHint,Uncategorised,e.g. AC turns on but room stays hot…,مثلاً اے سی چلتا ہے مگر کمرہ گرم رہتا ہے…,Maslan AC chalta hai magar kamra garam rehta hai…,
 postJobBack,Uncategorised,Back,پیچھے,Wapas,
@@ -225,6 +224,9 @@ postJobStepLaneSelection,Uncategorised,Choose Type,قسم منتخب کریں,Qi
 postJobStepDetails,Uncategorised,Details,تفصیلات,Tafseelat,
 postJobStepTimeSelection,Uncategorised,Time Selection,وقت کا انتخاب,Time ka intekhab,
 postJobStepIndicator,Uncategorised,Step {current} of {total}  ·  {title},مرحلہ {total} میں سے {current}  ·  {title},Step {total} mein se {current}  ·  {title},"Placeholders: {current}, {title}, {total}"
+postJobProgressBarTime,Uncategorised,Time,وقت,Time,Short label under segment 4 of the booking-form progress bar
+postJobRecommendedBadge,Uncategorised,RECOMMENDED,بہتر,Behtar,Small badge on the inspection lane card in booking-form lane selection
+trackLiveBadge,Uncategorised,LIVE,لائیو,Live,Small badge shown over the live map on the Track Worker screen
 clientHomeYourArea,Client,Your Area,آپ کا علاقہ,Aap ka ilaqa,
 clientHomeSectionRepairs,Client,Repairs,مرمت,Marammat,
 clientHomeSectionCleaning,Client,Cleaning,صفائی,Safai,
@@ -300,7 +302,7 @@ postJobCurrentLocation,Uncategorised,Current Location,موجودہ لوکیشن,
 postJobMapLocationAdded,Uncategorised,Map location added,نقشے سے لوکیشن شامل کر دی گئی,Map se location shamil kar di gayi,
 postJobPickOnMap,Uncategorised,Pick on Map,نقشے پر منتخب کریں,Map par chunain,
 postJobMapPrefix,Uncategorised,Map: {address},نقشہ: {address},Map: {address},Placeholders: {address}
-postJobGpsPrefix,Uncategorised,GPS: {coordinates},جی پی ایس: {coordinates},GPS: {coordinates},Placeholders: {coordinates}
+postJobGpsPrefix,Uncategorised,Pinned Location,لوکیشن پن کر دی گئی,Pin Location,
 postJobBookService,Uncategorised,Book Service,سروس بک کریں,Service book karein,
 postJobSaveChanges,Uncategorised,Save Changes,تبدیلیاں محفوظ کریں,Tabdeeliyan save karein,
 postJobBookAService,Uncategorised,Book a Service,سروس بک کریں,Ek service book karein,
@@ -316,19 +318,19 @@ bookingTimeWindow,Bookings,Time Window,وقت کا دورانیہ,Time Window,
 bookingScheduledDate,Bookings,Scheduled Date,طے شدہ تاریخ,Tay shuda date,
 bookingCreated,Bookings,Created,بنائی گئی,Banayi gayi,
 bookingCancellationReason,Bookings,Cancellation Reason,منسوخی کی وجہ,Cancel karne ki wajah,
-bookingInspectionCompletedBy,Bookings,Inspection completed by,انسپیکشن مکمل کرنے والے,Inspection mukammal karne wale,
+bookingInspectionCompletedBy,Bookings,Inspection completed by,معائنہ مکمل کرنے والے,Muaina mukammal karne wale,
 bookingWorkBeingCompletedBy,Bookings,Work being completed by,کام مکمل کرنے والے,Kaam mukammal karne wale,
-bookingInspectionAndRepairBy,Bookings,Inspection & repair by,انسپیکشن اور مرمت کرنے والے,Inspection aur marammat karne wale,
+bookingInspectionAndRepairBy,Bookings,Inspection & repair by,معائنہ اور مرمت کرنے والے,Muaina aur marammat karne wale,
 bookingAssignedWorker,Bookings,Assigned Worker,مقرر کردہ استاد,Assign kiya gaya Ustaad,
 bookingDetailsTitle,Bookings,Booking Details,بکنگ کی تفصیلات,Booking ki tafseelat,
 bookingNoAddressProvided,Bookings,No address provided,کوئی پتہ نہیں دیا گیا,Koi pata nahi diya gaya,
-bookingAttachments,Bookings,Attachments,منسلک فائلیں,Attachments,
+bookingAttachments,Bookings,Attachments,ویڈیوز اور تصاویر,Attachments,
 bookingPhotosCount,Bookings,Photos ({count}),تصاویر ({count}),Photos ({count}),Placeholders: {count}
 bookingVideosCount,Bookings,Videos ({count}),ویڈیوز ({count}),Videos ({count}),Placeholders: {count}
 bookingVoiceNote,Bookings,Voice Note,وائس نوٹ,Voice Note,
 bookingPricing,Bookings,Pricing,قیمت,Qeemat,
 bookingEstimatedPrice,Bookings,Estimated Price,تخمینی قیمت,Andazan qeemat,
-bookingInspectionCharges,Bookings,Inspection Charges,انسپیکشن چارجز,Inspection charges,
+bookingInspectionCharges,Bookings,Inspection Charges,معائنہ چارجز,Muaina charges,
 bookingWorkCharges,Bookings,Work Charges,کام کے چارجز,Kaam ke charges,
 bookingFinalPrice,Bookings,Final Price,حتمی قیمت,Final qeemat,
 bookingJobLocation,Bookings,Job location,کام کی جگہ,Kaam ki jagah,
@@ -357,7 +359,7 @@ bookingFindAnotherUstaad,Bookings,Find Another Ustaad,دوسرا استاد تل
 bookingSelectedServices,Bookings,Selected Services,منتخب سروسز,Muntakhab services,
 bookingServiceQuantity,Bookings,{name} x{quantity},{name} x{quantity},{name} x{quantity},"Placeholders: {name}, {quantity}"
 bookingChooseUstaad,Bookings,Choose Ustaad,استاد منتخب کریں,Ustaad chunain,
-bookingSeeWorkerBids,Bookings,See Worker Bids,استادوں کی بولیاں دیکھیں,Ustaad ki bids dekhein,
+bookingSeeWorkerBids,Bookings,See Worker Offers,استادوں کی آفرز دیکھیں,Ustaad ki offers dekhein,
 bookingTrackWorker,Bookings,Track Worker,استاد کو ٹریک کریں,Ustaad ko track karein,
 bookingReviewWorker,Bookings,Review Worker,استاد کو ریویو دیں,Ustaad ko review dein,
 bookingYourReview,Bookings,Your Review,آپ کا ریویو,Aap ka review,
@@ -378,7 +380,7 @@ trackUstaadLocationUnavailable,Uncategorised,The Ustaad's location is not availa
 trackJobCompleted,Uncategorised,Job Completed ✓,کام مکمل ✓,Kaam mukammal ✓,
 trackQuoteAcceptedRepairInProgress,Uncategorised,Quote Accepted — Repair In Progress,کوٹ منظور — مرمت جاری ہے,Quote accept — marammat jari hai,
 trackReportSubmitted,Uncategorised,Report Submitted,رپورٹ جمع کرا دی گئی,Report jama kara di gayi,
-trackInspectionInProgress,Uncategorised,Inspection In Progress,انسپیکشن جاری ہے,Inspection jari hai,
+trackInspectionInProgress,Uncategorised,Inspection In Progress,معائنہ جاری ہے,Muaina jari hai,
 trackReviewReportAndDecide,Uncategorised,Review the report below and decide how to proceed,نیچے رپورٹ دیکھیں اور فیصلہ کریں کہ آگے کیا کرنا ہے,Neeche report dekhein aur faisla karein ke aage kya karna hai,
 trackWorkerLabel,Uncategorised,Worker,استاد,Ustaad,
 trackHiredAt,Uncategorised,Hired at {price},{price} پر ہائر کیا گیا,{price} par hire kiya gaya,Placeholders: {price}
@@ -388,47 +390,50 @@ trackAssignedWorkerCaps,Uncategorised,ASSIGNED WORKER,مقرر کردہ استا
 trackCall,Uncategorised,Call,کال,Call,
 trackLocationUnavailable,Uncategorised,Location unavailable,لوکیشن دستیاب نہیں,Location available nahi,
 trackArrivingIn,Uncategorised,"{count, plural, =1{Arriving in ~{count} minute} other{Arriving in ~{count} minutes}}",تقریباً {count} منٹ میں پہنچ رہے ہیں,Taqreeban {count} minute mein pohanch rahe hain,Placeholders: {count} | ICU plural — keep the plural syntax intact
-trackEtaUnavailable,Uncategorised,ETA unavailable,پہنچنے کا وقت معلوم نہیں,ETA available nahi,
+trackEtaUnavailable,Uncategorised,Arrival time unavailable,پہنچنے کا وقت معلوم نہیں,Pohanchne ka waqt maloom nahi,
 trackStepHired,Uncategorised,Hired,ہائر ہو گئے,Hire ho gaye,
 trackStepUstaadOnTheWay,Uncategorised,Ustaad on the way,استاد راستے میں,Ustaad raaste mein,
-trackStepInspectionInProgress,Uncategorised,Inspection in progress,انسپیکشن جاری,Inspection jari,
+trackStepInspectionInProgress,Uncategorised,Inspection in progress,معائنہ جاری,Muaina jari,
 trackStepReportSubmitted,Uncategorised,Report submitted,رپورٹ جمع,Report jama,
-trackStepClosedAfterInspection,Uncategorised,Closed after inspection,انسپیکشن کے بعد بند,Inspection ke baad band,
+trackStepClosedAfterInspection,Uncategorised,Closed after inspection,معائنے کے بعد بند,Muainay ke baad band,
 trackStepQuoteAccepted,Uncategorised,Quote accepted,کوٹ منظور,Quote accept,
 trackStepReviewed,Uncategorised,Reviewed,ریویو ہو گیا,Review ho gaya,
 trackStepWorkInProgress,Uncategorised,Work in progress,کام جاری,Kaam jari,
 trackStepReviewPending,Uncategorised,Review pending,ریویو باقی,Review baqi,
-trackJobProgress,Uncategorised,Job Progress,کام کی پیش رفت,Kaam ki pesh raft,
+trackJobProgress,Uncategorised,Job Progress,کام کہاں تک پہنچا,Kaam ki pesh raft,
 trackLoadFailedShort,Uncategorised,Failed to load tracking,ٹریکنگ لوڈ نہیں ہو سکی,Tracking load nahi ho saki,
 discoveryJobLocation,Uncategorised,Job Location,کام کی جگہ,Kaam ki jagah,
 discoveryJobLocationUnavailable,Uncategorised,Job location not available,کام کی جگہ دستیاب نہیں,Kaam ki jagah available nahi,
 discoveryLiveWorkerOffers,Uncategorised,Live Worker Offers,استادوں کی لائیو آفرز,Ustaad ki live offers,
 discoveryRefresh,Uncategorised,Refresh,ریفریش,Refresh,
-discoveryBidsLoadFailed,Uncategorised,Could not load bids.,بولیاں لوڈ نہیں ہو سکیں۔,Bids load nahi ho sakin.,
-discoveryNoBidsYet,Uncategorised,No bids yet,ابھی کوئی بولی نہیں,Abhi koi bid nahi,
-discoveryPendingCount,Uncategorised,"{count, plural, =1{{count} pending} other{{count} pending}}",{count} زیرِ التوا,{count} pending,Placeholders: {count} | ICU plural — keep the plural syntax intact
+discoveryBidsLoadFailed,Uncategorised,Could not load offers.,آفرز لوڈ نہیں ہو سکیں۔,Offers load nahi ho sakin.,
+discoveryNoBidsYet,Uncategorised,No offers yet,ابھی کوئی آفر نہیں,Abhi koi offer nahi,
+discoveryPendingCount,Uncategorised,"{count, plural, =1{{count} pending} other{{count} pending}}",{count} باقی,{count} pending,Placeholders: {count} | ICU plural — keep the plural syntax intact
 discoveryHire,Uncategorised,Hire,ہائر کریں,Hire karein,
 discoveryHiring,Uncategorised,Hiring…,ہائر کیا جا رہا ہے…,Hire kiya ja raha hai…,
 discoveryHireNamed,Uncategorised,Hire {name}?,{name} کو ہائر کریں؟,{name} ko hire karein?,Placeholders: {name}
-discoveryAcceptBid,Uncategorised,Accept {name}'s bid of {price}?,{name} کی {price} کی بولی منظور کریں؟,{name} ki {price} ki bid accept karein?,"Placeholders: {name}, {price}"
-discoveryInspectionFeeSeparate,Uncategorised,"The inspecting Ustaad's inspection fee is paid separately. The new Ustaad will charge the full amount of their own offer, and the inspection fee is not adjusted into it.",انسپیکشن کرنے والے استاد کی انسپیکشن فیس الگ سے دینی ہوگی۔ نیا استاد اپنی آفر کے مطابق کام کی پوری رقم لے گا، اور انسپیکشن فیس اس میں ایڈجسٹ نہیں ہوگی۔,Inspection karne wale Ustaad ko inspection fee alag deni hogi. Naya Ustaad apne offer ke mutabiq kaam ki puri raqam charge karega. Inspection fee uske offer mein adjust nahi hogi.,
-discoveryBidLabourOnlyNote,Uncategorised,This bid covers labour only. Parts and materials will be purchased or charged separately with your approval.,یہ بولی صرف مزدوری کے اخراجات کے لیے ہے۔ پرزے اور سامان آپ کی منظوری سے الگ خریدے یا چارج کیے جائیں گے۔,Yeh bid sirf labour charges ke liye hai. Parts aur material aap ki approval se alag khareede ya charge kiye jayenge.,Bidding hire-confirmation modal — direct BIDDING lane (labour only)
-discoveryBidInspectionBasedNote,Uncategorised,This bid is based on the inspection report and includes labour and the parts or materials required for the reported work.,یہ بولی انسپیکشن رپورٹ کے مطابق ہے اور اس میں مزدوری اور رپورٹ کیے گئے کام کے لیے درکار پرزے یا سامان شامل ہیں۔,Yeh bid inspection report ke mutabiq hai aur is mein labour aur report ke kaam ke liye zaroori parts ya material shamil hain.,Bidding hire-confirmation modal — Inspection → Find Other Ustaad → Bidding lane
+discoveryAcceptBid,Uncategorised,Accept {name}'s offer of {price}?,{name} کی {price} کی آفر منظور کریں؟,{name} ki {price} ki offer accept karein?,"Placeholders: {name}, {price}"
+discoveryInspectionFeeSeparate,Uncategorised,"The inspection fee is paid separately.
+The new Ustaad's offer is charged separately.","معائنہ فیس الگ ادا کی جاتی ہے۔
+نئے اُستاد کا آفر الگ چارج ہوگا۔","Muaina fee alag ada ki jati hai.
+Naye Ustaad ka offer alag charge hoga.",
+discoveryBidLabourOnlyNote,Uncategorised,This offer covers labour only. Parts and materials will be purchased or charged separately with your approval.,یہ آفر صرف مزدوری کے اخراجات کے لیے ہے۔ پرزے اور سامان آپ کی منظوری سے الگ خریدے یا چارج کیے جائیں گے۔,Yeh offer sirf labour charges ke liye hai. Parts aur material aap ki approval se alag khareede ya charge kiye jayenge.,
+discoveryBidInspectionBasedNote,Uncategorised,This offer is based on the inspection report and includes labour and the parts or materials required for the reported work.,یہ آفر معائنہ رپورٹ کے مطابق ہے اور اس میں مزدوری اور رپورٹ کیے گئے کام کے لیے درکار پرزے یا سامان شامل ہیں۔,Yeh offer Muaina report ke mutabiq hai aur is mein labour aur report ke kaam ke liye zaroori parts ya material shamil hain.,
 discoveryWorkerHired,Uncategorised,Worker hired successfully,استاد کامیابی سے ہائر ہو گئے,Ustaad kamyabi se hire ho gaye,
 discoveryHireFailed,Uncategorised,Failed to hire worker.,استاد ہائر نہیں ہو سکے۔,Ustaad hire nahi ho sake.,
-discoveryInspectedThisJob,Uncategorised,INSPECTED THIS JOB,اس کام کی انسپیکشن کی,IS KAAM KI INSPECTION KI,
+discoveryInspectedThisJob,Uncategorised,INSPECTED THIS JOB,اس کام کا معائنہ کیا,IS KAAM KA MUAINA KIYA,
 discoveryTheirQuote,Uncategorised,their quote,ان کا کوٹ,un ka quote,
-discoveryInspectionCompletedByThis,Uncategorised,Inspection completed by this Ustaad.,انسپیکشن اسی استاد نے مکمل کی۔,Inspection isi Ustaad ne mukammal ki.,
-discoveryViewInspectionReport,Uncategorised,View Inspection Report,انسپیکشن رپورٹ دیکھیں,Inspection Report Dekhein,
+discoveryInspectionCompletedByThis,Uncategorised,Inspection completed by this Ustaad.,معائنہ اسی استاد نے مکمل کیا۔,Muaina isi Ustaad ne mukammal kiya.,
+discoveryViewInspectionReport,Uncategorised,View Inspection Report,معائنہ رپورٹ دیکھیں,Muaina Report Dekhein,
 discoveryHireAgain,Uncategorised,Hire Again,دوبارہ ہائر کریں,Dobara Hire Karein,
 discoveryHireAgainNamed,Uncategorised,Hire {name} again?,{name} کو دوبارہ ہائر کریں؟,{name} ko dobara hire karein?,Placeholders: {name}
-discoveryOriginalQuoteContinues,Uncategorised,They'll continue using their original inspection quote.,وہ اپنے اصل انسپیکشن کوٹ پر ہی کام جاری رکھیں گے۔,Wo apne asal inspection quote par hi kaam jari rakhenge.,
+discoveryOriginalQuoteContinues,Uncategorised,They'll continue using their original inspection quote.,وہ اپنے اصل معائنہ کوٹ پر ہی کام جاری رکھیں گے۔,Wo apne asal Muaina quote par hi kaam jari rakhenge.,
 discoveryWorkersWillAppear,Uncategorised,"Workers who apply will appear here.
 Check back shortly.","درخواست دینے والے استاد یہاں نظر آئیں گے۔
 تھوڑی دیر بعد دوبارہ دیکھیں۔","Apply karne wale Ustaad yahan nazar aayenge.
 Thori dair baad dobara dekhein.",
 discoveryTryAgain,Uncategorised,Try again,دوبارہ کوشش کریں,Dobara koshish karein,
-inspectionReportTitle,Inspection flow,Inspection Report,انسپیکشن رپورٹ,Inspection Report,
+inspectionReportTitle,Inspection flow,Inspection Report,معائنہ رپورٹ,Muaina Report,
 inspectionReportNotAvailable,Inspection flow,Report not available yet.,رپورٹ ابھی دستیاب نہیں۔,Report abhi available nahi.,
 inspectionUstaadVoiceNote,Inspection flow,Ustaad Voice Note,استاد کا وائس نوٹ,Ustaad ka voice note,
 inspectionPhotos,Inspection flow,Photos,تصاویر,Photos,
@@ -436,22 +441,22 @@ inspectionParts,Inspection flow,Parts,پرزے,Parts,
 inspectionRepairQuoteTotal,Inspection flow,Repair quote total,مرمت کے کوٹ کا کل,Marammat ke quote ka total,
 inspectionAcceptQuoteContinue,Inspection flow,Accept Quote & Continue Repair,کوٹ منظور کریں اور مرمت جاری رکھیں,Quote accept karein aur marammat jari rakhein,
 inspectionFindOtherUstaad,Inspection flow,Find Other Ustaad,دوسرا استاد تلاش کریں,Doosra Ustaad dhoondein,
-inspectionCloseAfterInspection,Inspection flow,Close After Inspection,انسپیکشن کے بعد بند کریں,Inspection ke baad band karein,
+inspectionCloseAfterInspection,Inspection flow,Close After Inspection,معائنے کے بعد بند کریں,Muainay ke baad band karein,
 inspectionAcceptQuoteConfirmTitle,Inspection flow,Accept quote & continue repair?,کوٹ منظور کر کے مرمت جاری رکھیں؟,Quote accept kar ke marammat jari rakhein?,
-inspectionCloseConfirmTitle,Inspection flow,Close after inspection?,انسپیکشن کے بعد بند کریں؟,Inspection ke baad band karein?,
-inspectionAcceptQuoteConfirmBody,Inspection flow,The same Ustaad will continue the repair. The inspection fee is waived — you will only pay the repair quote.,یہی استاد مرمت جاری رکھیں گے۔ انسپیکشن فیس معاف ہے — آپ صرف مرمت کا کوٹ ادا کریں گے۔,Yehi Ustaad marammat jari rakhenge. Inspection fee maaf hai — aap sirf marammat ka quote den ge.,
-inspectionCloseConfirmBody,Inspection flow,You will only be charged the inspection fee. The job will be marked completed.,آپ سے صرف انسپیکشن فیس لی جائے گی۔ کام مکمل شدہ نشان زد ہو جائے گا۔,Aap se sirf inspection fee li jayegi. Kaam mukammal mark ho jayega.,
-inspectionClosedAfterInspection,Inspection flow,Closed after inspection.,انسپیکشن کے بعد بند کر دیا گیا۔,Inspection ke baad band kar diya gaya.,
+inspectionCloseConfirmTitle,Inspection flow,Close after inspection?,معائنے کے بعد بند کریں؟,Muainay ke baad band karein?,
+inspectionAcceptQuoteConfirmBody,Inspection flow,The same Ustaad will continue the repair. The inspection fee is waived — you will only pay the repair quote.,یہی استاد مرمت جاری رکھیں گے۔ معائنہ فیس معاف ہے — آپ صرف مرمت کا کوٹ ادا کریں گے۔,Yehi Ustaad marammat jari rakhenge. Muaina fee maaf hai — aap sirf marammat ka quote den ge.,
+inspectionCloseConfirmBody,Inspection flow,You will only be charged the inspection fee. The job will be marked completed.,آپ سے صرف معائنہ فیس لی جائے گی۔ کام مکمل شدہ نشان زد ہو جائے گا۔,Aap se sirf Muaina fee li jayegi. Kaam mukammal mark ho jayega.,
+inspectionClosedAfterInspection,Inspection flow,Closed after inspection.,معائنے کے بعد بند کر دیا گیا۔,Muainay ke baad band kar diya gaya.,
 inspectionQuoteAcceptedRepairInProgress,Inspection flow,Quote accepted — repair in progress.,کوٹ منظور — مرمت جاری ہے۔,Quote accept — marammat jari hai.,
 inspectionActionFailed,Inspection flow,Action failed. Try again.,کارروائی ناکام۔ دوبارہ کوشش کریں۔,Kaam nahi hua. Dobara koshish karein.,
 inspectionFindAnotherConfirmTitle,Inspection flow,Find another Ustaad?,دوسرا استاد تلاش کریں؟,Doosra Ustaad dhoondein?,
-inspectionFindAnotherConfirmBody,Inspection flow,Confirming completes the inspection and charges the inspection fee. Your job goes live again so other Ustaads can send their rates.,تصدیق کرنے پر انسپیکشن مکمل ہو جائے گی اور انسپیکشن فیس لی جائے گی۔ آپ کا کام دوبارہ لائیو ہو جائے گا تاکہ دوسرے استاد اپنے ریٹ بھیج سکیں۔,Confirm karne par inspection mukammal ho jayegi aur inspection fee li jayegi. Aap ka kaam dobara live ho jayega taake doosre Ustaad apne rate bhej sakein.,
-inspectionBadge,Inspection flow,Inspection,انسپیکشن,Inspection,
+inspectionFindAnotherConfirmBody,Inspection flow,Confirming completes the inspection and charges the inspection fee. Your job goes live again so other Ustaads can send their rates.,تصدیق کرنے پر معائنہ مکمل ہو جائے گا اور معائنہ فیس لی جائے گی۔ آپ کا کام دوبارہ لائیو ہو جائے گا تاکہ دوسرے استاد اپنے ریٹ بھیج سکیں۔,Confirm karne par Muaina mukammal ho jayega aur Muaina fee li jayegi. Aap ka kaam dobara live ho jayega taake doosre Ustaad apne rate bhej sakein.,
+inspectionBadge,Inspection flow,Inspection,معائنہ,Muaina,
 chooseHireConfirmTitle,Uncategorised,Hire this Ustaad?,اس استاد کو ہائر کریں؟,Is Ustaad ko hire karein?,
 chooseHireConfirmBody,Uncategorised,Hire {name} for this job? You won't be able to choose a different Ustaad afterwards.,کیا {name} کو یہ کام دیں؟ اس کے بعد آپ دوسرا استاد منتخب نہیں کر سکیں گے۔,{name} ko ye kaam dein? Is ke baad aap doosra Ustaad nahi chun sakenge.,Placeholders: {name}
 chooseAssignFailed,Uncategorised,Unable to assign this Ustaad. Please try again.,یہ استاد مقرر نہیں ہو سکے۔ دوبارہ کوشش کریں۔,Ye Ustaad assign nahi ho sake. Dobara koshish karein.,
 chooseServiceTotal,Uncategorised,Service Total {price},سروس کا کل {price},Service Total {price},Placeholders: {price}
-chooseInspectionFeeAmount,Uncategorised,Inspection fee {price},انسپیکشن فیس {price},Inspection fee {price},Placeholders: {price}
+chooseInspectionFeeAmount,Uncategorised,Inspection fee {price},معائنہ فیس {price},Muaina fee {price},Placeholders: {price}
 chooseFindingUstaads,Uncategorised,Finding verified Ustaads near you…,آپ کے قریب تصدیق شدہ استاد تلاش کیے جا رہے ہیں…,Aap ke qareeb verified Ustaad dhoonde ja rahe hain…,
 chooseLoadFailed,Uncategorised,Unable to load available Ustaads right now.,اس وقت دستیاب استاد لوڈ نہیں ہو سکے۔,Is waqt available Ustaad load nahi ho sake.,
 chooseNoUstaadAvailable,Uncategorised,No verified Ustaad available right now.,اس وقت کوئی تصدیق شدہ استاد دستیاب نہیں۔,Is waqt koi verified Ustaad available nahi.,
@@ -474,7 +479,7 @@ cardGoesLiveBefore,Uncategorised,Goes live 1h before window,وقت سے ایک �
 cardWorkersNotified,Uncategorised,Workers are notified immediately,استادوں کو فوراً اطلاع دی جاتی ہے,Ustaad ko foran ittila di jati hai,
 cardSearchingWorkers,Uncategorised,Searching for workers...,استاد تلاش کیے جا رہے ہیں...,Ustaad dhoonde ja rahe hain...,
 cardNoWorkerYet,Uncategorised,No worker yet,ابھی کوئی استاد نہیں,Abhi koi Ustaad nahi,
-cardEstimatePrefix,Uncategorised,est.,تخمینہ,est.,
+cardEstimatePrefix,Uncategorised,est.,تخمینہ,Taqreeban,
 cardFindWorkers,Uncategorised,Find Workers,استاد تلاش کریں,Ustaad dhoondein,
 cardEdit,Uncategorised,Edit,تبدیلی,Edit,
 filterTitle,Uncategorised,Filter Bookings,بکنگز فلٹر کریں,Bookings filter karein,
@@ -505,14 +510,14 @@ trackSubtextContinuingRepair,Uncategorised,{name} is continuing the repair,{name
 trackSubtextOnTheWay,Uncategorised,{name} is on the way to your location,{name} آپ کی لوکیشن کی طرف آ رہے ہیں,{name} aap ki location ki taraf aa rahe hain,Placeholders: {name}
 trackSubtextArrived,Uncategorised,{name} has arrived at your location,{name} آپ کی لوکیشن پر پہنچ گئے ہیں,{name} aap ki location par pohanch gaye hain,Placeholders: {name}
 trackSubtextInspecting,Uncategorised,{name} is inspecting the issue,{name} مسئلہ دیکھ رہے ہیں,{name} masla dekh rahe hain,Placeholders: {name}
-trackSubtextHiredForInspection,Uncategorised,{name} has been hired for this inspection,{name} کو اس انسپیکشن کے لیے ہائر کیا گیا ہے,{name} ko is inspection ke liye hire kiya gaya hai,Placeholders: {name}
+trackSubtextHiredForInspection,Uncategorised,{name} has been hired for this inspection,{name} کو اس معائنے کے لیے ہائر کیا گیا ہے,{name} ko is Muainay ke liye hire kiya gaya hai,Placeholders: {name}
 trackSubtextWorking,Uncategorised,{name} is working on your job,{name} آپ کے کام پر لگے ہوئے ہیں,{name} aap ke kaam par lage hue hain,Placeholders: {name}
 trackSubtextHiredForJob,Uncategorised,{name} has been hired for this job,{name} کو اس کام کے لیے ہائر کیا گیا ہے,{name} ko is kaam ke liye hire kiya gaya hai,Placeholders: {name}
 urgentWithin1Hour,Uncategorised,Within 1 hour,ایک گھنٹے کے اندر,Ek ghante ke andar,
 urgentWithin2Hours,Uncategorised,Within 2 hours,دو گھنٹوں کے اندر,Do ghanton ke andar,
 urgentWithin4Hours,Uncategorised,Within 4 hours,چار گھنٹوں کے اندر,Chaar ghanton ke andar,
-inspectionFeePaid,Inspection flow,Inspection fee paid,انسپیکشن فیس ادا ہو گئی,Inspection fee paid,
-inspectionFeeNotPaid,Inspection flow,Inspection fee not paid,انسپیکشن فیس ادا نہیں ہوئی,Inspection fee paid nahi,
+inspectionFeePaid,Inspection flow,Inspection fee paid,معائنہ فیس ادا ہو گئی,Muaina fee paid,
+inspectionFeeNotPaid,Inspection flow,Inspection fee not paid,معائنہ فیس ادا نہیں ہوئی,Muaina fee paid nahi,
 chooseWithinRadius,Uncategorised,within {km} km,{km} کلومیٹر کے اندر,{km} km ke andar,Placeholders: {km}
 chooseHireConfirmBodyFull,Uncategorised,Hire {name} for this job? You will not be able to choose a different Ustaad afterwards.,کیا {name} کو یہ کام دیں؟ اس کے بعد آپ دوسرا استاد منتخب نہیں کر سکیں گے۔,{name} ko ye kaam dein? Is ke baad aap doosra Ustaad nahi chun sakenge.,Placeholders: {name}
 trackHeadlineUstaadOnTheWay,Uncategorised,Ustaad On The Way,استاد راستے میں,Ustaad On The Way,
@@ -520,12 +525,12 @@ trackHeadlineUstaadArrived,Uncategorised,Ustaad Arrived,استاد پہنچ گئ
 trackHeadlineWorkInProgress,Uncategorised,Work In Progress,کام جاری ہے,Work In Progress,
 trackHeadlineHired,Uncategorised,Hired ✓,ہائر ہو گئے ✓,Hire ho gaye ✓,
 trackRatingOutOfFive,Uncategorised,{rating} / 5.0,{rating} / 5.0,{rating} / 5.0,Placeholders: {rating}
-discoveryLoadingBids,Uncategorised,Loading bids...,بولیاں لوڈ ہو رہی ہیں...,Bids load ho rahi hain...,
-discoveryBidsLoadFailedShort,Uncategorised,Could not load bids,بولیاں لوڈ نہیں ہو سکیں,Bids load nahi ho sakin,
+discoveryLoadingBids,Uncategorised,Loading offers...,آفرز لوڈ ہو رہی ہیں...,Offers load ho rahi hain...,
+discoveryBidsLoadFailedShort,Uncategorised,Could not load offers,آفرز لوڈ نہیں ہو سکیں,Offers load nahi ho sakin,
 bookingWorkersAvailableNearby,Bookings,"{count, plural, =1{{count} worker available nearby} other{{count} workers available nearby}}",قریب {count} استاد دستیاب,Qareeb {count} Ustaad available,Placeholders: {count} | ICU plural — keep the plural syntax intact
 bookingIdShort,Bookings,#ER-{code},#ER-{code},#ER-{code},Placeholders: {code}
 inspectionPartWithWarranty,Inspection flow,{name} x{quantity} · {warranty},{name} x{quantity} · {warranty},{name} x{quantity} · {warranty},"Placeholders: {name}, {quantity}, {warranty}"
-discoveryPendingBidsSorted,Uncategorised,"{count, plural, =1{{count} pending bid · sorted by price} other{{count} pending bids · sorted by price}}",{count} زیرِ التوا بولیاں · قیمت کے حساب سے ترتیب,{count} pending bids · qeemat ke hisab se sorted,Placeholders: {count} | ICU plural — keep the plural syntax intact
+discoveryPendingBidsSorted,Uncategorised,"{count, plural, =1{{count} pending offer · sorted by price} other{{count} pending offers · sorted by price}}",{count} باقی آفرز · قیمت کے حساب سے ترتیب,{count} pending offers · qeemat ke hisab se sorted,Placeholders: {count} | ICU plural — keep the plural syntax intact
 workerOffline,Ustaad,Offline,آف لائن,Offline,
 workerOnline,Ustaad,Online,آن لائن,Online,
 workerBusy,Ustaad,Busy,مصروف,Busy,
@@ -537,15 +542,15 @@ workerActionOnMyWay,Ustaad,On My Way,میں روانہ ہوں,Main rawana hoon,
 workerActionArrived,Ustaad,Arrived,پہنچ گیا,Pohanch gaya,
 workerActionStartJob,Ustaad,Start Job,کام شروع کریں,Kaam shuru karein,
 workerActionCompleteJob,Ustaad,Complete Job,کام مکمل کریں,Kaam mukammal karein,
-workerActionStartInspection,Ustaad,Start Inspection,انسپیکشن شروع کریں,Inspection shuru karein,
+workerActionStartInspection,Ustaad,Start Inspection,معائنہ شروع کریں,Muaina shuru karein,
 workerActionStartWork,Ustaad,Start Work,کام شروع کریں,Kaam shuru karein,
-workerActionFillReport,Ustaad,Fill Inspection Report,انسپیکشن رپورٹ بھریں,Inspection report bharein,
+workerActionFillReport,Ustaad,Fill Inspection Report,معائنہ رپورٹ بھریں,Muaina report bharein,
 workerActionWaitingForClient,Ustaad,Waiting for Client Decision,کلائنٹ کے فیصلے کا انتظار,Client ke faisle ka intezar,
 workerSuccessOnTheWay,Ustaad,On the way — client notified.,آپ روانہ ہیں — کلائنٹ کو اطلاع دے دی گئی۔,Aap rawana hain — client ko ittila de di gayi.,
 workerSuccessArrived,Ustaad,Marked as arrived.,پہنچنے کا نشان لگا دیا گیا۔,Pohanchne ka nishan laga diya gaya.,
 workerSuccessJobStarted,Ustaad,Job started.,کام شروع ہو گیا۔,Kaam shuru ho gaya.,
 workerSuccessJobCompleted,Ustaad,Job marked as completed.,کام مکمل شدہ نشان زد ہو گیا۔,Kaam mukammal mark ho gaya.,
-workerSuccessInspectionStarted,Ustaad,Inspection started.,انسپیکشن شروع ہو گئی۔,Inspection shuru ho gayi.,
+workerSuccessInspectionStarted,Ustaad,Inspection started.,معائنہ شروع ہو گیا۔,Muaina shuru ho gaya.,
 workerSuccessWorkStarted,Ustaad,Work started.,کام شروع ہو گیا۔,Kaam shuru ho gaya.,
 workerSkillNotSelected,Ustaad,Skill not selected,مہارت منتخب نہیں کی گئی,Skill select nahi ki gayi,
 workerLocating,Ustaad,Locating…,لوکیشن معلوم کی جا رہی ہے…,Location maloom ki ja rahi hai…,
@@ -598,7 +603,7 @@ workerNoNewJobsHint,Ustaad,New job requests matching your skills will appear her
 workerCompleteProfileForJobs,Ustaad,Complete your profile. Once it is approved you can manage your jobs.,اپنی پروفائل مکمل کریں۔ منظوری کے بعد آپ اپنے کام سنبھال سکیں گے۔,Apni profile complete karain. Approval ke baad aap apni jobs manage kar sakenge.,
 workerJobsLoadFailed,Ustaad,Failed to load jobs. Please try again.,کام لوڈ نہیں ہو سکے۔ دوبارہ کوشش کریں۔,Jobs load nahi ho sake. Dobara koshish karein.,
 workerClientCancelledBooking,Ustaad,The client cancelled this booking,کلائنٹ نے یہ بکنگ منسوخ کر دی,Client ne ye booking cancel kar di,
-workerOnlyInspectionCompleted,Ustaad,Only the inspection was completed,صرف انسپیکشن مکمل ہوئی,Sirf Inspection Mukammal Hui,
+workerOnlyInspectionCompleted,Ustaad,Only the inspection was completed,صرف معائنہ مکمل ہوا,Sirf Muaina Mukammal Hua,
 workerComplete,Ustaad,Complete,مکمل کریں,Complete,
 workerCompleting,Ustaad,Completing...,مکمل کیا جا رہا ہے...,Complete ho raha hai...,
 workerMarkCompletedTitle,Ustaad,Mark as Completed?,مکمل شدہ نشان زد کریں؟,Mukammal mark karein?,
@@ -615,27 +620,27 @@ workerFilterCancelled,Ustaad,Cancelled,منسوخ,Cancel,
 workerFilterAllWork,Ustaad,All Work,سارا کام,Sab Kaam,
 workerFilterMyOffers,Ustaad,My Offers,میری آفرز,Meri Offers,
 workerFilterNoOfferSent,Ustaad,No offer sent,آفر نہیں بھیجی,Offer nahi bheji,
-bidPlaceABid,Bidding,Place a Bid,بولی لگائیں,Bid lagayein,
+bidPlaceABid,Bidding,Send an Offer,آفر بھیجیں,Offer bhejein,
 bidChatWithClient,Bidding,Chat with Client,کلائنٹ سے چیٹ کریں,Client se chat karein,
-bidLiveBids,Bidding,Live Bids,لائیو بولیاں,Live Bids,
+bidLiveBids,Bidding,Live Offers,لائیو آفرز,Live Offers,
 bidAreaNotAvailable,Bidding,Area not available,علاقہ دستیاب نہیں,Ilaqa available nahi,
-bidExactAddressAfterAccept,Bidding,The exact address is shared once the client accepts your bid.,کلائنٹ کے آپ کی بولی قبول کرنے پر مکمل پتہ بھیج دیا جاتا ہے۔,Client ke aap ki bid accept karne par poora pata bhej diya jata hai.,
+bidExactAddressAfterAccept,Bidding,The exact address is shared once the client accepts your offer.,کلائنٹ کے آپ کی آفر قبول کرنے پر مکمل پتہ بھیج دیا جاتا ہے۔,Client ke aap ki offer accept karne par poora pata bhej diya jata hai.,
 bidStatusAccepted,Bidding,Accepted,منظور,Accept,
 bidStatusRejected,Bidding,Rejected,مسترد,Reject,
-bidStatusPending,Bidding,Pending,زیرِ التوا,Pending,
-bidYourCurrentBid,Bidding,Your Current Bid,آپ کی موجودہ بولی,Aap ki mojooda bid,
-bidSubmit,Bidding,Submit Bid,بولی بھیجیں,Bid bhejein,
-bidUpdate,Bidding,Update Bid,بولی اپ ڈیٹ کریں,Bid update karein,
-bidPlaceYourBid,Bidding,Place Your Bid,اپنی بولی لگائیں,Apni bid lagayein,
-bidUpdateYourBid,Bidding,Update Your Bid,اپنی بولی اپ ڈیٹ کریں,Apni bid update karein,
-bidCanUpdateIn,Bidding,You can update your bid in {seconds}s.,آپ {seconds} سیکنڈ بعد بولی اپ ڈیٹ کر سکتے ہیں۔,Aap {seconds}s baad bid update kar sakte hain.,Placeholders: {seconds}
-bidCanUpdateNow,Bidding,You can update your bid now.,آپ ابھی اپنی بولی اپ ڈیٹ کر سکتے ہیں۔,Aap abhi apni bid update kar sakte hain.,
-bidAmountLabel,Bidding,Bid Amount (PKR) *,بولی کی رقم (PKR) *,Bid Amount (PKR) *,
+bidStatusPending,Bidding,Pending,باقی,Pending,
+bidYourCurrentBid,Bidding,Your Current Offer,آپ کی موجودہ آفر,Aap ki mojooda offer,
+bidSubmit,Bidding,Submit Offer,آفر جمع کریں,Offer submit karein,
+bidUpdate,Bidding,Update Offer,آفر اپ ڈیٹ کریں,Offer update karein,
+bidPlaceYourBid,Bidding,Send Your Offer,اپنی آفر بھیجیں,Apni offer bhejein,
+bidUpdateYourBid,Bidding,Update Your Offer,اپنی آفر اپ ڈیٹ کریں,Apni offer update karein,
+bidCanUpdateIn,Bidding,You can update your offer in {seconds}s.,آپ {seconds} سیکنڈ بعد آفر اپ ڈیٹ کر سکتے ہیں۔,Aap {seconds}s baad offer update kar sakte hain.,Placeholders: {seconds}
+bidCanUpdateNow,Bidding,You can update your offer now.,آپ ابھی اپنی آفر اپ ڈیٹ کر سکتے ہیں۔,Aap abhi apni offer update kar sakte hain.,
+bidAmountLabel,Bidding,Offer Amount (PKR) *,آفر کی رقم (PKR) *,Offer Amount (PKR) *,
 bidAmountHint,Bidding,e.g. 2500,مثلاً 2500,Maslan 2500,
 bidLabelWithCountdown,Bidding,{label} ({seconds}s),{label} ({seconds}s),{label} ({seconds}s),"Placeholders: {label}, {seconds}"
 bidJobCount,Bidding,"{count, plural, =1{{count} job} other{{count} jobs}}",{count} کام,{count} jobs,Placeholders: {count} | ICU plural — keep the plural syntax intact
-bidBeFirstToBid,Bidding,Be the first to bid on this job,اس کام پر سب سے پہلے بولی لگائیں,Is kaam par sab se pehle bid lagayein,
-earningBidding,Earnings,Bidding,بولی,Bidding,
+bidBeFirstToBid,Bidding,Be the first to send an offer on this job,اس کام پر سب سے پہلے آفر بھیجیں,Is kaam par sab se pehle offer bhejein,
+earningBidding,Earnings,Offers,آفرز,Offers,
 earningHistoryTitle,Earnings,Earning History,کمائی کی تفصیل,Earning History,
 earningNoneYet,Earnings,No earnings yet,ابھی کوئی کمائی نہیں,Abhi koi kamai nahi,
 earningNoneHint,Earnings,Completed jobs will show up here with your daily earnings.,مکمل کام یہاں آپ کی روزانہ کمائی کے ساتھ نظر آئیں گے۔,Mukammal kaam yahan aap ki rozana kamai ke sath nazar aayenge.,
@@ -656,8 +661,8 @@ inspFormSubmitted,Uncategorised,Report submitted. Waiting for client decision.,�
 inspFormSubmitFailed,Uncategorised,Failed to submit report.,رپورٹ جمع نہیں ہو سکی۔,Report jama nahi ho saki.,
 inspFormWhatWasIssue,Uncategorised,What was the issue?,مسئلہ کیا نکلا؟,Masla kya nikla?,
 inspFormWhatWasIssueRequired,Uncategorised,What was the issue? *,مسئلہ کیا نکلا؟ *,Masla kya nikla? *,
-inspFormRecommendedRepair,Uncategorised,Recommended repair,تجویز کردہ مرمت,Recommended repair,
-inspFormRecommendedRepairRequired,Uncategorised,Recommended repair *,تجویز کردہ مرمت *,Recommended repair *,
+inspFormRecommendedRepair,Uncategorised,Recommended Repair,بہتر طریقہ,Behtar Tareeqa,
+inspFormRecommendedRepairRequired,Uncategorised,Recommended Repair *,بہتر طریقہ *,Behtar Tareeqa *,
 inspFormWhatWorkNeeded,Uncategorised,What work will be needed,کیا کام کرنا ہوگا,Kya kaam karna hoga,
 inspFormWriteOrRecord,Uncategorised,Please write the report or record a voice note.,براہِ کرم رپورٹ لکھیں یا وائس نوٹ ریکارڈ کریں۔,Barah-e-karam report likhein ya voice note record karein.,
 inspFormPartsRequired,Uncategorised,Parts required?,پرزے درکار ہیں؟,Parts chahiye?,
@@ -674,7 +679,7 @@ inspFormPartNameHint,Uncategorised,e.g. the part or material used,مثلاً ا�
 inspFormWarrantyHint,Uncategorised,e.g. 7 days,مثلاً 7 دن,Maslan 7 din,
 inspFormRemovePart,Uncategorised,Remove part,پرزہ ہٹائیں,Part hatayein,
 inspFormTotalAmount,Uncategorised,Total amount for the work,کام کی پوری رقم,Kam ki puri raqam,
-inspFormFeeWaivedNote,Uncategorised,"If the customer continues with the repair, the inspection fee will not be charged.",اگر کسٹمر مرمت جاری رکھواتا ہے تو انسپیکشن فیس نہیں لی جائے گی۔,Agar customer repair continue karwata hai to inspection fee nhi deni hogi.,
+inspFormFeeWaivedNote,Uncategorised,"If the customer continues with the repair, the inspection fee will not be charged.",اگر کسٹمر مرمت جاری رکھواتا ہے تو معائنہ فیس نہیں لی جائے گی۔,Agar customer repair continue karwata hai to Muaina fee nhi deni hogi.,
 inspHintElectrical,Uncategorised,"e.g. switch is broken, wire is shorted...",مثلاً سوئچ خراب ہے، تار شارٹ ہے...,"Misal: switch kharab hai, wire short hai...",
 inspHintPlumbing,Uncategorised,"e.g. pipe is leaking, drain is blocked...",مثلاً پائپ لیک ہے، ڈرین بلاک ہے...,"Misal: pipe leak hai, drain block hai...",
 inspHintAc,Uncategorised,"e.g. AC is not cooling, gas leak...",مثلاً اے سی ٹھنڈا نہیں کر رہا، گیس لیک ہے...,"Misal: AC cooling nahi kar raha, gas leak hai...",
@@ -694,8 +699,7 @@ l10nFallbackProbe,Localization self-test,English fallback works,,,Intentionally 
 workerJobDetailsTitle,Ustaad,Job Details,کام کی تفصیل,Kaam Ki Tafseel,
 workerJobLoadFailed,Ustaad,Failed to load job.,کام لوڈ نہیں ہو سکا۔,Kaam load nahi ho saka.,
 workerStandardDirectHireNote,Ustaad,This is a Standard job. The client can hire you directly — you do not need to send an offer.,یہ ایک اسٹینڈرڈ کام ہے۔ کلائنٹ آپ کو براہِ راست ہائر کر سکتا ہے — آفر بھیجنے کی ضرورت نہیں۔,Yeh ek Standard kaam hai. Client aap ko seedha hire kar sakta hai — offer bhejne ki zaroorat nahi.,
-workerBidNow,Ustaad,Bid Now,ابھی بولی لگائیں,Abhi Bid Lagayein,
-workerReportSubmittedWaiting,Ustaad,Report submitted. Waiting for the client to accept the quote or close after inspection.,رپورٹ بھیج دی گئی۔ کلائنٹ کے کوٹ قبول کرنے یا انسپیکشن کے بعد کام بند کرنے کا انتظار ہے۔,Report bhej di gayi. Client ke quote accept karne ya inspection ke baad kaam band karne ka intezaar hai.,
+workerReportSubmittedWaiting,Ustaad,Report submitted. Waiting for the client to accept the quote or close after inspection.,رپورٹ بھیج دی گئی۔ کلائنٹ کے کوٹ قبول کرنے یا معائنے کے بعد کام بند کرنے کا انتظار ہے۔,Report bhej di gayi. Client ke quote accept karne ya Muainay ke baad kaam band karne ka intezaar hai.,
 workerClientSection,Ustaad,Client,کلائنٹ,Client,
 workerPostedBy,Ustaad,Posted by,کام دینے والا,Kaam dene wala,
 workerCategoryLabel,Ustaad,Category,کیٹیگری,Category,
@@ -762,7 +766,7 @@ workerExperienceInvalid,Ustaad,Enter a valid number of years (0 or more).,سال
 workerResidentialAddress,Ustaad,Residential Address,رہائشی پتہ,Rihaishi address,
 workerResidentialAddressHint,Ustaad,"House #, street, area, city",مکان نمبر، گلی، علاقہ، شہر,"Makan number, gali, ilaqa, sheher",
 workerResidentialAddressRequired,Ustaad,Residential address is required.,رہائشی پتہ ضروری ہے۔,Rihaishi address zaroori hai.,
-workerIdentityDocuments,Ustaad,Identity Documents,شناختی دستاویزات,Shanakhti dastawezat,
+workerIdentityDocuments,Ustaad,Identity Documents,شناختی کاغذات,Shanakhti dastawezat,
 workerCnicFront,Ustaad,CNIC Front,شناختی کارڈ کا اگلا رخ,CNIC ka agla rukh,
 workerCnicBack,Ustaad,CNIC Back,شناختی کارڈ کا پچھلا رخ,CNIC ka pichla rukh,
 workerLiveSelfie,Ustaad,Live Selfie,لائیو سیلفی,Live selfie,
@@ -782,10 +786,10 @@ workerMainSkillWithName,Ustaad,Main Skill: {skill},بنیادی ہنر: {skill},
 workerNoMainSkillYet,Ustaad,No main skill selected yet,ابھی کوئی بنیادی ہنر منتخب نہیں کیا گیا,Abhi koi buniyadi hunar muntakhab nahi kiya gaya,
 workerProfileApproval,Ustaad,Profile Approval,پروفائل کی منظوری,Profile ki manzoori,
 inspHintFallback,Uncategorised,e.g. describe what you found,مثلاً بتائیں آپ کو کیا ملا,Maslan batayein aap ko kya mila,Issue-example hint shown when the booking's service category has no hint of its own.
-bidAmountRequired,Bidding,Please enter a bid amount.,براہِ کرم بولی کی رقم لکھیں۔,Baraye meherbani bid ki raqam likhein.,
-bidAmountRange,Bidding,"Bid amount must be between 100 and 500,000.","بولی کی رقم 100 سے 500,000 کے درمیان ہونی چاہیے۔","Bid ki raqam 100 se 500,000 ke darmiyan honi chahiye.",
-bidSubmitted,Bidding,Bid submitted!,بولی بھیج دی گئی!,Bid bhej di gayi!,
-bidSubmitFailed,Bidding,Failed to submit bid.,بولی نہیں بھیجی جا سکی۔,Bid nahi bheji ja saki.,
+bidAmountRequired,Bidding,Please enter an offer amount.,براہِ کرم آفر کی رقم لکھیں۔,Baraye meherbani offer ki raqam likhein.,
+bidAmountRange,Bidding,"Offer amount must be between 100 and 500,000.","آفر کی رقم 100 سے 500,000 کے درمیان ہونی چاہیے۔","Offer ki raqam 100 se 500,000 ke darmiyan honi chahiye.",
+bidSubmitted,Bidding,Offer submitted!,آفر بھیج دی گئی!,Offer bhej di gayi!,
+bidSubmitFailed,Bidding,Failed to submit offer.,آفر نہیں بھیجی جا سکی۔,Offer nahi bheji ja saki.,
 workerViewJobDetails,Ustaad,View Details,تفصیل دیکھیں,Tafseel dekhein,
 workerSendOffer,Ustaad,Send Offer,آفر بھیجیں,Offer bhejein,
 workerChangeOffer,Ustaad,Change Offer,آفر بدلیں,Offer badlein,
@@ -813,10 +817,13 @@ errorConflict,Core / Errors,This has already been updated. Please refresh and tr
 errorTooManyRequests,Core / Errors,Too many attempts. Please wait a moment and try again.,بہت زیادہ کوششیں ہو گئی ہیں۔ تھوڑی دیر بعد دوبارہ کوشش کریں۔,Bohot zyada koshishein ho gayi hain. Thori dair baad dobara koshish karein.,HTTP 429 - rate limited
 errorServer,Core / Errors,Server error. Please try again later.,سرور میں مسئلہ ہے۔ کچھ دیر بعد دوبارہ کوشش کریں۔,Server mein masla hai. Kuch dair baad dobara koshish karein.,HTTP 5xx
 errorSmsSendFailed,Core / Errors,The SMS could not be sent. Please try again.,ایس ایم ایس نہیں بھیجا جا سکا۔ دوبارہ کوشش کریں۔,SMS bhejne mein masla hua. Dobara koshish karein.,Backend SMS provider could not deliver the OTP
-errorInspectorBusy,Core / Errors,The inspecting Ustaad is busy on another job right now. Please choose another Ustaad from the list below.,معائنہ کرنے والا استاد ابھی دوسرے کام میں مصروف ہے۔ نیچے سے کوئی اور استاد منتخب کریں۔,Inspection karne wala Ustaad abhi doosre kaam mein masroof hai. Neeche se koi aur Ustaad choose karein.,Backend code INSPECTOR_BUSY on a rehire attempt
-errorPhoneIsWorker,Core / Errors,This mobile number is already registered as an Ustaad account.,یہ موبائل نمبر پہلے سے استاد اکاؤنٹ کے ساتھ رجسٹرڈ ہے۔,Ye mobile number Ustaad account ke saath registered hai.,Backend code PHONE_IS_WORKER
-errorPhoneIsClient,Core / Errors,This mobile number is already registered as a Client account.,یہ موبائل نمبر پہلے سے کلائنٹ اکاؤنٹ کے ساتھ رجسٹرڈ ہے۔,Ye number Client account ke saath registered hai.,Backend code PHONE_IS_CLIENT
+errorOtpResendTooSoon,Core / Errors,Please wait a moment before requesting the OTP again.,دوبارہ او ٹی پی منگوانے سے پہلے تھوڑی دیر انتظار کریں۔,OTP dobara mangwane se pehle thori dair intezar karein.,"Backend code OTP_RESEND_TOO_SOON — fallback only; the backend's own message is shown when present, this covers the rare case it's empty"
+errorInspectorBusy,Core / Errors,The inspecting Ustaad is busy on another job right now. Please choose another Ustaad from the list below.,معائنہ کرنے والا استاد ابھی دوسرے کام میں مصروف ہے۔ نیچے سے کوئی اور استاد منتخب کریں۔,Muaina karne wala Ustaad abhi doosre kaam mein masroof hai. Neeche se koi aur Ustaad choose karein.,Backend code INSPECTOR_BUSY on a rehire attempt
+errorPhoneNotRegistered,Core / Errors,This number is not registered.,یہ نمبر رجسٹرڈ نہیں ہے۔,Ye number registered nahi hai.,Backend code PHONE_NOT_REGISTERED — login with a phone that either doesn't exist or belongs to the opposite role. Deliberately identical wording for both cases (role-privacy).
+errorPhoneAlreadyRegistered,Core / Errors,This number is already registered.,یہ نمبر پہلے سے رجسٹرڈ ہے۔,Ye number pehle se registered hai.,"Backend code PHONE_ALREADY_REGISTERED — registration with a phone that already has an account, regardless of role."
 errorUnknown,Core / Errors,Something went wrong. Please try again.,کچھ گڑبڑ ہو گئی۔ دوبارہ کوشش کریں۔,Kuch masla ho gaya. Dobara koshish karein.,Last-resort wording when nothing more specific is known
+errorOfflineActionBlocked,Core / Errors,No internet connection. Connect to the internet to continue.,انٹرنیٹ کنکشن موجود نہیں ہے۔ جاری رکھنے کے لیے انٹرنیٹ سے منسلک ہوں۔,Internet connection nahi hai. Yeh action karne ke liye internet se connect karein.,"A server-changing action (create/cancel booking, send message, etc.) was blocked client-side because the device has no network"
+offlineCachedDataBanner,Uncategorised,Offline — showing saved data,آف لائن — محفوظ شدہ معلومات دکھائی جا رہی ہیں,Offline — saved data dikhaya ja raha hai,Small non-blocking banner shown when a screen is displaying cached data because the live fetch failed
 authForgotPasswordTitle,Authentication,"Forgot your
 password?","پاس ورڈ بھول
 گئے؟","Password bhool
@@ -840,19 +847,18 @@ myBookingsTotalCount,Uncategorised,{count} total,کل {count},Kul {count},Placeh
 workerBidJobFallbackTitle,Ustaad,Job,کام,Kaam,Heading on the bid screen when the job title was not passed through
 navHome,Uncategorised,Home,ہوم,Home,Bottom-navigation tab: the home screen. Client and Ustaad share it.
 navBookings,Uncategorised,Bookings,بکنگز,Bookings,Bottom-navigation tab: the client's bookings list.
-navChats,Uncategorised,Chats,چیٹس,Chats,Bottom-navigation tab: the client's conversation list.
 inspectionRowIssueFound,Inspection flow,Issue found,جو مسئلہ ملا,Jo masla mila,Row label above what the Ustaad found during the inspection
 inspectionRowNotes,Inspection flow,Notes,نوٹس,Notes,Row label above the Ustaad's free-text notes on the report
 inspectionBadgeAwaitingDecision,Inspection flow,Report submitted — awaiting decision,رپورٹ جمع ہو گئی — فیصلے کا انتظار,Report jama ho gayi — faisle ka intezar,Status badge on the inspection report while the client has not decided
 inspectionBadgeQuoteAccepted,Inspection flow,Quote accepted — repair in progress,قیمت منظور — مرمت جاری ہے,Quote manzoor — marammat jari hai,Status badge on the inspection report once the repair quote was accepted
-inspectionBadgeFindingAnother,Inspection flow,Finding another Ustaad — open for bidding,دوسرا استاد تلاش کیا جا رہا ہے — بولی کے لیے کھلا,Doosra Ustaad talash kiya ja raha hai — bidding ke liye khula,Status badge on the inspection report after the client chose to re-open bidding
-inspStripClosedFeeOnlyWithAmount,Uncategorised,Closed after inspection — client pays inspection fee only: {fee},معائنے کے بعد بند — کلائنٹ صرف معائنہ فیس دے گا: {fee},Inspection ke baad band — client sirf inspection fee dega: {fee},Placeholders: {fee} | Status strip when the job closed after inspection and the fee amount is known
-inspStripClosedFeeOnly,Uncategorised,Closed after inspection — client pays inspection fee only.,معائنے کے بعد بند — کلائنٹ صرف معائنہ فیس دے گا۔,Inspection ke baad band — client sirf inspection fee dega.,Same strip when no fee snapshot is available to show
-inspStripRepairCompletedFeeWaived,Uncategorised,Repair completed — inspection fee waived.,مرمت مکمل — معائنہ فیس معاف۔,Marammat mukammal — inspection fee maaf.,Status strip once an inspection-lane repair finished
-inspStripQuoteAcceptedFeeWaived,Uncategorised,Quote accepted — inspection fee waived. Repair in progress.,قیمت منظور — معائنہ فیس معاف۔ مرمت جاری ہے۔,Quote manzoor — inspection fee maaf. Marammat jari hai.,Status strip while the accepted repair is being carried out
-inspStripReportSubmitted,Uncategorised,Inspection report submitted — review quote to continue repair or close after inspection.,معائنہ رپورٹ جمع ہو گئی — مرمت جاری رکھنے کے لیے قیمت دیکھیں یا معائنے کے بعد بند کریں۔,Inspection report jama ho gayi — marammat jari rakhne ke liye quote dekhein ya inspection ke baad band karein.,Status strip once the Ustaad submitted the report and the client must decide
+inspectionBadgeFindingAnother,Inspection flow,Finding another Ustaad — open for offers,دوسرا استاد تلاش کیا جا رہا ہے — آفرز کے لیے کھلا,Doosra Ustaad talash kiya ja raha hai — offers ke liye khula,Status badge on the inspection report after the client chose to re-open bidding
+inspStripClosedFeeOnlyWithAmount,Uncategorised,Closed after inspection — client pays inspection fee only: {fee},معائنے کے بعد بند — کلائنٹ صرف معائنہ فیس دے گا: {fee},Muainay ke baad band — client sirf Muaina fee dega: {fee},Placeholders: {fee} | Status strip when the job closed after inspection and the fee amount is known
+inspStripClosedFeeOnly,Uncategorised,Closed after inspection — client pays inspection fee only.,معائنے کے بعد بند — کلائنٹ صرف معائنہ فیس دے گا۔,Muainay ke baad band — client sirf Muaina fee dega.,Same strip when no fee snapshot is available to show
+inspStripRepairCompletedFeeWaived,Uncategorised,Repair completed — inspection fee waived.,مرمت مکمل — معائنہ فیس معاف۔,Marammat mukammal — Muaina fee maaf.,Status strip once an inspection-lane repair finished
+inspStripQuoteAcceptedFeeWaived,Uncategorised,Quote accepted — inspection fee waived. Repair in progress.,قیمت منظور — معائنہ فیس معاف۔ مرمت جاری ہے۔,Quote manzoor — Muaina fee maaf. Marammat jari hai.,Status strip while the accepted repair is being carried out
+inspStripReportSubmitted,Uncategorised,Inspection report submitted — review quote to continue repair or close after inspection.,معائنہ رپورٹ جمع ہو گئی — مرمت جاری رکھنے کے لیے قیمت دیکھیں یا معائنے کے بعد بند کریں۔,Muaina report jama ho gayi — marammat jari rakhne ke liye quote dekhein ya Muainay ke baad band karein.,Status strip once the Ustaad submitted the report and the client must decide
 inspStripUstaadHired,Uncategorised,Ustaad hired,استاد ہائر ہو گیا,Ustaad hire ho gaya,Status strip once an Ustaad is assigned to the inspection
-inspStripBookedChooseUstaad,Uncategorised,Inspection booked — choose an Ustaad,معائنہ بک ہو گیا — استاد منتخب کریں,Inspection book ho gaya — Ustaad chunein,Status strip while the inspection is still pending an Ustaad
+inspStripBookedChooseUstaad,Uncategorised,Inspection booked — choose an Ustaad,معائنہ بک ہو گیا — استاد منتخب کریں,Muaina book ho gaya — Ustaad chunein,Status strip while the inspection is still pending an Ustaad
 chooseChipCancelRate,Uncategorised,{rate}% cancel,{rate}% منسوخی,{rate}% cancel,Placeholders: {rate} | Stat chip on an Ustaad card: their cancellation rate
 locationCurrentFailed,Uncategorised,Could not get current location.,موجودہ لوکیشن حاصل نہیں ہو سکی۔,Maujooda location hasil nahi ho saki.,Shown when the GPS button fails to resolve a position
 locationResolveFailed,Uncategorised,Could not resolve selected location.,منتخب لوکیشن معلوم نہیں ہو سکی۔,Muntakhib location maloom nahi ho saki.,Shown when a search result cannot be turned into coordinates
@@ -867,14 +873,14 @@ postJobSelectUrgencyWindow,Uncategorised,Please select an urgency window.,برا
 postJobEnterAddress,Uncategorised,Enter your address.,اپنا پتہ درج کریں۔,Apna pata darj karein.,Validation: the address field is empty on final submit
 postJobAddAddressToContinue,Uncategorised,Add your service address to continue.,جاری رکھنے کے لیے اپنا سروس پتہ شامل کریں۔,Jari rakhne ke liye apna service pata shamil karein.,Validation: the address step cannot be left without an address
 postJobNearbyNotifiedNow,Uncategorised,Nearby Ustaads are notified right away.,قریبی استادوں کو فوراً اطلاع دی جاتی ہے۔,Qareebi Ustaadon ko foran ittila di jati hai.,Note under the urgent option explaining what happens on submit
-postJobInspectionNotAvailable,Uncategorised,Inspection is not available for this service.,اس سروس کے لیے معائنہ دستیاب نہیں ہے۔,Is service ke liye inspection available nahi hai.,Shown when tapping the inspection lane on a category that does not offer it
+postJobInspectionNotAvailable,Uncategorised,Inspection is not available for this service.,اس سروس کے لیے معائنہ دستیاب نہیں ہے۔,Is service ke liye Muaina available nahi hai.,Shown when tapping the inspection lane on a category that does not offer it
 postJobInspectionHeroStep1,Uncategorised,The Ustaad comes and checks it himself,استاد آ کر خود چیک کرے گا,Ustaad aa kar khud check karega,"Inspection explainer, step 1"
 postJobInspectionHeroStep2,Uncategorised,The rate is agreed before any work starts.,کام شروع کرنے سے پہلے ریٹ طے ہو جائے گا۔,Kaam shuru karne se pehle rate clear hoga.,"Inspection explainer, step 2"
-postJobInspectionHeroStep3,Uncategorised,"Go ahead if you like the quote, otherwise just pay the inspection fee.",پسند آئے تو کام کروا لیں، ورنہ صرف معائنہ فیس دیں۔,"Pasand aaye to kaam karwa lein, warna sirf inspection fee dein.","Inspection explainer, step 3"
-postJobStandardTotalFinal,Uncategorised,Total amount is final — no bidding. You choose your Ustaad in the next step.,کل رقم حتمی ہے — کوئی بولی نہیں۔ اگلے مرحلے میں آپ استاد منتخب کریں گے۔,Total amount final hai — koi bidding nahi. Aap next step par Ustaad choose karenge.,Note under the standard-lane price summary
-postJobHowInspectionStep1,Uncategorised,The inspection fee is fixed.,معائنہ فیس مقرر ہے۔,Inspection fee fixed hai.,"""How inspection works"" card, step 1"
+postJobInspectionHeroStep3,Uncategorised,"Go ahead if you like the quote, otherwise just pay the inspection fee.",پسند آئے تو کام کروا لیں، ورنہ صرف معائنہ فیس دیں۔,"Pasand aaye to kaam karwa lein, warna sirf Muaina fee dein.","Inspection explainer, step 3"
+postJobStandardTotalFinal,Uncategorised,Total amount is final — no offers. You choose your Ustaad in the next step.,کل رقم حتمی ہے — کوئی آفر نہیں۔ اگلے مرحلے میں آپ استاد منتخب کریں گے۔,Total amount final hai — koi offer nahi. Aap next step par Ustaad choose karenge.,Note under the standard-lane price summary
+postJobHowInspectionStep1,Uncategorised,The inspection fee is fixed.,معائنہ فیس مقرر ہے۔,Muaina fee fixed hai.,"""How inspection works"" card, step 1"
 postJobHowInspectionStep2,Uncategorised,"Ustaad visits, finds the problem, and gives you a fixed repair quote in the app.",استاد آتا ہے، مسئلہ معلوم کرتا ہے، اور ایپ میں مرمت کی مقررہ قیمت دیتا ہے۔,"Ustaad aata hai, masla maloom karta hai, aur app mein marammat ka fixed quote deta hai.","""How inspection works"" card, step 2"
-postJobHowInspectionStep3,Uncategorised,"Accept his quote and continue, or get bids from other Ustaads — your choice.",اس کی قیمت قبول کر کے جاری رکھیں، یا دوسرے استادوں سے بولیاں لیں — آپ کی مرضی۔,"Uska quote accept kar ke jari rakhein, ya doosre Ustaadon se bids lein — aap ki marzi.","""How inspection works"" card, step 3"
+postJobHowInspectionStep3,Uncategorised,"Accept his quote and continue, or get offers from other Ustaads — your choice.",اس کی قیمت قبول کر کے جاری رکھیں، یا دوسرے استادوں سے آفرز لیں — آپ کی مرضی۔,"Uska quote accept kar ke jari rakhein, ya doosre Ustaadon se offers lein — aap ki marzi.","""How inspection works"" card, step 3"
 cancelReasonNoLongerNeeded,Uncategorised,I no longer need the service,اب سروس کی ضرورت نہیں,Ab service ki zarurat nahi,Cancellation reason label. The stored value is fixed in ClientCancelReason.
 cancelReasonBookedByMistake,Uncategorised,I booked it by mistake,بکنگ غلطی سے ہو گئی,Booking ghalti se ho gayi,Cancellation reason label. The stored value is fixed in ClientCancelReason.
 cancelReasonProblemSolved,Uncategorised,The problem sorted itself out,مسئلہ خود حل ہو گیا,Masla khud hal ho gaya,Cancellation reason label. The stored value is fixed in ClientCancelReason.
@@ -921,20 +927,50 @@ workerEmergencyContactHint,Ustaad,Name and phone number,نام اور فون ن�
 workerAcceptedAgreementsTitle,Ustaad,My Agreements,میرے معاہدے,Mere Muahide,
 workerAcceptedAgreementsEmpty,Ustaad,You have not accepted any agreements yet.,آپ نے ابھی تک کوئی معاہدہ قبول نہیں کیا۔,Aap ne abhi tak koi muahida qabool nahi kiya.,
 agreementAcceptedOn,Uncategorised,Accepted on {date},قبول کیا گیا: {date},Qabool kiya gaya: {date},Placeholders: {date} | {date} is an already-formatted date.
-agreementAcceptanceId,Uncategorised,Acceptance ID: {id},ایکسیپٹنس آئی ڈی: {id},Acceptance ID: {id},Placeholders: {id} | {id} is the backend acceptance identifier and is never translated.
+agreementAcceptanceId,Uncategorised,Acceptance ID: {id},تصدیقی نمبر: {id},Acceptance ID: {id},Placeholders: {id} | {id} is the backend acceptance identifier and is never translated.
 agreementDownload,Uncategorised,Download,ڈاؤن لوڈ,Download,
 agreementDownloadInProgress,Uncategorised,Downloading agreement...,معاہدہ ڈاؤن لوڈ ہو رہا ہے...,Muahida download ho raha hai...,
 agreementDownloadSaved,Uncategorised,Agreement saved to {path},معاہدہ محفوظ ہو گیا: {path},Muahida save ho gaya: {path},Placeholders: {path} | {path} is a file system path and is never translated.
 agreementDownloadFailed,Uncategorised,Could not download the agreement. Please try again.,معاہدہ ڈاؤن لوڈ نہیں ہو سکا۔ براہِ کرم دوبارہ کوشش کریں۔,Muahida download nahi ho saka. Dobara koshish karein.,
-customerAgreementTitle,Customer Agreement Gate,"Customer Terms, Booking Rules & Privacy Notice",کسٹمر شرائط، بکنگ قواعد اور پرائیویسی نوٹس,"Customer Terms, Booking Rules aur Privacy Notice",
-customerAgreementCheckboxLabel,Customer Agreement Gate,I have read and agree to these Terms and Privacy Notice.,میں نے یہ شرائط اور پرائیویسی نوٹس پڑھ لیے ہیں اور ان سے رضامند ہوں۔,Main ne ye Terms aur Privacy Notice parh liye hain aur in se razamand hoon.,
-customerAgreementIAgree,Customer Agreement Gate,I Agree,میں رضامند ہوں,Main Razamand Hoon,
-customerAgreementViewDownloadPdf,Customer Agreement Gate,View/Download PDF,پی ڈی ایف دیکھیں/ڈاؤن لوڈ کریں,PDF Dekhein/Download Karein,
-customerAgreementSaveFailed,Customer Agreement Gate,Acceptance could not be saved. Please try again.,منظوری محفوظ نہیں ہو سکی۔ دوبارہ کوشش کریں۔,Acceptance save nahi ho saki. Dobara koshish karein.,
-customerAgreementEffectiveDateNote,Customer Agreement Gate,Effective from the date you accept below.,یہ آپ کی نیچے دی گئی منظوری کی تاریخ سے مؤثر ہے۔,Yeh aap ki neeche di gayi acceptance ki tareekh se effective hai.,
-customerAgreementHistoryTitle,Client Profile,Accepted Agreements,منظور شدہ معاہدے,Manzoor Shuda Muahiday,
+customerAgreementTitle,Uncategorised,"Customer Terms, Booking Rules & Privacy Notice",کسٹمر شرائط، بکنگ قواعد اور پرائیویسی نوٹس,"Customer Terms, Booking Rules aur Privacy Notice",
+customerAgreementCheckboxLabel,Uncategorised,I have read and agree to these Terms and Privacy Notice.,میں نے یہ شرائط اور پرائیویسی نوٹس پڑھ لیے ہیں اور ان سے رضامند ہوں۔,Main ne ye Terms aur Privacy Notice parh liye hain aur in se razamand hoon.,
+customerAgreementIAgree,Uncategorised,I Agree,میں رضامند ہوں,Main Razamand Hoon,
+customerAgreementViewDownloadPdf,Uncategorised,View/Download PDF,پی ڈی ایف دیکھیں/ڈاؤن لوڈ کریں,PDF Dekhein/Download Karein,
+customerAgreementSaveFailed,Uncategorised,Acceptance could not be saved. Please try again.,منظوری محفوظ نہیں ہو سکی۔ دوبارہ کوشش کریں۔,Acceptance save nahi ho saki. Dobara koshish karein.,
+customerAgreementEffectiveDateNote,Uncategorised,Effective from the date you accept below.,یہ آپ کی نیچے دی گئی منظوری کی تاریخ سے مؤثر ہے۔,Yeh aap ki neeche di gayi acceptance ki tareekh se effective hai.,
+customerAgreementHistoryTitle,Uncategorised,Accepted Agreements,منظور شدہ معاہدے,Manzoor Shuda Muahiday,
 workerSubmittedDetails,Ustaad,Submitted Details,جمع کرائی گئی تفصیلات,Jama karai gayi tafseelat,
 workerViewSubmittedDetails,Ustaad,View Submitted Details,جمع کرائی گئی تفصیلات دیکھیں,Jama karai gayi tafseelat dekhein,
 workerDetailsReadOnlyNotice,Ustaad,Your profile is approved. These details are locked and cannot be changed.,آپ کی پروفائل منظور ہو چکی ہے۔ یہ تفصیلات مقفل ہیں اور تبدیل نہیں کی جا سکتیں۔,Aap ki profile manzoor ho chuki hai. Yeh tafseelat lock hain aur tabdeel nahi ki ja sakti.,
 workerVerificationStatus,Ustaad,Verification Status,تصدیق کی حالت,Tasdeeq ki haalat,
 workerMainTrade,Ustaad,Main Trade,مرکزی ہنر,Markazi hunar,
+workerSuspendedMessage,Ustaad,Your HandyGo account has been suspended. Please contact Support for more information.,آپ کا HandyGo اکاؤنٹ معطل کر دیا گیا ہے۔ مزید معلومات کے لیے سپورٹ سے رابطہ کریں۔,Aapka HandyGo account suspend kar diya gaya hai. Mazeed maloomat ke liye Support se rabta karein.,Full-screen lock shown to a WorkerStatus.SUSPENDED Ustaad — the only content on that screen
+workerSuspendedContactSupport,Ustaad,Contact Support,سپورٹ سے رابطہ کریں,Support se Rabta Karein,Button on the suspended-account screen that dials HandyGo Support
+earningGrossEarnings,Earnings,Gross Earnings,کل کمائی,Total Kamai,Label for the pre-commission total on Worker Earning History
+earningCommissionLabel,Earnings,HandyGo Commission (18%),HandyGo کمیشن (18%),HandyGo Commission (18%),Label for HandyGo's 18% platform commission line
+earningUstaadEarnings,Earnings,Ustaad Earnings,اُستاد کی کمائی,Ustaad Ki Kamai,"Label for Gross - Commission, the amount the Ustaad actually keeps"
+earningCommissionStatusLabel,Earnings,Commission Status,کمیشن اسٹیٹس,Commission Status,Label above the Pending/Paid chip on each earning history job
+earningStatusPaid,Earnings,Paid,ادا شدہ,Paid,Commission settled by admin for this job
+notificationsPermissionOffMessage,Notifications,Notifications are off. Allow notifications to receive booking and job updates.,نوٹیفکیشن بند ہیں۔ بکنگ اور جاب اپ ڈیٹس حاصل کرنے کے لیے نوٹیفکیشن کی اجازت دیں۔,Notifications band hain. Booking aur job updates hasil karne ke liye notifications allow karein.,Shown as a non-blocking recovery row in Profile/Settings when notification permission is denied or permanently denied
+notificationsAllowAction,Notifications,Allow Notifications,نوٹیفکیشن کی اجازت دیں,Notifications Allow Karein,Button that (re)requests notification permission from the Profile/Settings recovery row
+locationPermissionRequiredMessage,Uncategorised,Location permission is required.,لوکیشن کی اجازت ضروری ہے۔,Location ki permission zaroori hai.,Shown when location permission was denied but can still be requested again
+locationAllowAction,Uncategorised,Allow Location,لوکیشن کی اجازت دیں,Location Allow Karein,Button that (re)requests location permission
+locationPermanentlyDeniedMessage,Uncategorised,Allow location permission from Settings.,لوکیشن کی اجازت سیٹنگز سے فعال کریں۔,Location permission Settings se allow karein.,Shown when location permission was permanently denied — the OS will not show the request dialog again
+locationGpsOffMessage,Uncategorised,Your phone's Location/GPS is off. Turn it on to continue.,آپ کے فون کی لوکیشن/GPS بند ہے۔ جاری رکھنے کے لیے اسے آن کریں۔,Phone ki Location/GPS band hai. Location on karein.,Shown when location permission is granted but the device's location service itself is disabled
+locationTurnOnAction,Uncategorised,Turn On Location,لوکیشن آن کریں,Location On Karein,Button that opens the location-services settings screen
+locationUnavailableRetryMessage,Uncategorised,Unable to get your location. Please try again.,لوکیشن حاصل نہیں ہو سکی۔ دوبارہ کوشش کریں۔,Location hasil nahi ho saki. Dobara koshish karein.,Shown when a location fix could not be obtained (timeout/failure) despite permission and GPS both being available
+locationStaleMessage,Uncategorised,Your current location is required. Please update your location.,آپ کی موجودہ لوکیشن ضروری ہے۔ براہ کرم اپنی لوکیشن اپ ڈیٹ کریں۔,Aapki maujooda location zaroori hai. Location update karein.,Shown when a cached worker location is too old to use for live job/discovery decisions
+cameraPermissionDeniedMessage,Uncategorised,Allow camera permission to continue.,جاری رکھنے کے لیے کیمرہ کی اجازت دیں۔,Camera use karne ke liye permission allow karein.,Shown when camera permission is denied or permanently denied
+galleryPermissionDeniedMessage,Uncategorised,Allow photo access to select files.,تصاویر منتخب کرنے کے لیے اجازت دیں۔,Photos select karne ke liye permission allow karein.,Shown when photo library/gallery permission is denied or permanently denied
+unsupportedFileMessage,Uncategorised,This file type is not supported. Select another file.,یہ فائل سپورٹڈ نہیں ہے۔ دوسری فائل منتخب کریں۔,Ye file supported nahi hai. Doosri file select karein.,Shown when a picked file's type is not accepted by the upload target
+fileTooLargeMessage,Uncategorised,The file is too large. Select a smaller file.,فائل کا سائز زیادہ ہے۔ چھوٹی فائل منتخب کریں۔,File size zyada hai. Choti file select karein.,Shown when a picked file exceeds the upload size limit
+commonChooseAgain,Shared,Choose Again,دوبارہ منتخب کریں,Dobara Chunein,Button that reopens the file/photo picker after a failed selection
+pageNotAvailableTitle,Uncategorised,Page Not Available,صفحہ دستیاب نہیں ہے,Page Available Nahi Hai,Title of the global screen shown for an unknown/invalid route
+pageNotAvailableBody,Uncategorised,This page is no longer available.,یہ صفحہ اب دستیاب نہیں ہے۔,Ye page ab available nahi hai.,Body of the global screen shown for an unknown/invalid route
+commonGoHome,Shared,Go to Home,ہوم پر جائیں,Home Par Jayein,Button that navigates back to the caller's role-appropriate home screen
+resourceBookingUnavailable,Uncategorised,This booking is no longer available.,یہ بکنگ اب دستیاب نہیں ہے۔,Ye booking ab available nahi hai.,"Shown on the booking detail screen when the booking has been deleted, or is otherwise no longer accessible to this account (404/403 from the API)"
+resourceJobUnavailable,Uncategorised,This job is no longer assigned to you.,یہ جاب اب آپ کو اسائن نہیں ہے۔,Ye job ab aapko assigned nahi hai.,Shown on the worker job detail screen when the job is no longer assigned to this worker (404/403 from the API)
+resourceConversationUnavailable,Uncategorised,This conversation is no longer available.,یہ چیٹ اب دستیاب نہیں ہے۔,Ye chat ab available nahi hai.,"Shown on the chat detail screen when the conversation has been deleted, or is otherwise no longer accessible to this account (404/403 from the API)"
+goToMyBookingsAction,Uncategorised,Go to My Bookings,میری بکنگز پر جائیں,My Bookings Par Jayein,Safe-navigation button on the client's booking-unavailable state
+goToMyJobsAction,Uncategorised,Go to My Jobs,میری جابز پر جائیں,My Jobs Par Jayein,Safe-navigation button on the worker's job-unavailable state
+goToChatsAction,Uncategorised,Go to Chats,چیٹس پر جائیں,Chats Par Jayein,Safe-navigation button on the chat-unavailable state

@@ -6,6 +6,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:handygo_app/core/network/api_client.dart';
 import 'package:handygo_app/core/storage/secure_storage_service.dart';
+import 'package:handygo_app/features/auth/data/datasources/auth_remote_datasource.dart';
 
 /// In-memory stand-in for [SecureStorageService] — overrides every method so
 /// none of them ever touch the real `flutter_secure_storage` platform
@@ -88,6 +89,58 @@ Dio _buildRefreshDio(_Handler handler) {
 
 void main() {
   group('AuthInterceptor', () {
+    test(
+      'access token expiry never logs out an active user — a single request '
+      'that 401s on an expired access token silently refreshes and succeeds, '
+      'with the newly-issued (sliding-expiry) refresh token persisted',
+      () async {
+        final storage = _FakeSecureStorage()
+          ..accessToken = 'expired'
+          ..refreshToken = 'valid-refresh';
+
+        final refreshDio = _buildRefreshDio((options) async {
+          return _json(200, {
+            'accessToken': 'fresh-token',
+            // A genuinely new refresh token, distinct from the one
+            // presented — this is what makes 30d an inactivity timeout
+            // rather than a fixed session cap: every successful refresh
+            // both the app and the backend agree the clock restarts.
+            'refreshToken': 'fresh-refresh',
+          });
+        });
+
+        var attempt = 0;
+        final mainDio = _buildMainDio((options) async {
+          attempt++;
+          final auth = options.headers['Authorization'] as String? ?? '';
+          if (auth == 'Bearer expired') {
+            return ResponseBody.fromString(
+              '{"message":"Unauthorized"}',
+              401,
+              headers: {
+                Headers.contentTypeHeader: [Headers.jsonContentType],
+              },
+            );
+          }
+          return _json(200, {'ok': 'true'});
+        });
+
+        mainDio.interceptors.add(
+          AuthInterceptor(storage, mainDio, refreshDio: refreshDio),
+        );
+
+        final response = await mainDio.get<dynamic>('/a');
+
+        expect(attempt, 2, reason: 'the 401, then one silent retry');
+        expect(response.statusCode, 200);
+        // Never a "session expired" outcome, and the persisted refresh
+        // token is the fresh one — not cleared, not left as the old one.
+        expect(storage.clearCount, 0);
+        expect(storage.accessToken, 'fresh-token');
+        expect(storage.refreshToken, 'fresh-refresh');
+      },
+    );
+
     test(
       'concurrent 401s share a single refresh and both retry with the new token',
       () async {
@@ -354,5 +407,201 @@ void main() {
         expect(requestCount, 2, reason: 'original attempt + exactly one retry');
       },
     );
+
+    test(
+      'a transient network failure on the retry (right after a successful '
+      'refresh) surfaces as itself, never as the stale pre-refresh 401 — a '
+      'one-off blip on the retry must not read as an expired session',
+      () async {
+        final storage = _FakeSecureStorage()
+          ..accessToken = 'expired'
+          ..refreshToken = 'valid-refresh';
+
+        final refreshDio = _buildRefreshDio((options) async {
+          return _json(200, {
+            'accessToken': 'fresh-token',
+            'refreshToken': 'fresh-refresh',
+          });
+        });
+
+        var attempt = 0;
+        final mainDio = _buildMainDio((options) async {
+          attempt++;
+          final auth = options.headers['Authorization'] as String? ?? '';
+          if (auth == 'Bearer expired') {
+            return ResponseBody.fromString(
+              '{"message":"Unauthorized"}',
+              401,
+              headers: {
+                Headers.contentTypeHeader: [Headers.jsonContentType],
+              },
+            );
+          }
+          // The retry itself (now carrying the fresh token) hits a
+          // transient network failure — nothing to do with authorization.
+          throw DioException(
+            requestOptions: options,
+            type: DioExceptionType.connectionError,
+          );
+        });
+
+        mainDio.interceptors.add(
+          AuthInterceptor(storage, mainDio, refreshDio: refreshDio),
+        );
+
+        await expectLater(
+          mainDio.get<dynamic>('/a'),
+          throwsA(
+            isA<DioException>()
+                .having((e) => e.type, 'type', DioExceptionType.connectionError)
+                .having((e) => e.response?.statusCode, 'statusCode', isNull),
+          ),
+        );
+
+        expect(attempt, 2, reason: 'original attempt + the retry that then failed');
+        // The refresh itself succeeded — a transient retry failure must
+        // never be treated as proof the refresh token is bad.
+        expect(storage.clearCount, 0);
+        expect(storage.accessToken, 'fresh-token');
+      },
+    );
+
+    test(
+      'app restart with an expired access token but a valid refresh token '
+      'silently restores the session — GET /auth/me 401s once, the '
+      'interceptor refreshes and retries behind the scenes, and the caller '
+      'sees a normal successful user, never a "session expired" error',
+      () async {
+        final storage = _FakeSecureStorage()
+          ..accessToken = 'expired-access'
+          ..refreshToken = 'still-valid-refresh';
+
+        final refreshDio = _buildRefreshDio((options) async {
+          return _json(200, {
+            'accessToken': 'fresh-access',
+            'refreshToken': 'fresh-refresh',
+          });
+        });
+
+        final mainDio = _buildMainDio((options) async {
+          final auth = options.headers['Authorization'] as String? ?? '';
+          if (auth == 'Bearer expired-access') {
+            return ResponseBody.fromString(
+              '{"message":"Unauthorized"}',
+              401,
+              headers: {
+                Headers.contentTypeHeader: [Headers.jsonContentType],
+              },
+            );
+          }
+          expect(auth, 'Bearer fresh-access');
+          return ResponseBody.fromString(
+            '{"data":{"id":"u1","phone":"+923001234567","role":"CLIENT",'
+            '"firstName":"Ali","lastName":"Khan"}}',
+            200,
+            headers: {
+              Headers.contentTypeHeader: [Headers.jsonContentType],
+            },
+          );
+        });
+
+        mainDio.interceptors.add(
+          AuthInterceptor(storage, mainDio, refreshDio: refreshDio),
+        );
+
+        final datasource = AuthRemoteDatasource(mainDio, mainDio);
+        final user = await datasource.getCurrentUser();
+
+        expect(user.id, 'u1');
+        expect(user.role, 'CLIENT');
+        // The old token was silently replaced — never wiped, which is what
+        // would force the user back to a login screen.
+        expect(storage.clearCount, 0);
+        expect(storage.accessToken, 'fresh-access');
+        expect(storage.refreshToken, 'fresh-refresh');
+      },
+    );
+
+    test(
+      'resetRefreshState lets a subsequent 401 start its own fresh refresh '
+      'instead of waiting on a refresh left orphaned by a logout',
+      () async {
+        final storage = _FakeSecureStorage()
+          ..accessToken = 'expired'
+          ..refreshToken = 'valid-refresh';
+
+        final firstRefreshGate = Completer<ResponseBody>();
+        var refreshCalls = 0;
+        final refreshDio = _buildRefreshDio((options) async {
+          refreshCalls++;
+          if (refreshCalls == 1) {
+            // Simulates a refresh still in flight at the moment of logout —
+            // deliberately never resolves during the assertions below.
+            return firstRefreshGate.future;
+          }
+          return _json(200, {
+            'accessToken': 'fresh-token-2',
+            'refreshToken': 'fresh-refresh-2',
+          });
+        });
+
+        final mainDio = _buildMainDio((options) async {
+          final auth = options.headers['Authorization'] as String? ?? '';
+          if (auth == 'Bearer expired' || auth.isEmpty) {
+            return ResponseBody.fromString(
+              '{"message":"Unauthorized"}',
+              401,
+              headers: {
+                Headers.contentTypeHeader: [Headers.jsonContentType],
+              },
+            );
+          }
+          return _json(200, {'ok': 'true'});
+        });
+
+        final interceptor = AuthInterceptor(
+          storage,
+          mainDio,
+          refreshDio: refreshDio,
+        );
+        mainDio.interceptors.add(interceptor);
+
+        // Kick off a request that 401s and starts a refresh which will
+        // never resolve on its own.
+        final stuckRequest = mainDio.get<dynamic>('/a');
+        // Let its onError reach _isRefreshing = true before logout happens.
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+
+        // Logout resets the interceptor's bookkeeping — same call
+        // LogoutNotifier makes via Dio.resetAuthRefreshState().
+        interceptor.resetRefreshState();
+
+        // A fresh 401 for a different request must not wait on the orphaned
+        // completer — it starts (and completes) its own refresh.
+        final secondResponse = await mainDio
+            .get<dynamic>('/b')
+            .timeout(const Duration(seconds: 2));
+
+        expect(secondResponse.statusCode, 200);
+        expect(
+          refreshCalls,
+          2,
+          reason: 'the second request ran its own refresh rather than '
+              'reusing the stuck one',
+        );
+
+        // Let the first refresh resolve so nothing leaks past the test —
+        // its retry then goes through normally with the token it got.
+        firstRefreshGate.complete(
+          _json(200, {'accessToken': 'ignored', 'refreshToken': 'ignored'}),
+        );
+        await stuckRequest;
+      },
+    );
+
+    test('resetAuthRefreshState is a no-op on a Dio with no AuthInterceptor', () {
+      final dio = Dio(BaseOptions(baseUrl: 'http://test'));
+      expect(() => dio.resetAuthRefreshState(), returnsNormally);
+    });
   });
 }

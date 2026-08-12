@@ -17,6 +17,7 @@ import 'choose_ustaad_page.dart';
 import 'track_worker_page.dart';
 import 'worker_discovery_map_page.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
+import '../../../../core/network/offline_banner.dart';
 import '../utils/booking_labels.dart';
 import '../../../../core/errors/failure_messages.dart';
 
@@ -49,6 +50,8 @@ class _MyBookingsPageState extends ConsumerState<MyBookingsPage> {
     final bookingsAsync = ref.watch(bookingsNotifierProvider);
     final filter = ref.watch(bookingFilterProvider);
     final filtered = ref.watch(filteredBookingsProvider);
+    final isShowingCachedData =
+        ref.watch(bookingsIsOfflineProvider) && bookingsAsync.hasValue;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
@@ -58,6 +61,7 @@ class _MyBookingsPageState extends ConsumerState<MyBookingsPage> {
           children: [
             _Header(filter: filter),
             _StatusTabs(activeTab: filter.activeTab),
+            if (isShowingCachedData) const OfflineDataBanner(),
             if (bookingsAsync.hasError && bookingsAsync.hasValue)
               const _RefreshFailedBanner(),
             Expanded(

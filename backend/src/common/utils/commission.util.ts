@@ -64,9 +64,12 @@ export function calculateWorkerEarning(
  * The worker-facing gross earning for a completed booking — the full
  * pre-commission amount (same value `calculatePlatformFee`'s 18% is computed
  * from), exposed under a clearer name for earnings/stats/history display.
- * Worker-facing screens must always show this, never `calculateWorkerEarning`
- * — HandyGo's commission is a company-accounting concern only, never
- * presented to the Ustaad as a deduction from their own earning.
+ *
+ * The Worker Earning History screen shows this alongside
+ * `calculatePlatformFee` and `calculateWorkerEarning` side by side (Gross /
+ * HandyGo Commission / Ustaad Earning) — see
+ * `WorkersRepository.getEarningsHistory`. The "today" dashboard tile still
+ * shows gross only.
  */
 export function calculateGrossWorkerEarning(
   input: CommissionBaseInput,

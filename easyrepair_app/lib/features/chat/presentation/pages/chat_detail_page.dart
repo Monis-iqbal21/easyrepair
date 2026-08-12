@@ -5,7 +5,6 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -14,7 +13,13 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:video_player/video_player.dart';
 
+import '../../../../core/errors/failure_messages.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
+import '../../../../core/location/location_availability.dart';
+import '../../../../core/location/location_recovery_snack.dart';
+import '../../../../core/network/offline_banner.dart';
+import '../../../../core/permissions/media_permission_helper.dart';
+import '../../../../core/presentation/widgets/resource_unavailable_view.dart';
 import '../../../../core/services/chat_socket_service.dart';
 import '../../../../features/auth/presentation/providers/auth_providers.dart';
 import '../../../../features/notifications/presentation/providers/notification_providers.dart';
@@ -142,7 +147,7 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
           .send(widget.conversationId, text);
       WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
     } catch (e) {
-      _showError(e.toString());
+      if (mounted) _showError(failureMessage(context.l10n, e));
     } finally {
       if (mounted) setState(() => _isSending = false);
     }
@@ -195,14 +200,26 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
   // ── Gallery / camera ──────────────────────────────────────────────────────
 
   Future<void> _pickFromGallery(bool isVideo) async {
+    // Re-entry guard: an attachment send already in flight must never let a
+    // second picker flow start (accidental repeated taps on the trigger).
+    if (_isSendingAttachment) return;
     if (isVideo) {
-      final file = await _picker.pickVideo(source: ImageSource.gallery);
-      if (file == null) return;
+      final file = await runPickerWithRecovery(
+        context,
+        MediaPermissionKind.gallery,
+        () => _picker.pickVideo(source: ImageSource.gallery),
+      );
+      if (file == null || !mounted) return;
       final mime = file.mimeType ?? _mimeFromPath(file.path);
       await _sendMediaFile(file.path, mime);
     } else {
-      final files = await _picker.pickMultiImage();
-      if (files.isEmpty) return;
+      final files = await runPickerWithRecovery(
+            context,
+            MediaPermissionKind.gallery,
+            () => _picker.pickMultiImage(),
+          ) ??
+          [];
+      if (files.isEmpty || !mounted) return;
       setState(() => _isSendingAttachment = true);
       try {
         for (final file in files) {
@@ -211,7 +228,7 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
               .read(chatRepositoryProvider)
               .sendMediaMessage(widget.conversationId, file.path, mime);
           result.fold(
-            (failure) => _showError(failure.toString()),
+            (failure) => _showError(failureMessage(context.l10n, failure)),
             (message) => ref
                 .read(chatMessagesProvider(widget.conversationId).notifier)
                 .append(message),
@@ -225,25 +242,29 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
   }
 
   Future<void> _captureFromCamera(bool isVideo) async {
-    XFile? file;
-    if (isVideo) {
-      file = await _picker.pickVideo(source: ImageSource.camera);
-    } else {
-      file = await _picker.pickImage(source: ImageSource.camera);
-    }
-    if (file == null) return;
+    final file = await runPickerWithRecovery(
+      context,
+      MediaPermissionKind.camera,
+      () => isVideo
+          ? _picker.pickVideo(source: ImageSource.camera)
+          : _picker.pickImage(source: ImageSource.camera),
+    );
+    if (file == null || !mounted) return;
     final mime = file.mimeType ?? _mimeFromPath(file.path);
     await _sendMediaFile(file.path, mime);
   }
 
   Future<void> _sendMediaFile(String path, String mimeType) async {
+    // Re-entry guard: an attachment send already in flight must never submit
+    // the same picked file twice from an accidental repeated tap.
+    if (_isSendingAttachment) return;
     setState(() => _isSendingAttachment = true);
     try {
       final result = await ref
           .read(chatRepositoryProvider)
           .sendMediaMessage(widget.conversationId, path, mimeType);
       result.fold(
-        (failure) => _showError(failure.toString()),
+        (failure) => _showError(failureMessage(context.l10n, failure)),
         (message) {
           ref
               .read(chatMessagesProvider(widget.conversationId).notifier)
@@ -369,13 +390,16 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
   }
 
   Future<void> _sendVoiceFile(String path) async {
+    // Re-entry guard: an attachment send already in flight must never submit
+    // the same recorded voice note twice from an accidental repeated tap.
+    if (_isSendingAttachment) return;
     setState(() => _isSendingAttachment = true);
     try {
       final result = await ref
           .read(chatRepositoryProvider)
           .sendVoiceMessage(widget.conversationId, path);
       result.fold(
-        (failure) => _showError(failure.toString()),
+        (failure) => _showError(failureMessage(context.l10n, failure)),
         (message) {
           ref
               .read(chatMessagesProvider(widget.conversationId).notifier)
@@ -391,27 +415,24 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
   // ── Location ──────────────────────────────────────────────────────────────
 
   Future<void> _sendLocation() async {
-    // Captured up front: everything below runs after an await.
-    final l10n = context.l10n;
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        _showError(l10n.chatLocationPermissionDenied);
-        return;
+    // Re-entry guard: an attachment send already in flight must never start
+    // a second location resolve+send from an accidental repeated tap.
+    if (_isSendingAttachment) return;
+    final locationResult = await resolveCurrentLocation();
+    if (!locationResult.isAvailable) {
+      if (mounted) {
+        showLocationRecoverySnack(
+          context,
+          locationResult.status,
+          onRetry: _sendLocation,
+        );
       }
-    }
-    if (permission == LocationPermission.deniedForever) {
-      _showError(l10n.chatLocationPermissionPermanentlyDenied);
       return;
     }
 
     setState(() => _isSendingAttachment = true);
     try {
-      final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
-
+      final position = locationResult.position!;
       final result = await ref
           .read(chatRepositoryProvider)
           .sendLocationMessage(
@@ -420,7 +441,7 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
             position.longitude,
           );
       result.fold(
-        (failure) => _showError(failure.toString()),
+        (failure) => _showError(failureMessage(context.l10n, failure)),
         (message) {
           ref
               .read(chatMessagesProvider(widget.conversationId).notifier)
@@ -428,8 +449,6 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
           WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
         },
       );
-    } catch (e) {
-      _showError(l10n.chatLocationFailed('$e'));
     } finally {
       if (mounted) setState(() => _isSendingAttachment = false);
     }
@@ -555,7 +574,7 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
         .read(chatRepositoryProvider)
         .editMessage(widget.conversationId, message.id, newText);
     result.fold(
-      (failure) => _showError(failure.toString()),
+      (failure) => _showError(failureMessage(context.l10n, failure)),
       (updated) {
         ref
             .read(chatMessagesProvider(widget.conversationId).notifier)
@@ -591,7 +610,7 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
           .read(chatRepositoryProvider)
           .deleteMessage(widget.conversationId, message.id);
       result.fold(
-        (failure) => _showError(failure.toString()),
+        (failure) => _showError(failureMessage(context.l10n, failure)),
         (deleted) {
           ref
               .read(chatMessagesProvider(widget.conversationId).notifier)
@@ -680,6 +699,9 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
   Widget build(BuildContext context) {
     final messagesAsync =
         ref.watch(chatMessagesProvider(widget.conversationId));
+    final isShowingCachedData =
+        ref.watch(chatMessagesIsOfflineProvider(widget.conversationId)) &&
+            messagesAsync.hasValue;
     final currentUserId =
         ref.watch(authStateProvider).valueOrNull?.id ?? '';
 
@@ -789,6 +811,7 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
       body: Column(
         children: [
           if (isSupport) const _SupportBanner(),
+          if (isShowingCachedData) const OfflineDataBanner(),
           Expanded(
             child: messagesAsync.when(
               loading: () => const Center(
@@ -796,7 +819,17 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
                   valueColor: AlwaysStoppedAnimation(Color(0xFFDB6234)),
                 ),
               ),
-              error: (err, _) => Center(
+              error: (err, _) => isResourceUnavailableFailure(err)
+                  ? ResourceUnavailableView(
+                      message: context.l10n.resourceConversationUnavailable,
+                      actionLabel: context.l10n.goToChatsAction,
+                      onAction: () => context.go(
+                        ref.read(authStateProvider).valueOrNull?.isWorker == true
+                            ? '/worker/chat'
+                            : '/client/chat',
+                      ),
+                    )
+                  : Center(
                 child: Padding(
                   padding: const EdgeInsets.all(24),
                   child: Column(
@@ -805,7 +838,7 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
                       const Icon(Icons.error_outline,
                           size: 48, color: Color(0xFFEF4444)),
                       const SizedBox(height: 12),
-                      Text(err.toString(),
+                      Text(failureMessage(context.l10n, err),
                           textAlign: TextAlign.center,
                           style: const TextStyle(color: Color(0xFF6B7280))),
                       const SizedBox(height: 16),

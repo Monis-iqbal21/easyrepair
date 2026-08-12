@@ -67,6 +67,7 @@ describe('AuthService — SMS OTP login/registration', () => {
         firstName: 'Existing',
         lastName: 'Worker',
         verificationStatus: 'VERIFIED',
+        status: 'ACTIVE',
       }),
       findUserByNormalizedPhone: jest.fn().mockResolvedValue(null),
       countRecentOtpRequests: jest.fn().mockResolvedValue(0),
@@ -115,8 +116,8 @@ describe('AuthService — SMS OTP login/registration', () => {
       expect(repository.createAuthOtp).not.toHaveBeenCalled();
     });
 
-    it('enforces the phone rate limit (3 per 30 minutes)', async () => {
-      repository.countRecentAuthOtpByPhone.mockResolvedValue(3);
+    it('enforces the phone rate limit (5 per 30 minutes)', async () => {
+      repository.countRecentAuthOtpByPhone.mockResolvedValue(5);
       await expect(
         service.requestOtp(PHONE_RAW, AuthOtpPurpose.CLIENT_LOGIN_REGISTER, IP),
       ).rejects.toMatchObject({ response: { error: 'OTP_RATE_LIMITED' } });
@@ -297,11 +298,13 @@ describe('AuthService — SMS OTP login/registration', () => {
       );
     });
 
-    it('rejects the Client flow when the phone already belongs to a WORKER', async () => {
+    it('rejects the Client flow when the phone already belongs to a WORKER, without revealing the role', async () => {
       repository.findUserByPhoneVariants.mockResolvedValue(WORKER_USER);
       await expect(
         service.clientOtpLoginOrRegister('Ali Khan', PHONE_RAW, '123456'),
-      ).rejects.toMatchObject({ response: { error: 'PHONE_IS_WORKER' } });
+      ).rejects.toMatchObject({
+        response: { error: 'PHONE_ALREADY_REGISTERED', message: '' },
+      });
       expect(repository.createUserWithProfile).not.toHaveBeenCalled();
     });
 
@@ -377,7 +380,7 @@ describe('AuthService — SMS OTP login/registration', () => {
       expect(result.user.verificationStatus).toBe('PENDING');
     });
 
-    it('rejects with PHONE_IS_WORKER when a Worker already owns the number', async () => {
+    it('rejects with PHONE_ALREADY_REGISTERED when a Worker already owns the number', async () => {
       repository.findUserByPhoneVariants.mockResolvedValue(WORKER_USER);
       await expect(
         service.workerOtpRegister(
@@ -387,10 +390,12 @@ describe('AuthService — SMS OTP login/registration', () => {
           'password123',
           'cat-1',
         ),
-      ).rejects.toMatchObject({ response: { error: 'PHONE_IS_WORKER' } });
+      ).rejects.toMatchObject({
+        response: { error: 'PHONE_ALREADY_REGISTERED', message: '' },
+      });
     });
 
-    it('rejects with PHONE_IS_CLIENT when a Client already owns the number', async () => {
+    it('rejects with PHONE_ALREADY_REGISTERED when a Client already owns the number, without revealing the role', async () => {
       repository.findUserByPhoneVariants.mockResolvedValue(CLIENT_USER);
       await expect(
         service.workerOtpRegister(
@@ -400,7 +405,26 @@ describe('AuthService — SMS OTP login/registration', () => {
           'password123',
           'cat-1',
         ),
-      ).rejects.toMatchObject({ response: { error: 'PHONE_IS_CLIENT' } });
+      ).rejects.toMatchObject({
+        response: { error: 'PHONE_ALREADY_REGISTERED', message: '' },
+      });
+    });
+
+    it('newly-registered Worker gets ACTIVE workerStatus', async () => {
+      repository.findUserByPhoneVariants.mockResolvedValue(null);
+      repository.createUserWithProfile.mockResolvedValue({
+        id: 'new-worker',
+        phone: PHONE_NORMALIZED,
+        role: Role.WORKER,
+      });
+      const result = await service.workerOtpRegister(
+        'Muhammad Ali Khan',
+        PHONE_RAW,
+        '123456',
+        'password123',
+        'cat-1',
+      );
+      expect(result.user.workerStatus).toBe('ACTIVE');
     });
   });
 
@@ -414,10 +438,11 @@ describe('AuthService — SMS OTP login/registration', () => {
       );
     });
 
-    it('logs in an existing WORKER and marks the phone verified', async () => {
+    it('logs in an existing WORKER, marks the phone verified, and surfaces workerStatus', async () => {
       repository.findUserByPhoneVariants.mockResolvedValue(WORKER_USER);
       const result = await service.workerOtpLogin(PHONE_RAW, '123456');
       expect(result.user.role).toBe(Role.WORKER);
+      expect(result.user.workerStatus).toBe('ACTIVE');
       expect(repository.markPhoneVerified).toHaveBeenCalledWith(WORKER_USER.id);
     });
 
@@ -425,14 +450,18 @@ describe('AuthService — SMS OTP login/registration', () => {
       repository.findUserByPhoneVariants.mockResolvedValue(null);
       await expect(
         service.workerOtpLogin(PHONE_RAW, '123456'),
-      ).rejects.toMatchObject({ response: { error: 'WORKER_NOT_FOUND' } });
+      ).rejects.toMatchObject({
+        response: { error: 'PHONE_NOT_REGISTERED', message: '' },
+      });
     });
 
-    it('rejects when the phone belongs to a CLIENT, not a WORKER', async () => {
+    it('rejects when the phone belongs to a CLIENT, not a WORKER, with the exact same rejection as a nonexistent phone', async () => {
       repository.findUserByPhoneVariants.mockResolvedValue(CLIENT_USER);
       await expect(
         service.workerOtpLogin(PHONE_RAW, '123456'),
-      ).rejects.toMatchObject({ response: { error: 'WORKER_NOT_FOUND' } });
+      ).rejects.toMatchObject({
+        response: { error: 'PHONE_NOT_REGISTERED', message: '' },
+      });
     });
   });
 
@@ -451,6 +480,28 @@ describe('AuthService — SMS OTP login/registration', () => {
       } as any);
       expect(result.user.role).toBe(Role.WORKER);
       expect(result.accessToken).toBe('signed.jwt.token');
+    });
+
+    it('rejects a Client-owned phone with the same role-privacy-safe rejection as a nonexistent one (Worker password login is role-scoped)', async () => {
+      const passwordHash = await bcrypt.hash('password123', 12);
+      repository.findUserByPhone.mockResolvedValue({
+        ...CLIENT_USER,
+        passwordHash,
+      });
+      await expect(
+        service.login({ phone: PHONE_RAW, password: 'password123' } as any),
+      ).rejects.toMatchObject({
+        response: { error: 'PHONE_NOT_REGISTERED', message: '' },
+      });
+    });
+
+    it('rejects a genuinely nonexistent phone with the exact same rejection', async () => {
+      repository.findUserByPhone.mockResolvedValue(null);
+      await expect(
+        service.login({ phone: PHONE_RAW, password: 'password123' } as any),
+      ).rejects.toMatchObject({
+        response: { error: 'PHONE_NOT_REGISTERED', message: '' },
+      });
     });
   });
 
@@ -652,10 +703,10 @@ describe('AuthService — SMS OTP login/registration', () => {
       expect(result).toEqual({ status: 'CLIENT' });
     });
 
-    it('returns WORKER for an existing Worker phone', async () => {
+    it('returns NEW (not WORKER) for an existing Worker phone — never reveals the role', async () => {
       repository.findUserByPhoneVariants.mockResolvedValue(WORKER_USER);
       const result = await service.checkClientPhoneStatus(PHONE_RAW);
-      expect(result).toEqual({ status: 'WORKER' });
+      expect(result).toEqual({ status: 'NEW' });
     });
   });
 
@@ -682,18 +733,22 @@ describe('AuthService — SMS OTP login/registration', () => {
       ).rejects.toThrow('Invalid phone number or password');
     });
 
-    it('rejects an unregistered phone with a generic message (no enumeration)', async () => {
+    it('rejects an unregistered phone with the role-privacy-safe rejection', async () => {
       repository.findUserByPhoneVariants.mockResolvedValue(null);
       await expect(
         service.clientPasswordLogin(PHONE_RAW, 'password123'),
-      ).rejects.toThrow('Invalid phone number or password');
+      ).rejects.toMatchObject({
+        response: { error: 'PHONE_NOT_REGISTERED', message: '' },
+      });
     });
 
-    it('rejects a Worker phone with the Ustaad-login redirect', async () => {
+    it('rejects a Worker phone with the exact same rejection as an unregistered one — never reveals the role', async () => {
       repository.findUserByPhoneVariants.mockResolvedValue(WORKER_USER);
       await expect(
         service.clientPasswordLogin(PHONE_RAW, 'password123'),
-      ).rejects.toMatchObject({ response: { error: 'PHONE_IS_WORKER' } });
+      ).rejects.toMatchObject({
+        response: { error: 'PHONE_NOT_REGISTERED', message: '' },
+      });
     });
   });
 
@@ -740,19 +795,23 @@ describe('AuthService — SMS OTP login/registration', () => {
       );
     });
 
-    it('rejects with PHONE_IS_WORKER when a Worker already owns the number', async () => {
+    it('rejects with PHONE_ALREADY_REGISTERED when a Worker already owns the number, without revealing the role', async () => {
       repository.findUserByPhoneVariants.mockResolvedValue(WORKER_USER);
       await expect(
         service.clientPasswordRegister('Ali Khan', PHONE_RAW, 'password123'),
-      ).rejects.toMatchObject({ response: { error: 'PHONE_IS_WORKER' } });
+      ).rejects.toMatchObject({
+        response: { error: 'PHONE_ALREADY_REGISTERED', message: '' },
+      });
       expect(repository.createUserWithProfile).not.toHaveBeenCalled();
     });
 
-    it('rejects with PHONE_IS_CLIENT when a Client already owns the number', async () => {
+    it('rejects with PHONE_ALREADY_REGISTERED when a Client already owns the number', async () => {
       repository.findUserByPhoneVariants.mockResolvedValue(CLIENT_USER);
       await expect(
         service.clientPasswordRegister('Ali Khan', PHONE_RAW, 'password123'),
-      ).rejects.toMatchObject({ response: { error: 'PHONE_IS_CLIENT' } });
+      ).rejects.toMatchObject({
+        response: { error: 'PHONE_ALREADY_REGISTERED', message: '' },
+      });
       expect(repository.createUserWithProfile).not.toHaveBeenCalled();
     });
 

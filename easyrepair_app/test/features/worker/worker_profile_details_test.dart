@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fpdart/fpdart.dart';
+import 'package:handygo_app/core/data/cached_result.dart';
 import 'package:handygo_app/core/errors/failures.dart';
 import 'package:handygo_app/features/worker/domain/entities/worker_profile_entity.dart';
 import 'package:handygo_app/features/worker/domain/entities/worker_skill_entity.dart';
@@ -62,8 +63,8 @@ class _FakeRepo implements WorkerRepository {
   final WorkerProfileEntity profile;
 
   @override
-  Future<Either<Failure, WorkerProfileEntity>> getProfile() async =>
-      Right(profile);
+  Future<Either<Failure, CachedResult<WorkerProfileEntity>>> getProfile() async =>
+      Right(CachedResult(profile));
 
   @override
   dynamic noSuchMethod(Invocation invocation) =>

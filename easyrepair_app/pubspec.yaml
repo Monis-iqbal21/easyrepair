@@ -31,6 +31,9 @@ dependencies:
   flutter_secure_storage: ^9.2.4
   shared_preferences: ^2.5.3
 
+  # Connectivity detection (device-level; API result is still the source of truth)
+  connectivity_plus: ^6.1.5
+
   # Functional programming
   fpdart: ^1.1.0
 
@@ -79,6 +82,22 @@ dev_dependencies:
 
   flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.14.3
+
+  # Directly imported (not just transitive) by
+  # test/core/storage/secure_storage_service_test.dart to swap
+  # FlutterSecureStoragePlatform.instance for a recording fake.
+  flutter_secure_storage_platform_interface: ^1.1.2
+
+  # Directly imported (not just transitive) by
+  # test/core/location/location_availability_test.dart to swap
+  # GeolocatorPlatform.instance for a fake — same pattern as above.
+  geolocator_platform_interface: ^4.2.6
+
+  # Directly imported (not just transitive) by
+  # test/core/permissions/media_permission_helper_test.dart and
+  # test/core/notifications/notification_permission_service_test.dart to
+  # swap PermissionHandlerPlatform.instance for a fake — same pattern.
+  permission_handler_platform_interface: ^4.3.0
 
 flutter:
   uses-material-design: true

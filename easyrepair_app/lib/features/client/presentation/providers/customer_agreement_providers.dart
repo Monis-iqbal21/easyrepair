@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/l10n/locale_provider.dart';
 import '../../../../core/network/api_client.dart';
+import '../../../../core/network/connectivity_service.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../data/datasources/customer_agreement_remote_datasource.dart';
 import '../../data/repositories/customer_agreement_repository_impl.dart';
@@ -52,6 +53,11 @@ class AcceptCustomerAgreementNotifier extends AsyncNotifier<void> {
   /// Returns true on success. On failure, sets [state] to [AsyncError] and
   /// returns false — the gate stays open and shows a retryable error.
   Future<bool> accept({String? deviceDescriptor}) async {
+    final offline = offlineActionGuard();
+    if (offline != null) {
+      state = AsyncError(offline, StackTrace.current);
+      return false;
+    }
     state = const AsyncLoading();
     final result =
         await ref.read(customerAgreementRepositoryProvider).acceptAgreement(

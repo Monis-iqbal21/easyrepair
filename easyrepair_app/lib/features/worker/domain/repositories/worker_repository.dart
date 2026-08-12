@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:fpdart/fpdart.dart';
 
+import '../../../../core/data/cached_result.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../bookings/domain/entities/booking_entity.dart';
 import '../entities/worker_profile_entity.dart';
@@ -13,7 +14,8 @@ import '../entities/agreement_template_entity.dart';
 import '../entities/earning_history_entity.dart';
 
 abstract class WorkerRepository {
-  Future<Either<Failure, WorkerProfileEntity>> getProfile();
+  /// Falls back to cache on failure — see [CachedResult].
+  Future<Either<Failure, CachedResult<WorkerProfileEntity>>> getProfile();
 
   // ── Profile completion (Ustaad onboarding) ────────────────────────────
   Future<Either<Failure, void>> updateProfileCompletion({
@@ -67,13 +69,15 @@ abstract class WorkerRepository {
 
   Future<Either<Failure, List<CategoryEntity>>> getCategories();
 
-  Future<Either<Failure, List<NewJobEntity>>> getNewJobs();
+  Future<Either<Failure, CachedResult<List<NewJobEntity>>>> getNewJobs();
 
-  Future<Either<Failure, List<BookingEntity>>> getWorkerJobs(
+  Future<Either<Failure, CachedResult<List<BookingEntity>>>> getWorkerJobs(
     String? statusFilter,
   );
 
-  Future<Either<Failure, BookingEntity>> getWorkerJobById(String bookingId);
+  Future<Either<Failure, CachedResult<BookingEntity>>> getWorkerJobById(
+    String bookingId,
+  );
 
   Future<Either<Failure, BookingEntity>> completeWorkerJob(String bookingId);
 
@@ -87,5 +91,6 @@ abstract class WorkerRepository {
   Future<Either<Failure, WorkerReviewSummaryEntity>> getWorkerReviewSummary();
 
   /// All-time completed-job earnings grouped by date (gross, newest first).
-  Future<Either<Failure, List<EarningHistoryDayEntity>>> getEarningsHistory();
+  Future<Either<Failure, CachedResult<List<EarningHistoryDayEntity>>>>
+      getEarningsHistory();
 }

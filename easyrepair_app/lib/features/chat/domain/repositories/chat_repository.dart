@@ -1,5 +1,6 @@
 import 'package:fpdart/fpdart.dart';
 
+import '../../../../core/data/cached_result.dart';
 import '../../../../core/errors/failures.dart';
 import '../entities/chat_entities.dart';
 
@@ -14,8 +15,9 @@ abstract class ChatRepository {
   /// Guarantees the caller's permanent HandyGo Support thread exists.
   /// Idempotent — repeated calls never create a second conversation.
   Future<Either<Failure, void>> ensureSupportConversation();
-  Future<Either<Failure, List<ConversationEntity>>> getConversations();
-  Future<Either<Failure, List<MessageEntity>>> getMessages(
+  Future<Either<Failure, CachedResult<List<ConversationEntity>>>>
+      getConversations();
+  Future<Either<Failure, CachedResult<List<MessageEntity>>>> getMessages(
     String conversationId, {
     int limit,
     String? before,

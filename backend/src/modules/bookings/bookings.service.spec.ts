@@ -912,3 +912,273 @@ describe('BookingsService.reopenAfterWorkerCancellation', () => {
     expect(jobBroadcastService.broadcastJob).toHaveBeenCalledWith('booking-1');
   });
 });
+
+// ── Chunk 3: launch-hardening idempotency ─────────────────────────────────
+describe('BookingsService idempotency', () => {
+  let bookingsRepository: any;
+  let storageService: any;
+  let notificationsService: any;
+  let chatService: any;
+  let bookingsQueue: any;
+  let jobBroadcastService: any;
+  let jobCompletionNotifier: any;
+  let service: BookingsService;
+
+  function makeBooking(status: string, overrides: Partial<any> = {}) {
+    return {
+      id: 'booking-1',
+      clientProfileId: 'client-1',
+      workerProfileId: overrides.workerProfileId ?? 'worker-1',
+      status,
+      category: { name: 'Plumbing' },
+      title: null,
+      description: 'Fix the sink',
+      urgency: 'NORMAL',
+      timeSlot: null,
+      urgentWindow: null,
+      scheduledAt: null,
+      createdAt: new Date(),
+      inspection: false,
+      lane: 'STANDARD',
+      standardServiceId: null,
+      standardServiceNameSnapshot: null,
+      standardServicePriceSnapshot: null,
+      standardServiceItems: [],
+      inspectionFeeSnapshot: null,
+      estimatedPrice: 1500,
+      finalPrice: 1500,
+      addressLine: '123 Street',
+      city: 'Karachi',
+      latitude: 24.86,
+      longitude: 67.0,
+      acceptedAt: new Date(),
+      enRouteAt: null,
+      arrivedAt: null,
+      startedAt: null,
+      completedAt: null,
+      cancellationReason: null,
+      cancelledByRole: null,
+      expiresAt: null,
+      liveStartedAt: new Date(),
+      relistedAt: null,
+      idempotencyKey: null,
+      clientProfile: { id: 'client-1', userId: 'client-user-1' },
+      workerProfile: {
+        id: 'worker-1',
+        userId: 'worker-user-1',
+        firstName: 'Ali',
+        lastName: 'Khan',
+        avatarUrl: null,
+        rating: 4.5,
+        currentLat: null,
+        currentLng: null,
+        user: { phone: '+923001234567' },
+      },
+      inspectionReport: null,
+      review: null,
+      attachments: [],
+      bids: [],
+      workerExclusions: [],
+      ...overrides,
+    };
+  }
+
+  beforeEach(() => {
+    bookingsRepository = {
+      findClientProfileByUserId: jest
+        .fn()
+        .mockResolvedValue({ id: 'client-1' }),
+      findBookingByIdempotencyKey: jest.fn().mockResolvedValue(null),
+      findCategoryByName: jest
+        .fn()
+        .mockResolvedValue({ id: 'cat-1', name: 'Plumbing', inspectionFee: 500 }),
+      createBooking: jest.fn().mockResolvedValue(makeBooking('PENDING')),
+      findBookingById: jest.fn(),
+      findWorkerProfileById: jest.fn(),
+      findWorkerProfileByUserId: jest
+        .fn()
+        .mockResolvedValue({ id: 'worker-1' }),
+      cancelBooking: jest.fn(),
+      assignWorkerToBooking: jest.fn(),
+      markEnRoute: jest.fn(),
+      completeBookingLifecycle: jest.fn(),
+    };
+    storageService = {};
+    notificationsService = { notify: jest.fn().mockResolvedValue(undefined) };
+    chatService = { ensureConversationForBooking: jest.fn() };
+    bookingsQueue = { getJob: jest.fn(), add: jest.fn() };
+    jobBroadcastService = {
+      matchRadiusKm: 7,
+      broadcastJob: jest.fn().mockResolvedValue(undefined),
+      matchOpenJobsForWorker: jest.fn().mockResolvedValue(undefined),
+      reconcileVisibleJobs: jest.fn(),
+    };
+    jobCompletionNotifier = {
+      notifyClientJobCompleted: jest.fn().mockResolvedValue(undefined),
+    };
+    service = new BookingsService(
+      bookingsRepository,
+      storageService,
+      notificationsService,
+      chatService,
+      bookingsQueue,
+      jobBroadcastService,
+      jobCompletionNotifier,
+    );
+  });
+
+  const CREATE_DTO = {
+    serviceCategory: 'Plumbing',
+    urgency: 'NORMAL',
+    timeSlot: 'MORNING',
+    addressLine: '123 Street',
+    city: 'Karachi',
+    latitude: 24.86,
+    longitude: 67.0,
+  } as any;
+
+  it('createBooking: replaying the same idempotencyKey returns the existing booking without creating a new one', async () => {
+    bookingsRepository.findBookingByIdempotencyKey.mockResolvedValue(
+      makeBooking('PENDING'),
+    );
+
+    const result = await service.createBooking('client-user-1', {
+      ...CREATE_DTO,
+      idempotencyKey: 'req-1',
+    });
+
+    expect(result.id).toBe('booking-1');
+    expect(bookingsRepository.findCategoryByName).not.toHaveBeenCalled();
+    expect(bookingsRepository.createBooking).not.toHaveBeenCalled();
+    expect(jobBroadcastService.broadcastJob).not.toHaveBeenCalled();
+  });
+
+  it('createBooking: a different idempotencyKey creates a genuinely new booking', async () => {
+    await service.createBooking('client-user-1', {
+      ...CREATE_DTO,
+      idempotencyKey: 'req-2',
+    });
+
+    expect(bookingsRepository.createBooking).toHaveBeenCalledWith(
+      expect.objectContaining({ idempotencyKey: 'req-2' }),
+    );
+  });
+
+  it('createBooking: an idempotencyKey belonging to a different client is rejected', async () => {
+    bookingsRepository.findBookingByIdempotencyKey.mockResolvedValue(
+      makeBooking('PENDING', { clientProfileId: 'someone-else' }),
+    );
+
+    await expect(
+      service.createBooking('client-user-1', {
+        ...CREATE_DTO,
+        idempotencyKey: 'req-3',
+      }),
+    ).rejects.toThrow();
+  });
+
+  it('cancelBooking: retrying an already-cancelled booking returns success instead of a conflict error', async () => {
+    bookingsRepository.findBookingById.mockResolvedValue(
+      makeBooking('CANCELLED'),
+    );
+
+    const result = await service.cancelBooking(
+      'client-user-1',
+      'booking-1',
+      'Changed my mind',
+    );
+
+    expect(result.status).toBe('CANCELLED');
+    expect(bookingsRepository.cancelBooking).not.toHaveBeenCalled();
+    expect(notificationsService.notify).not.toHaveBeenCalled();
+  });
+
+  it('cancelBooking: losing the race to a concurrent cancel still returns success, no duplicate notification', async () => {
+    bookingsRepository.findBookingById.mockResolvedValue(
+      makeBooking('PENDING'),
+    );
+    bookingsRepository.cancelBooking.mockResolvedValue({
+      booking: makeBooking('CANCELLED'),
+      changed: false,
+    });
+
+    const result = await service.cancelBooking(
+      'client-user-1',
+      'booking-1',
+      'Changed my mind',
+    );
+
+    expect(result.status).toBe('CANCELLED');
+    expect(notificationsService.notify).not.toHaveBeenCalled();
+  });
+
+  it('cancelBooking: a genuinely non-cancellable status still throws', async () => {
+    bookingsRepository.findBookingById.mockResolvedValue(
+      makeBooking('IN_PROGRESS'),
+    );
+
+    await expect(
+      service.cancelBooking('client-user-1', 'booking-1', 'reason'),
+    ).rejects.toThrow(BadRequestException);
+    expect(bookingsRepository.cancelBooking).not.toHaveBeenCalled();
+  });
+
+  it('markOnMyWay: retrying after it already succeeded returns success without a duplicate notification', async () => {
+    bookingsRepository.findWorkerProfileByUserId.mockResolvedValue({
+      id: 'worker-1',
+    });
+    bookingsRepository.findBookingById.mockResolvedValue(
+      makeBooking('EN_ROUTE'),
+    );
+
+    const result = await service.markOnMyWay('worker-user-1', 'booking-1');
+
+    expect(result.status).toBe('EN_ROUTE');
+    expect(bookingsRepository.markEnRoute).not.toHaveBeenCalled();
+    expect(notificationsService.notify).not.toHaveBeenCalled();
+  });
+
+  it('assignWorker: retrying a hire to the same worker returns success without a second write', async () => {
+    bookingsRepository.findBookingById.mockResolvedValue(
+      makeBooking('ACCEPTED', { workerProfileId: 'worker-1' }),
+    );
+
+    const result = await service.assignWorker(
+      'client-user-1',
+      'booking-1',
+      'worker-1',
+    );
+
+    expect(result.status).toBe('ACCEPTED');
+    expect(bookingsRepository.assignWorkerToBooking).not.toHaveBeenCalled();
+  });
+
+  it('assignWorker: hiring a booking already assigned to a DIFFERENT worker still conflicts', async () => {
+    bookingsRepository.findBookingById.mockResolvedValue(
+      makeBooking('ACCEPTED', { workerProfileId: 'worker-1' }),
+    );
+
+    await expect(
+      service.assignWorker('client-user-1', 'booking-1', 'worker-2'),
+    ).rejects.toThrow(BadRequestException);
+    expect(bookingsRepository.assignWorkerToBooking).not.toHaveBeenCalled();
+  });
+
+  it('completeJob: retrying after it already succeeded returns success without duplicate earnings/notification', async () => {
+    bookingsRepository.findWorkerProfileByUserId.mockResolvedValue({
+      id: 'worker-1',
+    });
+    bookingsRepository.findBookingById.mockResolvedValue(
+      makeBooking('COMPLETED'),
+    );
+
+    const result = await service.completeJob('worker-user-1', 'booking-1');
+
+    expect(result.status).toBe('COMPLETED');
+    expect(bookingsRepository.completeBookingLifecycle).not.toHaveBeenCalled();
+    expect(
+      jobCompletionNotifier.notifyClientJobCompleted,
+    ).not.toHaveBeenCalled();
+    expect(notificationsService.notify).not.toHaveBeenCalled();
+  });
+});

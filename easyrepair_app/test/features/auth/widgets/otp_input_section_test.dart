@@ -155,4 +155,36 @@ void main() {
       expect(find.textContaining('04:5'), findsOneWidget);
     });
   });
+
+  group('expiresAtFromRetryAfter', () {
+    // Reconstructs a still-valid OTP's expiry from OTP_RESEND_TOO_SOON's
+    // retryAfterSeconds when the local expiresAt was lost (e.g. the OTP page
+    // was remounted, which resets the request notifier — see the OTP pages'
+    // initState). The resend cooldown and OTP validity share one anchor (the
+    // original request time), so this must invert cleanly:
+    // expiresAtFromRetryAfter(retryAfterSeconds) should always land exactly
+    // otpValidityDuration - (otpResendCooldownDuration - retryAfterSeconds)
+    // seconds from now.
+    test('a fresh cooldown (retryAfterSeconds == 60) reconstructs the full validity window', () {
+      final before = DateTime.now();
+      final result = expiresAtFromRetryAfter(60);
+
+      expect(
+        result.difference(before).inSeconds,
+        closeTo(otpValidityDuration.inSeconds, 1),
+      );
+    });
+
+    test('a nearly-elapsed cooldown (retryAfterSeconds == 1) reconstructs a nearly-elapsed validity window', () {
+      final before = DateTime.now();
+      final result = expiresAtFromRetryAfter(1);
+
+      // elapsedSinceRequest = 60 - 1 = 59s already gone; ~241s of validity remain.
+      final expectedRemaining = otpValidityDuration.inSeconds - 59;
+      expect(
+        result.difference(before).inSeconds,
+        closeTo(expectedRemaining, 1),
+      );
+    });
+  });
 }

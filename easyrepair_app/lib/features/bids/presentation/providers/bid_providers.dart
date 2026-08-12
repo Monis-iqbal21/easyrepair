@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/network/connectivity_service.dart';
 import '../../data/datasources/bid_remote_datasource.dart';
 import '../../data/repositories/bid_repository_impl.dart';
 import '../../domain/entities/bid_entity.dart';
@@ -30,6 +31,11 @@ class SubmitBidNotifier extends AsyncNotifier<BidEntity?> {
     required double amount,
     String? message,
   }) async {
+    final offline = offlineActionGuard();
+    if (offline != null) {
+      state = AsyncError(offline, StackTrace.current);
+      throw offline;
+    }
     state = const AsyncLoading();
     final result = await ref.read(bidRepositoryProvider).submitBid(
           bookingId: bookingId,
@@ -67,6 +73,11 @@ class EditBidNotifier extends AsyncNotifier<BidEntity?> {
     required double amount,
     String? message,
   }) async {
+    final offline = offlineActionGuard();
+    if (offline != null) {
+      state = AsyncError(offline, StackTrace.current);
+      throw offline;
+    }
     state = const AsyncLoading();
     final result = await ref.read(bidRepositoryProvider).editBid(
           bidId: bidId,
@@ -119,6 +130,11 @@ class AcceptBidNotifier extends AsyncNotifier<void> {
     required String bidId,
     required String bookingId,
   }) async {
+    final offline = offlineActionGuard();
+    if (offline != null) {
+      state = AsyncError(offline, StackTrace.current);
+      throw offline;
+    }
     state = const AsyncLoading();
     final result = await ref.read(bidRepositoryProvider).acceptBid(bidId);
     result.fold(

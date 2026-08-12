@@ -4,6 +4,7 @@ import {
   BidStatus,
   BookingLane,
   BookingStatus,
+  CommissionStatus,
   Prisma,
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -12,7 +13,11 @@ import {
   computeCancellationRate,
   computeCompletedJobs,
 } from '../../common/utils/worker-stats.util';
-import { calculateGrossWorkerEarning } from '../../common/utils/commission.util';
+import {
+  calculateGrossWorkerEarning,
+  calculatePlatformFee,
+  calculateWorkerEarning,
+} from '../../common/utils/commission.util';
 
 // ---------------------------------------------------------------------------
 // Worker profile include
@@ -564,6 +569,13 @@ export class WorkersRepository {
    * date (newest first). Gross amounts via calculateGrossWorkerEarning —
    * the same source getJobStats' todayEarnings uses, so the home dashboard
    * tile and this history never disagree on what a job actually earned.
+   *
+   * commissionAmount/ustaadEarning are derived from the same gross figure
+   * via calculatePlatformFee/calculateWorkerEarning (the one shared 18%
+   * source — never recomputed in Flutter). commissionStatus is read
+   * straight off the underlying Booking row: it belongs to that one
+   * completed job, not to the worker account, so two jobs on the same day
+   * can carry different statuses.
    */
   async getEarningsHistory(workerProfileId: string): Promise<
     {
@@ -575,6 +587,9 @@ export class WorkersRepository {
         lane: BookingLane;
         serviceCategory: string;
         grossEarning: number;
+        commissionAmount: number;
+        ustaadEarning: number;
+        commissionStatus: CommissionStatus;
         completedAt: Date;
         isInspectionOnly: boolean;
       }[];
@@ -592,6 +607,7 @@ export class WorkersRepository {
           lane: true,
           finalPrice: true,
           completedAt: true,
+          commissionStatus: true,
           category: { select: { name: true } },
           inspectionReport: { select: { labourCost: true, decisionStatus: true } },
           // See getJobStats — labour-only earning for a rehired-inspector
@@ -628,6 +644,7 @@ export class WorkersRepository {
               id: true,
               completedAt: true,
               inspectionFeeSnapshot: true,
+              commissionStatus: true,
               category: { select: { name: true } },
             },
           },
@@ -640,8 +657,20 @@ export class WorkersRepository {
       lane: BookingLane;
       serviceCategory: string;
       grossEarning: number;
+      commissionAmount: number;
+      ustaadEarning: number;
+      commissionStatus: CommissionStatus;
       completedAt: Date;
       isInspectionOnly: boolean;
+    };
+
+    /** Gross → {commissionAmount, ustaadEarning} via the one shared 18% source. */
+    const splitGross = (grossEarning: number) => {
+      const commissionAmount = calculatePlatformFee(grossEarning);
+      return {
+        commissionAmount,
+        ustaadEarning: calculateWorkerEarning(grossEarning, commissionAmount),
+      };
     };
 
     const jobs: Job[] = assignedCompleted.map((b) => {
@@ -649,17 +678,20 @@ export class WorkersRepository {
       const isRehiredInspectorRepair =
         b.lane === BookingLane.BIDDING &&
         sourceReport?.workerProfileId === workerProfileId;
+      const grossEarning = isRehiredInspectorRepair
+        ? sourceReport.labourCost
+        : calculateGrossWorkerEarning({
+            lane: b.lane,
+            finalPrice: b.finalPrice,
+            inspectionReport: b.inspectionReport,
+          });
       return {
         bookingId: b.id,
         lane: b.lane,
         serviceCategory: b.category.name,
-        grossEarning: isRehiredInspectorRepair
-          ? sourceReport.labourCost
-          : calculateGrossWorkerEarning({
-              lane: b.lane,
-              finalPrice: b.finalPrice,
-              inspectionReport: b.inspectionReport,
-            }),
+        grossEarning,
+        ...splitGross(grossEarning),
+        commissionStatus: b.commissionStatus,
         completedAt: b.completedAt!,
         isInspectionOnly: false,
       };
@@ -673,6 +705,8 @@ export class WorkersRepository {
         lane: BookingLane.INSPECTION,
         serviceCategory: r.booking.category.name,
         grossEarning: fee,
+        ...splitGross(fee),
+        commissionStatus: r.booking.commissionStatus,
         completedAt: r.booking.completedAt!,
         isInspectionOnly: true,
       });
@@ -984,19 +1018,29 @@ export class WorkersRepository {
   /**
    * Transition an active booking to COMPLETED and free the worker.
    * Wrapped in a transaction; re-fetches with full relations after commit.
+   *
+   * Legacy sibling of BookingsRepository.completeBookingLifecycle — the two
+   * endpoints share the same deduplicated client-completion notice (see
+   * JobCompletionNotifierService) but each has its own booking write, so
+   * this guard closes the same double-complete race independently: the
+   * status flip is an atomic `updateMany` guarded by `fromStatuses`, and the
+   * caller decides whether a `changed: false` loser is a safe idempotent
+   * no-op (booking already COMPLETED) or a genuine conflict.
    */
   async completeBooking(
     bookingId: string,
     workerProfileId: string,
-  ): Promise<WorkerJobWithRelations> {
-    await this.prisma.$transaction(async (tx) => {
-      await tx.booking.update({
-        where: { id: bookingId },
+    fromStatuses: BookingStatus[],
+  ): Promise<{ job: WorkerJobWithRelations; changed: boolean }> {
+    const changed = await this.prisma.$transaction(async (tx) => {
+      const { count } = await tx.booking.updateMany({
+        where: { id: bookingId, status: { in: fromStatuses } },
         data: {
           status: BookingStatus.COMPLETED,
           completedAt: new Date(),
         },
       });
+      if (count === 0) return false;
 
       await tx.bookingStatusHistory.create({
         data: {
@@ -1011,11 +1055,14 @@ export class WorkersRepository {
         where: { id: workerProfileId },
         data: { currentlyWorking: false },
       });
+
+      return true;
     });
 
-    return this.prisma.booking.findUniqueOrThrow({
+    const job = await this.prisma.booking.findUniqueOrThrow({
       where: { id: bookingId },
       include: WORKER_JOB_INCLUDE,
     });
+    return { job, changed };
   }
 }

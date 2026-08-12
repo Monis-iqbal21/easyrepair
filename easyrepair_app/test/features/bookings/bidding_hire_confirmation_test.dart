@@ -7,10 +7,32 @@ import 'package:handygo_app/features/bids/domain/repositories/bid_repository.dar
 import 'package:handygo_app/features/bids/presentation/providers/bid_providers.dart';
 import 'package:handygo_app/features/bookings/domain/entities/booking_entity.dart';
 import 'package:handygo_app/features/bookings/domain/entities/inspection_report_entity.dart';
+import 'package:handygo_app/core/l10n/locale_provider.dart';
 import 'package:handygo_app/features/bookings/presentation/pages/worker_discovery_map_page.dart';
 import 'package:handygo_app/features/bookings/presentation/providers/booking_providers.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../support/l10n_test_app.dart';
+
+/// Never actually calls the repository — only counts how many times accept
+/// is invoked, always resolving to a (harmless, test-only) error so the page
+/// never attempts to navigate away after this fake settles.
+class _FakeAcceptBidNotifier extends AcceptBidNotifier {
+  int calls = 0;
+
+  @override
+  Future<void> build() async {}
+
+  @override
+  Future<void> accept({required String bidId, required String bookingId}) async {
+    calls++;
+    state = const AsyncLoading();
+    await Future<void>.delayed(Duration.zero);
+    final error = Exception('test-only: no real backend in this test');
+    state = AsyncError(error, StackTrace.current);
+    throw error;
+  }
+}
 
 /// Covers the hire-confirmation modal's origin-aware explanatory note:
 ///  * A direct BIDDING booking (client picked BIDDING themselves) shows the
@@ -132,6 +154,17 @@ BidWithWorkerEntity _bid({required String bookingId}) {
 }
 
 void main() {
+  late SharedPreferences testPrefs;
+
+  // bookingRepositoryProvider's real datasource chain now reaches
+  // LocalCacheService, which needs sharedPreferencesProvider — this
+  // ProviderScope doesn't fully override bookingRepositoryProvider, so it
+  // needs this in scope too, even though this test never exercises caching.
+  setUpAll(() async {
+    SharedPreferences.setMockInitialValues({});
+    testPrefs = await SharedPreferences.getInstance();
+  });
+
   setUp(() {
     final view = TestWidgetsFlutterBinding.ensureInitialized()
         .platformDispatcher
@@ -156,10 +189,12 @@ void main() {
     WidgetTester tester,
     BookingEntity booking, {
     AppLocale locale = AppLocale.english,
+    List<Override> extraOverrides = const [],
   }) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          sharedPreferencesProvider.overrideWithValue(testPrefs),
           bookingBidsProvider(
             booking.id,
           ).overrideWith((_) async => [_bid(bookingId: booking.id)]),
@@ -167,6 +202,7 @@ void main() {
             inspectionReportProvider(
               booking.id,
             ).overrideWith((_) async => _report()),
+          ...extraOverrides,
         ],
         child: localizedApp(
           WorkerDiscoveryMapPage(booking: booking),
@@ -270,6 +306,40 @@ void main() {
         locale: AppLocale.urdu,
       );
       expect(find.text(_inspectionBasedUrdu), findsOneWidget);
+    });
+  });
+
+  // Chunk 3 launch-hardening: a double-tap on the dialog's confirm button
+  // that races past the disabled state must still only fire one accept
+  // request — see the "Re-entry guard" in worker_discovery_map_page.dart's
+  // bid-offer _confirmHire.
+  group('hire confirmation double-tap protection', () {
+    testWidgets('two rapid taps on the dialog Hire button fire only one accept request', (
+      tester,
+    ) async {
+      final fake = _FakeAcceptBidNotifier();
+      await openHireDialog(
+        tester,
+        _directBiddingBooking(),
+        extraOverrides: [acceptBidProvider.overrideWith(() => fake)],
+      );
+
+      final confirmButton = find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.widgetWithText(FilledButton, 'Hire'),
+      );
+      expect(confirmButton, findsOneWidget);
+
+      // Two taps back-to-back, no pump in between — simulates a real
+      // double-tap landing before the notifier's isLoading state renders.
+      // The first tap pops the dialog, so the second may miss its (already
+      // closing) target — that's fine, warnIfMissed:false silences the
+      // benign warning; what matters is accept() firing only once below.
+      await tester.tap(confirmButton);
+      await tester.tap(confirmButton, warnIfMissed: false);
+      await tester.pumpAndSettle();
+
+      expect(fake.calls, 1);
     });
   });
 }
