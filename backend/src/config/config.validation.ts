@@ -87,6 +87,10 @@ class EnvironmentVariables {
   @IsString()
   @IsOptional()
   USE_POSTGIS: string = 'false';
+
+  @IsString()
+  @IsOptional()
+  OTP_ADMIN_ENCRYPTION_KEY: string;
 }
 
 export function validate(config: Record<string, unknown>) {

@@ -66,4 +66,13 @@ export default () => ({
   forgotPassword: {
     devOtp: process.env.FORGOT_PASSWORD_DEV_OTP,
   },
+  otpAdmin: {
+    /**
+     * 32-byte AES-256-GCM key (64 hex chars, or base64) backing the Admin
+     * OTP-reveal feature only — see otp-encryption.util.ts. Optional at boot
+     * (like SMS_API_KEY/R2 creds): when unset, OTP request/verify continue
+     * working exactly as before, the new OTP just isn't admin-revealable.
+     */
+    encryptionKey: process.env.OTP_ADMIN_ENCRYPTION_KEY,
+  },
 });

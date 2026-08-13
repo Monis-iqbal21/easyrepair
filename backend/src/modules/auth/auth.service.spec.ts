@@ -53,6 +53,7 @@ describe('AuthService — SMS OTP login/registration', () => {
       invalidatePreviousAuthOtps: jest.fn().mockResolvedValue(undefined),
       createAuthOtp: jest.fn().mockResolvedValue('otp-row-1'),
       deleteAuthOtp: jest.fn().mockResolvedValue(undefined),
+      markSmsDispatched: jest.fn().mockResolvedValue(undefined),
       findActiveAuthOtp: jest.fn().mockResolvedValue(null),
       consumeAuthOtp: jest.fn().mockResolvedValue(undefined),
       incrementAuthOtpAttempts: jest.fn().mockResolvedValue(undefined),

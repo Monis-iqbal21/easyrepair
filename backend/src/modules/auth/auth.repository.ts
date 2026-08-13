@@ -329,9 +329,20 @@ export class AuthRepository {
     otpHash: string;
     expiresAt: Date;
     requestIp: string | null;
+    otpCiphertext?: string | null;
+    otpCipherIv?: string | null;
+    otpCipherTag?: string | null;
   }): Promise<string> {
     const created = await this.prisma.authOtp.create({ data });
     return created.id;
+  }
+
+  /** Diagnostics only (Admin OTP Diagnostics page) — flips once the SMS provider confirms dispatch. */
+  async markSmsDispatched(id: string): Promise<void> {
+    await this.prisma.authOtp.update({
+      where: { id },
+      data: { smsDispatched: true },
+    });
   }
 
   /**

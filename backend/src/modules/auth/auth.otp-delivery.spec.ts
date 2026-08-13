@@ -1,3 +1,4 @@
+import * as bcrypt from 'bcrypt';
 import { AuthOtpPurpose, Role } from '@prisma/client';
 import { AuthService } from './auth.service';
 import { otpMessage, OTP_VALIDITY_MINUTES } from './sms-otp.service';
@@ -38,6 +39,7 @@ describe('OTP delivery is device-independent', () => {
       invalidatePreviousAuthOtps: jest.fn().mockResolvedValue(undefined),
       createAuthOtp: jest.fn().mockResolvedValue('otp-row-1'),
       deleteAuthOtp: jest.fn().mockResolvedValue(undefined),
+      markSmsDispatched: jest.fn().mockResolvedValue(undefined),
       findUserByPhoneVariants: jest.fn().mockResolvedValue(null),
     };
     smsOtp = { isConfigured: true, sendOtp: jest.fn().mockResolvedValue(true) };
@@ -138,8 +140,32 @@ describe('OTP delivery is device-independent', () => {
     );
     const [[created]] = repository.createAuthOtp.mock.calls;
     expect(Object.keys(created).sort()).toEqual(
-      ['expiresAt', 'otpHash', 'phone', 'purpose', 'requestIp'].sort(),
+      [
+        'expiresAt',
+        'otpHash',
+        'phone',
+        'purpose',
+        'requestIp',
+        'otpCiphertext',
+        'otpCipherIv',
+        'otpCipherTag',
+      ].sort(),
     );
+    // No admin-reveal encryption key configured in this test's config mock —
+    // the OTP is still issued normally, it simply isn't admin-revealable.
+    expect(created.otpCiphertext).toBeNull();
+    expect(created.otpCipherIv).toBeNull();
+    expect(created.otpCipherTag).toBeNull();
+  });
+
+  // #11 normal bcrypt verification still works — the admin-reveal encryption
+  // addition is a parallel, additive copy and never touches otpHash.
+  it('still stores a bcrypt hash of the real code, verifiable independently of the new encryption fields', async () => {
+    await service.requestOtp(WORKER_PHONE, AuthOtpPurpose.WORKER_LOGIN, PHONE_A_IP);
+
+    const [[created]] = repository.createAuthOtp.mock.calls;
+    const [, sentOtp] = smsOtp.sendOtp.mock.calls[0];
+    await expect(bcrypt.compare(sentOtp, created.otpHash)).resolves.toBe(true);
   });
 
   // ── Provider failure must not punish the caller ───────────────────────────

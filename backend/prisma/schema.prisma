@@ -292,11 +292,55 @@ model AuthOtp {
   requestIp  String?
   createdAt  DateTime       @default(now())
 
+  /// Whether SmsOtpService actually dispatched this code through the SMS
+  /// provider (STATUS === 'SUCCESSFUL'). False when running without SMS
+  /// configured (dev — the code was only logged, never sent). Diagnostics
+  /// only — never read by requestOtp()/_verifyAuthOtp()'s actual logic.
+  smsDispatched Boolean @default(false)
+
+  /// AES-256-GCM encrypted copy of the plaintext code, decryptable ONLY by
+  /// the Admin OTP-reveal endpoint (OTP_ADMIN_ENCRYPTION_KEY — see
+  /// otp-encryption.util.ts). Exists solely so an admin can manually relay a
+  /// code whose SMS never reached the handset. All three are null when the
+  /// encryption key wasn't configured at issuance time (that OTP is simply
+  /// not revealable) or on legacy pre-migration rows.
+  ///
+  /// Normal OTP verification NEVER reads these — it continues to use
+  /// otpHash (bcrypt) exactly as before this field existed.
+  otpCiphertext String?
+  otpCipherIv   String?
+  otpCipherTag  String?
+
   @@index([phone, purpose])
   @@index([expiresAt])
   @@index([consumedAt])
   @@index([requestIp, createdAt])
   @@map("auth_otps")
+}
+
+/// Permanent audit trail for the one high-risk admin action this table
+/// exists for: an admin decrypting and viewing a still-active OTP so it can
+/// be manually relayed to a user whose SMS never arrived. Deliberately
+/// narrow (OTP-reveal only) rather than a general admin-audit-log — see
+/// AdminOtpService.reveal. The revealed plaintext OTP is never written here.
+model OtpRevealAuditLog {
+  id          String         @id @default(cuid())
+  /// Not a relation to User on purpose — this row must remain a permanent,
+  /// unmodifiable record of who looked at what, even if the admin account is
+  /// later deleted.
+  adminUserId String
+  authOtpId   String
+  /// The phone this OTP belonged to — audit context, never the revealed code.
+  targetPhone String
+  purpose     AuthOtpPurpose
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime       @default(now())
+
+  @@index([adminUserId])
+  @@index([authOtpId])
+  @@index([createdAt])
+  @@map("otp_reveal_audit_logs")
 }
 
 model RefreshToken {

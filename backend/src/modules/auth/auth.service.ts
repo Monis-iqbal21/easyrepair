@@ -30,6 +30,10 @@ import {
   phoneLookupVariants,
   maskPhone,
 } from '../../common/utils/phone.util';
+import {
+  encryptOtp,
+  OtpEncryptionKeyError,
+} from '../../common/utils/otp-encryption.util';
 
 const OTP_EXPIRY_MS = 5 * 60 * 1000;
 const OTP_RESEND_COOLDOWN_MS = 60 * 1000;
@@ -813,6 +817,26 @@ export class AuthService {
     const otpHash = await bcrypt.hash(otp, 10);
     const expiresAt = new Date(Date.now() + OTP_EXPIRY_MS);
 
+    // Admin-reveal copy only — never read by verification. Encryption
+    // failure (key unset/malformed) must never block a real OTP request, so
+    // this degrades to "not revealable" rather than throwing.
+    let encrypted: { ciphertext: string; iv: string; tag: string } | null =
+      null;
+    try {
+      encrypted = encryptOtp(
+        otp,
+        this.config.get<string>('otpAdmin.encryptionKey'),
+      );
+    } catch (err) {
+      if (err instanceof OtpEncryptionKeyError) {
+        this.logger.warn(
+          `[requestOtp] admin-reveal unavailable: ${err.message}`,
+        );
+      } else {
+        throw err;
+      }
+    }
+
     await this.authRepository.invalidatePreviousAuthOtps(normalized, purpose);
     const otpId = await this.authRepository.createAuthOtp({
       phone: normalized,
@@ -820,6 +844,9 @@ export class AuthService {
       otpHash,
       expiresAt,
       requestIp: trackableIp,
+      otpCiphertext: encrypted?.ciphertext ?? null,
+      otpCipherIv: encrypted?.iv ?? null,
+      otpCipherTag: encrypted?.tag ?? null,
     });
 
     if (this.smsOtp.isConfigured) {
@@ -835,6 +862,8 @@ export class AuthService {
           error: 'SMS_SEND_FAILED',
         });
       }
+      // Diagnostics only — never blocks the response either way.
+      await this.authRepository.markSmsDispatched(otpId).catch(() => undefined);
     } else if (process.env.NODE_ENV !== 'production') {
       this.logger.log(
         `[DEV OTP] phone=${maskPhone(normalized)} purpose=${purpose} code=***${otp.slice(-2)}`,
