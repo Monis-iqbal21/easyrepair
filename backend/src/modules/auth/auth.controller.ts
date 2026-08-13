@@ -52,7 +52,11 @@ export class AuthController {
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
   }
-
+  @Post('admin/login')
+  @HttpCode(HttpStatus.OK)
+  adminLogin(@Body() dto: LoginDto) {
+    return this.authService.adminLogin(dto);
+  }
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   refresh(@Body() dto: RefreshTokenDto) {

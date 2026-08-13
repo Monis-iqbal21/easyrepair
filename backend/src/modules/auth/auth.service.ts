@@ -170,7 +170,8 @@ export class AuthService {
     // re-queried, since createUserWithProfile just created exactly that row.
     const verificationStatus =
       (dto.role as Role) === Role.WORKER ? 'PENDING' : undefined;
-    const workerStatus = (dto.role as Role) === Role.WORKER ? 'ACTIVE' : undefined;
+    const workerStatus =
+      (dto.role as Role) === Role.WORKER ? 'ACTIVE' : undefined;
     return this._buildAuthResponse(
       user.id,
       user.phone,
@@ -222,7 +223,45 @@ export class AuthService {
       user.accountStatus,
     );
   }
+  /**
+   * POST /auth/admin/login — Admin web password login only.
+   *
+   * This endpoint is intentionally separate from the Worker password-login
+   * endpoint so Client/Worker role-privacy rules remain unchanged.
+   */
+  async adminLogin(dto: LoginDto): Promise<AuthResponseDto> {
+    this._assertNotSupportAccount(dto.phone);
 
+    const user = await this.authRepository.findUserByPhone(dto.phone);
+
+    if (!user || user.deletedAt !== null || user.role !== Role.ADMIN) {
+      throw this._phoneNotRegisteredError();
+    }
+
+    if (!user.isActive) {
+      throw new ForbiddenException('Account is deactivated');
+    }
+
+    const passwordMatch = await bcrypt.compare(
+      dto.password,
+      user.passwordHash ?? '',
+    );
+
+    if (!passwordMatch) {
+      throw new UnauthorizedException('Invalid phone number or password');
+    }
+
+    return this._buildAuthResponse(
+      user.id,
+      user.phone,
+      user.role,
+      '',
+      '',
+      undefined,
+      undefined,
+      user.accountStatus,
+    );
+  }
   async refreshTokens(dto: RefreshTokenDto): Promise<AuthResponseDto> {
     const stored = await this.authRepository.findRefreshToken(dto.refreshToken);
     if (!stored) {
@@ -237,7 +276,10 @@ export class AuthService {
     // instead of stranding the device. Outside the grace window (or if the
     // chain has nowhere further to go), this is a genuine rejection.
     if (stored.replacedByToken) {
-      return this._reissueFromGraceWindow(stored.replacedByToken, stored.supersededAt);
+      return this._reissueFromGraceWindow(
+        stored.replacedByToken,
+        stored.supersededAt,
+      );
     }
 
     if (stored.expiresAt < new Date()) {
@@ -296,7 +338,8 @@ export class AuthService {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
 
-    const replacement = await this.authRepository.findRefreshToken(replacedByToken);
+    const replacement =
+      await this.authRepository.findRefreshToken(replacedByToken);
     if (!replacement || replacement.expiresAt < new Date()) {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
@@ -389,7 +432,10 @@ export class AuthService {
    * English, Urdu and Roman Urdu rather than a single hardcoded sentence.
    */
   private _phoneNotRegisteredError(): UnauthorizedException {
-    return new UnauthorizedException({ message: '', error: 'PHONE_NOT_REGISTERED' });
+    return new UnauthorizedException({
+      message: '',
+      error: 'PHONE_NOT_REGISTERED',
+    });
   }
 
   /**
@@ -400,18 +446,18 @@ export class AuthService {
    * reasoning.
    */
   private _phoneAlreadyRegisteredError(): ConflictException {
-    return new ConflictException({ message: '', error: 'PHONE_ALREADY_REGISTERED' });
+    return new ConflictException({
+      message: '',
+      error: 'PHONE_ALREADY_REGISTERED',
+    });
   }
 
   private _signAccessToken(userId: string, phone: string, role: Role): string {
-    return this.jwtService.sign(
-      { sub: userId, phone, role } as object,
-      {
-        expiresIn: this.config.getOrThrow<string>('jwt.accessExpires') as
-          | `${number}${'s' | 'm' | 'h' | 'd' | 'w' | 'y'}`
-          | number,
-      },
-    );
+    return this.jwtService.sign({ sub: userId, phone, role } as object, {
+      expiresIn: this.config.getOrThrow<string>('jwt.accessExpires') as
+        | `${number}${'s' | 'm' | 'h' | 'd' | 'w' | 'y'}`
+        | number,
+    });
   }
 
   /** Refresh-token lifetime, driven by JWT_REFRESH_EXPIRES (default 30d). */
@@ -598,9 +644,7 @@ export class AuthService {
         `[DEV OTP] phone=${maskPhone(normalized)} code=***${otp.slice(-2)}`,
       );
     } else {
-      this.logger.warn(
-        'SMS OTP not configured — forgot password OTP not sent',
-      );
+      this.logger.warn('SMS OTP not configured — forgot password OTP not sent');
       if (options.surfaceSmsFailure) throw sendFailureError;
     }
 
@@ -734,9 +778,13 @@ export class AuthService {
         ? this.authRepository.countRecentAuthOtpByIp(trackableIp, since)
         : Promise.resolve(0),
     ]);
-    if (byPhone >= OTP_MAX_PER_PHONE_PER_WINDOW || byIp >= OTP_MAX_PER_IP_PER_WINDOW) {
+    if (
+      byPhone >= OTP_MAX_PER_PHONE_PER_WINDOW ||
+      byIp >= OTP_MAX_PER_IP_PER_WINDOW
+    ) {
       throw new BadRequestException({
-        message: 'Bohat zyada koshishein. Thori dair baad dobara koshish karein.',
+        message:
+          'Bohat zyada koshishein. Thori dair baad dobara koshish karein.',
         error: 'OTP_RATE_LIMITED',
       });
     }
@@ -862,10 +910,15 @@ export class AuthService {
       });
     }
 
-    await this._verifyAuthOtp(normalized, AuthOtpPurpose.CLIENT_LOGIN_REGISTER, otp);
+    await this._verifyAuthOtp(
+      normalized,
+      AuthOtpPurpose.CLIENT_LOGIN_REGISTER,
+      otp,
+    );
 
     const variants = phoneLookupVariants(normalized);
-    const existing = await this.authRepository.findUserByPhoneVariants(variants);
+    const existing =
+      await this.authRepository.findUserByPhoneVariants(variants);
 
     if (existing) {
       if (existing.role === Role.WORKER) {
@@ -923,7 +976,8 @@ export class AuthService {
         err instanceof Prisma.PrismaClientKnownRequestError &&
         err.code === 'P2002'
       ) {
-        const winner = await this.authRepository.findUserByPhoneVariants(variants);
+        const winner =
+          await this.authRepository.findUserByPhoneVariants(variants);
         if (winner) {
           await this.authRepository.markPhoneVerified(winner.id);
           const profile = await this._getProfileName(winner.id, winner.role);
@@ -942,7 +996,13 @@ export class AuthService {
       throw err;
     }
 
-    return this._buildAuthResponse(user.id, user.phone, user.role, firstName, lastName);
+    return this._buildAuthResponse(
+      user.id,
+      user.phone,
+      user.role,
+      firstName,
+      lastName,
+    );
   }
 
   // ── Client password fallback (alongside the OTP flow above) ────────────
@@ -1047,7 +1107,8 @@ export class AuthService {
     }
 
     const variants = phoneLookupVariants(normalized);
-    const existing = await this.authRepository.findUserByPhoneVariants(variants);
+    const existing =
+      await this.authRepository.findUserByPhoneVariants(variants);
     if (existing) {
       // Same rejection regardless of which role already owns the number —
       // User.phone is globally unique, so this is the only outcome that
@@ -1076,7 +1137,8 @@ export class AuthService {
         err instanceof Prisma.PrismaClientKnownRequestError &&
         err.code === 'P2002'
       ) {
-        const winner = await this.authRepository.findUserByPhoneVariants(variants);
+        const winner =
+          await this.authRepository.findUserByPhoneVariants(variants);
         if (winner) {
           const profile = await this._getProfileName(winner.id, winner.role);
           return this._buildAuthResponse(
@@ -1094,7 +1156,13 @@ export class AuthService {
       throw err;
     }
 
-    return this._buildAuthResponse(user.id, user.phone, user.role, firstName, lastName);
+    return this._buildAuthResponse(
+      user.id,
+      user.phone,
+      user.role,
+      firstName,
+      lastName,
+    );
   }
 
   /** POST /auth/worker/otp-register — OTP-verified Ustaad registration. */
@@ -1117,7 +1185,8 @@ export class AuthService {
     await this._verifyAuthOtp(normalized, AuthOtpPurpose.WORKER_REGISTER, otp);
 
     const variants = phoneLookupVariants(normalized);
-    const existing = await this.authRepository.findUserByPhoneVariants(variants);
+    const existing =
+      await this.authRepository.findUserByPhoneVariants(variants);
     if (existing) {
       // Same rejection regardless of which role already owns the number —
       // never reveals whether it's a Client or an existing Worker account.
@@ -1163,7 +1232,10 @@ export class AuthService {
   }
 
   /** POST /auth/worker/otp-login — existing Ustaad, OTP instead of password. */
-  async workerOtpLogin(rawPhone: string, otp: string): Promise<AuthResponseDto> {
+  async workerOtpLogin(
+    rawPhone: string,
+    otp: string,
+  ): Promise<AuthResponseDto> {
     this._assertNotSupportAccount(rawPhone);
     const normalized = normalizePakistaniPhone(rawPhone);
     if (!normalized) {
