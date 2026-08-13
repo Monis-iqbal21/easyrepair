@@ -171,6 +171,53 @@ void main() {
     });
   });
 
+  group('background refresh of an already-resolved status', () {
+    // Regression coverage: requiredCustomerAgreementProvider is listened to
+    // by routerProvider's refreshListenable, so an invalidation while the
+    // client is deep in navigation (post-accept, or a locale change) puts it
+    // into AsyncLoading with the previous status retained via
+    // copyWithPrevious. That must never bounce the client to /splash.
+    test(
+      'a CLIENT on a nested route survives a refresh of an already-accepted '
+      'status — route is preserved, not bounced to splash',
+      () {
+        final refreshing =
+            AsyncLoading<CustomerAgreementStatusEntity?>().copyWithPrevious(
+          AsyncData(_status(acceptanceRequired: false)),
+        );
+
+        final redirect = resolveClientAgreementRedirect(
+          isLoggedIn: true,
+          isWorker: false,
+          matchedLocation: '/client/bookings/42',
+          agreementAsync: refreshing,
+        );
+
+        expect(redirect, isNull);
+      },
+    );
+
+    test(
+      'a refresh of a still-required status keeps routing to the gate, not '
+      'to splash',
+      () {
+        final refreshing =
+            AsyncLoading<CustomerAgreementStatusEntity?>().copyWithPrevious(
+          AsyncData(_status(acceptanceRequired: true)),
+        );
+
+        final redirect = resolveClientAgreementRedirect(
+          isLoggedIn: true,
+          isWorker: false,
+          matchedLocation: '/client/home',
+          agreementAsync: refreshing,
+        );
+
+        expect(redirect, '/client/agreement-gate');
+      },
+    );
+  });
+
   group('a network/server error must never be read as accepted', () {
     test('an error resolving the required-status blocks access like required: true', () {
       final redirect = resolveClientAgreementRedirect(

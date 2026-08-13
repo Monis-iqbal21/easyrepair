@@ -300,13 +300,17 @@ final routerProvider = Provider<GoRouter>((ref) {
 /// without booting a full GoRouter/widget tree.
 ///
 /// Rules:
-///  * [authState] still resolving, OR errored with nothing previously
-///    confirmed (`hasError && !hasValue` — a transient failure on the very
-///    first check, before any user was ever confirmed) → splash. An errored
-///    [authState] that DOES still carry a previous value falls through
-///    instead (Riverpod preserves it across a failed rebuild — see
-///    AuthStateNotifier), so a network blip after a confirmed login is never
-///    read as logged out here.
+///  * [authState] has NO value yet — still resolving its very first check,
+///    or errored before any user was ever confirmed (`!hasValue &&
+///    (isLoading || hasError)`) → splash, since there is nothing to route on.
+///  * A background REFRESH of an already-confirmed session (`isLoading` or
+///    `hasError` while `hasValue` is still true — e.g. app-resume invalidates
+///    [authStateProvider] while the user is deep in navigation, or a token
+///    refresh races a `/auth/me` retry) falls straight through to the
+///    `valueOrNull` below instead: Riverpod's `copyWithPrevious` keeps the
+///    last confirmed user visible through both states (see
+///    AuthStateNotifier), so a background refresh must never be read as
+///    logged out or bounce the user off their current route.
 ///  * From splash, or a still-logged-in user sitting on an `/auth` route →
 ///    dispatch to the correct home, or back to role-select if logged out.
 ///  * A logged-out user anywhere else → role-select.
@@ -319,7 +323,7 @@ String? resolveAuthRedirect({
   final isSplash = matchedLocation == '/splash';
   final isAuthRoute = matchedLocation.startsWith('/auth');
 
-  if (authState.isLoading || (authState.hasError && !authState.hasValue)) {
+  if (!authState.hasValue && (authState.isLoading || authState.hasError)) {
     return isSplash ? null : '/splash';
   }
 
@@ -408,8 +412,12 @@ String? resolveClientRestrictedRedirect({
 ///
 /// Rules:
 ///  * Never applies when logged out or to a WORKER (`null`).
-///  * While [agreementAsync] is still resolving, stays on `/splash` rather
-///    than flashing any client content.
+///  * While [agreementAsync] has NO value yet (its very first resolution),
+///    stays on `/splash` rather than flashing any client content. A
+///    background REFRESH of an already-resolved status (`isLoading` while
+///    `hasValue` is still true — e.g. after accepting, or a locale change,
+///    while the client is already deep in navigation) falls straight through
+///    to the retained `valueOrNull` below instead of bouncing to splash.
 ///  * A network/server error ([agreementAsync] has an error) is treated the
 ///    same as "acceptance required" — it must never be read as "accepted".
 ///  * Once required, every location except the gate itself redirects to it.
@@ -424,7 +432,7 @@ String? resolveClientAgreementRedirect({
 
   final isGateRoute = matchedLocation == '/client/agreement-gate';
 
-  if (agreementAsync.isLoading) {
+  if (agreementAsync.isLoading && !agreementAsync.hasValue) {
     return matchedLocation == '/splash' ? null : '/splash';
   }
 

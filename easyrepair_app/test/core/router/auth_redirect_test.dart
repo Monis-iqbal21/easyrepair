@@ -129,6 +129,76 @@ void main() {
     );
   });
 
+  group('background refresh of an already-confirmed session', () {
+    // Regression coverage for the navigation-reset bug: app.dart's
+    // AppLifecycleState.resumed handler calls ref.invalidate(authStateProvider)
+    // on every foreground return (including a brief backgrounding for the
+    // inspection-photo camera/gallery picker). That puts authState into
+    // AsyncLoading with the previous user retained via Riverpod's
+    // copyWithPrevious (isLoading == true, hasValue == true) — this must
+    // never force a redirect to /splash while a nested route is open.
+    test(
+      'a WORKER on a nested route survives an auth-state refresh — route '
+      'is preserved, not bounced to splash/home',
+      () {
+        final refreshing = const AsyncLoading<UserEntity?>()
+            .copyWithPrevious(const AsyncData<UserEntity?>(_worker));
+
+        final redirect = resolveAuthRedirect(
+          authState: refreshing,
+          matchedLocation: '/worker/job/123/inspection-report',
+        );
+
+        expect(redirect, isNull);
+      },
+    );
+
+    test(
+      'a CLIENT on a nested route survives an auth-state refresh — route '
+      'is preserved, not bounced to splash/home',
+      () {
+        final refreshing = const AsyncLoading<UserEntity?>()
+            .copyWithPrevious(const AsyncData<UserEntity?>(_client));
+
+        final redirect = resolveAuthRedirect(
+          authState: refreshing,
+          matchedLocation: '/client/bookings/42',
+        );
+
+        expect(redirect, isNull);
+      },
+    );
+
+    test(
+      'a successful token refresh (auth state settles back to the same '
+      'confirmed user) leaves the current route untouched',
+      () {
+        final redirect = resolveAuthRedirect(
+          authState: const AsyncData<UserEntity?>(_worker),
+          matchedLocation: '/worker/job/123',
+        );
+
+        expect(redirect, isNull);
+      },
+    );
+
+    test(
+      'still dispatches away from an /auth route to the right home even '
+      'while refreshing, as long as a user was already confirmed',
+      () {
+        final refreshing = const AsyncLoading<UserEntity?>()
+            .copyWithPrevious(const AsyncData<UserEntity?>(_client));
+
+        final redirect = resolveAuthRedirect(
+          authState: refreshing,
+          matchedLocation: '/auth/role-select',
+        );
+
+        expect(redirect, '/client/home');
+      },
+    );
+  });
+
   group('genuinely logged out', () {
     test('a null user (definite logout) sends any non-auth route to role-select', () {
       final redirect = resolveAuthRedirect(
