@@ -1,12 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Modify this file to customize your launch splash screen -->
-<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:drawable="?android:colorBackground" />
+<!--
+  HandyGo launch screen (API 21-30). Same composition as the pre-21 drawable:
+  the shared fallback colour from values/colors.xml plus the centred logo, so
+  the hand-off into Flutter's welcome screen shows no flash.
 
-    <!-- You can insert your own image assets here -->
-    <!-- <item>
+  On API 31+ this drawable is ignored by the platform in favour of the system
+  splash API - see values-v31/styles.xml.
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/handygo_splash_background" />
+
+    <item>
         <bitmap
             android:gravity="center"
-            android:src="@mipmap/launch_image" />
-    </item> -->
+            android:src="@drawable/handygo_splash_logo" />
+    </item>
 </layer-list>

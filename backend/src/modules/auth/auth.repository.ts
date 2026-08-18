@@ -213,10 +213,40 @@ export class AuthRepository {
     return { avatarUrl: p?.avatarUrl ?? null };
   }
 
+  /**
+   * Assigns [token] to [userId], atomically detaching it from any OTHER
+   * User row that currently holds it first.
+   *
+   * The schema has a single `fcmToken` per User (no multi-device table), so
+   * one physical device's push token must never be simultaneously associated
+   * with two accounts — e.g. a Worker logging out and a Client logging in on
+   * the same phone. Both statements run in one transaction so a reader can
+   * never observe the token attached to two users at once.
+   */
   async saveFcmToken(userId: string, token: string): Promise<void> {
+    await this.prisma.$transaction([
+      this.prisma.user.updateMany({
+        where: { fcmToken: token, id: { not: userId } },
+        data: { fcmToken: null },
+      }),
+      this.prisma.user.update({
+        where: { id: userId },
+        data: { fcmToken: token },
+      }),
+    ]);
+  }
+
+  /**
+   * Detaches this device's push ownership from [userId] — called on logout
+   * so a forced-offline/system notification created afterwards is persisted
+   * but never pushed to the device that just logged out, and so a
+   * subsequent login by a different account on the same physical device
+   * never inherits a stale token/account pairing.
+   */
+  async clearFcmToken(userId: string): Promise<void> {
     await this.prisma.user.update({
       where: { id: userId },
-      data: { fcmToken: token },
+      data: { fcmToken: null },
     });
   }
 

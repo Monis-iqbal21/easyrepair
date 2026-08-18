@@ -7,6 +7,10 @@ class ConversationParticipantEntity {
   final String? avatarUrl;
   /// Non-null only when the participant is a worker.
   final double? rating;
+  /// The participant's registered phone number — powers the chat header's
+  /// call button. Null for the HandyGo Support thread (no invented support
+  /// number) or if genuinely absent.
+  final String? phone;
 
   const ConversationParticipantEntity({
     required this.userId,
@@ -14,6 +18,7 @@ class ConversationParticipantEntity {
     required this.lastName,
     this.avatarUrl,
     this.rating,
+    this.phone,
   });
 
   String get fullName => '$firstName $lastName'.trim();

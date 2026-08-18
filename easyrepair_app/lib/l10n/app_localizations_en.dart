@@ -404,6 +404,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatCouldNotOpenMaps => 'Could not open maps';
 
   @override
+  String get chatCouldNotOpenDialer => 'Could not open the phone dialer';
+
+  @override
   String get chatSharedLocation => 'Shared location';
 
   @override
@@ -1392,6 +1395,36 @@ class AppLocalizationsEn extends AppLocalizations {
   String get discoveryTryAgain => 'Try again';
 
   @override
+  String get postJobInspectionReportSectionTitle =>
+      'Inspection Report (Optional)';
+
+  @override
+  String get postJobAttachInspectionReport =>
+      'Attach previous inspection report';
+
+  @override
+  String get postJobAttachInspectionHint =>
+      'Help bidders understand the job by sharing an earlier diagnosis.';
+
+  @override
+  String get postJobChangeInspectionReport => 'Change report';
+
+  @override
+  String get postJobSelectInspectionReport => 'Select an inspection report';
+
+  @override
+  String get postJobNoInspectionReports =>
+      'No previous inspection reports available for this service.';
+
+  @override
+  String get postJobInspectionReportsFailed =>
+      'Could not load your inspection reports.';
+
+  @override
+  String get postJobInspectionReportCleared =>
+      'Attached inspection report was removed because the service changed.';
+
+  @override
   String get inspectionReportTitle => 'Inspection Report';
 
   @override
@@ -2018,6 +2051,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workerNoJobsAssigned => 'No jobs assigned yet';
 
   @override
+  String get workerNoAppliedJobs => 'No applied jobs yet';
+
+  @override
   String get workerNewRequestsHere => 'New requests will appear here';
 
   @override
@@ -2025,6 +2061,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get workerCancelledJobsHere => 'Cancelled jobs will show up here';
+
+  @override
+  String get workerAppliedJobsHere =>
+      'Jobs you\'ve placed an offer on will show up here';
 
   @override
   String get workerAcceptToGetStarted =>

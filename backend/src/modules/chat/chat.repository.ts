@@ -10,6 +10,10 @@ const CONVERSATION_INCLUDE = {
   clientUser: {
     select: {
       id: true,
+      // Reused by the chat "call" button — mirrors the same User.phone the
+      // booking-detail Call Worker / Call Client actions already expose via
+      // WorkerSummaryDto.phone / WorkerJobResponseDto.clientPhone.
+      phone: true,
       clientProfile: {
         select: { firstName: true, lastName: true, avatarUrl: true },
       },
@@ -18,6 +22,7 @@ const CONVERSATION_INCLUDE = {
   workerUser: {
     select: {
       id: true,
+      phone: true,
       workerProfile: {
         select: {
           firstName: true,

@@ -801,6 +801,12 @@ abstract class AppLocalizations {
   /// **'Could not open maps'**
   String get chatCouldNotOpenMaps;
 
+  /// No description provided for @chatCouldNotOpenDialer.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not open the phone dialer'**
+  String get chatCouldNotOpenDialer;
+
   /// No description provided for @chatSharedLocation.
   ///
   /// In en, this message translates to:
@@ -2589,6 +2595,54 @@ abstract class AppLocalizations {
   /// **'Try again'**
   String get discoveryTryAgain;
 
+  /// No description provided for @postJobInspectionReportSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Inspection Report (Optional)'**
+  String get postJobInspectionReportSectionTitle;
+
+  /// No description provided for @postJobAttachInspectionReport.
+  ///
+  /// In en, this message translates to:
+  /// **'Attach previous inspection report'**
+  String get postJobAttachInspectionReport;
+
+  /// No description provided for @postJobAttachInspectionHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Help bidders understand the job by sharing an earlier diagnosis.'**
+  String get postJobAttachInspectionHint;
+
+  /// No description provided for @postJobChangeInspectionReport.
+  ///
+  /// In en, this message translates to:
+  /// **'Change report'**
+  String get postJobChangeInspectionReport;
+
+  /// No description provided for @postJobSelectInspectionReport.
+  ///
+  /// In en, this message translates to:
+  /// **'Select an inspection report'**
+  String get postJobSelectInspectionReport;
+
+  /// No description provided for @postJobNoInspectionReports.
+  ///
+  /// In en, this message translates to:
+  /// **'No previous inspection reports available for this service.'**
+  String get postJobNoInspectionReports;
+
+  /// No description provided for @postJobInspectionReportsFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load your inspection reports.'**
+  String get postJobInspectionReportsFailed;
+
+  /// No description provided for @postJobInspectionReportCleared.
+  ///
+  /// In en, this message translates to:
+  /// **'Attached inspection report was removed because the service changed.'**
+  String get postJobInspectionReportCleared;
+
   /// No description provided for @inspectionReportTitle.
   ///
   /// In en, this message translates to:
@@ -3663,6 +3717,12 @@ abstract class AppLocalizations {
   /// **'No jobs assigned yet'**
   String get workerNoJobsAssigned;
 
+  /// No description provided for @workerNoAppliedJobs.
+  ///
+  /// In en, this message translates to:
+  /// **'No applied jobs yet'**
+  String get workerNoAppliedJobs;
+
   /// No description provided for @workerNewRequestsHere.
   ///
   /// In en, this message translates to:
@@ -3680,6 +3740,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Cancelled jobs will show up here'**
   String get workerCancelledJobsHere;
+
+  /// No description provided for @workerAppliedJobsHere.
+  ///
+  /// In en, this message translates to:
+  /// **'Jobs you\'ve placed an offer on will show up here'**
+  String get workerAppliedJobsHere;
 
   /// No description provided for @workerAcceptToGetStarted.
   ///

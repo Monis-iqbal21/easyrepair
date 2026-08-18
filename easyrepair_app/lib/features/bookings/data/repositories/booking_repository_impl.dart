@@ -4,6 +4,7 @@ import 'package:fpdart/fpdart.dart';
 
 import '../../../../core/data/cached_result.dart';
 import '../../../../core/errors/failures.dart';
+import '../../domain/entities/attachable_inspection_entity.dart';
 import '../../domain/entities/booking_entity.dart';
 import '../../domain/entities/create_booking_request.dart';
 import '../../domain/entities/inspection_report_entity.dart';
@@ -16,6 +17,22 @@ class BookingRepositoryImpl implements BookingRepository {
   final BookingRemoteDataSource _dataSource;
 
   const BookingRepositoryImpl(this._dataSource);
+
+  @override
+  Future<Either<Failure, List<AttachableInspectionEntity>>>
+      getAttachableInspections({String? categoryId}) async {
+    try {
+      final list = await _dataSource.getAttachableInspections(
+        categoryId: categoryId,
+      );
+      return Right(list);
+    } on Failure catch (f) {
+      return Left(f);
+    } catch (e) {
+      return Left(ServerFailure('',
+          code: FailureCode.unknown, diagnostic: e.toString()));
+    }
+  }
 
   @override
   Future<Either<Failure, BookingEntity>> createBooking(

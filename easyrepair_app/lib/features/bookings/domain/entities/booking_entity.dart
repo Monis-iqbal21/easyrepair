@@ -358,7 +358,12 @@ extension BookingInspectionLifecycleX on BookingEntity {
   /// whether one exists is answered by the backend, and the button renders
   /// nothing when it does not.
   bool get hasInspectionReportToShow =>
-      lane == BookingLane.inspection || sourceInspectionBookingId != null;
+      lane == BookingLane.inspection ||
+      sourceInspectionBookingId != null ||
+      // A bidding job the client attached one of their own past inspection
+      // reports to — same read-only viewer, resolved by the backend through
+      // this booking's id exactly like the linked-repair case above.
+      attachedInspectionBookingId != null;
 
   /// Worker "My Jobs" card: this completed entry represents inspection work
   /// only — the repair was opened to other Ustaads — so it must be labelled
@@ -620,6 +625,26 @@ class BookingWorkerExclusionEntity {
   });
 }
 
+/// The outcome of THIS worker's own bid on a job, as shown in My Jobs →
+/// Applied. Mirrors the backend `BidStatus` enum exactly — no invented
+/// "not selected" state: a job awarded to someone else leaves this worker's
+/// bid at [rejected], which is what the server actually stores (see
+/// BidsRepository.acceptBid, which rejects the other bids rather than
+/// deleting them).
+enum BidOutcome { pending, accepted, rejected }
+
+extension BidOutcomeX on BidOutcome {
+  /// Null-safe parse of the server's `myBidStatus` — null (the field is
+  /// absent on every non-Applied response) stays null rather than
+  /// defaulting to a status this worker never actually has.
+  static BidOutcome? fromRaw(String? raw) => switch (raw?.toUpperCase()) {
+        'PENDING' => BidOutcome.pending,
+        'ACCEPTED' => BidOutcome.accepted,
+        'REJECTED' => BidOutcome.rejected,
+        _ => null,
+      };
+}
+
 /// One entry from the booking_status_history table.
 class BookingStatusHistoryEntry {
   final String id;
@@ -724,11 +749,41 @@ class BookingEntity {
   /// Other Ustaad" — the linked repair booking now open for bidding.
   final String? linkedRepairBookingId;
 
+  /// Set when the client manually attached one of their OWN past completed
+  /// inspections' reports while independently posting this BIDDING job —
+  /// read-only supporting context for bidders.
+  ///
+  /// Deliberately distinct from [sourceInspectionBookingId]: that one means
+  /// "this repair job was spawned from that inspection" and carries real
+  /// business behavior (inspector exclusion, earnings, fee derivation). An
+  /// attachment carries none of it — the original inspection was closed and
+  /// paid, and its inspector may bid here like anyone else.
+  final String? attachedInspectionBookingId;
+
+  /// True when this booking has an inspection report a worker/client can
+  /// open — through either route. The report viewer resolves both via the
+  /// same booking id, so UI never needs to branch on which one it was.
+  bool get hasLinkedInspectionReport =>
+      sourceInspectionBookingId != null || attachedInspectionBookingId != null;
+
   /// Whether the client has paid the inspection fee. Computed server-side
   /// from the ORIGINAL inspection work unit reaching COMPLETED — never from
   /// the existence of a report or from the linked repair's own status.
   /// Null when no inspection is involved in this booking.
   final bool? inspectionFeePaid;
+
+  /// My Jobs → Applied/Bids only: this worker's OWN bid outcome, which is
+  /// deliberately independent of [status]. A REJECTED bid on an ACCEPTED
+  /// booking is the normal "someone else was hired" case — without this the
+  /// Applied card would show the booking's own "Assigned" chip and read as
+  /// though this worker had won the job. Null on every other list/detail
+  /// response.
+  final BidOutcome? myBidStatus;
+
+  /// My Jobs → Applied/Bids only — the amount this worker actually bid.
+  /// Null elsewhere. Distinct from [finalPrice]/[acceptedBidAmount], which
+  /// describe the hired worker's price, not this worker's offer.
+  final double? myBidAmount;
 
   const BookingEntity({
     required this.id,
@@ -786,7 +841,10 @@ class BookingEntity {
     this.isInspectionOnlyForCaller = false,
     this.sourceInspectionBookingId,
     this.linkedRepairBookingId,
+    this.attachedInspectionBookingId,
     this.inspectionFeePaid,
+    this.myBidStatus,
+    this.myBidAmount,
   });
 
   /// Sum of all selected STANDARD-lane sub-service prices (× quantity).

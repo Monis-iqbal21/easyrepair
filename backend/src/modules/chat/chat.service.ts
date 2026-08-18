@@ -759,6 +759,9 @@ export class ChatService {
           lastName: '',
           avatarUrl: null,
           rating: null,
+          // Never invent a support phone number — the app hides the call
+          // button for the Support thread when this is null.
+          phone: null,
         }
       : // Build otherParticipant from the opposite side's user record
       callerRole === Role.CLIENT
@@ -768,6 +771,7 @@ export class ChatService {
             lastName: c.workerUser.workerProfile?.lastName ?? '',
             avatarUrl: c.workerUser.workerProfile?.avatarUrl ?? null,
             rating: c.workerUser.workerProfile?.rating ?? null,
+            phone: c.workerUser.phone,
           }
         : {
             userId: c.clientUserId,
@@ -775,6 +779,7 @@ export class ChatService {
             lastName: c.clientUser.clientProfile?.lastName ?? '',
             avatarUrl: c.clientUser.clientProfile?.avatarUrl ?? null,
             rating: null,
+            phone: c.clientUser.phone,
           };
 
     return {

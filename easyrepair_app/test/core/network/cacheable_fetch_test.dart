@@ -1,7 +1,10 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:handygo_app/core/errors/failures.dart';
+import 'package:handygo_app/core/data/cache_policy.dart';
 import 'package:handygo_app/core/network/cacheable_fetch.dart';
 import 'package:handygo_app/core/storage/local_cache_service.dart';
 import 'package:handygo_app/core/storage/secure_storage_service.dart';
@@ -166,6 +169,127 @@ void main() {
       expect(result.data, [7]);
       // Nothing was persisted under any key for a null account.
       expect(cache.read('u1', 'nums'), isNull);
+    });
+
+    // ── maxAge (New Jobs 24h discovery-cache TTL) ─────────────────────────
+    group('cache policy (was: maxAge)', () {
+      Future<SharedPreferences> writeAgedEntry(
+        String userId,
+        String key,
+        Object? data,
+        DateTime savedAt,
+      ) async {
+        final prefs = await SharedPreferences.getInstance();
+        final envelope = jsonEncode({
+          'savedAt': savedAt.toIso8601String(),
+          'data': data,
+        });
+        await prefs.setString('hg_cache_v1:$userId:$key', envelope);
+        return prefs;
+      }
+
+      test('omitted (default) — a cache many days old is still served, '
+          'exactly as before this option existed', () async {
+        SharedPreferences.setMockInitialValues({});
+        await writeAgedEntry(
+          'u1',
+          'nums',
+          [1, 1],
+          DateTime.now().subtract(const Duration(days: 30)),
+        );
+        final prefs = await SharedPreferences.getInstance();
+        final cache = LocalCacheService(prefs);
+        final storage = _FakeSecureStorage('u1');
+
+        final result = await fetchWithCache<List<int>>(
+          cache: cache,
+          secureStorage: storage,
+          cacheKey: 'nums',
+          request: () async => throw _connectionError(),
+          decode: (json) => (json as List<dynamic>).cast<int>(),
+        );
+
+        expect(result.isStale, isTrue);
+        expect(result.data, [1, 1]);
+      });
+
+      test('a cache just inside maxAge is still served, marked stale',
+          () async {
+        SharedPreferences.setMockInitialValues({});
+        await writeAgedEntry(
+          'u1',
+          'new_jobs',
+          [1],
+          DateTime.now().subtract(const Duration(hours: 23)),
+        );
+        final prefs = await SharedPreferences.getInstance();
+        final cache = LocalCacheService(prefs);
+        final storage = _FakeSecureStorage('u1');
+
+        final result = await fetchWithCache<List<int>>(
+          cache: cache,
+          secureStorage: storage,
+          cacheKey: 'new_jobs',
+          policy: CachePolicy.newJobs,
+          request: () async => throw _connectionError(),
+          decode: (json) => (json as List<dynamic>).cast<int>(),
+        );
+
+        expect(result.isStale, isTrue);
+        expect(result.data, [1]);
+      });
+
+      test('a cache older than maxAge is NOT served — the live failure is '
+          'rethrown instead of implying stale data is still usable',
+          () async {
+        SharedPreferences.setMockInitialValues({});
+        await writeAgedEntry(
+          'u1',
+          'new_jobs',
+          [1],
+          DateTime.now().subtract(const Duration(hours: 25)),
+        );
+        final prefs = await SharedPreferences.getInstance();
+        final cache = LocalCacheService(prefs);
+        final storage = _FakeSecureStorage('u1');
+
+        await expectLater(
+          fetchWithCache<List<int>>(
+            cache: cache,
+            secureStorage: storage,
+            cacheKey: 'new_jobs',
+            policy: CachePolicy.newJobs,
+            request: () async => throw _connectionError(),
+            decode: (json) => (json as List<dynamic>).cast<int>(),
+          ),
+          throwsA(isA<NetworkFailure>()),
+        );
+      });
+
+      test('a live success always refreshes regardless of maxAge', () async {
+        SharedPreferences.setMockInitialValues({});
+        await writeAgedEntry(
+          'u1',
+          'new_jobs',
+          [1],
+          DateTime.now().subtract(const Duration(hours: 25)),
+        );
+        final prefs = await SharedPreferences.getInstance();
+        final cache = LocalCacheService(prefs);
+        final storage = _FakeSecureStorage('u1');
+
+        final result = await fetchWithCache<List<int>>(
+          cache: cache,
+          secureStorage: storage,
+          cacheKey: 'new_jobs',
+          policy: CachePolicy.newJobs,
+          request: () async => [9, 9],
+          decode: (json) => (json as List<dynamic>).cast<int>(),
+        );
+
+        expect(result.isStale, isFalse);
+        expect(result.data, [9, 9]);
+      });
     });
   });
 }

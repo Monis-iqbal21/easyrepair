@@ -179,7 +179,10 @@ export class WorkersRepository {
         isOnline: goingOnline || status === AvailabilityStatus.BUSY,
         // Record session start when going online; clear it when going offline.
         // BUSY transitions (set by booking flow) leave onlineAt untouched.
-        ...(goingOnline ? { onlineAt: new Date() } : {}),
+        // lastSeenAt renews the presence lease on every authenticated
+        // Go-Online call (see touchWorkerPresence semantics in
+        // job-eligibility.util.ts) — never touched for BUSY/OFFLINE.
+        ...(goingOnline ? { onlineAt: new Date(), lastSeenAt: new Date() } : {}),
         ...(goingOffline ? { onlineAt: null } : {}),
         ...(lat !== undefined && lng !== undefined
           ? {
@@ -229,6 +232,10 @@ export class WorkersRepository {
         currentLat: lat,
         currentLng: lng,
         locationUpdatedAt: new Date(),
+        // A live-location ping while ONLINE is genuine app activity — renews
+        // the presence lease (see WORKER_PRESENCE_STALE_MS). Gated to ONLINE
+        // by the `where` above, same as the location fields themselves.
+        lastSeenAt: new Date(),
       },
     });
   }
@@ -243,6 +250,44 @@ export class WorkersRepository {
         onlineAt: null,
       },
     });
+  }
+
+  /**
+   * ONLINE workers whose presence lease has gone stale (no genuine app
+   * activity within the configured window) — the candidate set for the
+   * periodic stale-presence cleanup job. A null `lastSeenAt` (e.g. a row
+   * that went ONLINE before this field existed) is treated as stale.
+   */
+  async findStaleOnlineWorkers(
+    staleBefore: Date,
+  ): Promise<{ id: string; userId: string }[]> {
+    return this.prisma.workerProfile.findMany({
+      where: {
+        availabilityStatus: AvailabilityStatus.ONLINE,
+        OR: [{ lastSeenAt: null }, { lastSeenAt: { lt: staleBefore } }],
+      },
+      select: { id: true, userId: true },
+    });
+  }
+
+  /**
+   * Conditional offline transition guarded by `availabilityStatus: ONLINE`
+   * in the WHERE clause — returns whether THIS call is the one that actually
+   * flipped the row. Used by the stale-presence cleanup job so a race with a
+   * concurrent manual "Go Offline" (or a second overlapping cleanup pass)
+   * never double-transitions the row or double-fires the INACTIVITY
+   * notification: only the caller that wins the atomic update notifies.
+   */
+  async setOfflineIfStillOnline(workerProfileId: string): Promise<boolean> {
+    const { count } = await this.prisma.workerProfile.updateMany({
+      where: { id: workerProfileId, availabilityStatus: AvailabilityStatus.ONLINE },
+      data: {
+        availabilityStatus: AvailabilityStatus.OFFLINE,
+        isOnline: false,
+        onlineAt: null,
+      },
+    });
+    return count > 0;
   }
 
   /**
@@ -799,13 +844,11 @@ export class WorkersRepository {
     statusFilter?: 'active' | 'completed' | 'cancelled',
   ): Promise<WorkerJobWithRelations[]> {
     const statusIn = (() => {
-      if (statusFilter === 'active') {
-        return [
-          BookingStatus.ACCEPTED,
-          BookingStatus.EN_ROUTE,
-          BookingStatus.IN_PROGRESS,
-        ];
-      }
+      // Shared single source of truth (see worker-stats.util.ts) — keeps
+      // this in step with getJobStats/findOngoingJob so a job in ARRIVED
+      // status (EN_ROUTE → ARRIVED → IN_PROGRESS) is never invisible under
+      // My Jobs → Active despite genuinely being an ongoing assigned job.
+      if (statusFilter === 'active') return [...ACTIVE_BOOKING_STATUSES];
       if (statusFilter === 'completed') return [BookingStatus.COMPLETED];
       if (statusFilter === 'cancelled')
         return [BookingStatus.REJECTED, BookingStatus.CANCELLED];
@@ -820,6 +863,44 @@ export class WorkersRepository {
       include: WORKER_JOB_INCLUDE,
       orderBy: { createdAt: 'desc' },
     });
+  }
+
+  /**
+   * My Jobs → Applied/Bids: every bid this worker has ever placed, newest
+   * first, regardless of the bid's own status (PENDING/ACCEPTED/REJECTED) or
+   * the underlying booking's current status/assignment/age. This is account
+   * history, not discovery — unlike findAvailableJobsForWorker, it is never
+   * filtered by ONLINE, category freshness, radius or the 48h discovery
+   * window (see JOB_DISCOVERY_WINDOW_MS), and never disappears when the
+   * booking is later assigned to a different worker: Bid rows are never
+   * deleted, only their `status` changes (acceptBid rejects every other bid
+   * on the booking instead of removing it — see BidsRepository.acceptBid).
+   */
+  async findAppliedJobsByWorkerProfileId(workerProfileId: string): Promise<
+    {
+      bidStatus: BidStatus;
+      bidAmount: Prisma.Decimal;
+      bidUpdatedAt: Date;
+      booking: WorkerJobWithRelations;
+    }[]
+  > {
+    return this.prisma.bid.findMany({
+      where: { workerProfileId },
+      orderBy: { updatedAt: 'desc' },
+      select: {
+        status: true,
+        amount: true,
+        updatedAt: true,
+        booking: { include: WORKER_JOB_INCLUDE },
+      },
+    }).then((rows) =>
+      rows.map((r) => ({
+        bidStatus: r.status,
+        bidAmount: r.amount,
+        bidUpdatedAt: r.updatedAt,
+        booking: r.booking,
+      })),
+    );
   }
 
   /**

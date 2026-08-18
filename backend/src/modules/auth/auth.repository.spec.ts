@@ -99,3 +99,60 @@ describe('AuthRepository.softDeleteUser — legal-preservation', () => {
     expect(updateArgs!.data.deletedAt).toBeInstanceOf(Date);
   });
 });
+
+/**
+ * A physical FCM token must never remain simultaneously associated with two
+ * User rows — e.g. a Worker logging out and a Client logging in on the same
+ * physical device. Single-`fcmToken`-column architecture (no per-device
+ * table), so exclusivity is enforced by atomically detaching the token from
+ * every other row before assigning it to the caller.
+ */
+describe('AuthRepository.saveFcmToken — exclusive token ownership', () => {
+  it('detaches the token from any other user, then assigns it to this user, in one transaction', async () => {
+    const calls: Array<{ op: string; args: unknown }> = [];
+    const prisma = {
+      user: {
+        updateMany: jest.fn((args: unknown) => {
+          calls.push({ op: 'updateMany', args });
+          return Promise.resolve({ count: 1 });
+        }),
+        update: jest.fn((args: unknown) => {
+          calls.push({ op: 'update', args });
+          return Promise.resolve({});
+        }),
+      },
+      $transaction: jest.fn((ops: Promise<unknown>[]) => Promise.all(ops)),
+    };
+
+    const repository = new AuthRepository(prisma as never);
+    await repository.saveFcmToken('user-2', 'token-abc');
+
+    expect(prisma.user.updateMany).toHaveBeenCalledWith({
+      where: { fcmToken: 'token-abc', id: { not: 'user-2' } },
+      data: { fcmToken: null },
+    });
+    expect(prisma.user.update).toHaveBeenCalledWith({
+      where: { id: 'user-2' },
+      data: { fcmToken: 'token-abc' },
+    });
+    // Detach is built (and handed to $transaction) before assign, so a
+    // reader observing the transaction's effects never sees the token on
+    // two rows at once.
+    expect(calls.map((c) => c.op)).toEqual(['updateMany', 'update']);
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('AuthRepository.clearFcmToken', () => {
+  it('nulls out fcmToken for exactly the given user', async () => {
+    const prisma = { user: { update: jest.fn().mockResolvedValue({}) } };
+    const repository = new AuthRepository(prisma as never);
+
+    await repository.clearFcmToken('user-1');
+
+    expect(prisma.user.update).toHaveBeenCalledWith({
+      where: { id: 'user-1' },
+      data: { fcmToken: null },
+    });
+  });
+});

@@ -54,6 +54,49 @@ export default () => ({
       process.env.MATCH_LOCATION_COOLDOWN_SECONDS || '60',
       10,
     ),
+    /**
+     * How many recipients (or jobs) the broadcast fan-out re-reads and pushes
+     * per batch. Purely a round-trip/latency knob: every batch still re-reads
+     * BOTH sides from the database immediately before pushing, so the
+     * pre-push eligibility recheck is unaffected by this value.
+     */
+    fanOutChunkSize: parseInt(process.env.MATCH_FANOUT_CHUNK_SIZE || '50', 10),
+    /**
+     * Runaway guard on the nearby-worker candidate query (see
+     * DEFAULT_NEARBY_FETCH_LIMIT in bookings.repository.ts). The query is
+     * ordered nearest-first, so this can only ever drop workers farther away
+     * than those kept, in a pool far larger than the 4-worker target or the
+     * client UI needs.
+     */
+    nearbyWorkerFetchLimit: parseInt(
+      process.env.MATCH_NEARBY_FETCH_LIMIT || '200',
+      10,
+    ),
+  },
+  presence: {
+    /**
+     * How many hours a Worker's ONLINE status may go without a genuine
+     * app-activity signal (see touchWorkerPresence) before it is treated as
+     * stale — excluded from new-job matching immediately, and force-flipped
+     * to OFFLINE by the periodic cleanup job. Single source of truth — see
+     * WORKER_PRESENCE_STALE_MS in job-eligibility.util.ts. Independent of,
+     * and never a replacement for, GPS/location freshness.
+     */
+    workerOnlineStaleHours: parseFloat(
+      process.env.WORKER_ONLINE_STALE_HOURS || '6',
+    ),
+  },
+  discovery: {
+    /**
+     * How many hours an open job stays in New Jobs discovery (feed,
+     * broadcast, late-discovery push) after creation, regardless of its
+     * BookingStatus. Single source of truth — see JOB_DISCOVERY_WINDOW_MS in
+     * job-eligibility.util.ts. Discovery filtering only, never deletion — a
+     * worker's existing bid/history on an older job is unaffected.
+     */
+    jobDiscoveryWindowHours: parseFloat(
+      process.env.JOB_DISCOVERY_WINDOW_HOURS || '48',
+    ),
   },
   whatsapp: {
     token: process.env.WHATSAPP_TOKEN,

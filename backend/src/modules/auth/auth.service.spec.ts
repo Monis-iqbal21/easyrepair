@@ -9,6 +9,7 @@ describe('AuthService — SMS OTP login/registration', () => {
   let storageService: any;
   let smsOtp: any;
   let chatService: any;
+  let workersService: any;
   let service: AuthService;
 
   // A public address: 10.0.0.1 is a private/proxy-side address, which the
@@ -92,6 +93,7 @@ describe('AuthService — SMS OTP login/registration', () => {
 
     // Support-thread creation is fire-and-forget and must never affect auth.
     chatService = { ensureSupportConversation: jest.fn().mockResolvedValue(null) };
+    workersService = { handleWorkerLogout: jest.fn().mockResolvedValue(undefined) };
 
     service = new AuthService(
       repository,
@@ -100,6 +102,7 @@ describe('AuthService — SMS OTP login/registration', () => {
       storageService,
       smsOtp,
       chatService,
+      workersService,
     );
 
     process.env.NODE_ENV = 'test'; // non-production -> dev OTP log path

@@ -488,6 +488,55 @@ export class WorkersService {
     };
   }
 
+  // ── Session lifecycle (logout) ──────────────────────────────────────────
+
+  /**
+   * Authoritative server-side session cleanup for a logging-out Worker —
+   * called from AuthService.logout regardless of role (a CLIENT userId has
+   * no WorkerProfile and this is a no-op for them).
+   *
+   * Always force-flips availability to OFFLINE (even from BUSY) so the
+   * Worker is immediately excluded from new-job matching, but deliberately
+   * never touches `currentlyWorking` or the active booking itself — an
+   * assigned job survives logout untouched. A forced-offline notification
+   * (reason=LOGOUT) is persisted only on a genuine transition out of
+   * OFFLINE, so logging out while already offline never creates a duplicate.
+   * The caller (AuthService.logout) clears this device's FCM token BEFORE
+   * calling this, so the notification is persisted but never pushed here.
+   */
+  async handleWorkerLogout(userId: string): Promise<void> {
+    const profile = await this.workersRepository.findByUserId(userId);
+    if (!profile) return;
+
+    const wasOnlineOrBusy =
+      profile.availabilityStatus !== AvailabilityStatus.OFFLINE;
+
+    await this.workersRepository.setOfflineById(profile.id);
+
+    // Cancel any pending 7h auto-offline timer — the worker is already
+    // offline now, so it would otherwise fire a redundant/incorrect
+    // auto-offline notification later.
+    void this._syncAutoOfflineJob(
+      profile.id,
+      userId,
+      profile.availabilityStatus,
+      AvailabilityStatus.OFFLINE,
+    );
+
+    if (!wasOnlineOrBusy) return;
+
+    void this.notificationsService.notify({
+      userId,
+      eventKey: 'worker.availability.forced_offline',
+      title: 'Ap offline ho gaye hain',
+      body: 'Logout karne ki wajah se apki availability offline kar di gayi hai.',
+      route: '/worker/home',
+      entityType: 'worker',
+      entityId: profile.id,
+      payload: { reason: 'LOGOUT' },
+    });
+  }
+
   // ── Profile & availability ───────────────────────────────────────────────
 
   /** Get the full worker dashboard profile including skills, stats, and ongoing job. */
@@ -805,10 +854,27 @@ export class WorkersService {
   /** List all jobs assigned to this worker, with optional filter. */
   async getWorkerJobs(
     userId: string,
-    statusFilter?: 'active' | 'completed' | 'cancelled',
+    statusFilter?: 'active' | 'completed' | 'cancelled' | 'applied',
   ): Promise<WorkerJobResponseDto[]> {
     const profile = await this.workersRepository.findByUserId(userId);
     if (!profile) throw new NotFoundException('Worker profile not found');
+
+    // Applied/Bids is account history derived from the worker's own Bid
+    // rows, not from Booking.workerProfileId — a bid the worker placed
+    // never disappears here just because the job was later assigned to
+    // someone else, went stale, or the worker went OFFLINE (see
+    // WorkersRepository.findAppliedJobsByWorkerProfileId).
+    if (statusFilter === 'applied') {
+      const applied =
+        await this.workersRepository.findAppliedJobsByWorkerProfileId(
+          profile.id,
+        );
+      return applied.map((a) => ({
+        ...this._toJobDto(a.booking, profile.id),
+        myBidStatus: a.bidStatus,
+        myBidAmount: Number(a.bidAmount),
+      }));
+    }
 
     const jobs = await this.workersRepository.findJobsByWorkerProfileId(
       profile.id,
@@ -1236,9 +1302,14 @@ export class WorkersService {
       // Linked repair booking spawned by "Find Other Ustaad" — lets the
       // worker app resolve the source inspection's (price-sanitized) report.
       sourceInspectionBookingId: job.sourceInspectionBookingId ?? null,
+      attachedInspectionBookingId: job.attachedInspectionBookingId ?? null,
       // Same single rule the client sees — owned by the original inspection
       // work unit, never by this repair booking. See inspection-fee.util.ts.
       inspectionFeePaid: deriveInspectionFeePaid(job),
+      // Set only for My Jobs → Applied entries (see getWorkerJobs); null
+      // for every other list/detail response.
+      myBidStatus: null,
+      myBidAmount: null,
     };
   }
 

@@ -144,11 +144,11 @@ describe('BookingsService.assertClientCanChatWithWorker', () => {
   beforeEach(() => {
     bookingsRepository = {
       findBookingById: jest.fn().mockResolvedValue(BASE_BOOKING),
-      findNearbyWorkers: jest.fn().mockResolvedValue({
-        workers: [{ id: 'nearby-worker-1' }],
-        searchedRadiusKm: 5,
-        searchCompleted: true,
-      }),
+      // Membership-test variant used by assertClientCanChatWithWorker — same
+      // search/eligibility, ids only (no stats/ranking).
+      findNearbyWorkerIds: jest
+        .fn()
+        .mockResolvedValue(new Set(['nearby-worker-1'])),
       hasBidFromWorker: jest.fn().mockResolvedValue(false),
     };
     storageService = {};
@@ -216,11 +216,7 @@ describe('BookingsService.assertClientCanChatWithWorker', () => {
   });
 
   it('rejects an excluded worker even though the booking is still open', async () => {
-    bookingsRepository.findNearbyWorkers.mockResolvedValue({
-      workers: [],
-      searchedRadiusKm: 5,
-      searchCompleted: true,
-    });
+    bookingsRepository.findNearbyWorkerIds.mockResolvedValue(new Set());
     await expect(
       service.assertClientCanChatWithWorker(
         'client-user-1',
@@ -244,7 +240,7 @@ describe('BookingsService.assertClientCanChatWithWorker', () => {
         'bidder-1',
       ),
     ).resolves.toBeUndefined();
-    expect(bookingsRepository.findNearbyWorkers).not.toHaveBeenCalled();
+    expect(bookingsRepository.findNearbyWorkerIds).not.toHaveBeenCalled();
   });
 
   // ── #8 Assigned worker after a completed STANDARD job ───────────────────

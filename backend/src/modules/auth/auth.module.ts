@@ -9,6 +9,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { SmsOtpService } from './sms-otp.service';
 import { StorageModule } from '../storage/storage.module';
 import { ChatModule } from '../chat/chat.module';
+import { WorkersModule } from '../workers/workers.module';
 
 @Module({
   imports: [
@@ -17,6 +18,10 @@ import { ChatModule } from '../chat/chat.module';
     // Login/registration ensures the user's HandyGo Support conversation.
     // Acyclic: ChatModule does not import AuthModule.
     ChatModule,
+    // Logout is authoritative session cleanup — forces a logging-out Worker
+    // OFFLINE server-side. Acyclic: WorkersModule (and everything it
+    // imports) does not import AuthModule.
+    WorkersModule,
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({

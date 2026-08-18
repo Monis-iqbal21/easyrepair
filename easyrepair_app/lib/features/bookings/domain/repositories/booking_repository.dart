@@ -4,6 +4,7 @@ import 'package:fpdart/fpdart.dart';
 
 import '../../../../core/data/cached_result.dart';
 import '../../../../core/errors/failures.dart';
+import '../entities/attachable_inspection_entity.dart';
 import '../entities/booking_entity.dart';
 import '../entities/create_booking_request.dart';
 import '../entities/inspection_report_entity.dart';
@@ -31,6 +32,11 @@ abstract class BookingRepository {
   Future<Either<Failure, List<BookingEntity>>> getPendingReviews();
 
   /// Create a new service request / booking.
+  /// The client's own previously completed inspections whose report may be
+  /// attached to a new bidding job. Never cached — see the datasource note.
+  Future<Either<Failure, List<AttachableInspectionEntity>>>
+      getAttachableInspections({String? categoryId});
+
   Future<Either<Failure, BookingEntity>> createBooking(
     CreateBookingRequest request,
   );

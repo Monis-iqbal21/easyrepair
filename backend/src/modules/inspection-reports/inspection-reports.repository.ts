@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InspectionDecisionStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ATTACHABLE_INSPECTION_DECISION_STATUSES } from '../../common/utils/attachable-inspection.util';
 
 export const INSPECTION_REPORT_INCLUDE = {
   parts: { orderBy: { createdAt: 'asc' as const } },
@@ -31,6 +32,10 @@ export type InspectionBookingContext = {
   workerExclusions: { workerProfileId: string }[];
   /** For a linked repair booking: the completed inspection it came from. */
   sourceInspectionBookingId: string | null;
+  /** For an independently-posted BIDDING job: the historical inspection whose
+   *  report the client manually attached. Informational only — never implies
+   *  the post-inspection/Find-Other-Ustaad relationship above. */
+  attachedInspectionBookingId: string | null;
   /** For a completed inspection: the linked repair booking spawned by
    *  "Find Other Ustaad", if any — bidder eligibility is checked against
    *  this booking's own category/location/exclusions. */
@@ -52,6 +57,70 @@ export class InspectionReportsRepository {
   async findWorkerProfileByUserId(userId: string) {
     return this.prisma.workerProfile.findUnique({ where: { userId } });
   }
+
+  async findClientProfileByUserId(userId: string) {
+    return this.prisma.clientProfile.findUnique({
+      where: { userId },
+      select: { id: true },
+    });
+  }
+
+  /**
+   * The authenticated client's own previously COMPLETED inspection bookings
+   * that carry a submitted report — the selectable set for "attach a previous
+   * inspection report" when posting a new BIDDING job.
+   *
+   * Eligibility is deliberately strict and entirely server-side:
+   *  - the inspection booking belongs to THIS client (never another's);
+   *  - lane is INSPECTION;
+   *  - the booking actually reached COMPLETED (so the inspection finished and
+   *    its fee was settled — never an in-flight or cancelled one);
+   *  - an InspectionReport row exists (a report was genuinely submitted, so
+   *    drafts/never-filled inspections are excluded);
+   *  - the client has already made their decision on it — CLOSED_AFTER_
+   *    INSPECTION (the case this feature exists for) or ACCEPTED_REPAIR (a
+   *    finished repair whose report is still useful context). A report still
+   *    at PENDING_CLIENT_DECISION or mid-FIND_OTHER_USTAAD is excluded: those
+   *    are live decisions, not history.
+   *
+   * [categoryId] narrows to the same service as the job being posted.
+   */
+  async findClientCompletedInspections(params: {
+    clientProfileId: string;
+    categoryId?: string;
+  }) {
+    return this.prisma.booking.findMany({
+      where: {
+        clientProfileId: params.clientProfileId,
+        lane: 'INSPECTION',
+        status: 'COMPLETED',
+        ...(params.categoryId ? { categoryId: params.categoryId } : {}),
+        inspectionReport: {
+          decisionStatus: {
+            in: [...ATTACHABLE_INSPECTION_DECISION_STATUSES],
+          },
+        },
+      },
+      orderBy: { completedAt: 'desc' },
+      select: {
+        id: true,
+        categoryId: true,
+        completedAt: true,
+        createdAt: true,
+        category: { select: { id: true, name: true } },
+        inspectionReport: {
+          select: {
+            id: true,
+            issueFound: true,
+            recommendedRepair: true,
+            decisionStatus: true,
+            createdAt: true,
+          },
+        },
+      },
+    });
+  }
+
 
   /** Used only to authorize an eligible bidder's sanitized-report access. */
   async findWorkerProfileWithSkillsByUserId(userId: string) {
@@ -84,6 +153,7 @@ export class InspectionReportsRepository {
         workerProfile: { select: { userId: true } },
         workerExclusions: { select: { workerProfileId: true } },
         sourceInspectionBookingId: true,
+        attachedInspectionBookingId: true,
         repairBooking: {
           select: {
             id: true,

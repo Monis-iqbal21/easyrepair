@@ -1,5 +1,6 @@
 import {
   AttachmentType,
+  BidStatus,
   BookingLane,
   BookingStatus,
   BookingUrgency,
@@ -126,10 +127,26 @@ export class WorkerJobResponseDto {
    */
   sourceInspectionBookingId: string | null;
   /**
+   * Set when the client attached one of their own past completed
+   * inspections' reports to this independently-posted BIDDING job. Purely
+   * informational: it lets the worker open the (sanitized) report for
+   * context and never excludes the original inspector from bidding.
+   */
+  attachedInspectionBookingId: string | null;
+  /**
    * Whether the client has paid the inspection fee for the work unit this
    * Ustaad inspected — derived ONLY from the original inspection booking
    * reaching COMPLETED (see inspection-fee.util.ts). `null` when no
    * inspection is involved.
    */
   inspectionFeePaid: boolean | null;
+  /**
+   * My Jobs → Applied/Bids only: the status of THIS worker's own bid on the
+   * job (independent of the booking's own status — e.g. a REJECTED bid on
+   * an ACCEPTED booking means another worker was hired). Null everywhere
+   * else (active/completed/cancelled/detail/new-jobs).
+   */
+  myBidStatus: BidStatus | null;
+  /** My Jobs → Applied/Bids only — this worker's own bid amount. */
+  myBidAmount: number | null;
 }

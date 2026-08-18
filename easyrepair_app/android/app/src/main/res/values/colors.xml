@@ -1,4 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="ic_launcher_background">#FFFEFB</color>
+
+    <!--
+      ============================================================
+      HANDYGO NATIVE SPLASH FALLBACK COLOUR - SINGLE SOURCE OF TRUTH
+      ============================================================
+      This is the ONLY place the Android launch-screen colour is defined.
+      Everything that needs it references @color/handygo_splash_background:
+
+        * drawable/launch_background.xml          (pre-API 21)
+        * drawable-v21/launch_background.xml      (API 21-30)
+        * values-v31/styles.xml                   (Android 12+ splash API)
+        * values-night/styles.xml                 (via the same drawables)
+
+      WHY THIS VALUE: it matches the flat, near-white canvas that fills the
+      middle and bottom of assets/images/background.png - the region the
+      Flutter welcome screen shows behind the logo and the "Shuru karein"
+      button. Keeping them equal is what removes the white/black flash
+      between the native launch screen and the Flutter screen.
+
+      The native launch screen deliberately shows this flat colour plus the
+      centred logo rather than the full background artwork: the artwork is a
+      fixed-aspect illustration and would crop differently from Flutter's
+      BoxFit.cover on many devices, which would read as a visible jump.
+      Brand identity comes from the logo and this colour; the full artwork
+      appears the instant Flutter draws.
+
+      WHEN THE FINAL HANDYGO PALETTE IS CHOSEN: change this one value (and
+      the iOS counterpart - see ios/Runner/Base.lproj/LaunchScreen.storyboard
+      and the README in ios/Runner/Assets.xcassets/LaunchImage.imageset/).
+    -->
+    <color name="handygo_splash_background">#FDFAF6</color>
 </resources>

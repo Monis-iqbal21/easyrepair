@@ -6,6 +6,7 @@ class ConversationParticipantModel {
   final String lastName;
   final String? avatarUrl;
   final double? rating;
+  final String? phone;
 
   const ConversationParticipantModel({
     required this.userId,
@@ -13,6 +14,7 @@ class ConversationParticipantModel {
     required this.lastName,
     this.avatarUrl,
     this.rating,
+    this.phone,
   });
 
   factory ConversationParticipantModel.fromJson(Map<String, dynamic> json) {
@@ -22,6 +24,7 @@ class ConversationParticipantModel {
       lastName: json['lastName'] as String? ?? '',
       avatarUrl: json['avatarUrl'] as String?,
       rating: (json['rating'] as num?)?.toDouble(),
+      phone: json['phone'] as String?,
     );
   }
 
@@ -32,6 +35,7 @@ class ConversationParticipantModel {
       lastName: lastName,
       avatarUrl: avatarUrl,
       rating: rating,
+      phone: phone,
     );
   }
 }

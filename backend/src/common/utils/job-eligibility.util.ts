@@ -29,6 +29,43 @@ export const DEFAULT_JOB_MATCH_RADIUS_KM = 7;
 /** GPS freshness rule, mirrored from the nearby-worker SQL query. */
 export const LOCATION_FRESHNESS_MS = 30 * 60 * 1000;
 
+/**
+ * How stale a Worker's `lastSeenAt` presence signal may get before their
+ * ONLINE status is treated as an expired lease rather than genuine
+ * availability. Configurable via WORKER_ONLINE_STALE_HOURS (default 6h) —
+ * single source of truth, mirrored into the stale-worker cleanup job
+ * (workers.processor.ts) and the coarse DB-level candidate filters
+ * (matching.repository.ts, bookings.repository.ts findNearbyWorkers).
+ *
+ * Deliberately independent of LOCATION_FRESHNESS_MS above: presence answers
+ * "has this Worker's app been active in HandyGo recently?", location answers
+ * "is this Worker's GPS fix recent enough for nearby matching?". Neither
+ * check replaces the other.
+ */
+const WORKER_ONLINE_STALE_HOURS =
+  parseFloat(process.env.WORKER_ONLINE_STALE_HOURS ?? '') || 6;
+export const WORKER_PRESENCE_STALE_MS =
+  WORKER_ONLINE_STALE_HOURS * 60 * 60 * 1000;
+
+/**
+ * How long an open job stays in NEW-JOB DISCOVERY (New Jobs feed / broadcast
+ * / late-discovery push) after creation, independent of its BookingStatus.
+ * Configurable via JOB_DISCOVERY_WINDOW_HOURS (default 48h) — single source
+ * of truth, checked centrally in `checkJobEligibility` below so it can never
+ * drift between the New Jobs feed, the broadcast fan-out and late discovery.
+ *
+ * This is discovery FILTERING, not data deletion or the booking's actual
+ * expiry: a still-PENDING booking older than this window simply stops being
+ * offered to new bidders — it is untouched in the database, and a worker who
+ * already bid on it keeps that bid/history regardless of this window. The
+ * booking's own auto-expiry (72h, see BookingsProcessor) is a separate,
+ * longer-running mechanism that eventually flips it to EXPIRED.
+ */
+const JOB_DISCOVERY_WINDOW_HOURS =
+  parseFloat(process.env.JOB_DISCOVERY_WINDOW_HOURS ?? '') || 48;
+export const JOB_DISCOVERY_WINDOW_MS =
+  JOB_DISCOVERY_WINDOW_HOURS * 60 * 60 * 1000;
+
 export interface JobEligibilityWorker {
   id: string;
   status: WorkerStatus;
@@ -40,6 +77,8 @@ export interface JobEligibilityWorker {
   currentLat: number | null;
   currentLng: number | null;
   locationUpdatedAt: Date | null;
+  /** Server-observed last genuine app-activity timestamp — see touchWorkerPresence. */
+  lastSeenAt: Date | null;
   skills: { categoryId: string }[];
 }
 
@@ -54,6 +93,8 @@ export interface JobEligibilityBooking {
   /** Workers excluded from this specific booking (e.g. cancelled after being
    *  hired) — never re-offered/re-listed for it, even after a relist. */
   workerExclusions?: { workerProfileId: string }[];
+  /** When present, gates the JOB_DISCOVERY_WINDOW_MS check below. */
+  createdAt?: Date;
 }
 
 export interface JobEligibilityOptions {
@@ -61,6 +102,19 @@ export interface JobEligibilityOptions {
   radiusKm?: number;
   /** Post-inspection jobs only: the Ustaad who performed the inspection. */
   inspectingWorkerProfileId?: string | null;
+  /**
+   * Defaults to true — the existing, stricter behavior: the Worker must be
+   * genuinely ONLINE with a fresh presence lease and fresh GPS. Live/instant
+   * paths (broadcast fan-out, late-discovery push, direct-hire nearby-worker
+   * search) must always leave this at its default.
+   *
+   * Pass false ONLY for Worker-facing marketplace browsing/bidding (New Jobs
+   * feed, bid submission) — manual OFFLINE means "exclude me from live
+   * matching," not "hide the marketplace from me" (see job-visibility task).
+   * Account state, category match, exclusions, BUSY, and radius (using
+   * whatever location is on file, however stale) still apply either way.
+   */
+  requireLivePresence?: boolean;
 }
 
 /** Reason codes, used by the throwing assert to pick a user-facing message. */
@@ -71,10 +125,12 @@ export type JobIneligibilityReason =
   | 'CATEGORY_MISMATCH'
   | 'OFFLINE'
   | 'BUSY'
+  | 'STALE_PRESENCE'
   | 'STALE_LOCATION'
   | 'OUT_OF_RADIUS'
   | 'NOT_OPEN'
   | 'ALREADY_ASSIGNED'
+  | 'DISCOVERY_WINDOW_EXPIRED'
   | null;
 
 export function checkJobEligibility(
@@ -84,6 +140,7 @@ export function checkJobEligibility(
 ): JobIneligibilityReason {
   const radiusKm = options.radiusKm ?? DEFAULT_JOB_MATCH_RADIUS_KM;
   const inspectingWorkerProfileId = options.inspectingWorkerProfileId ?? null;
+  const requireLivePresence = options.requireLivePresence ?? true;
 
   // ── Job must still be open ────────────────────────────────────────────────
   // Only enforced when the caller supplied the field, so partial projections
@@ -93,6 +150,15 @@ export function checkJobEligibility(
   }
   if (booking.workerProfileId != null) {
     return 'ALREADY_ASSIGNED';
+  }
+  // Discovery filtering, not deletion — see JOB_DISCOVERY_WINDOW_MS. Only
+  // enforced when the caller supplied createdAt, same partial-projection
+  // convention as status/workerProfileId above.
+  if (
+    booking.createdAt != null &&
+    Date.now() - booking.createdAt.getTime() > JOB_DISCOVERY_WINDOW_MS
+  ) {
+    return 'DISCOVERY_WINDOW_EXPIRED';
   }
 
   // ── Worker account ────────────────────────────────────────────────────────
@@ -112,20 +178,41 @@ export function checkJobEligibility(
   if (!worker.skills.some((s) => s.categoryId === booking.categoryId)) {
     return 'CATEGORY_MISMATCH';
   }
-  if (worker.availabilityStatus !== AvailabilityStatus.ONLINE) {
+  if (requireLivePresence && worker.availabilityStatus !== AvailabilityStatus.ONLINE) {
     return 'OFFLINE';
   }
   if (worker.currentlyWorking === true) {
     return 'BUSY';
   }
 
-  // ── Location ──────────────────────────────────────────────────────────────
-  if (
-    !worker.locationUpdatedAt ||
-    Date.now() - worker.locationUpdatedAt.getTime() > LOCATION_FRESHNESS_MS
-  ) {
-    return 'STALE_LOCATION';
+  // ── Presence lease ───────────────────────────────────────────────────────
+  // ONLINE is a renewable server-side lease, not a permanent flag: a Worker
+  // who hasn't shown genuine app activity (touchWorkerPresence) within the
+  // stale window is excluded from new-job matching immediately, independent
+  // of whether the periodic cleanup job has flipped them to OFFLINE yet.
+  // Skipped in marketplace-browse mode (requireLivePresence: false) — a
+  // manually OFFLINE Worker has no live presence lease at all by design, but
+  // may still browse/bid; see JobEligibilityOptions.requireLivePresence.
+  if (requireLivePresence) {
+    if (
+      !worker.lastSeenAt ||
+      Date.now() - worker.lastSeenAt.getTime() > WORKER_PRESENCE_STALE_MS
+    ) {
+      return 'STALE_PRESENCE';
+    }
+
+    // ── Location freshness ────────────────────────────────────────────────
+    if (
+      !worker.locationUpdatedAt ||
+      Date.now() - worker.locationUpdatedAt.getTime() > LOCATION_FRESHNESS_MS
+    ) {
+      return 'STALE_LOCATION';
+    }
   }
+
+  // ── Radius — always enforced, live or marketplace, using whatever
+  // location is on file (may be stale in marketplace mode; that's fine, it
+  // still keeps genuinely-out-of-area workers from seeing the job). ────────
   const distanceKm = haversineKm(
     booking.latitude,
     booking.longitude,
@@ -166,6 +253,8 @@ export function assertEligibleForJob(
       throw new ForbiddenException(
         'Aap pehle se ek kaam par hain. Mukammal karne ke baad naya kaam lein.',
       );
+    case 'STALE_PRESENCE':
+      throw new ForbiddenException('Go online to view or bid on this job.');
     case 'STALE_LOCATION':
       throw new ForbiddenException(
         'Update your location to view or bid on this job.',
@@ -174,6 +263,7 @@ export function assertEligibleForJob(
       throw new ForbiddenException('This job is outside your service area.');
     case 'NOT_OPEN':
     case 'ALREADY_ASSIGNED':
+    case 'DISCOVERY_WINDOW_EXPIRED':
       throw new ForbiddenException('This job is no longer open.');
     default:
       return;
@@ -201,10 +291,12 @@ export function assertEligibleForInspectionBidding(
   booking: JobEligibilityBooking,
   inspectingWorkerProfileId: string | null,
   radiusKm?: number,
+  requireLivePresence?: boolean,
 ): void {
   assertEligibleForJob(worker, booking, {
     inspectingWorkerProfileId,
     radiusKm,
+    requireLivePresence,
   });
 }
 
@@ -213,9 +305,11 @@ export function isEligibleForInspectionBidding(
   booking: JobEligibilityBooking,
   inspectingWorkerProfileId: string | null,
   radiusKm?: number,
+  requireLivePresence?: boolean,
 ): boolean {
   return isEligibleForJob(worker, booking, {
     inspectingWorkerProfileId,
     radiusKm,
+    requireLivePresence,
   });
 }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/auth/presentation/pages/role_selection_page.dart';
+import '../../features/auth/presentation/pages/welcome_page.dart';
 import '../../features/auth/presentation/pages/client_otp_auth_page.dart';
 import '../../features/auth/presentation/pages/worker_type_selection_page.dart';
 import '../../features/auth/presentation/pages/worker_otp_register_page.dart';
@@ -123,6 +124,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/splash',
         builder: (_, __) => const SplashPage(),
+      ),
+      GoRoute(
+        path: '/welcome',
+        builder: (_, _) => const WelcomePage(),
       ),
       GoRoute(
         path: '/auth/role-select',
@@ -311,17 +316,26 @@ final routerProvider = Provider<GoRouter>((ref) {
 ///    last confirmed user visible through both states (see
 ///    AuthStateNotifier), so a background refresh must never be read as
 ///    logged out or bounce the user off their current route.
-///  * From splash, or a still-logged-in user sitting on an `/auth` route →
-///    dispatch to the correct home, or back to role-select if logged out.
-///  * A logged-out user anywhere else → role-select.
+///  * From splash, or a still-logged-in user sitting on an `/auth` route or
+///    the logged-out welcome screen → dispatch to the correct home, or to
+///    the welcome screen if logged out.
+///  * A logged-out user anywhere else → welcome.
 ///  * Otherwise `null` — leave navigation alone (the caller applies further
 ///    redirects, e.g. the Customer Terms gate).
+///
+/// `/welcome` is HandyGo's branded logged-out landing screen; its
+/// "Shuru karein" button hands off to `/auth/role-select`. It is treated
+/// exactly like an `/auth` route here — somewhere a logged-out user is
+/// allowed to be, and somewhere a logged-in user is dispatched away from —
+/// so the logged-out entry point moved without changing any other rule.
 String? resolveAuthRedirect({
   required AsyncValue<UserEntity?> authState,
   required String matchedLocation,
 }) {
   final isSplash = matchedLocation == '/splash';
-  final isAuthRoute = matchedLocation.startsWith('/auth');
+  final isWelcome = matchedLocation == '/welcome';
+  // Every location a signed-out user may legitimately sit on.
+  final isLoggedOutRoute = matchedLocation.startsWith('/auth') || isWelcome;
 
   if (!authState.hasValue && (authState.isLoading || authState.hasError)) {
     return isSplash ? null : '/splash';
@@ -334,12 +348,12 @@ String? resolveAuthRedirect({
   // the profile-completion modal/banner and action-level gating (Go Online,
   // bid, apply) handle the "not approved yet" case there, rather than
   // hard-blocking the whole app on a dead-end page.
-  if (isSplash || (isLoggedIn && isAuthRoute)) {
-    if (user == null) return '/auth/role-select';
+  if (isSplash || (isLoggedIn && isLoggedOutRoute)) {
+    if (user == null) return '/welcome';
     return user.isWorker ? '/worker/home' : '/client/home';
   }
 
-  if (!isLoggedIn && !isAuthRoute) return '/auth/role-select';
+  if (!isLoggedIn && !isLoggedOutRoute) return '/welcome';
 
   return null;
 }

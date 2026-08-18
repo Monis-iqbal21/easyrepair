@@ -3,6 +3,8 @@ import { BidStatus, BookingStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { computeCompletedJobs } from '../../common/utils/worker-stats.util';
 import { WorkerUnavailableError } from '../../common/errors/worker-unavailable.error';
+import { JOB_DISCOVERY_WINDOW_MS } from '../../common/utils/job-eligibility.util';
+import { boundingBoxKm, boundingBoxWhere } from '../../common/utils/geo.util';
 
 export const BID_INCLUDE = {
   workerProfile: {
@@ -78,6 +80,7 @@ export class BidsRepository {
         currentLat: true,
         currentLng: true,
         locationUpdatedAt: true,
+        lastSeenAt: true,
         profileCompleted: true,
         skills: { select: { categoryId: true } },
       },
@@ -362,7 +365,33 @@ export class BidsRepository {
   async findAvailableJobsForWorker(
     workerProfileId: string,
     categoryIds: string[],
+    /**
+     * The worker's location + match radius. When supplied, a lat/lng bounding
+     * box is applied in SQL — a strict SUPERSET of the radius circle, so the
+     * caller's authoritative `isEligibleForJob` (precise Haversine) decides
+     * exactly as before; it just no longer has to load every open job in the
+     * country to throw most of them away.
+     *
+     * NOTE: this is marketplace browsing. No availabilityStatus filter is
+     * added here and none must be — a manually OFFLINE Worker still browses
+     * and bids (see JobEligibilityOptions.requireLivePresence).
+     */
+    geo?: { lat?: number | null; lng?: number | null; radiusKm?: number },
   ) {
+    // DB-level discovery-window filter — see JOB_DISCOVERY_WINDOW_MS. The
+    // authoritative check still happens in checkJobEligibility (which the
+    // caller applies to every row below), but excluding stale rows here
+    // keeps the query itself from growing unbounded with ancient still-open
+    // bookings.
+    const discoveryCutoff = new Date(Date.now() - JOB_DISCOVERY_WINDOW_MS);
+    const geoFilter =
+      geo?.lat != null && geo.lng != null && geo.radiusKm != null
+        ? boundingBoxWhere(
+            boundingBoxKm(geo.lat, geo.lng, geo.radiusKm),
+            'latitude',
+            'longitude',
+          )
+        : null;
     return this.prisma.booking.findMany({
       where: {
         status: BookingStatus.PENDING,
@@ -370,9 +399,13 @@ export class BidsRepository {
         // status catches up.
         workerProfileId: null,
         categoryId: { in: categoryIds },
+        createdAt: { gte: discoveryCutoff },
         // A worker who cancelled (or was otherwise excluded from) a STANDARD
         // booking must never see it again in their own feed, even after relist.
         workerExclusions: { none: { workerProfileId } },
+        // Wrapped in AND so the box's antimeridian `OR` cannot collide with
+        // any other OR on this where object.
+        ...(geoFilter ? { AND: [geoFilter] } : {}),
       },
       orderBy: { createdAt: 'desc' },
       include: {

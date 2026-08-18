@@ -22,6 +22,7 @@ import '../../../../core/permissions/file_validation_helper.dart';
 import '../../../../core/permissions/media_permission_helper.dart';
 import '../../../../core/presentation/responsive_utils.dart';
 import '../../../../core/utils/currency_utils.dart';
+import '../../../../features/bookings/domain/entities/attachable_inspection_entity.dart';
 import '../../../../features/bookings/domain/entities/booking_entity.dart';
 import '../../../../features/bookings/domain/entities/create_booking_request.dart';
 import '../../../../features/bookings/domain/entities/update_booking_request.dart';
@@ -68,6 +69,11 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     with TickerProviderStateMixin {
   // ── Form state ──────────────────────────────────────────────────────────────
   String? _selectedService;
+
+  /// OPTIONAL previous inspection report attached to a BIDDING job — purely
+  /// informational context for bidders. Null means "no report attached",
+  /// which is the normal case and leaves posting behaviour unchanged.
+  AttachableInspectionEntity? _attachedInspection;
 
   bool _isUrgent = false;
   DateTime? _selectedDate;
@@ -982,6 +988,11 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
       longitude: _gpsLng,
       inspection: _laneChoice == BookingLane.inspection,
       lane: _laneChoice ?? BookingLane.bidding,
+      // Only ever sent for a BIDDING job, and only when the client picked
+      // one; the backend re-validates ownership/category regardless.
+      attachedInspectionBookingId: _laneChoice == BookingLane.bidding
+          ? _attachedInspection?.bookingId
+          : null,
       standardServiceIds: _laneChoice == BookingLane.standard
           ? _selectedStandardServices.keys.toList()
           : const [],
@@ -1326,7 +1337,26 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                     imagePath: _serviceImagePath(cat.name),
                     isSelected: _selectedService == cat.name,
                     locked: !kLaunchActiveServiceCategories.contains(cat.name),
-                    onTap: () => setState(() => _selectedService = cat.name),
+                    onTap: () => setState(() {
+                      // Switching service invalidates any attached report:
+                      // the backend requires the report's category to match
+                      // the job's, so keeping it would guarantee a rejection
+                      // at submit. Cleared explicitly (never silently kept
+                      // and never silently mismatched) and the client is
+                      // told, so they can re-attach a matching one.
+                      if (_selectedService != cat.name &&
+                          _attachedInspection != null) {
+                        _attachedInspection = null;
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (mounted) {
+                            _showError(
+                              context.l10n.postJobInspectionReportCleared,
+                            );
+                          }
+                        });
+                      }
+                      _selectedService = cat.name;
+                    }),
                   );
                 },
               );
@@ -2777,10 +2807,92 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                 ],
               ),
             ),
+            const SizedBox(height: 12),
+            _buildAttachInspectionSection(),
           ],
         ],
       ),
     );
+  }
+
+  // ── Optional: attach a previous inspection report (BIDDING only) ──────────
+
+  /// Read-only supporting context for bidders. Entirely optional: failures
+  /// and empty results never block posting, and no report is attached unless
+  /// the client explicitly picks one.
+  Widget _buildAttachInspectionSection() {
+    final selected = _attachedInspection;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _kBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            context.l10n.postJobInspectionReportSectionTitle,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: _kDark,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            context.l10n.postJobAttachInspectionHint,
+            style: const TextStyle(fontSize: 11.5, height: 1.35, color: _kGray),
+          ),
+          const SizedBox(height: 10),
+          if (selected == null)
+            OutlinedButton.icon(
+              onPressed: _openInspectionReportSelector,
+              icon: const Icon(Icons.attach_file_rounded, size: 16),
+              label: Text(context.l10n.postJobAttachInspectionReport),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: _kGreen,
+                side: const BorderSide(color: _kGreen),
+                minimumSize: const Size(double.infinity, 42),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                textStyle: const TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            )
+          else
+            _AttachedInspectionCard(
+              inspection: selected,
+              onView: () => context.push(
+                '/client/booking/${selected.bookingId}/inspection-report',
+              ),
+              onChange: _openInspectionReportSelector,
+              onRemove: () => setState(() => _attachedInspection = null),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _openInspectionReportSelector() async {
+    final categories = ref.read(clientBookingCategoriesProvider).valueOrNull;
+    final category =
+        categories == null ? null : _resolveCategory(categories);
+
+    final picked = await showModalBottomSheet<AttachableInspectionEntity>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => _InspectionReportSelectorSheet(categoryId: category?.id),
+    );
+    if (picked != null && mounted) {
+      setState(() => _attachedInspection = picked);
+    }
   }
 
   Widget _laneHeroCard({required bool enabled}) {
@@ -3948,6 +4060,320 @@ class _AnimatedWaveform extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+// ── Attached inspection report card ─────────────────────────────────────────
+
+/// The compact selected-report card shown in Post Job once a report is
+/// attached. Read-only summary plus the three actions the flow needs.
+class _AttachedInspectionCard extends StatelessWidget {
+  final AttachableInspectionEntity inspection;
+  final VoidCallback onView;
+  final VoidCallback onChange;
+  final VoidCallback onRemove;
+
+  const _AttachedInspectionCard({
+    required this.inspection,
+    required this.onView,
+    required this.onChange,
+    required this.onRemove,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final summary = inspection.summary;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(11),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF7F3),
+        borderRadius: BorderRadius.circular(11),
+        border: Border.all(color: _kGreen.withValues(alpha: 0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.fact_check_outlined, size: 16, color: _kGreen),
+              const SizedBox(width: 7),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      inspection.categoryName,
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: _kDark,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    // The inspection date is always shown so the client can
+                    // judge for themselves whether it is still relevant —
+                    // old reports are deliberately never auto-expired.
+                    Text(
+                      DateFormat('d MMM yyyy').format(inspection.inspectionDate),
+                      style: const TextStyle(fontSize: 11, color: _kGray),
+                    ),
+                    if (summary != null) ...[
+                      const SizedBox(height: 3),
+                      Text(
+                        summary,
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          height: 1.3,
+                          color: _kGray,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          // Wrap so the three actions reflow instead of overflowing on the
+          // narrowest supported screens.
+          Wrap(
+            spacing: 4,
+            children: [
+              _AttachedAction(
+                label: context.l10n.discoveryViewInspectionReport,
+                onTap: onView,
+              ),
+              _AttachedAction(
+                label: context.l10n.postJobChangeInspectionReport,
+                onTap: onChange,
+              ),
+              _AttachedAction(
+                label: context.l10n.commonRemove,
+                onTap: onRemove,
+                danger: true,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AttachedAction extends StatelessWidget {
+  final String label;
+  final VoidCallback onTap;
+  final bool danger;
+
+  const _AttachedAction({
+    required this.label,
+    required this.onTap,
+    this.danger = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton(
+      onPressed: onTap,
+      style: TextButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        minimumSize: const Size(0, 32),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        foregroundColor: danger ? const Color(0xFFDC2626) : _kGreen,
+        textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+      ),
+      child: Text(label),
+    );
+  }
+}
+
+// ── Inspection report selector sheet ────────────────────────────────────────
+
+/// Lists the client's own eligible previous inspection reports. Loading,
+/// empty and error states are all self-contained: dismissing the sheet always
+/// returns null, so a failure here can never block posting the job itself.
+class _InspectionReportSelectorSheet extends ConsumerWidget {
+  final String? categoryId;
+
+  const _InspectionReportSelectorSheet({this.categoryId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(attachableInspectionsProvider(categoryId));
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.7,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 12, bottom: 6),
+            child: Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE2E8F0),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    context.l10n.postJobSelectInspectionReport,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: _kDark,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close_rounded, size: 20),
+                  color: _kGray,
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+          ),
+          Flexible(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(16, 4, 16, 16 + bottomPadding),
+              child: async.when(
+                loading: () => const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 28),
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation(_kGreen),
+                    ),
+                  ),
+                ),
+                error: (err, _) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        context.l10n.postJobInspectionReportsFailed,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 12.5, color: _kGray),
+                      ),
+                      const SizedBox(height: 10),
+                      TextButton(
+                        onPressed: () => ref.invalidate(
+                          attachableInspectionsProvider(categoryId),
+                        ),
+                        child: Text(context.l10n.commonRetry),
+                      ),
+                    ],
+                  ),
+                ),
+                data: (items) {
+                  if (items.isEmpty) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 24),
+                      child: Text(
+                        context.l10n.postJobNoInspectionReports,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          height: 1.4,
+                          color: _kGray,
+                        ),
+                      ),
+                    );
+                  }
+                  return ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: items.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 8),
+                    itemBuilder: (_, i) {
+                      final item = items[i];
+                      return InkWell(
+                        onTap: () => Navigator.pop(context, item),
+                        borderRadius: BorderRadius.circular(11),
+                        child: Container(
+                          padding: const EdgeInsets.all(11),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(11),
+                            border: Border.all(color: _kBorder),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Icon(
+                                Icons.fact_check_outlined,
+                                size: 16,
+                                color: _kGreen,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      item.categoryName,
+                                      style: const TextStyle(
+                                        fontSize: 12.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: _kDark,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      DateFormat('d MMM yyyy')
+                                          .format(item.inspectionDate),
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: _kGray,
+                                      ),
+                                    ),
+                                    if (item.summary != null) ...[
+                                      const SizedBox(height: 3),
+                                      Text(
+                                        item.summary!,
+                                        style: const TextStyle(
+                                          fontSize: 11.5,
+                                          height: 1.3,
+                                          color: _kGray,
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

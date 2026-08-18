@@ -126,9 +126,9 @@ export class NotificationsService {
     body: string,
     data: Record<string, string>,
   ): Promise<void> {
+    let fcmToken: string | null = null;
     try {
-      const fcmToken =
-        await this.notificationsRepository.findUserFcmToken(userId);
+      fcmToken = await this.notificationsRepository.findUserFcmToken(userId);
       if (!fcmToken) {
         this.logger.debug(`No FCM token for userId=${userId}`);
         return;
@@ -139,7 +139,36 @@ export class NotificationsService {
       );
     } catch (err) {
       this.logger.warn(`FCM push failed for userId=${userId}: ${err}`);
+      if (fcmToken && this._isPermanentlyInvalidToken(err)) {
+        // App was uninstalled / token otherwise permanently revoked —
+        // Firebase itself confirmed it, so stop retrying it forever. Cleanup
+        // only: never used to infer Worker availability (see
+        // WORKER_PRESENCE_STALE_MS, the sole presence mechanism).
+        await this.notificationsRepository
+          .clearFcmTokenByValue(fcmToken)
+          .catch(() => undefined);
+        this.logger.log(
+          `Cleared permanently-invalid FCM token for userId=${userId}`,
+        );
+      }
     }
+  }
+
+  /**
+   * Firebase Admin's messaging.send() rejects with a FirebaseMessagingError
+   * whose `.code` identifies a permanently unregistered/invalid token —
+   * distinct from a transient send failure (network, quota, malformed
+   * payload, etc.), which must never trigger token cleanup. Deliberately
+   * narrow to the two codes the SDK documents as token-specific; a broader
+   * code like `messaging/invalid-argument` can also mean an unrelated
+   * malformed payload, so it is NOT treated as a token problem here.
+   */
+  private _isPermanentlyInvalidToken(err: unknown): boolean {
+    const code = (err as { code?: string } | null)?.code;
+    return (
+      code === 'messaging/registration-token-not-registered' ||
+      code === 'messaging/invalid-registration-token'
+    );
   }
 
   /** See NotificationsRepository.existsForBookingAndUser. */
@@ -176,6 +205,56 @@ export class NotificationsService {
       eventKey,
       liveStartedAt,
     );
+  }
+
+  /**
+   * Batched counterpart of wasAlreadyNotifiedThisCycle — see
+   * NotificationsRepository.findNotifiedUserIds. Returns the userIds that
+   * have already been notified, so a fan-out can skip them without one dedup
+   * query per recipient.
+   */
+  async findAlreadyNotifiedThisCycle(
+    userIds: string[],
+    bookingId: string,
+    eventKey: string,
+    liveStartedAt: Date | null,
+  ): Promise<Set<string>> {
+    return this.notificationsRepository.findNotifiedUserIds(
+      userIds,
+      bookingId,
+      eventKey,
+      liveStartedAt,
+    );
+  }
+
+  /**
+   * Batched counterpart of wasAlreadyNotifiedThisCycle for the one-worker /
+   * many-jobs fan-out. Returns the bookingIds that must be SKIPPED, applying
+   * each booking's own liveStartedAt cycle boundary — see
+   * NotificationsRepository.findLatestNotifiedAtByBooking.
+   */
+  async findAlreadyNotifiedBookingIds(
+    userId: string,
+    bookings: { id: string; liveStartedAt: Date | null }[],
+    eventKey: string,
+  ): Promise<Set<string>> {
+    const latest =
+      await this.notificationsRepository.findLatestNotifiedAtByBooking(
+        userId,
+        bookings.map((b) => b.id),
+        eventKey,
+      );
+    const skip = new Set<string>();
+    for (const booking of bookings) {
+      const notifiedAt = latest.get(booking.id);
+      if (!notifiedAt) continue;
+      // liveStartedAt === null reproduces the unbounded wasAlreadyNotified
+      // check; otherwise only notifications from the current cycle count.
+      if (!booking.liveStartedAt || notifiedAt >= booking.liveStartedAt) {
+        skip.add(booking.id);
+      }
+    }
+    return skip;
   }
 
   /** See NotificationsRepository.existsRecentForEntity. */

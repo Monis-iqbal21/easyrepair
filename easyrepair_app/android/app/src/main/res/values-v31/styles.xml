@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Android 12+ (API 31) replaced the windowBackground launch screen with
+      the system splash API. Only the attributes below are honoured; a custom
+      layout is not possible, so this is the closest supported match rather
+      than a reproduction of the Flutter screen.
+
+      windowSplashScreenAnimatedIcon is deliberately the LAUNCHER icon, not
+      the wide HandyGo wordmark: the platform masks this icon to a circle and
+      only the inner two thirds are guaranteed visible, so a 3:2 wordmark
+      would be clipped. The launcher icon is already drawn for that mask.
+      The full wordmark, tagline and "(Private) Limited" lockup appear
+      immediately afterwards on the Flutter welcome screen.
+
+      The background colour is the shared fallback from values/colors.xml -
+      the single place it is defined. Not duplicated as a hex literal here.
+    -->
+    <style name="LaunchTheme" parent="@android:style/Theme.Light.NoTitleBar">
+        <item name="android:windowSplashScreenBackground">@color/handygo_splash_background</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+    </style>
+
+    <style name="NormalTheme" parent="@android:style/Theme.Light.NoTitleBar">
+        <item name="android:windowBackground">@color/handygo_splash_background</item>
+    </style>
+</resources>

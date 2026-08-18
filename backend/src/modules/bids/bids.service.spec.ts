@@ -35,6 +35,7 @@ describe('BidsService', () => {
     currentLat: 24.86,
     currentLng: 67.0,
     locationUpdatedAt: new Date(),
+    lastSeenAt: new Date(),
     skills: [{ categoryId: 'cat-1' }],
   };
 
@@ -132,8 +133,11 @@ describe('BidsService', () => {
     ).rejects.toThrow(ForbiddenException);
   });
 
-  // ── #4 Offline worker cannot bid on a reopened INSPECTION job ───────────
-  it('rejects an offline worker bidding on a reopened INSPECTION job', async () => {
+  // ── #4 Manually OFFLINE worker can still bid — marketplace browsing/
+  // bidding is intentionally NOT gated by live ONLINE presence (only
+  // proactive push broadcast/live matching requires it). See job-visibility
+  // task, requireLivePresence option on checkJobEligibility.
+  it('allows a manually OFFLINE worker to bid on a reopened INSPECTION job', async () => {
     bidsRepository.findWorkerProfileByUserId.mockResolvedValue({
       ...APPROVED_WORKER,
       availabilityStatus: AvailabilityStatus.OFFLINE,
@@ -148,7 +152,7 @@ describe('BidsService', () => {
     });
     await expect(
       service.createBid('user-1', 'booking-1', 1500),
-    ).rejects.toThrow(ForbiddenException);
+    ).resolves.toEqual({ id: 'bid-1' });
   });
 
   it('allows an eligible worker to bid on a reopened INSPECTION job', async () => {
@@ -418,7 +422,7 @@ describe('BidsService', () => {
       expect(bidsRepository.createBid).not.toHaveBeenCalled();
     });
 
-    it('rejects an offline worker bidding on the linked child booking', async () => {
+    it('allows a manually OFFLINE worker to bid on the linked child booking', async () => {
       bidsRepository.findWorkerProfileByUserId.mockResolvedValue({
         ...APPROVED_WORKER,
         availabilityStatus: AvailabilityStatus.OFFLINE,
@@ -426,7 +430,7 @@ describe('BidsService', () => {
       bidsRepository.findBookingById.mockResolvedValue(LINKED_CHILD_BOOKING);
       await expect(
         service.createBid('user-1', 'child-1', 1500),
-      ).rejects.toThrow(ForbiddenException);
+      ).resolves.toEqual({ id: 'bid-1' });
     });
 
     it('rejects a worker outside the radius bidding on the linked child booking', async () => {
@@ -525,18 +529,22 @@ describe('BidsService', () => {
       expect(jobs).toHaveLength(0);
     });
 
-    it('hides the linked child from an offline worker and from one with a stale location', async () => {
+    // New Jobs is marketplace browsing, not live matching — a manually
+    // OFFLINE worker (no live presence lease, possibly stale GPS) still sees
+    // an in-radius open job here; only radius/busy/category/account state
+    // and the 48h discovery window still gate visibility.
+    it('still shows the linked child to an offline worker and to one with a stale location', async () => {
       bidsRepository.findWorkerProfileByUserId.mockResolvedValue({
         ...APPROVED_WORKER,
         availabilityStatus: AvailabilityStatus.OFFLINE,
       });
-      expect(await service.getNewJobsForWorker('user-1')).toHaveLength(0);
+      expect(await service.getNewJobsForWorker('user-1')).toHaveLength(1);
 
       bidsRepository.findWorkerProfileByUserId.mockResolvedValue({
         ...APPROVED_WORKER,
         locationUpdatedAt: new Date(Date.now() - 31 * 60 * 1000), // 31 min old
       });
-      expect(await service.getNewJobsForWorker('user-1')).toHaveLength(0);
+      expect(await service.getNewJobsForWorker('user-1')).toHaveLength(1);
     });
 
     // #10 — the original inspector never sees their own linked repair job.
@@ -575,11 +583,6 @@ describe('BidsService', () => {
         'outside the radius',
         { currentLat: 31.5204, currentLng: 74.3587 },
       ],
-      ['offline', { availabilityStatus: AvailabilityStatus.OFFLINE }],
-      [
-        'stale location',
-        { locationUpdatedAt: new Date(Date.now() - 31 * 60 * 1000) },
-      ],
       ['busy on another job', { currentlyWorking: true }],
     ])(
       'hides a Direct-Bidding job from a worker %s (null inspector never bypasses matching)',
@@ -594,6 +597,46 @@ describe('BidsService', () => {
         expect(await service.getNewJobsForWorker('user-1')).toHaveLength(0);
       },
     );
+
+    it.each([
+      ['offline', { availabilityStatus: AvailabilityStatus.OFFLINE }],
+      [
+        'with a stale location',
+        { locationUpdatedAt: new Date(Date.now() - 31 * 60 * 1000) },
+      ],
+    ])(
+      'still shows a Direct-Bidding job to a worker %s (marketplace browsing is not live-presence-gated)',
+      async (_label, override) => {
+        bidsRepository.findAvailableJobsForWorker.mockResolvedValue([
+          DIRECT_BIDDING_ROW,
+        ]);
+        bidsRepository.findWorkerProfileByUserId.mockResolvedValue({
+          ...APPROVED_WORKER,
+          ...override,
+        });
+        expect(await service.getNewJobsForWorker('user-1')).toHaveLength(1);
+      },
+    );
+
+    it('hides a job older than the 48h discovery window even though it is still PENDING', async () => {
+      bidsRepository.findAvailableJobsForWorker.mockResolvedValue([
+        {
+          ...DIRECT_BIDDING_ROW,
+          createdAt: new Date(Date.now() - 49 * 60 * 60 * 1000),
+        },
+      ]);
+      expect(await service.getNewJobsForWorker('user-1')).toHaveLength(0);
+    });
+
+    it('keeps a job just inside the 48h discovery window', async () => {
+      bidsRepository.findAvailableJobsForWorker.mockResolvedValue([
+        {
+          ...DIRECT_BIDDING_ROW,
+          createdAt: new Date(Date.now() - 47 * 60 * 60 * 1000),
+        },
+      ]);
+      expect(await service.getNewJobsForWorker('user-1')).toHaveLength(1);
+    });
 
     it('hides any job that has already been assigned', async () => {
       bidsRepository.findAvailableJobsForWorker.mockResolvedValue([

@@ -88,10 +88,16 @@ export class BidsService {
     // alike — goes through the one central matcher. The inspector exclusion
     // is an extra layer, never a substitute: a Direct-Bidding job (no
     // InspectionReport, inspectorWorkerProfileId null) is still radius,
-    // online, freshness, busy and open/unassigned checked.
+    // busy and open/unassigned checked.
+    //
+    // requireLivePresence: false — bidding is a marketplace action, not live
+    // instant matching. A manually OFFLINE Worker may still submit a bid
+    // (see job-visibility task); only genuinely ONLINE-gated flows (push
+    // broadcast, direct-hire nearby search) keep the live presence gate.
     assertEligibleForJob(workerProfile, booking, {
       radiusKm: this.jobBroadcastService.matchRadiusKm,
       inspectingWorkerProfileId: postInspection.inspectorWorkerProfileId,
+      requireLivePresence: false,
     });
 
     const existing = await this.bidsRepository.findExistingBid(
@@ -207,6 +213,7 @@ export class BidsService {
       assertEligibleForJob(workerProfile, fullBooking, {
         radiusKm: this.jobBroadcastService.matchRadiusKm,
         inspectingWorkerProfileId: postInspection.inspectorWorkerProfileId,
+        requireLivePresence: false,
       });
     }
 
@@ -528,31 +535,48 @@ export class BidsService {
       return [];
     }
 
+    // The match radius is pushed into SQL as a bounding box (superset of the
+    // circle) so the feed query stays bounded as job volume grows; the exact
+    // radius decision is still the isEligibleForJob call below, unchanged.
+    const radiusKm = this.jobBroadcastService.matchRadiusKm;
     const allBookings = await this.bidsRepository.findAvailableJobsForWorker(
       workerProfile.id,
       categoryIds,
+      {
+        lat: workerProfile.currentLat,
+        lng: workerProfile.currentLng,
+        radiusKm,
+      },
     );
 
-    // EVERY lane is matched, not just post-inspection jobs: a live job is
-    // only visible to nearby eligible Ustaads. This is deliberately the same
-    // `isEligibleForJob` call the broadcast fan-out ends on, so notification
-    // reach and feed visibility cannot drift apart.
+    // EVERY lane is matched, not just post-inspection jobs: a job is only
+    // visible to nearby eligible Ustaads. This is deliberately the same
+    // `isEligibleForJob` call the broadcast fan-out ends on (minus the live
+    // presence requirement — see below), so notification reach and feed
+    // visibility cannot drift apart on everything else.
     //
-    // Because it re-reads the worker's live availability/coords/freshness on
-    // every request, visibility is fully dynamic: entering the radius or
-    // coming online reveals a still-open job on the next refresh, and leaving
-    // the radius, going offline, going stale or becoming busy removes it —
-    // with no cache and no dependency on whether a push was ever delivered.
+    // Because it re-reads the worker's coords/category/busy state on every
+    // request, visibility is fully dynamic: entering the radius or becoming
+    // free reveals a still-open job on the next refresh, and leaving the
+    // radius or becoming busy removes it.
+    //
+    // requireLivePresence: false — New Jobs is marketplace browsing, not
+    // live instant matching. A manually OFFLINE Worker still sees and can
+    // bid on open jobs here; only proactive push broadcast/late-discovery
+    // and direct-hire nearby search require genuine ONLINE presence. BUSY,
+    // radius (using whatever location is on file), category, exclusions,
+    // account state and the 48h discovery window (JOB_DISCOVERY_WINDOW_MS)
+    // still apply regardless of presence.
     //
     // The inspector exclusion is additive only. A Direct-Bidding job has no
     // InspectionReport and a null inspector id, which means "nobody to
-    // exclude" — it never skips the radius/online/fresh/busy checks.
-    const radiusKm = this.jobBroadcastService.matchRadiusKm;
+    // exclude" — it never skips the radius/busy/open checks.
     const bookings = allBookings.filter((b) =>
       isEligibleForJob(workerProfile, b, {
         radiusKm,
         inspectingWorkerProfileId:
           this._postInspectionBiddingContext(b).inspectorWorkerProfileId,
+        requireLivePresence: false,
       }),
     );
 
@@ -607,6 +631,10 @@ export class BidsService {
         // Linked post-inspection repair job marker — the worker app shows
         // the optional "Inspection Report Dekhein" entry point off this.
         sourceInspectionBookingId: b.sourceInspectionBookingId ?? null,
+        // Client-attached historical report on an ordinary bidding job —
+        // drives the same report entry point, with none of the
+        // post-inspection semantics (the inspector is NOT excluded here).
+        attachedInspectionBookingId: b.attachedInspectionBookingId ?? null,
         isOpenForBidding,
         standardServiceItems: b.standardServiceItems.map((item) => ({
           id: item.id,

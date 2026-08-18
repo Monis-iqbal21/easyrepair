@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   AttachmentType,
@@ -13,7 +13,8 @@ import {
   WorkerStatus,
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import { computeCancellationRate } from '../../common/utils/worker-stats.util';
+import { WORKER_PRESENCE_STALE_MS } from '../../common/utils/job-eligibility.util';
+import { boundingBoxKm, boundingBoxWhere } from '../../common/utils/geo.util';
 import { WorkerUnavailableError } from '../../common/errors/worker-unavailable.error';
 
 // Raw row shape returned by the PostGIS nearby-workers query.
@@ -25,8 +26,42 @@ interface RawNearbyWorkerRow {
   rating: number;
   distance_meters: number;
   skills: string[];
-  completed_jobs: bigint; // COUNT() returns bigint from Prisma $queryRaw
 }
+
+/**
+ * One candidate in the nearby-worker pool, as produced by either geographic
+ * path (PostGIS or Haversine + bounding box) before stats/ranking are added.
+ */
+interface NearbyWorkerRow {
+  id: string;
+  firstName: string;
+  lastName: string;
+  avatarUrl: string | null;
+  rating: number;
+  distanceMeters: number;
+  skills: string[];
+  completedJobs: number;
+}
+
+/**
+ * Nearby-worker discovery constants. Centralised here (they used to be
+ * duplicated as literals inside each of the two geographic paths, where they
+ * could silently drift apart) — the values themselves are unchanged.
+ */
+/** Expansion stops as soon as this many unique workers have been found. */
+const NEARBY_TARGET_POOL = 4;
+/** STANDARD / INSPECTION: direct-assignment lanes, tighter pool. */
+const NEARBY_STANDARD_LADDER_KM = [5, 7] as const;
+/** BIDDING / everything else: the wider legacy ladder. */
+const NEARBY_LEGACY_LADDER_KM = [3, 5, 8, 10, 15, 20] as const;
+/**
+ * Runaway guard on how many candidates one nearby search may pull back. The
+ * query is ordered nearest-first, so this can only ever drop workers FARTHER
+ * away than the ones kept, and only in a pool far larger than the client UI
+ * (or the 4-worker target) could ever use. Configurable via
+ * MATCH_NEARBY_FETCH_LIMIT.
+ */
+const DEFAULT_NEARBY_FETCH_LIMIT = 200;
 
 /** Haversine great-circle distance in metres between two lat/lng points. */
 function haversineMeters(
@@ -204,13 +239,18 @@ class InspectionCloseStateError extends Error {}
 
 @Injectable()
 export class BookingsRepository {
+  private readonly logger = new Logger(BookingsRepository.name);
   private readonly usePostgis: boolean;
+  private readonly nearbyWorkerFetchLimit: number;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
   ) {
     this.usePostgis = this.config.get<boolean>('usePostgis') ?? false;
+    this.nearbyWorkerFetchLimit =
+      this.config.get<number>('matching.nearbyWorkerFetchLimit') ??
+      DEFAULT_NEARBY_FETCH_LIMIT;
   }
 
   /** Find a ServiceCategory by its name (case-insensitive). */
@@ -276,6 +316,14 @@ export class BookingsRepository {
     liveStartedAt?: Date;
     /** Client-generated dedup key for this creation attempt. See schema doc. */
     idempotencyKey?: string;
+    /**
+     * Optional read-only reference to a previously COMPLETED inspection
+     * booking whose report the client attached to this new BIDDING job.
+     * Purely informational — see the schema doc on
+     * Booking.attachedInspectionBookingId for why this is deliberately NOT
+     * sourceInspectionBookingId.
+     */
+    attachedInspectionBookingId?: string;
   }): Promise<BookingWithRelations> {
     let createdId: string;
     try {
@@ -308,6 +356,8 @@ export class BookingsRepository {
             expiresAt: data.expiresAt ?? null,
             liveStartedAt: data.liveStartedAt ?? null,
             idempotencyKey: data.idempotencyKey ?? null,
+            attachedInspectionBookingId:
+              data.attachedInspectionBookingId ?? null,
           },
         });
 
@@ -685,6 +735,29 @@ export class BookingsRepository {
   /**
    * Find a worker profile by id for availability validation before assignment.
    */
+  /**
+   * Minimal projection used to validate an `attachedInspectionBookingId`
+   * supplied at booking-creation time. Deliberately NOT filtered by client
+   * here — BookingsService compares ownership itself so "doesn't exist" and
+   * "belongs to someone else" can be answered identically (no id probing).
+   *
+   * Read-only: nothing in the attach flow ever writes to the historical
+   * inspection booking or its report.
+   */
+  async findInspectionForAttachment(bookingId: string) {
+    return this.prisma.booking.findUnique({
+      where: { id: bookingId },
+      select: {
+        id: true,
+        lane: true,
+        status: true,
+        categoryId: true,
+        clientProfileId: true,
+        inspectionReport: { select: { id: true, decisionStatus: true } },
+      },
+    });
+  }
+
   async findWorkerProfileById(workerProfileId: string) {
     return this.prisma.workerProfile.findUnique({
       where: { id: workerProfileId },
@@ -696,6 +769,7 @@ export class BookingsRepository {
         currentlyWorking: true,
         status: true,
         onboardingStatus: true,
+        lastSeenAt: true,
       },
     });
   }
@@ -748,7 +822,7 @@ export class BookingsRepository {
     /** When provided, only this single radius is searched (frontend-driven expansion).
      *  When omitted the full ladder runs server-side (backward compat). */
     radiusKm?: number;
-    /** STANDARD lane uses the tighter 5→7km ladder; other lanes keep the legacy ladder. */
+    /** STANDARD lane uses the tighter 5-7km ladder; other lanes keep the legacy ladder. */
     lane?: BookingLane;
     /** Worker profile ids to exclude (e.g. previously cancelled this booking). */
     excludedWorkerIds?: string[];
@@ -769,10 +843,7 @@ export class BookingsRepository {
     searchedRadiusKm: number;
     searchCompleted: boolean;
   }> {
-    const result = this.usePostgis
-      ? await this._findNearbyWorkersPostgis(params)
-      : await this._findNearbyWorkersHaversine(params);
-
+    const result = await this._searchNearbyWorkers(params);
     const withStats = await this._attachWorkerStats(result.workers);
 
     // Rank: rating desc, completedJobs desc, cancellationRate asc, distance asc.
@@ -808,72 +879,134 @@ export class BookingsRepository {
   }
 
   /**
-   * Batch-attach reviewsCount + cancellationRate to a small pool of nearby
-   * workers (bounded by TARGET_POOL, so per-worker queries are cheap).
-   * cancellationRate uses the shared helper (see worker-stats.util.ts) so it
-   * stays consistent with WorkersRepository.getJobStats.
+   * Membership test only: "is this worker in the nearby pool for this job?"
+   *
+   * Same search, same eligibility, same ladder - but it skips the per-worker
+   * review/cancellation stats and the recommendation ranking, none of which a
+   * yes/no permission check (see BookingsService.assertClientCanChatWithWorker)
+   * ever looked at.
    */
-  private async _attachWorkerStats<
-    T extends { id: string; completedJobs: number },
-  >(
-    workers: T[],
-  ): Promise<(T & { reviewsCount: number; cancellationRate: number })[]> {
-    return Promise.all(
-      workers.map(async (w) => {
-        const [reviewsCount, cancellationRate] = await Promise.all([
-          this.prisma.review.count({
-            where: { booking: { workerProfileId: w.id } },
-          }),
-          computeCancellationRate(this.prisma, w.id),
-        ]);
-
-        return { ...w, reviewsCount, cancellationRate };
-      }),
-    );
-  }
-
-  // ── PostGIS implementation ─────────────────────────────────────────────────
-
-  private async _findNearbyWorkersPostgis(params: {
+  async findNearbyWorkerIds(params: {
     categoryId: string;
     lat: number;
     lng: number;
     radiusKm?: number;
     lane?: BookingLane;
     excludedWorkerIds?: string[];
-  }) {
-    const TARGET_POOL = 4;
-    const legacyLadder = [3000, 5000, 8000, 10000, 15000, 20000];
-    const standardLadder = [5000, 7000];
-    // STANDARD and INSPECTION are both direct-assignment lanes (fixed
-    // price/fee, no bidding) and share the tighter 5→7km ladder. BIDDING
-    // keeps the wider legacy ladder.
-    const radii =
-      params.radiusKm !== undefined
-        ? [Math.round(params.radiusKm * 1000)]
-        : params.lane === BookingLane.STANDARD ||
-            params.lane === BookingLane.INSPECTION
-          ? standardLadder
-          : legacyLadder;
-    const excludedIds = params.excludedWorkerIds ?? [];
+  }): Promise<Set<string>> {
+    const { workers } = await this._searchNearbyWorkers(params);
+    return new Set(workers.map((w) => w.id));
+  }
 
-    type WorkerEntry = {
-      id: string;
-      firstName: string;
-      lastName: string;
-      avatarUrl: string | null;
-      rating: number;
-      distanceMeters: number;
-      skills: string[];
-      completedJobs: number;
+  // -- The one nearby-worker search -----------------------------------------
+
+  /**
+   * The radius ladder, unchanged:
+   *   - STANDARD / INSPECTION (direct-assignment lanes): 5 -> 7 km.
+   *   - BIDDING / other:                                 3 -> 5 -> 8 -> 10 -> 15 -> 20 km.
+   *   - A caller-supplied radiusKm searches only that single radius
+   *     (frontend-driven expansion), regardless of lane.
+   */
+  private _radiusLadderKm(params: {
+    radiusKm?: number;
+    lane?: BookingLane;
+  }): number[] {
+    if (params.radiusKm !== undefined) return [params.radiusKm];
+    return params.lane === BookingLane.STANDARD ||
+      params.lane === BookingLane.INSPECTION
+      ? [...NEARBY_STANDARD_LADDER_KM]
+      : [...NEARBY_LEGACY_LADDER_KM];
+  }
+
+  /**
+   * ONE bounded database query, then the ladder is resolved in memory.
+   *
+   * BEFORE: the ladder ran in the database - up to six sequential queries,
+   * each re-scanning the same worker population at a wider radius, and on the
+   * PostGIS path each one built its geography inline (ST_MakePoint(...)), an
+   * expression no index can serve.
+   *
+   * AFTER: a single query to the WIDEST rung, ordered nearest-first and
+   * capped, then the rungs are applied to that already-sorted set. The result
+   * is IDENTICAL by construction - the old loop returned every worker inside
+   * the first rung whose cumulative count reached the target pool, which is
+   * exactly what picking that rung out of a distance-sorted list produces -
+   * and searchedRadiusKm / searchCompleted are derived the same way.
+   *
+   * Expansion still stops at the first rung that satisfies the target pool,
+   * and the maximum radius is still the last rung; nothing about the business
+   * behaviour moved.
+   */
+  private async _searchNearbyWorkers(params: {
+    categoryId: string;
+    lat: number;
+    lng: number;
+    radiusKm?: number;
+    lane?: BookingLane;
+    excludedWorkerIds?: string[];
+  }): Promise<{
+    workers: NearbyWorkerRow[];
+    searchedRadiusKm: number;
+    searchCompleted: boolean;
+  }> {
+    const ladderKm = this._radiusLadderKm(params);
+    const maxRadiusKm = ladderKm[ladderKm.length - 1];
+
+    const rows = this.usePostgis
+      ? await this._queryNearbyWorkersPostgis({ ...params, maxRadiusKm })
+      : await this._queryNearbyWorkersHaversine({ ...params, maxRadiusKm });
+
+    // Nearest first, rating as the tiebreak - the same ordering the ladder
+    // loop produced, and the order the ladder resolution below relies on.
+    rows.sort((a, b) =>
+      a.distanceMeters !== b.distanceMeters
+        ? a.distanceMeters - b.distanceMeters
+        : b.rating - a.rating,
+    );
+
+    let searchedRadiusKm = maxRadiusKm;
+    let workers = rows;
+    for (const rungKm of ladderKm) {
+      const within = rows.filter((w) => w.distanceMeters <= rungKm * 1000);
+      searchedRadiusKm = rungKm;
+      workers = within;
+      if (within.length >= NEARBY_TARGET_POOL) break;
+    }
+
+    return {
+      workers,
+      searchedRadiusKm,
+      searchCompleted: workers.length >= NEARBY_TARGET_POOL,
     };
-    const seen = new Map<string, WorkerEntry>();
-    let finalRadius = radii[radii.length - 1];
+  }
 
-    for (const radius of radii) {
-      finalRadius = radius;
+  // -- PostGIS implementation ------------------------------------------------
 
-      const rows = await this.prisma.$queryRaw<RawNearbyWorkerRow[]>`
+  /**
+   * Radius filtering via the GIST-indexed worker_profiles.location generated
+   * column (see the 20260818000100_worker_location_geography migration). The
+   * previous query built the geography per row inline, which forced a
+   * sequential scan on every rung; ST_DWithin against a real indexed column
+   * is the whole point of using PostGIS.
+   *
+   * If the column is missing (USE_POSTGIS=true but the migration has not been
+   * applied yet) this degrades to the Haversine + bounding-box path rather
+   * than failing the request.
+   */
+  private async _queryNearbyWorkersPostgis(params: {
+    categoryId: string;
+    lat: number;
+    lng: number;
+    maxRadiusKm: number;
+    excludedWorkerIds?: string[];
+  }): Promise<NearbyWorkerRow[]> {
+    const excludedIds = params.excludedWorkerIds ?? [];
+    const presenceCutoff = new Date(Date.now() - WORKER_PRESENCE_STALE_MS);
+    const radiusMeters = params.maxRadiusKm * 1000;
+
+    let raw: RawNearbyWorkerRow[];
+    try {
+      raw = await this.prisma.$queryRaw<RawNearbyWorkerRow[]>`
         SELECT
           wp.id,
           wp."firstName",
@@ -881,7 +1014,7 @@ export class BookingsRepository {
           wp."avatarUrl",
           wp.rating,
           ST_Distance(
-            ST_SetSRID(ST_MakePoint(wp."currentLng"::float8, wp."currentLat"::float8), 4326)::geography,
+            wp.location,
             ST_SetSRID(ST_MakePoint(${params.lng}::float8, ${params.lat}::float8), 4326)::geography
           )::float8 AS distance_meters,
           ARRAY(
@@ -889,19 +1022,14 @@ export class BookingsRepository {
             FROM worker_skills ws2
             JOIN service_categories sc ON ws2."categoryId" = sc.id
             WHERE ws2."workerProfileId" = wp.id
-          ) AS skills,
-          (
-            SELECT COUNT(*)
-            FROM bookings b
-            WHERE b."workerProfileId" = wp.id
-              AND b.status = 'COMPLETED'::"BookingStatus"
-          ) AS completed_jobs
+          ) AS skills
         FROM worker_profiles wp
         WHERE wp."availabilityStatus" = 'ONLINE'::"AvailabilityStatus"
           AND wp."currentlyWorking" = FALSE
           AND wp."currentLat" IS NOT NULL
           AND wp."currentLng" IS NOT NULL
           AND wp."locationUpdatedAt" > NOW() - INTERVAL '30 minutes'
+          AND wp."lastSeenAt" > ${presenceCutoff}::timestamptz
           AND wp.status = 'ACTIVE'::"WorkerStatus"
           AND wp."onboardingStatus" = 'APPROVED'::"WorkerOnboardingStatus"
           AND wp."profileCompleted" = TRUE
@@ -912,72 +1040,61 @@ export class BookingsRepository {
               AND ws."categoryId" = ${params.categoryId}
           )
           AND ST_DWithin(
-            ST_SetSRID(ST_MakePoint(wp."currentLng"::float8, wp."currentLat"::float8), 4326)::geography,
+            wp.location,
             ST_SetSRID(ST_MakePoint(${params.lng}::float8, ${params.lat}::float8), 4326)::geography,
-            ${radius}::float8
+            ${radiusMeters}::float8
           )
         ORDER BY distance_meters ASC, wp.rating DESC
+        LIMIT ${this.nearbyWorkerFetchLimit}
       `;
-
-      for (const r of rows) {
-        if (!seen.has(r.id)) {
-          seen.set(r.id, {
-            id: r.id,
-            firstName: r.firstName,
-            lastName: r.lastName,
-            avatarUrl: r.avatarUrl ?? null,
-            rating: Number(r.rating),
-            completedJobs: Number(r.completed_jobs),
-            distanceMeters: Number(r.distance_meters),
-            skills: r.skills,
-          });
-        }
-      }
-
-      if (seen.size >= TARGET_POOL) break;
+    } catch (err) {
+      this.logger.warn(
+        `[nearby-workers] PostGIS query failed (${(err as Error)?.message}); ` +
+          'falling back to the Haversine path. If USE_POSTGIS=true, check that ' +
+          'migration 20260818000100_worker_location_geography has been applied.',
+      );
+      return this._queryNearbyWorkersHaversine(params);
     }
 
-    const workers = Array.from(seen.values()).sort((a, b) =>
-      a.distanceMeters !== b.distanceMeters
-        ? a.distanceMeters - b.distanceMeters
-        : b.rating - a.rating,
-    );
-
-    return {
-      workers,
-      searchedRadiusKm: finalRadius / 1000,
-      searchCompleted: seen.size >= TARGET_POOL,
-    };
+    const rows = raw.map((r) => ({
+      id: r.id,
+      firstName: r.firstName,
+      lastName: r.lastName,
+      avatarUrl: r.avatarUrl ?? null,
+      rating: Number(r.rating),
+      distanceMeters: Number(r.distance_meters),
+      skills: r.skills,
+      completedJobs: 0,
+    }));
+    return this._attachCompletedJobs(rows);
   }
 
-  // ── Haversine fallback (no PostGIS required) ───────────────────────────────
+  // -- Haversine fallback (no PostGIS required) ------------------------------
 
-  private async _findNearbyWorkersHaversine(params: {
+  /**
+   * Same eligibility filters as the PostGIS path, with a lat/lng BOUNDING BOX
+   * applied in SQL as the geographic pre-filter. The box is a strict superset
+   * of the radius circle, so the precise Haversine pass below removes exactly
+   * the workers it always did - the difference is that the database no longer
+   * hands Node every online, skilled worker in the country first.
+   */
+  private async _queryNearbyWorkersHaversine(params: {
     categoryId: string;
     lat: number;
     lng: number;
-    radiusKm?: number;
-    lane?: BookingLane;
+    maxRadiusKm: number;
     excludedWorkerIds?: string[];
-  }) {
-    const TARGET_POOL = 4;
-    const legacyLadderKm = [3, 5, 8, 10, 15, 20];
-    const standardLadderKm = [5, 7];
-    // STANDARD and INSPECTION share the tighter 5→7km ladder — see the
-    // matching comment in _findNearbyWorkersPostgis.
-    const radiusLadderKm =
-      params.radiusKm !== undefined
-        ? [params.radiusKm]
-        : params.lane === BookingLane.STANDARD ||
-            params.lane === BookingLane.INSPECTION
-          ? standardLadderKm
-          : legacyLadderKm;
-
-    // Location freshness threshold — same 30-minute rule as the PostGIS path.
+  }): Promise<NearbyWorkerRow[]> {
+    // Location freshness threshold - same 30-minute rule as the PostGIS path.
     const freshThreshold = new Date(Date.now() - 30 * 60 * 1000);
+    // Presence-lease threshold - same rule as the PostGIS path.
+    const presenceThreshold = new Date(Date.now() - WORKER_PRESENCE_STALE_MS);
+    const box = boundingBoxWhere(
+      boundingBoxKm(params.lat, params.lng, params.maxRadiusKm),
+      'currentLat',
+      'currentLng',
+    );
 
-    // Fetch all eligible candidate workers once (avoids repeated DB round-trips).
-    // The DB filters everything except the spatial radius (applied in TS below).
     const candidates = await this.prisma.workerProfile.findMany({
       where: {
         availabilityStatus: AvailabilityStatus.ONLINE,
@@ -988,11 +1105,18 @@ export class BookingsRepository {
         currentLat: { not: null },
         currentLng: { not: null },
         locationUpdatedAt: { gte: freshThreshold },
+        lastSeenAt: { gte: presenceThreshold },
         skills: { some: { categoryId: params.categoryId } },
         ...(params.excludedWorkerIds && params.excludedWorkerIds.length > 0
           ? { id: { notIn: params.excludedWorkerIds } }
           : {}),
+        // Wrapped in AND so the box's antimeridian OR cannot collide with
+        // another OR on this where object.
+        AND: [box],
       },
+      // Projection only - no CNIC/document/user payload, and the per-row
+      // COMPLETED-booking count that used to ride along on every candidate is
+      // now one batched groupBy over the surviving pool instead.
       select: {
         id: true,
         firstName: true,
@@ -1001,72 +1125,146 @@ export class BookingsRepository {
         rating: true,
         currentLat: true,
         currentLng: true,
-        skills: {
-          include: { category: { select: { name: true } } },
-        },
-        _count: {
-          select: {
-            bookings: { where: { status: BookingStatus.COMPLETED } },
-          },
-        },
+        skills: { select: { category: { select: { name: true } } } },
       },
+      take: this.nearbyWorkerFetchLimit,
     });
 
-    type WorkerEntry = {
-      id: string;
-      firstName: string;
-      lastName: string;
-      avatarUrl: string | null;
-      rating: number;
-      distanceMeters: number;
-      skills: string[];
-      completedJobs: number;
-    };
-    const seen = new Map<string, WorkerEntry>();
-    let finalRadiusKm = radiusLadderKm[radiusLadderKm.length - 1];
-
-    for (const radiusKm of radiusLadderKm) {
-      finalRadiusKm = radiusKm;
-      const radiusMeters = radiusKm * 1000;
-
-      for (const w of candidates) {
-        if (seen.has(w.id)) continue;
-
-        const distanceMeters = haversineMeters(
-          params.lat,
-          params.lng,
-          w.currentLat as number,
-          w.currentLng as number,
-        );
-
-        if (distanceMeters <= radiusMeters) {
-          seen.set(w.id, {
-            id: w.id,
-            firstName: w.firstName,
-            lastName: w.lastName,
-            avatarUrl: w.avatarUrl ?? null,
-            rating: Number(w.rating),
-            completedJobs: w._count.bookings,
-            distanceMeters,
-            skills: w.skills.map((s) => s.category.name),
-          });
-        }
-      }
-
-      if (seen.size >= TARGET_POOL) break;
+    const radiusMeters = params.maxRadiusKm * 1000;
+    const rows: NearbyWorkerRow[] = [];
+    for (const w of candidates) {
+      const distanceMeters = haversineMeters(
+        params.lat,
+        params.lng,
+        w.currentLat as number,
+        w.currentLng as number,
+      );
+      if (distanceMeters > radiusMeters) continue;
+      rows.push({
+        id: w.id,
+        firstName: w.firstName,
+        lastName: w.lastName,
+        avatarUrl: w.avatarUrl ?? null,
+        rating: Number(w.rating),
+        distanceMeters,
+        skills: w.skills.map((s) => s.category.name),
+        completedJobs: 0,
+      });
     }
+    return this._attachCompletedJobs(rows);
+  }
 
-    const workers = Array.from(seen.values()).sort((a, b) =>
-      a.distanceMeters !== b.distanceMeters
-        ? a.distanceMeters - b.distanceMeters
-        : b.rating - a.rating,
+  /**
+   * completedJobs for a whole pool in ONE groupBy, replacing the per-row
+   * correlated COUNT(*) subquery (PostGIS) / _count include (Prisma) that ran
+   * for every candidate the geographic filter had not yet rejected.
+   */
+  private async _attachCompletedJobs(
+    rows: NearbyWorkerRow[],
+  ): Promise<NearbyWorkerRow[]> {
+    if (rows.length === 0) return rows;
+    const grouped = await this.prisma.booking.groupBy({
+      by: ['workerProfileId'],
+      where: {
+        workerProfileId: { in: rows.map((r) => r.id) },
+        status: BookingStatus.COMPLETED,
+      },
+      _count: { _all: true },
+    });
+    const counts = new Map(
+      grouped.map((g) => [g.workerProfileId as string, g._count._all]),
+    );
+    return rows.map((r) => ({ ...r, completedJobs: counts.get(r.id) ?? 0 }));
+  }
+
+  /**
+   * Batch-attach reviewsCount + cancellationRate to the nearby-worker pool.
+   *
+   * BEFORE: three queries PER WORKER (review count + the two booking counts
+   * inside computeCancellationRate), issued in parallel but still 3N round
+   * trips. AFTER: a fixed number of grouped queries for the whole pool. The
+   * arithmetic is identical to the shared helper (see worker-stats.util.ts):
+   * a cancellation counts for the worker when cancelledByRole = WORKER, or -
+   * for historical rows predating that column - when it is null and the
+   * reason contains 'Cancelled by worker'.
+   */
+  private async _attachWorkerStats<
+    T extends { id: string; completedJobs: number },
+  >(
+    workers: T[],
+  ): Promise<(T & { reviewsCount: number; cancellationRate: number })[]> {
+    if (workers.length === 0) return [];
+    const ids = workers.map((w) => w.id);
+
+    const [reviewedBookings, cancelledGroups, acceptedGroups] =
+      await Promise.all([
+        // Review is 1:1 with Booking, so reviews are attributed to a worker
+        // through the reviewed booking.
+        this.prisma.booking.findMany({
+          where: { workerProfileId: { in: ids }, review: { isNot: null } },
+          select: { workerProfileId: true },
+        }),
+        this.prisma.booking.groupBy({
+          by: ['workerProfileId'],
+          where: {
+            workerProfileId: { in: ids },
+            status: BookingStatus.CANCELLED,
+            OR: [
+              { cancelledByRole: 'WORKER' },
+              {
+                cancelledByRole: null,
+                cancellationReason: { contains: 'Cancelled by worker' },
+              },
+            ],
+          },
+          _count: { _all: true },
+        }),
+        this.prisma.booking.groupBy({
+          by: ['workerProfileId'],
+          where: {
+            workerProfileId: { in: ids },
+            status: {
+              in: [
+                BookingStatus.ACCEPTED,
+                BookingStatus.EN_ROUTE,
+                BookingStatus.ARRIVED,
+                BookingStatus.IN_PROGRESS,
+                BookingStatus.COMPLETED,
+                BookingStatus.CANCELLED,
+              ],
+            },
+          },
+          _count: { _all: true },
+        }),
+      ]);
+
+    const reviewCounts = new Map<string, number>();
+    for (const booking of reviewedBookings) {
+      if (!booking.workerProfileId) continue;
+      reviewCounts.set(
+        booking.workerProfileId,
+        (reviewCounts.get(booking.workerProfileId) ?? 0) + 1,
+      );
+    }
+    const cancelledCounts = new Map(
+      cancelledGroups.map((g) => [g.workerProfileId as string, g._count._all]),
+    );
+    const acceptedCounts = new Map(
+      acceptedGroups.map((g) => [g.workerProfileId as string, g._count._all]),
     );
 
-    return {
-      workers,
-      searchedRadiusKm: finalRadiusKm,
-      searchCompleted: seen.size >= TARGET_POOL,
-    };
+    return workers.map((w) => {
+      const totalAccepted = acceptedCounts.get(w.id) ?? 0;
+      const workerCancelled = cancelledCounts.get(w.id) ?? 0;
+      return {
+        ...w,
+        reviewsCount: reviewCounts.get(w.id) ?? 0,
+        cancellationRate:
+          totalAccepted > 0
+            ? Math.round((workerCancelled / totalAccepted) * 100)
+            : 0,
+      };
+    });
   }
 
   /**

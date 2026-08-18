@@ -88,6 +88,14 @@ class EnvironmentVariables {
   @IsOptional()
   USE_POSTGIS: string = 'false';
 
+  @IsNumber()
+  @IsOptional()
+  MATCH_FANOUT_CHUNK_SIZE: number = 50;
+
+  @IsNumber()
+  @IsOptional()
+  MATCH_NEARBY_FETCH_LIMIT: number = 200;
+
   @IsString()
   @IsOptional()
   OTP_ADMIN_ENCRYPTION_KEY: string;

@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/data/cache_policy.dart';
 import '../../../../core/data/cached_result.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/network/cacheable_fetch.dart';
@@ -120,6 +121,11 @@ class WorkerRemoteDatasourceImpl implements WorkerRemoteDatasource {
       cache: _cache,
       secureStorage: _secureStorage,
       cacheKey: 'new_jobs',
+      // New Jobs is live marketplace discovery, not account history — a
+      // cached list older than this policy's window is no longer presented as
+      // a usable offline fallback. The 24h rule itself is unchanged; it now
+      // lives in CachePolicy.newJobs instead of as a literal here.
+      policy: CachePolicy.newJobs,
       request: () async {
         debugPrint('[NewJobs] → GET /workers/jobs/new');
         final response =

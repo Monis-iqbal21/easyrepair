@@ -200,12 +200,31 @@ void main() {
   });
 
   group('genuinely logged out', () {
-    test('a null user (definite logout) sends any non-auth route to role-select', () {
+    test('a null user (definite logout) sends any protected route to the '
+        'branded welcome screen', () {
       final redirect = resolveAuthRedirect(
         authState: const AsyncData<UserEntity?>(null),
         matchedLocation: '/client/home',
       );
-      expect(redirect, '/auth/role-select');
+      expect(redirect, '/welcome');
+    });
+
+    test('a logged-out user is left alone ON the welcome screen — it is where '
+        'they belong, not somewhere to redirect away from', () {
+      final redirect = resolveAuthRedirect(
+        authState: const AsyncData<UserEntity?>(null),
+        matchedLocation: '/welcome',
+      );
+      expect(redirect, isNull);
+    });
+
+    test('a logged-out user is left alone on role-select — where the '
+        'welcome screen hands off via Shuru karein', () {
+      final redirect = resolveAuthRedirect(
+        authState: const AsyncData<UserEntity?>(null),
+        matchedLocation: '/auth/role-select',
+      );
+      expect(redirect, isNull);
     });
 
     test('an already-on-/auth route with no user is left alone', () {
@@ -216,12 +235,12 @@ void main() {
       expect(redirect, isNull);
     });
 
-    test('splash with no user dispatches to role-select', () {
+    test('splash with no user dispatches to the welcome screen', () {
       final redirect = resolveAuthRedirect(
         authState: const AsyncData<UserEntity?>(null),
         matchedLocation: '/splash',
       );
-      expect(redirect, '/auth/role-select');
+      expect(redirect, '/welcome');
     });
   });
 

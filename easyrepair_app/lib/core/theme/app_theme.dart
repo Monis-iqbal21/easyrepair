@@ -1,19 +1,30 @@
 import 'package:flutter/material.dart';
 
+import 'app_semantic_colors.dart';
+
 class AppTheme {
   static ThemeData get lightTheme {
     const primaryColor = Color(0xFF1A1A1A);
     const accentColor = Color(0xFF1D9E75);
     const backgroundColor = Color(0xFFF9FAFB);
 
+    final colorScheme = ColorScheme.fromSeed(
+      seedColor: accentColor,
+      primary: accentColor,
+      surface: Colors.white,
+    );
+
     return ThemeData(
       useMaterial3: true,
       scaffoldBackgroundColor: backgroundColor,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: accentColor,
-        primary: accentColor,
-        surface: Colors.white,
-      ),
+      colorScheme: colorScheme,
+      // Single registration point for HandyGo's semantic colour tokens — see
+      // AppSemanticColors. Every offline/cache surface reads its colours from
+      // here rather than hardcoding values, so the pending palette decision
+      // and the future dark theme are a one-file change.
+      extensions: <ThemeExtension<dynamic>>[
+        AppSemanticColors.fromColorScheme(colorScheme),
+      ],
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.white,
         foregroundColor: primaryColor,

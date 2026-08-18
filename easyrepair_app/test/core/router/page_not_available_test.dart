@@ -72,6 +72,7 @@ GoRouter _testRouter(ProviderContainer container, {String initialLocation = '/sp
     },
     routes: [
       GoRoute(path: '/splash', builder: (_, _) => _stub('SPLASH')),
+      GoRoute(path: '/welcome', builder: (_, _) => _stub('WELCOME')),
       GoRoute(path: '/auth/role-select', builder: (_, _) => _stub('ROLE_SELECT')),
       GoRoute(path: '/client/home', builder: (_, _) => _stub('CLIENT_HOME')),
       GoRoute(path: '/worker/home', builder: (_, _) => _stub('WORKER_HOME')),
@@ -135,12 +136,12 @@ void main() {
       },
     );
 
-    testWidgets('a logged-out visitor is sent to auth, never to the 404 page',
-        (tester) async {
+    testWidgets('a logged-out visitor is sent to the branded welcome screen, '
+        'never to the 404 page', (tester) async {
       await _pump(tester, null, initialLocation: '/some/garbage/path');
 
       expect(find.byType(PageNotAvailablePage), findsNothing);
-      expect(find.text('ROLE_SELECT'), findsOneWidget);
+      expect(find.text('WELCOME'), findsOneWidget);
     });
   });
 

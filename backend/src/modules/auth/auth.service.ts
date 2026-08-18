@@ -18,6 +18,7 @@ import { AuthRepository } from './auth.repository';
 import { StorageService } from '../storage/storage.service';
 import { isSupportPhone } from '../../common/utils/support-identity.util';
 import { ChatService } from '../chat/chat.service';
+import { WorkersService } from '../workers/workers.service';
 import { SmsOtpService } from './sms-otp.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -112,6 +113,7 @@ export class AuthService {
     private readonly storageService: StorageService,
     private readonly smsOtp: SmsOtpService,
     private readonly chatService: ChatService,
+    private readonly workersService: WorkersService,
   ) {}
 
   /**
@@ -372,7 +374,17 @@ export class AuthService {
     };
   }
 
+  /**
+   * Authoritative server-side session cleanup. Order matters: the FCM token
+   * is detached BEFORE any forced-offline notification is created, so that
+   * notification is persisted (for the account's history) but never pushed
+   * to the device that just logged out — NotificationsService reads the
+   * token fresh from the DB at send time. CLIENT accounts pass through
+   * `handleWorkerLogout` as a no-op (no WorkerProfile to act on).
+   */
   async logout(userId: string, refreshToken?: string): Promise<void> {
+    await this.authRepository.clearFcmToken(userId).catch(() => {});
+
     if (refreshToken) {
       await this.authRepository
         .deleteRefreshToken(refreshToken)
@@ -380,6 +392,12 @@ export class AuthService {
     } else {
       await this.authRepository.deleteAllRefreshTokens(userId);
     }
+
+    await this.workersService.handleWorkerLogout(userId).catch((err) => {
+      this.logger.warn(
+        `[logout] worker presence cleanup failed for userId=${userId}: ${(err as Error)?.message}`,
+      );
+    });
   }
 
   async getMe(userId: string): Promise<AuthResponseDto['user']> {

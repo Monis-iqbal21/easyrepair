@@ -263,14 +263,17 @@ export class WorkersController {
   }
 
   /**
-   * GET /workers/jobs?filter=active|completed|cancelled
-   * Returns all bookings assigned to the authenticated worker.
+   * GET /workers/jobs?filter=active|completed|cancelled|applied
+   * Returns this worker's own job relationships: 'active'/'completed'/
+   * 'cancelled' are bookings actually assigned to them; 'applied' is their
+   * own bid history (see WorkersService.getWorkerJobs) — independent of
+   * whether the booking was ever assigned to them at all.
    * Must be defined BEFORE /workers/jobs/:id so the router matches correctly.
    */
   @Get('jobs')
   getWorkerJobs(
     @CurrentUser() user: { id: string },
-    @Query('filter') filter?: 'active' | 'completed' | 'cancelled',
+    @Query('filter') filter?: 'active' | 'completed' | 'cancelled' | 'applied',
   ) {
     return this.workersService.getWorkerJobs(user.id, filter);
   }

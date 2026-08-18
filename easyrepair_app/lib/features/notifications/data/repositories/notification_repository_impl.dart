@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/data/cached_result.dart';
 import '../../../../core/errors/dio_failure_mapper.dart';
 import '../../../../core/errors/failures.dart';
 import '../../domain/entities/notification_entity.dart';
@@ -14,10 +15,18 @@ class NotificationRepositoryImpl implements NotificationRepository {
   const NotificationRepositoryImpl(this._datasource);
 
   @override
-  Future<Either<Failure, List<NotificationEntity>>> getNotifications() async {
+  Future<Either<Failure, CachedResult<List<NotificationEntity>>>>
+      getNotifications() async {
     try {
-      final models = await _datasource.getNotifications();
-      return Right(models.map((m) => m.toEntity()).toList());
+      final result = await _datasource.getNotifications();
+      return Right(CachedResult(
+        result.data.map((m) => m.toEntity()).toList(),
+        isStale: result.isStale,
+      ));
+    } on Failure catch (f) {
+      // fetchWithCache already mapped the DioException (and decided whether
+      // cache was permitted) — pass its verdict through untouched.
+      return Left(f);
     } on DioException catch (e) {
       return Left(dioExceptionToFailure(e));
     } catch (e) {

@@ -72,6 +72,7 @@ describe('AuthService — Worker suspension exposure', () => {
       {} as any,
       {} as any,
       chatService as any,
+      { handleWorkerLogout: jest.fn().mockResolvedValue(undefined) } as any,
     );
   });
 

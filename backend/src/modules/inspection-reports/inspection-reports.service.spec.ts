@@ -499,6 +499,7 @@ describe('InspectionReportsService', () => {
       currentLat: 24.86,
       currentLng: 67.0,
       locationUpdatedAt: new Date(),
+      lastSeenAt: new Date(),
       skills: [{ categoryId: 'cat-1' }],
     };
 
@@ -582,6 +583,7 @@ describe('InspectionReportsService', () => {
       currentLat: 24.86,
       currentLng: 67.0,
       locationUpdatedAt: new Date(),
+      lastSeenAt: new Date(),
       skills: [{ categoryId: 'cat-1' }],
     };
 

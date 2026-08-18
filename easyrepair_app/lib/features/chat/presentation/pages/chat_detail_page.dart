@@ -168,10 +168,6 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
           Navigator.pop(context);
           _pickFromGallery(true);
         },
-        onVoiceNote: () {
-          Navigator.pop(context);
-          _startVoiceRecording();
-        },
         onLocation: () {
           Navigator.pop(context);
           _sendLocation();
@@ -620,6 +616,24 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
     });
   }
 
+  // ── Call ──────────────────────────────────────────────────────────────────
+
+  /// Opens the device dialer pre-filled with [phone] — never places the call
+  /// automatically. Mirrors the same `tel:` + launchUrl pattern already used
+  /// for Call Worker/Call Client on the booking pages and for Contact
+  /// Support, so behavior stays consistent across the app.
+  Future<void> _callParticipant(String phone) async {
+    final uri = Uri(scheme: 'tel', path: phone);
+    try {
+      final launched = await launchUrl(uri);
+      if (!launched && mounted) {
+        _showError(context.l10n.chatCouldNotOpenDialer);
+      }
+    } catch (e) {
+      if (mounted) _showError(context.l10n.chatCouldNotOpenDialer);
+    }
+  }
+
   // ── Helpers ───────────────────────────────────────────────────────────────
 
   void _showError(String message) {
@@ -741,6 +755,15 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
     // pages and updates the match list.
     final canPop = Navigator.canPop(context);
 
+    // The Support thread never shows a call icon — HandyGo Support has no
+    // legitimate phone-call workflow today, and no support number is ever
+    // invented here. A normal Client<->Worker conversation shows it only
+    // once the other participant's registered phone number is known.
+    final participantPhone = participant?.phone;
+    final showCall = !isSupport &&
+        participantPhone != null &&
+        participantPhone.isNotEmpty;
+
     void handleBack() {
       if (canPop) {
         Navigator.pop(context);
@@ -803,6 +826,15 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
             ],
           ),
         ),
+        actions: [
+          if (showCall)
+            IconButton(
+              icon: const Icon(Icons.call_rounded,
+                  color: Color(0xFFDB6234), size: 22),
+              tooltip: context.l10n.trackCall,
+              onPressed: () => _callParticipant(participantPhone),
+            ),
+        ],
         bottom: const PreferredSize(
           preferredSize: Size.fromHeight(1),
           child: Divider(height: 1, color: Color(0xFFE2E8F0)),
@@ -2461,13 +2493,11 @@ class _BlinkingDotState extends State<_BlinkingDot>
 class _AttachmentSheet extends StatelessWidget {
   final VoidCallback onGalleryImage;
   final VoidCallback onGalleryVideo;
-  final VoidCallback onVoiceNote;
   final VoidCallback onLocation;
 
   const _AttachmentSheet({
     required this.onGalleryImage,
     required this.onGalleryVideo,
-    required this.onVoiceNote,
     required this.onLocation,
   });
 
@@ -2514,12 +2544,6 @@ class _AttachmentSheet extends StatelessWidget {
                   label: context.l10n.chatAttachVideo,
                   color: const Color(0xFF8B5CF6),
                   onTap: onGalleryVideo,
-                ),
-                _AttachOption(
-                  icon: Icons.mic_rounded,
-                  label: context.l10n.chatAttachVoice,
-                  color: const Color(0xFF10B981),
-                  onTap: onVoiceNote,
                 ),
                 _AttachOption(
                   icon: Icons.location_on_rounded,

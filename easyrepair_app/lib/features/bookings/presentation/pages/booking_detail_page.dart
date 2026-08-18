@@ -27,6 +27,7 @@ import 'track_worker_page.dart';
 import 'worker_discovery_map_page.dart';
 import '../utils/booking_labels.dart';
 import '../../../../core/errors/failure_messages.dart';
+import '../../../../core/network/reconnect_refresh.dart';
 import '../../../../core/network/offline_banner.dart';
 import '../../../../core/presentation/widgets/resource_unavailable_view.dart';
 
@@ -69,6 +70,13 @@ class BookingDetailPage extends ConsumerStatefulWidget {
 class _BookingDetailPageState extends ConsumerState<BookingDetailPage> {
   @override
   Widget build(BuildContext context) {
+    // Reconnecting while the user is sitting on this nested page must
+    // refresh the booking WITHOUT moving them: only this booking's data
+    // provider is invalidated, so the route stays /client/booking/<id>.
+    refreshOnReconnect(
+      ref,
+      () => ref.invalidate(bookingDetailProvider(widget.bookingId)),
+    );
     final bookingAsync = ref.watch(bookingDetailProvider(widget.bookingId));
     final isShowingCachedData =
         ref.watch(bookingDetailIsOfflineProvider(widget.bookingId)) &&

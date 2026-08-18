@@ -17,6 +17,7 @@ import 'choose_ustaad_page.dart';
 import 'track_worker_page.dart';
 import 'worker_discovery_map_page.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
+import '../../../../core/network/reconnect_refresh.dart';
 import '../../../../core/network/offline_banner.dart';
 import '../utils/booking_labels.dart';
 import '../../../../core/errors/failure_messages.dart';
@@ -47,6 +48,13 @@ class _MyBookingsPageState extends ConsumerState<MyBookingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Reconnect refreshes this list IN PLACE. It only invalidates a data
+    // provider — never auth state, never the router — so the user stays on
+    // My Bookings and the previous list stays visible while it refetches.
+    refreshOnReconnect(
+      ref,
+      () => ref.read(bookingsNotifierProvider.notifier).refresh(),
+    );
     final bookingsAsync = ref.watch(bookingsNotifierProvider);
     final filter = ref.watch(bookingFilterProvider);
     final filtered = ref.watch(filteredBookingsProvider);

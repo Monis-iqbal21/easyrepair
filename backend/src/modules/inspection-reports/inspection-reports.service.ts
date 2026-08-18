@@ -5,6 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { InspectionDecisionStatus } from '@prisma/client';
 import {
   InspectionBookingContext,
   InspectionReportsRepository,
@@ -15,6 +16,7 @@ import {
   InspectionReportResponseDto,
   SanitizedInspectionReportResponseDto,
 } from './dto/inspection-report-response.dto';
+import { AttachableInspectionReportDto } from './dto/attachable-inspection-report.dto';
 import { StorageService } from '../storage/storage.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { BookingsService } from '../bookings/bookings.service';
@@ -31,6 +33,44 @@ export class InspectionReportsService {
     private readonly notificationsService: NotificationsService,
     private readonly bookingsService: BookingsService,
   ) {}
+
+  /**
+   * GET /inspection-reports/client/available?categoryId=… — the authenticated
+   * client's own past inspections whose report they may attach to a new
+   * BIDDING job. Eligibility lives entirely in the repository query (see
+   * findClientCompletedInspections); a client with none simply gets [].
+   */
+  async listAttachableForClient(
+    userId: string,
+    categoryId?: string,
+  ): Promise<AttachableInspectionReportDto[]> {
+    const clientProfile = await this.repository.findClientProfileByUserId(
+      userId,
+    );
+    if (!clientProfile) throw new ForbiddenException('Client profile not found');
+
+    const rows = await this.repository.findClientCompletedInspections({
+      clientProfileId: clientProfile.id,
+      categoryId,
+    });
+
+    return rows
+      // The query already requires a report via its decisionStatus filter;
+      // this narrows the type and stays defensive rather than asserting.
+      .filter((b) => b.inspectionReport !== null)
+      .map((b) => ({
+        bookingId: b.id,
+        categoryId: b.categoryId,
+        categoryName: b.category.name,
+        inspectionDate: (
+          b.completedAt ??
+          b.inspectionReport!.createdAt ??
+          b.createdAt
+        ).toISOString(),
+        issueFound: b.inspectionReport!.issueFound ?? null,
+        recommendedRepair: b.inspectionReport!.recommendedRepair ?? null,
+      }));
+  }
 
   /** POST /bookings/:id/inspection-report — assigned worker only. */
   async submitReport(
@@ -165,6 +205,12 @@ export class InspectionReportsService {
     let booking = await this.repository.findBookingContext(bookingId);
     if (!booking) throw new NotFoundException('Booking not found');
 
+    // Set only when this report was reached through a manually ATTACHED
+    // historical inspection — holds the independently-posted BIDDING job the
+    // caller actually asked about, which is what a worker's eligibility must
+    // be judged against (never the old inspection).
+    let attachedFromBooking: InspectionBookingContext | null = null;
+
     // A linked repair booking has no report of its own — the report always
     // lives on the source inspection booking, so "Inspection Report Dekhein"
     // works with either id.
@@ -173,6 +219,17 @@ export class InspectionReportsService {
         booking.sourceInspectionBookingId,
       );
       if (source) booking = source;
+    } else if (booking.attachedInspectionBookingId) {
+      // Independently-posted bidding job carrying an attached historical
+      // report. Deliberately a separate branch from the Find-Other-Ustaad
+      // resolution above so that path's authorization is untouched.
+      const source = await this.repository.findBookingContext(
+        booking.attachedInspectionBookingId,
+      );
+      if (source) {
+        attachedFromBooking = booking;
+        booking = source;
+      }
     }
 
     if (role === 'CLIENT' && booking.clientProfile?.userId !== userId) {
@@ -196,6 +253,17 @@ export class InspectionReportsService {
 
       // "Assigned" means assigned to this inspection booking (old-style
       // same-row reassignment) or to its linked repair booking (new flow).
+      // Reached via a manually attached historical report: eligibility is
+      // judged against the NEW bidding job, and the original inspector is
+      // deliberately NOT excluded (that closed inspection was already paid;
+      // this is an unrelated marketplace job they may freely bid on).
+      if (attachedFromBooking) {
+        return this._getSanitizedReportForAttachedViewer(
+          userId,
+          attachedFromBooking,
+        );
+      }
+
       const isAssignedHere = booking.workerProfile?.userId === userId;
       const isAssignedOnLinkedRepair =
         booking.repairBooking?.workerProfile?.userId === userId;
@@ -474,6 +542,56 @@ export class InspectionReportsService {
     return this._toDto(updated, freshBooking);
   }
 
+  /**
+   * Worker-side read path for a report reached through a MANUALLY ATTACHED
+   * historical inspection on an independently-posted BIDDING job.
+   *
+   * Kept strictly separate from [_getSanitizedReportForBidder] so the
+   * Find-Other-Ustaad authorization above is untouched. Two deliberate
+   * differences, both following from "the old inspection is closed, paid and
+   * unrelated to this job":
+   *   - no `decisionStatus === FIND_OTHER_USTAAD` requirement (an attached
+   *     report is CLOSED_AFTER_INSPECTION/ACCEPTED_REPAIR by definition);
+   *   - `inspectingWorkerProfileId: null` — the original inspector is NOT
+   *     excluded and may view and bid like any other Ustaad.
+   *
+   * Everything protective is retained: the caller must be an approved worker
+   * who is genuinely eligible for THIS bidding job (category, radius, account
+   * state, exclusions), and they only ever receive the SANITIZED report —
+   * the inspector's original quote/prices are never exposed.
+   */
+  private async _getSanitizedReportForAttachedViewer(
+    userId: string,
+    biddingBooking: InspectionBookingContext,
+  ): Promise<SanitizedInspectionReportResponseDto> {
+    const workerProfile =
+      await this.repository.findWorkerProfileWithSkillsByUserId(userId);
+    if (!workerProfile) {
+      throw new ForbiddenException('Worker profile not found');
+    }
+
+    assertEligibleForInspectionBidding(
+      workerProfile,
+      biddingBooking,
+      // No inspector exclusion — see the doc above.
+      null,
+      undefined,
+      // Marketplace browsing, same as the New Jobs feed: a manually OFFLINE
+      // Ustaad may still read the attached report before bidding.
+      false,
+    );
+
+    const inspectionBookingId = biddingBooking.attachedInspectionBookingId;
+    if (!inspectionBookingId) {
+      throw new NotFoundException('No inspection report for this booking yet.');
+    }
+    const report = await this.repository.findByBookingId(inspectionBookingId);
+    if (!report) {
+      throw new NotFoundException('No inspection report for this booking yet.');
+    }
+    return this._toSanitizedDto(report);
+  }
+
   private async _getSanitizedReportForBidder(
     userId: string,
     booking: InspectionBookingContext,
@@ -491,18 +609,24 @@ export class InspectionReportsService {
       throw new ForbiddenException('This job is no longer open for bidding.');
     }
 
-    // Full approved/active/profile-completed/online/category/radius/fresh-GPS
-    // gate, plus exclusion of the original inspecting worker — same standard
-    // enforced at bid-creation time, so viewing the report can't be used to
-    // sidestep the eligibility rules that gate bidding itself. When a linked
-    // repair booking exists (new flow), the bidder is bidding on THAT
-    // booking, so eligibility is checked against its category/location/
-    // exclusions; old-style rows are themselves the open job.
+    // Full approved/active/profile-completed/category/radius gate, plus
+    // exclusion of the original inspecting worker — same standard enforced
+    // at bid-creation time, so viewing the report can't be used to sidestep
+    // the eligibility rules that gate bidding itself. When a linked repair
+    // booking exists (new flow), the bidder is bidding on THAT booking, so
+    // eligibility is checked against its category/location/exclusions;
+    // old-style rows are themselves the open job.
+    //
+    // requireLivePresence: false — this is marketplace browsing (viewing a
+    // reopened job's report before bidding), same as the New Jobs feed; a
+    // manually OFFLINE Worker may still view/bid here.
     const biddingBooking = booking.repairBooking ?? booking;
     assertEligibleForInspectionBidding(
       workerProfile,
       biddingBooking,
       report.workerProfileId,
+      undefined,
+      false,
     );
 
     return this._toSanitizedDto(report);

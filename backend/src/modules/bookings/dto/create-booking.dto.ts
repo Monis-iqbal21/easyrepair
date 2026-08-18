@@ -131,4 +131,15 @@ export class CreateBookingDto {
   @IsString()
   @IsUUID()
   idempotencyKey?: string;
+
+  // Optional: the id of one of THIS client's own previously COMPLETED
+  // inspection bookings, whose report they chose to attach to this new
+  // BIDDING job as read-only supporting context for bidders. Fully
+  // validated server-side (ownership, lane, completion, decision status and
+  // category) — see BookingsService._resolveAttachedInspection. Omitting it
+  // leaves booking creation behaving exactly as before.
+  @IsOptional()
+  @IsString()
+  @IsUUID()
+  attachedInspectionBookingId?: string;
 }

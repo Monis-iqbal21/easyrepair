@@ -8,6 +8,7 @@ import '../../../../core/network/api_client.dart';
 import '../../../../core/network/cacheable_fetch.dart';
 import '../../../../core/storage/local_cache_service.dart';
 import '../../../../core/storage/secure_storage_service.dart';
+import '../../domain/entities/attachable_inspection_entity.dart';
 import '../../domain/entities/booking_entity.dart';
 import '../../domain/entities/create_booking_request.dart';
 import '../../domain/entities/inspection_report_entity.dart';
@@ -18,6 +19,14 @@ import '../models/nearby_worker_model.dart';
 
 abstract class BookingRemoteDataSource {
   Future<BookingModel> createBooking(CreateBookingRequest request);
+
+  /// The client's own previously completed inspections whose report they may
+  /// attach to a new bidding job, optionally narrowed to one category.
+  /// Deliberately NOT cached: it gates a write action, so a stale list could
+  /// offer a report the backend would then reject.
+  Future<List<AttachableInspectionEntity>> getAttachableInspections({
+    String? categoryId,
+  });
   Future<CachedResult<List<BookingModel>>> getClientBookings();
   Future<CachedResult<BookingModel>> getBookingById(String bookingId);
   Future<List<BookingModel>> getPendingReviews();
@@ -101,11 +110,35 @@ class BookingRemoteDataSourceImpl implements BookingRemoteDataSource {
           'standardServiceIds': request.standardServiceIds
         else if (request.standardServiceId != null)
           'standardServiceId': request.standardServiceId,
+        if (request.attachedInspectionBookingId != null)
+          'attachedInspectionBookingId': request.attachedInspectionBookingId,
       };
 
       final response = await _dio.post('/bookings', data: body);
       final data = response.data['data'] as Map<String, dynamic>;
       return BookingModel.fromJson(data);
+    } on DioException catch (e) {
+      throw dioExceptionToFailure(e);
+    }
+  }
+
+  @override
+  Future<List<AttachableInspectionEntity>> getAttachableInspections({
+    String? categoryId,
+  }) async {
+    try {
+      final response = await _dio.get(
+        '/inspection-reports/client/available',
+        queryParameters: {
+          if (categoryId != null && categoryId.isNotEmpty)
+            'categoryId': categoryId,
+        },
+      );
+      final data = response.data['data'] as List<dynamic>? ?? [];
+      return data
+          .map((e) =>
+              AttachableInspectionEntity.fromJson(e as Map<String, dynamic>))
+          .toList();
     } on DioException catch (e) {
       throw dioExceptionToFailure(e);
     }

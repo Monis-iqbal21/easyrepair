@@ -112,6 +112,9 @@ String workerJobFilterLabel(AppLocalizations l10n, WorkerJobFilter filter) =>
     switch (filter) {
       WorkerJobFilter.all => l10n.filterAll,
       WorkerJobFilter.active => l10n.workerActive,
+      // Same "My Offers" wording NewJobFilter.myBids already uses — same
+      // concept (jobs this worker placed a bid/offer on).
+      WorkerJobFilter.applied => l10n.workerFilterMyOffers,
       WorkerJobFilter.completed => l10n.bookingStatusCompleted,
       WorkerJobFilter.cancelled => l10n.workerFilterCancelled,
     };

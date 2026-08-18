@@ -50,6 +50,7 @@ function makeWorker(overrides: Partial<any> = {}) {
     currentLat: JOB_LAT,
     currentLng: JOB_LNG,
     locationUpdatedAt: new Date(),
+    lastSeenAt: new Date(),
     skills: [{ categoryId: 'cat-1' }],
     ...overrides,
   };
@@ -68,11 +69,28 @@ describe('JobBroadcastService', () => {
       findWorkerForMatching: jest.fn().mockResolvedValue(makeWorker()),
       findCandidateWorkers: jest.fn().mockResolvedValue([makeWorker()]),
       findOpenBookingsForCategories: jest.fn().mockResolvedValue([]),
+      // Batched pre-push rechecks — default to echoing whatever the
+      // single-row doubles above return, so each test can keep overriding
+      // just findWorkerForMatching / findBookingForMatching.
+      findWorkersForMatching: jest.fn(async (ids: string[]) => {
+        const worker = await matchingRepository.findWorkerForMatching(ids[0]);
+        return worker ? [worker] : [];
+      }),
+      findBookingsForMatching: jest.fn(async (ids: string[]) => {
+        const bookings = await Promise.all(
+          ids.map((id: string) =>
+            matchingRepository.findBookingForMatching(id),
+          ),
+        );
+        return bookings.filter(Boolean);
+      }),
     };
     notificationsService = {
       notify: jest.fn().mockResolvedValue(undefined),
       wasAlreadyNotifiedThisCycle: jest.fn().mockResolvedValue(false),
       wasAlreadyNotified: jest.fn().mockResolvedValue(false),
+      findAlreadyNotifiedThisCycle: jest.fn().mockResolvedValue(new Set()),
+      findAlreadyNotifiedBookingIds: jest.fn().mockResolvedValue(new Set()),
     };
     redisService = { tryAcquire: jest.fn().mockResolvedValue(true) };
     config = {
@@ -210,9 +228,9 @@ describe('JobBroadcastService', () => {
       await flushPromises();
 
       expect(
-        notificationsService.wasAlreadyNotifiedThisCycle,
+        notificationsService.findAlreadyNotifiedThisCycle,
       ).toHaveBeenCalledWith(
-        'worker-user-1',
+        ['worker-user-1'],
         'booking-1',
         'booking.bidding.available',
         CYCLE_START,
@@ -220,7 +238,9 @@ describe('JobBroadcastService', () => {
     });
 
     it('does not re-notify within the same cycle (e.g. leaving and re-entering the radius)', async () => {
-      notificationsService.wasAlreadyNotifiedThisCycle.mockResolvedValue(true);
+      notificationsService.findAlreadyNotifiedThisCycle.mockResolvedValue(
+        new Set(['worker-user-1']),
+      );
 
       await service.broadcastJob('booking-1');
       await flushPromises();
@@ -237,9 +257,13 @@ describe('JobBroadcastService', () => {
       );
       // The ledger only has the previous cycle's row, so scoping to the new
       // cycle start reports "not yet notified".
-      notificationsService.wasAlreadyNotifiedThisCycle.mockImplementation(
-        (_u: string, _b: string, _e: string, since: Date) =>
-          Promise.resolve(since.getTime() === CYCLE_START.getTime()),
+      notificationsService.findAlreadyNotifiedThisCycle.mockImplementation(
+        (userIds: string[], _b: string, _e: string, since: Date) =>
+          Promise.resolve(
+            since.getTime() === CYCLE_START.getTime()
+              ? new Set(userIds)
+              : new Set<string>(),
+          ),
       );
 
       await service.broadcastJob('booking-1');
@@ -247,9 +271,9 @@ describe('JobBroadcastService', () => {
 
       expect(notificationsService.notify).toHaveBeenCalledTimes(1);
       expect(
-        notificationsService.wasAlreadyNotifiedThisCycle,
+        notificationsService.findAlreadyNotifiedThisCycle,
       ).toHaveBeenCalledWith(
-        'worker-user-1',
+        ['worker-user-1'],
         'booking-1',
         expect.any(String),
         NEW_CYCLE,
@@ -359,7 +383,9 @@ describe('JobBroadcastService', () => {
     });
 
     it('stays silent on repeated refreshes within the same cycle', async () => {
-      notificationsService.wasAlreadyNotifiedThisCycle.mockResolvedValue(true);
+      notificationsService.findAlreadyNotifiedBookingIds.mockResolvedValue(
+        new Set(['booking-1']),
+      );
 
       service.reconcileVisibleJobs('worker-1', ['booking-1']);
       await flushPromises();

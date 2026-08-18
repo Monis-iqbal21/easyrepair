@@ -51,6 +51,7 @@ describe('OTP delivery is device-independent', () => {
       {} as any,
       smsOtp,
       { ensureSupportConversation: jest.fn().mockResolvedValue(null) } as any,
+      { handleWorkerLogout: jest.fn().mockResolvedValue(undefined) } as any,
     );
     process.env.NODE_ENV = 'test';
   });

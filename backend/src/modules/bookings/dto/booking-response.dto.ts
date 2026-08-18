@@ -146,6 +146,13 @@ export class BookingResponseDto {
    */
   sourceInspectionBookingId: string | null;
   /**
+   * Set only when the client manually attached one of their own past
+   * COMPLETED inspections' reports while independently posting this BIDDING
+   * job — read-only supporting context. Never implies the post-inspection
+   * relationship `sourceInspectionBookingId` above represents.
+   */
+  attachedInspectionBookingId: string | null;
+  /**
    * Set only on a completed inspection booking whose client chose "Find
    * Other Ustaad" — the linked repair booking opened for bidding.
    */

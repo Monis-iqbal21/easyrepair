@@ -8,6 +8,7 @@ import '../../../bookings/domain/entities/booking_entity.dart';
 import '../../../bookings/presentation/providers/booking_providers.dart';
 import '../../../bookings/presentation/widgets/booking_skeleton.dart';
 import '../../../bookings/presentation/widgets/inspection_badge.dart';
+import '../../../../core/network/reconnect_refresh.dart';
 import '../providers/worker_job_providers.dart';
 import '../providers/worker_providers.dart';
 import '../widgets/onboarding_gate.dart';
@@ -62,6 +63,9 @@ class _WorkerJobsPageState extends ConsumerState<WorkerJobsPage>
 
   @override
   Widget build(BuildContext context) {
+    // In-place refresh on reconnect — same scoped, navigation-free
+    // behaviour as the resume handler above.
+    refreshOnReconnect(ref, () => ref.invalidate(workerJobsProvider));
     final jobsAsync = ref.watch(workerJobsProvider);
     final isShowingCachedData =
         ref.watch(workerJobsIsOfflineProvider) && jobsAsync.hasValue;
@@ -213,9 +217,21 @@ class _JobCard extends ConsumerWidget {
     // two can never disagree. INSPECTION lane: its own ladder (On My Way /
     // Arrived / Start Inspection / Fill Report / Waiting for Decision /
     // Complete Job) via BookingEntity.inspectionWorkerNextAction.
-    final standardAction = job.standardWorkerNextAction ?? job.biddingWorkerNextAction;
-    final inspectionAction = job.inspectionWorkerNextAction;
-    final isActive = job.status.isWorkerActive;
+    //
+    // Under My Jobs → Applied, an entry is this worker's BID, not necessarily
+    // an assignment: a booking awarded to someone else is ACCEPTED while this
+    // worker's own bid is REJECTED. The lifecycle getters above key off the
+    // booking's status alone, so without this gate such a card would offer
+    // "On My Way" on a job this worker never won. A bid that WAS accepted
+    // means they are the assigned worker, so those keep their normal actions.
+    final isOtherWorkersJob =
+        job.myBidStatus != null && job.myBidStatus != BidOutcome.accepted;
+    final standardAction = isOtherWorkersJob
+        ? null
+        : (job.standardWorkerNextAction ?? job.biddingWorkerNextAction);
+    final inspectionAction =
+        isOtherWorkersJob ? null : job.inspectionWorkerNextAction;
+    final isActive = !isOtherWorkersJob && job.status.isWorkerActive;
     final canComplete =
         isActive && standardAction == null && inspectionAction == null;
     final cancelledByClient = job.status == BookingStatus.cancelled &&
@@ -392,8 +408,15 @@ class _JobCard extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    // Status chip
-                    _StatusChip(status: job.status),
+                    // My Jobs → Applied shows THIS worker's own bid outcome,
+                    // not the booking's status: a job awarded to someone else
+                    // leaves the booking ACCEPTED while this worker's bid is
+                    // REJECTED, and showing "Assigned" there would read as
+                    // though they had won it.
+                    if (job.myBidStatus != null)
+                      _BidStatusChip(outcome: job.myBidStatus!)
+                    else
+                      _StatusChip(status: job.status),
                   ],
                 ),
 
@@ -426,11 +449,12 @@ class _JobCard extends ConsumerWidget {
                     _UrgencyPill(urgency: job.urgency),
                     if (job.inspection) const InspectionBadge(small: true),
                     // Price this Ustaad's work unit was hired/paid for — see
-                    // BookingEntity.canonicalPrice. Null only for a still-open
-                    // BIDDING job (never happens here, since My Jobs only
-                    // lists jobs already assigned to this worker), so this is
-                    // deliberately defensive rather than unreachable.
-                    if (job.canonicalPrice != null)
+                    // BookingEntity.canonicalPrice. Under the Applied filter
+                    // the job usually isn't assigned to this worker at all
+                    // (canonicalPrice is null for a still-open BIDDING job),
+                    // so their OWN bid amount is the only truthful figure to
+                    // show there.
+                    if ((job.myBidAmount ?? job.canonicalPrice) != null)
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -441,7 +465,7 @@ class _JobCard extends ConsumerWidget {
                           ),
                           const SizedBox(width: 3),
                           Text(
-                            formatPkr(job.canonicalPrice),
+                            formatPkr(job.myBidAmount ?? job.canonicalPrice),
                             style: const TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w700,
@@ -954,6 +978,46 @@ class _StatusChip extends StatelessWidget {
   }
 }
 
+/// My Jobs → Applied: this worker's own bid outcome. Reuses the existing
+/// bidStatus* wording (already translated in all three languages) rather
+/// than inventing parallel strings, and deliberately never invents a
+/// "not selected" state — REJECTED is what the server actually stores when
+/// another worker is hired (see BidsRepository.acceptBid).
+class _BidStatusChip extends StatelessWidget {
+  final BidOutcome outcome;
+  const _BidStatusChip({required this.outcome});
+
+  @override
+  Widget build(BuildContext context) {
+    final (bg, fg) = switch (outcome) {
+      BidOutcome.accepted => (const Color(0xFFDCFCE7), const Color(0xFF15803D)),
+      BidOutcome.rejected => (const Color(0xFFFEF2F2), const Color(0xFFDC2626)),
+      BidOutcome.pending => (const Color(0xFFFFF7ED), const Color(0xFFC2541D)),
+    };
+    final label = switch (outcome) {
+      BidOutcome.accepted => context.l10n.bidStatusAccepted,
+      BidOutcome.rejected => context.l10n.bidStatusRejected,
+      BidOutcome.pending => context.l10n.bidStatusPending,
+    };
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: fg,
+        ),
+      ),
+    );
+  }
+}
+
 class _UrgencyPill extends StatelessWidget {
   final BookingUrgency urgency;
   const _UrgencyPill({required this.urgency});
@@ -1002,12 +1066,14 @@ class _EmptyState extends StatelessWidget {
     final l10n = context.l10n;
     final title = switch (filter) {
       WorkerJobFilter.active => l10n.workerNoActiveJobs,
+      WorkerJobFilter.applied => l10n.workerNoAppliedJobs,
       WorkerJobFilter.completed => l10n.workerNoCompletedJobs,
       WorkerJobFilter.cancelled => l10n.workerNoCancelledJobs,
       WorkerJobFilter.all => l10n.workerNoJobsAssigned,
     };
     final subtitle = switch (filter) {
       WorkerJobFilter.active => l10n.workerNewRequestsHere,
+      WorkerJobFilter.applied => l10n.workerAppliedJobsHere,
       WorkerJobFilter.completed => l10n.workerCompletedJobsHere,
       WorkerJobFilter.cancelled => l10n.workerCancelledJobsHere,
       WorkerJobFilter.all => l10n.workerAcceptToGetStarted,

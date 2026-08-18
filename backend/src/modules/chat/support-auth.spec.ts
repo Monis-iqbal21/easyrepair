@@ -33,6 +33,7 @@ describe('Support account cannot be signed into', () => {
       {} as any,
       { isConfigured: false, sendOtp: jest.fn() } as any,
       { ensureSupportConversation: jest.fn() } as any,
+      { handleWorkerLogout: jest.fn().mockResolvedValue(undefined) } as any,
     );
   });
 

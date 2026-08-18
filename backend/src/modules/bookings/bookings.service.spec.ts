@@ -1164,6 +1164,57 @@ describe('BookingsService idempotency', () => {
     expect(bookingsRepository.assignWorkerToBooking).not.toHaveBeenCalled();
   });
 
+  // Presence-lease recheck at hire confirmation time — same rule
+  // checkJobEligibility applies everywhere else, independent of the
+  // findNearbyWorkers list filter the client browsed a moment earlier.
+  it('assignWorker: rejects a worker whose presence lease went stale between listing and hire', async () => {
+    bookingsRepository.findBookingById.mockResolvedValue(
+      makeBooking('PENDING', { workerProfileId: null }),
+    );
+    bookingsRepository.findWorkerProfileById.mockResolvedValue({
+      id: 'worker-1',
+      availabilityStatus: 'ONLINE',
+      profileCompleted: true,
+      currentlyWorking: false,
+      status: 'ACTIVE',
+      onboardingStatus: 'APPROVED',
+      lastSeenAt: new Date(Date.now() - 7 * 60 * 60 * 1000), // 7h old
+    });
+
+    await expect(
+      service.assignWorker('client-user-1', 'booking-1', 'worker-1'),
+    ).rejects.toThrow(BadRequestException);
+    expect(bookingsRepository.assignWorkerToBooking).not.toHaveBeenCalled();
+  });
+
+  it('assignWorker: accepts a worker with a fresh presence lease', async () => {
+    bookingsRepository.findBookingById.mockResolvedValue(
+      makeBooking('PENDING', { workerProfileId: null }),
+    );
+    bookingsRepository.findWorkerProfileById.mockResolvedValue({
+      id: 'worker-1',
+      availabilityStatus: 'ONLINE',
+      profileCompleted: true,
+      currentlyWorking: false,
+      status: 'ACTIVE',
+      onboardingStatus: 'APPROVED',
+      lastSeenAt: new Date(),
+    });
+    bookingsRepository.assignWorkerToBooking.mockResolvedValue({
+      booking: makeBooking('ACCEPTED', { workerProfileId: 'worker-1' }),
+      changed: true,
+    });
+
+    const result = await service.assignWorker(
+      'client-user-1',
+      'booking-1',
+      'worker-1',
+    );
+
+    expect(result.status).toBe('ACCEPTED');
+    expect(bookingsRepository.assignWorkerToBooking).toHaveBeenCalled();
+  });
+
   it('completeJob: retrying after it already succeeded returns success without duplicate earnings/notification', async () => {
     bookingsRepository.findWorkerProfileByUserId.mockResolvedValue({
       id: 'worker-1',

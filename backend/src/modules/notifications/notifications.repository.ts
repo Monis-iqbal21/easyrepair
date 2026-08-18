@@ -77,6 +77,20 @@ export class NotificationsRepository {
   }
 
   /**
+   * Removes a permanently-invalid FCM token (Firebase reported it
+   * unregistered/invalid — e.g. after app uninstall) from whichever User row
+   * currently holds it. Cleanup only — never the Worker-availability
+   * mechanism, which is driven exclusively by the presence lease
+   * (WORKER_PRESENCE_STALE_MS), not by push delivery failures.
+   */
+  async clearFcmTokenByValue(token: string): Promise<void> {
+    await this.prisma.user.updateMany({
+      where: { fcmToken: token },
+      data: { fcmToken: null },
+    });
+  }
+
+  /**
    * Check whether a notification with this exact eventKey/bookingId/userId
    * combination was already sent — used to dedupe repeated-poll notifications
    * (e.g. "worker listed for STANDARD job" firing on every nearby-workers
@@ -117,6 +131,67 @@ export class NotificationsRepository {
       select: { id: true },
     });
     return found !== null;
+  }
+
+  /**
+   * BATCHED form of the two checks above: given a chunk of recipient userIds,
+   * returns the subset that has ALREADY been notified about this
+   * booking/eventKey (optionally scoped to the booking's current live cycle
+   * via [since]).
+   *
+   * Semantically identical to calling existsForBookingAndUser(Since) once per
+   * user — same predicate, same cycle scoping — but the broadcast fan-out
+   * needs it for every eligible worker, and one query per worker does not
+   * scale. Persistence semantics are untouched; this is a read-side batch
+   * only.
+   */
+  async findNotifiedUserIds(
+    userIds: string[],
+    bookingId: string,
+    eventKey: string,
+    since: Date | null,
+  ): Promise<Set<string>> {
+    if (userIds.length === 0) return new Set();
+    const rows = await this.prisma.notification.findMany({
+      where: {
+        bookingId,
+        eventKey,
+        userId: { in: userIds },
+        ...(since ? { createdAt: { gte: since } } : {}),
+      },
+      select: { userId: true },
+      distinct: ['userId'],
+    });
+    return new Set(rows.map((r) => r.userId));
+  }
+
+  /**
+   * Mirror of findNotifiedUserIds for the other fan-out shape: ONE recipient,
+   * MANY bookings sharing an eventKey (late discovery / reconcile).
+   *
+   * Returns bookingId → most recent notification time, so the caller can apply
+   * each booking's own `liveStartedAt` cycle boundary in memory. That yields
+   * exactly the same answer as one existsForBookingAndUser(Since) call per
+   * booking, in a single query.
+   */
+  async findLatestNotifiedAtByBooking(
+    userId: string,
+    bookingIds: string[],
+    eventKey: string,
+  ): Promise<Map<string, Date>> {
+    if (bookingIds.length === 0) return new Map();
+    const rows = await this.prisma.notification.groupBy({
+      by: ['bookingId'],
+      where: { userId, eventKey, bookingId: { in: bookingIds } },
+      _max: { createdAt: true },
+    });
+    const result = new Map<string, Date>();
+    for (const row of rows) {
+      if (row.bookingId && row._max.createdAt) {
+        result.set(row.bookingId, row._max.createdAt);
+      }
+    }
+    return result;
   }
 
   /**

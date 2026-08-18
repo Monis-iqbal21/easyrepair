@@ -272,7 +272,15 @@ class BookingModel {
   final bool isInspectionOnlyForCaller;
   final String? sourceInspectionBookingId;
   final String? linkedRepairBookingId;
+  /// See BookingEntity.attachedInspectionBookingId — informational only.
+  final String? attachedInspectionBookingId;
   final bool? inspectionFeePaid;
+  /// My Jobs → Applied/Bids only — this worker's OWN bid outcome on the job,
+  /// which is independent of the booking's status (a REJECTED bid on an
+  /// ACCEPTED booking means someone else was hired). Null on every other
+  /// list/detail response.
+  final String? myBidStatus;
+  final double? myBidAmount;
 
   const BookingModel({
     required this.id,
@@ -328,7 +336,10 @@ class BookingModel {
     this.isInspectionOnlyForCaller = false,
     this.sourceInspectionBookingId,
     this.linkedRepairBookingId,
+    this.attachedInspectionBookingId,
     this.inspectionFeePaid,
+    this.myBidStatus,
+    this.myBidAmount,
   });
 
   factory BookingModel.fromJson(Map<String, dynamic> json) {
@@ -438,7 +449,11 @@ class BookingModel {
           json['isInspectionOnlyForCaller'] as bool? ?? false,
       sourceInspectionBookingId: json['sourceInspectionBookingId'] as String?,
       linkedRepairBookingId: json['linkedRepairBookingId'] as String?,
+      attachedInspectionBookingId:
+          json['attachedInspectionBookingId'] as String?,
       inspectionFeePaid: json['inspectionFeePaid'] as bool?,
+      myBidStatus: json['myBidStatus'] as String?,
+      myBidAmount: (json['myBidAmount'] as num?)?.toDouble(),
     );
   }
 
@@ -520,7 +535,10 @@ class BookingModel {
       isInspectionOnlyForCaller: isInspectionOnlyForCaller,
       sourceInspectionBookingId: sourceInspectionBookingId,
       linkedRepairBookingId: linkedRepairBookingId,
+      attachedInspectionBookingId: attachedInspectionBookingId,
       inspectionFeePaid: inspectionFeePaid,
+      myBidStatus: BidOutcomeX.fromRaw(myBidStatus),
+      myBidAmount: myBidAmount,
     );
   }
 }

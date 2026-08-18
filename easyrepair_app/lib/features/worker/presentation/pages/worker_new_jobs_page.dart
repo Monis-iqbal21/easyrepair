@@ -10,6 +10,7 @@ import '../../../bookings/domain/entities/booking_entity.dart';
 import '../../../bookings/presentation/widgets/inspection_badge.dart';
 import '../../../bookings/presentation/widgets/booking_skeleton.dart';
 import '../../domain/entities/new_job_entity.dart';
+import '../../../../core/network/reconnect_refresh.dart';
 import '../providers/worker_job_providers.dart';
 import '../providers/worker_providers.dart';
 import '../widgets/onboarding_gate.dart';
@@ -62,6 +63,9 @@ class _WorkerNewJobsPageState extends ConsumerState<WorkerNewJobsPage>
 
   @override
   Widget build(BuildContext context) {
+    // New Jobs is the most time-sensitive list in the app, so reconnecting
+    // refetches it immediately — in place, without leaving this tab.
+    refreshOnReconnect(ref, () => ref.invalidate(newJobsProvider));
     final jobsAsync = ref.watch(newJobsProvider);
     final isShowingCachedData =
         ref.watch(newJobsIsOfflineProvider) && jobsAsync.hasValue;

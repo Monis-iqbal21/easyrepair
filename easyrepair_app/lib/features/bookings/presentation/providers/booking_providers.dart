@@ -11,6 +11,7 @@ import '../../../../core/storage/local_cache_service.dart';
 import '../../../../core/storage/secure_storage_service.dart';
 import '../../data/datasources/booking_remote_datasource.dart';
 import '../../data/repositories/booking_repository_impl.dart';
+import '../../domain/entities/attachable_inspection_entity.dart';
 import '../../domain/entities/booking_entity.dart';
 import '../../domain/entities/create_booking_request.dart';
 import '../../domain/entities/inspection_report_entity.dart';
@@ -52,6 +53,24 @@ final getClientBookingsUseCaseProvider = Provider<GetClientBookingsUseCase>((
 
 final cancelBookingUseCaseProvider = Provider<CancelBookingUseCase>((ref) {
   return CancelBookingUseCase(ref.watch(bookingRepositoryProvider));
+});
+
+// ── Attachable previous inspection reports (Post Job selector) ──────────────
+
+/// The client's own previously completed inspections whose report they may
+/// attach to the bidding job they are posting, narrowed to [categoryId] when
+/// one is supplied (null = no category chosen yet, so no filtering).
+///
+/// `autoDispose` + `family` so switching category refetches the correct set
+/// and nothing is retained after the Post Job page closes. Deliberately not
+/// cached offline: it gates a write action, and a stale list could offer a
+/// report the backend would then reject.
+final attachableInspectionsProvider = FutureProvider.autoDispose
+    .family<List<AttachableInspectionEntity>, String?>((ref, categoryId) async {
+  final result = await ref
+      .read(bookingRepositoryProvider)
+      .getAttachableInspections(categoryId: categoryId);
+  return result.fold((f) => throw f, (list) => list);
 });
 
 // ── Bookings list notifier ────────────────────────────────────────────────────

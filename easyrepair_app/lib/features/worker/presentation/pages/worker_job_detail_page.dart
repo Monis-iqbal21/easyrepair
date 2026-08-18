@@ -20,6 +20,7 @@ import '../../../bookings/presentation/providers/booking_providers.dart';
 import '../../../bookings/presentation/widgets/inspection_badge.dart';
 import '../../../bookings/presentation/widgets/inspection_report_card.dart';
 import '../../../bookings/presentation/widgets/media_attachment_widgets.dart';
+import '../../../../core/network/reconnect_refresh.dart';
 import '../providers/worker_job_providers.dart';
 import '../providers/worker_providers.dart';
 import '../widgets/onboarding_gate.dart';
@@ -66,6 +67,10 @@ class WorkerJobDetailPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     debugPrint('[WorkerJobDetailPage] build — jobId received=$jobId');
+    // Reconnecting on this nested page refreshes the job in place — only
+    // this job's data provider is invalidated, so the Ustaad stays on
+    // /worker/job/<id> instead of being bounced anywhere.
+    refreshOnReconnect(ref, () => ref.invalidate(workerJobDetailProvider(jobId)));
     final jobAsync = ref.watch(workerJobDetailProvider(jobId));
     final isShowingCachedData =
         ref.watch(workerJobDetailIsOfflineProvider(jobId)) && jobAsync.hasValue;
@@ -318,13 +323,18 @@ class _JobBody extends ConsumerWidget {
                     bookingId: job.id,
                     route: '/worker/job/${job.id}/inspection-report/view',
                   )
-                // ── Linked post-inspection repair job: the report lives on
-                // the source inspection booking. Purely OPTIONAL extra
-                // context for bidders — never required before bidding, and
-                // always price-sanitized by the backend (the button itself
-                // self-hides if this worker isn't an eligible viewer, since
-                // the provider errors out). ────────────────────────────────
-                else if (job.sourceInspectionBookingId != null)
+                // ── The report lives on another booking — either a linked
+                // post-inspection repair job (Find Other Ustaad) or a
+                // historical inspection the client manually attached to this
+                // ordinary bidding job. Both resolve through this same
+                // booking id server-side, so the worker sees one identical
+                // read-only entry point either way.
+                //
+                // Purely OPTIONAL extra context for bidders — never required
+                // before bidding, and always price-sanitized by the backend
+                // (the button self-hides if this worker isn't an eligible
+                // viewer, since the provider errors out). ──────────────────
+                else if (job.hasLinkedInspectionReport)
                   ViewInspectionReportButton(
                     bookingId: job.id,
                     route: '/worker/job/${job.id}/inspection-report/view',

@@ -7,14 +7,16 @@ import '../../../../../core/notifications/notification_navigator.dart';
 import '../../../../../features/auth/presentation/providers/auth_providers.dart';
 import '../../domain/entities/notification_entity.dart';
 import '../providers/notification_providers.dart';
+import '../../../../core/network/offline_banner.dart';
+import '../../../../core/network/reconnect_refresh.dart';
 import '../../../../core/errors/failure_messages.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
 
 const _kOrange = Color(0xFFDB6234);
-const _kDark   = Color(0xFF1A1A1A);
-const _kGray   = Color(0xFF6B7280);
+const _kDark = Color(0xFF1A1A1A);
+const _kGray = Color(0xFF6B7280);
 const _kBorder = Color(0xFFE2E8F0);
-const _kBg     = Color(0xFFF9FAFB);
+const _kBg = Color(0xFFF9FAFB);
 
 class NotificationListPage extends ConsumerWidget {
   const NotificationListPage({super.key});
@@ -22,6 +24,15 @@ class NotificationListPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final notificationsAsync = ref.watch(notificationsProvider);
+    final isShowingCachedData =
+        ref.watch(notificationsIsOfflineProvider) &&
+        notificationsAsync.hasValue;
+    // Reconnect refetches the authoritative list — including read state,
+    // which is never mutated locally while offline.
+    refreshOnReconnect(
+      ref,
+      () => ref.read(notificationsProvider.notifier).refresh(),
+    );
 
     return Scaffold(
       backgroundColor: _kBg,
@@ -30,8 +41,11 @@ class NotificationListPage extends ConsumerWidget {
         elevation: 0,
         surfaceTintColor: Colors.white,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded,
-              size: 18, color: _kDark),
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            size: 18,
+            color: _kDark,
+          ),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
@@ -65,44 +79,60 @@ class NotificationListPage extends ConsumerWidget {
           child: Container(height: 1, color: _kBorder),
         ),
       ),
-      body: notificationsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, _) => Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.error_outline_rounded,
-                  size: 48, color: Color(0xFFCBD5E1)),
-              const SizedBox(height: 12),
-              Text(failureMessage(context.l10n, err),
-                  style: const TextStyle(color: _kGray, fontSize: 14),
-                  textAlign: TextAlign.center),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () => ref.invalidate(notificationsProvider),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _kOrange,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
+      body: Column(
+        children: [
+          if (isShowingCachedData) const OfflineDataBanner(),
+          Expanded(
+            child: notificationsAsync.when(
+              // Keep the cached list on screen when a background refresh fails,
+              // rather than replacing it with a full-page error.
+              skipError: true,
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, _) => Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.error_outline_rounded,
+                      size: 48,
+                      color: Color(0xFFCBD5E1),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      failureMessage(context.l10n, err),
+                      style: const TextStyle(color: _kGray, fontSize: 14),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () => ref.invalidate(notificationsProvider),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _kOrange,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: Text(context.l10n.commonRetry),
+                    ),
+                  ],
                 ),
-                child: Text(context.l10n.commonRetry),
               ),
-            ],
+              data: (notifications) => notifications.isEmpty
+                  ? const _EmptyState()
+                  : ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 40),
+                      itemCount: notifications.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 8),
+                      itemBuilder: (ctx, i) => _NotificationCard(
+                        notification: notifications[i],
+                        onTap: () => _handleTap(ctx, ref, notifications[i]),
+                      ),
+                    ),
+            ),
           ),
-        ),
-        data: (notifications) => notifications.isEmpty
-            ? const _EmptyState()
-            : ListView.separated(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 40),
-                itemCount: notifications.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 8),
-                itemBuilder: (ctx, i) => _NotificationCard(
-                  notification: notifications[i],
-                  onTap: () => _handleTap(ctx, ref, notifications[i]),
-                ),
-              ),
+        ],
       ),
     );
   }
@@ -125,14 +155,17 @@ class NotificationListPage extends ConsumerWidget {
     // Build a data map mirroring FCM payload so NotificationNavigator can route it.
     final data = <String, dynamic>{
       if (notification.eventKey != null) 'eventKey': notification.eventKey,
-      if (notification.entityType != null) 'entityType': notification.entityType,
+      if (notification.entityType != null)
+        'entityType': notification.entityType,
       if (notification.entityId != null) 'entityId': notification.entityId,
       if (notification.bookingId != null) 'bookingId': notification.bookingId,
       if (notification.route != null) 'route': notification.route,
     };
 
-    final destination =
-        NotificationNavigator.resolveRoute(data, isWorker: isWorker);
+    final destination = NotificationNavigator.resolveRoute(
+      data,
+      isWorker: isWorker,
+    );
     if (destination != null && destination.isNotEmpty) {
       context.push(destination);
     }
@@ -145,10 +178,7 @@ class _NotificationCard extends StatelessWidget {
   final NotificationEntity notification;
   final VoidCallback onTap;
 
-  const _NotificationCard({
-    required this.notification,
-    required this.onTap,
-  });
+  const _NotificationCard({required this.notification, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -324,11 +354,7 @@ class _EmptyState extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               context.l10n.notificationsEmptySubtitle,
-              style: const TextStyle(
-                fontSize: 13,
-                color: _kGray,
-                height: 1.5,
-              ),
+              style: const TextStyle(fontSize: 13, color: _kGray, height: 1.5),
               textAlign: TextAlign.center,
             ),
           ],

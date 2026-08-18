@@ -7,7 +7,9 @@ import {
 } from '@prisma/client';
 import {
   DEFAULT_JOB_MATCH_RADIUS_KM,
+  JOB_DISCOVERY_WINDOW_MS,
   JobEligibilityWorker,
+  WORKER_PRESENCE_STALE_MS,
   assertEligibleForJob,
   checkJobEligibility,
   isEligibleForJob,
@@ -46,6 +48,7 @@ function eligibleWorker(
     currentLat: JOB_LAT,
     currentLng: JOB_LNG,
     locationUpdatedAt: new Date(),
+    lastSeenAt: new Date(),
     skills: [{ categoryId: 'cat-1' }],
     ...overrides,
   };
@@ -100,6 +103,11 @@ describe('job-eligibility.util', () => {
       { locationUpdatedAt: new Date(Date.now() - 31 * 60 * 1000) },
     ],
     ['STALE_LOCATION', { locationUpdatedAt: null }],
+    [
+      'STALE_PRESENCE',
+      { lastSeenAt: new Date(Date.now() - WORKER_PRESENCE_STALE_MS - 1000) },
+    ],
+    ['STALE_PRESENCE', { lastSeenAt: null }],
     ['CATEGORY_MISMATCH', { skills: [{ categoryId: 'cat-other' }] }],
     ['NOT_APPROVED', { status: WorkerStatus.SUSPENDED }],
     [
@@ -114,6 +122,46 @@ describe('job-eligibility.util', () => {
     expect(() => assertEligibleForJob(worker, OPEN_BOOKING)).toThrow(
       ForbiddenException,
     );
+  });
+
+  // ── Presence lease (independent of GPS/location freshness) ────────────────
+  describe('presence lease', () => {
+    it('accepts a worker just inside the stale window', () => {
+      const worker = eligibleWorker({
+        lastSeenAt: new Date(Date.now() - WORKER_PRESENCE_STALE_MS + 60_000),
+      });
+      expect(checkJobEligibility(worker, OPEN_BOOKING)).toBeNull();
+    });
+
+    it('rejects a worker just past the stale window', () => {
+      const worker = eligibleWorker({
+        lastSeenAt: new Date(Date.now() - WORKER_PRESENCE_STALE_MS - 60_000),
+      });
+      expect(checkJobEligibility(worker, OPEN_BOOKING)).toBe(
+        'STALE_PRESENCE',
+      );
+    });
+
+    it('rejects a fresh-location worker whose presence lease is stale', () => {
+      // Fresh GPS alone must never substitute for a live presence lease.
+      const worker = eligibleWorker({
+        locationUpdatedAt: new Date(),
+        lastSeenAt: new Date(Date.now() - WORKER_PRESENCE_STALE_MS - 1000),
+      });
+      expect(checkJobEligibility(worker, OPEN_BOOKING)).toBe(
+        'STALE_PRESENCE',
+      );
+    });
+
+    it('rejects a fresh-presence worker whose GPS is stale (checks are independent)', () => {
+      const worker = eligibleWorker({
+        locationUpdatedAt: new Date(Date.now() - 31 * 60 * 1000),
+        lastSeenAt: new Date(),
+      });
+      expect(checkJobEligibility(worker, OPEN_BOOKING)).toBe(
+        'STALE_LOCATION',
+      );
+    });
   });
 
   // ── Job state ─────────────────────────────────────────────────────────────
@@ -211,6 +259,124 @@ describe('job-eligibility.util', () => {
           { inspectingWorkerProfileId: null },
         ),
       ).toBe('ALREADY_ASSIGNED');
+    });
+  });
+
+  // ── Discovery window (New Jobs marketplace visibility, not deletion) ──────
+  describe('48h discovery window', () => {
+    it('accepts a job just inside the window when createdAt is supplied', () => {
+      const booking = {
+        ...OPEN_BOOKING,
+        createdAt: new Date(Date.now() - JOB_DISCOVERY_WINDOW_MS + 60_000),
+      };
+      expect(checkJobEligibility(eligibleWorker(), booking)).toBeNull();
+    });
+
+    it('rejects a job just past the window with DISCOVERY_WINDOW_EXPIRED', () => {
+      const booking = {
+        ...OPEN_BOOKING,
+        createdAt: new Date(Date.now() - JOB_DISCOVERY_WINDOW_MS - 60_000),
+      };
+      expect(checkJobEligibility(eligibleWorker(), booking)).toBe(
+        'DISCOVERY_WINDOW_EXPIRED',
+      );
+    });
+
+    it('skips the check entirely when the caller omits createdAt (partial projections)', () => {
+      // OPEN_BOOKING itself has no createdAt — must not be treated as "age
+      // zero" or "always expired", just "not checked here".
+      expect(checkJobEligibility(eligibleWorker(), OPEN_BOOKING)).toBeNull();
+    });
+
+    it('surfaces the same generic "no longer open" message as NOT_OPEN/ALREADY_ASSIGNED', () => {
+      const booking = {
+        ...OPEN_BOOKING,
+        createdAt: new Date(Date.now() - JOB_DISCOVERY_WINDOW_MS - 60_000),
+      };
+      expect(() => assertEligibleForJob(eligibleWorker(), booking)).toThrow(
+        'This job is no longer open.',
+      );
+    });
+  });
+
+  // ── requireLivePresence: marketplace browsing vs. live instant matching ──
+  describe('requireLivePresence (marketplace browsing/bidding)', () => {
+    it('defaults to true — OFFLINE is still rejected when the option is omitted (live matching unchanged)', () => {
+      const worker = eligibleWorker({
+        availabilityStatus: AvailabilityStatus.OFFLINE,
+      });
+      expect(checkJobEligibility(worker, OPEN_BOOKING)).toBe('OFFLINE');
+    });
+
+    it('explicit true behaves identically to the default', () => {
+      const worker = eligibleWorker({
+        availabilityStatus: AvailabilityStatus.OFFLINE,
+      });
+      expect(
+        checkJobEligibility(worker, OPEN_BOOKING, {
+          requireLivePresence: true,
+        }),
+      ).toBe('OFFLINE');
+    });
+
+    it('false allows a manually OFFLINE worker through', () => {
+      const worker = eligibleWorker({
+        availabilityStatus: AvailabilityStatus.OFFLINE,
+      });
+      expect(
+        checkJobEligibility(worker, OPEN_BOOKING, {
+          requireLivePresence: false,
+        }),
+      ).toBeNull();
+    });
+
+    it('false also skips the presence-lease and location-freshness checks', () => {
+      const worker = eligibleWorker({
+        availabilityStatus: AvailabilityStatus.OFFLINE,
+        lastSeenAt: null,
+        locationUpdatedAt: new Date(Date.now() - 60 * 60 * 1000),
+      });
+      expect(
+        checkJobEligibility(worker, OPEN_BOOKING, {
+          requireLivePresence: false,
+        }),
+      ).toBeNull();
+    });
+
+    it('false still enforces BUSY (a worker mid-job is not offered new work)', () => {
+      const worker = eligibleWorker({
+        availabilityStatus: AvailabilityStatus.OFFLINE,
+        currentlyWorking: true,
+      });
+      expect(
+        checkJobEligibility(worker, OPEN_BOOKING, {
+          requireLivePresence: false,
+        }),
+      ).toBe('BUSY');
+    });
+
+    it('false still enforces the radius, using whatever location is on file', () => {
+      const worker = eligibleWorker({
+        availabilityStatus: AvailabilityStatus.OFFLINE,
+        currentLat: latOffsetFor(25),
+      });
+      expect(
+        checkJobEligibility(worker, OPEN_BOOKING, {
+          requireLivePresence: false,
+        }),
+      ).toBe('OUT_OF_RADIUS');
+    });
+
+    it('false still enforces account/category/exclusion checks', () => {
+      const notApproved = eligibleWorker({
+        availabilityStatus: AvailabilityStatus.OFFLINE,
+        status: WorkerStatus.SUSPENDED,
+      });
+      expect(
+        checkJobEligibility(notApproved, OPEN_BOOKING, {
+          requireLivePresence: false,
+        }),
+      ).toBe('NOT_APPROVED');
     });
   });
 

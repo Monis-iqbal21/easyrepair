@@ -10,7 +10,7 @@ import 'worker_providers.dart'; // for workerProfileProvider
 
 // ── Filter ────────────────────────────────────────────────────────────────────
 
-enum WorkerJobFilter { all, active, completed, cancelled }
+enum WorkerJobFilter { all, active, applied, completed, cancelled }
 
 extension WorkerJobFilterX on WorkerJobFilter {
   // Visible wording: workerJobFilterLabel() in presentation/utils/worker_labels.dart.
@@ -18,6 +18,11 @@ extension WorkerJobFilterX on WorkerJobFilter {
   String? get apiValue => switch (this) {
         WorkerJobFilter.all => null,
         WorkerJobFilter.active => 'active',
+        // Account history derived from this worker's own Bid rows — see
+        // WorkersService.getWorkerJobs. Never gated by ONLINE/OFFLINE and
+        // never disappears just because the job was later assigned to
+        // someone else (see job-visibility task).
+        WorkerJobFilter.applied => 'applied',
         WorkerJobFilter.completed => 'completed',
         WorkerJobFilter.cancelled => 'cancelled',
       };

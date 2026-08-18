@@ -24,6 +24,8 @@ import {
   BookingWithRelations,
 } from './bookings.repository';
 import { WorkerUnavailableError } from '../../common/errors/worker-unavailable.error';
+import { WORKER_PRESENCE_STALE_MS } from '../../common/utils/job-eligibility.util';
+import { isAttachableDecisionStatus } from '../../common/utils/attachable-inspection.util';
 import {
   BOOKINGS_QUEUE,
   EXPIRE_BOOKING_JOB,
@@ -70,6 +72,66 @@ export class BookingsService {
     private readonly jobBroadcastService: JobBroadcastService,
     private readonly jobCompletionNotifier: JobCompletionNotifierService,
   ) {}
+
+  /**
+   * Validates an optional client-supplied `attachedInspectionBookingId` and
+   * returns the id to persist (or undefined when none was requested).
+   *
+   * The client-supplied id is NEVER trusted: every rule below is re-checked
+   * against the database. "Doesn't exist" and "belongs to a different client"
+   * deliberately raise the SAME error, so this can't be used to probe which
+   * booking ids exist.
+   *
+   * This is a pure read + validate step — it never writes to, reopens, or
+   * otherwise touches the historical inspection booking or its report, which
+   * stay exactly as the original (already closed and paid) transaction left
+   * them. The resulting reference is informational only; see the schema doc
+   * on Booking.attachedInspectionBookingId for why it is deliberately not
+   * sourceInspectionBookingId.
+   */
+  private async _resolveAttachedInspection(params: {
+    requested?: string;
+    clientProfileId: string;
+    categoryId: string;
+    lane: BookingLane;
+  }): Promise<string | undefined> {
+    if (!params.requested) return undefined;
+
+    // Attaching context only makes sense for an open marketplace job. The
+    // STANDARD/INSPECTION lanes are direct-assign and have no bidders to
+    // inform.
+    if (params.lane !== BookingLane.BIDDING) {
+      throw new BadRequestException(
+        'An inspection report can only be attached to a bidding job.',
+      );
+    }
+
+    const notAttachable = new BadRequestException(
+      'That inspection report is not available to attach.',
+    );
+
+    const source = await this.bookingsRepository.findInspectionForAttachment(
+      params.requested,
+    );
+    if (!source) throw notAttachable;
+    // Ownership — the single most important check here.
+    if (source.clientProfileId !== params.clientProfileId) throw notAttachable;
+    if (source.lane !== BookingLane.INSPECTION) throw notAttachable;
+    if (source.status !== BookingStatus.COMPLETED) throw notAttachable;
+    // A report must actually have been submitted — never a draft/never-filled
+    // inspection.
+    if (!source.inspectionReport) throw notAttachable;
+    if (!isAttachableDecisionStatus(source.inspectionReport.decisionStatus)) {
+      throw notAttachable;
+    }
+    if (source.categoryId !== params.categoryId) {
+      throw new BadRequestException(
+        'The attached inspection report is for a different service.',
+      );
+    }
+
+    return source.id;
+  }
 
   async createBooking(
     userId: string,
@@ -202,6 +264,16 @@ export class BookingsService {
     // an explicit lane sent by newer builds.
     const inspection = dto.inspection ?? lane === BookingLane.INSPECTION;
 
+    // Optional read-only historical inspection report attached by the client.
+    // Fully validated server-side before the booking row is written; never
+    // reads or mutates the historical inspection itself.
+    const attachedInspectionBookingId = await this._resolveAttachedInspection({
+      requested: dto.attachedInspectionBookingId,
+      clientProfileId: profile.id,
+      categoryId: category.id,
+      lane,
+    });
+
     const now = new Date();
     const expiresAt = new Date(now.getTime() + BOOKING_EXPIRY_MS);
 
@@ -229,6 +301,7 @@ export class BookingsService {
       expiresAt,
       liveStartedAt: now,
       idempotencyKey: dto.idempotencyKey,
+      attachedInspectionBookingId,
     });
 
     this.logger.log(
@@ -883,14 +956,17 @@ export class BookingsService {
         const excludedWorkerIds = booking.workerExclusions.map(
           (e) => e.workerProfileId,
         );
-        const { workers } = await this.bookingsRepository.findNearbyWorkers({
+        // Membership test only — the ids variant runs the identical search
+        // and ladder but skips the per-worker stats/ranking this check never
+        // reads. See BookingsRepository.findNearbyWorkerIds.
+        const nearbyIds = await this.bookingsRepository.findNearbyWorkerIds({
           categoryId: booking.categoryId,
           lat: booking.latitude,
           lng: booking.longitude,
           lane: booking.lane,
           excludedWorkerIds,
         });
-        if (workers.some((w) => w.id === workerProfileId)) return;
+        if (nearbyIds.has(workerProfileId)) return;
       }
     }
 
@@ -962,6 +1038,18 @@ export class BookingsService {
       await this.bookingsRepository.findWorkerProfileById(workerProfileId);
     if (!worker) throw new NotFoundException('Worker not found.');
     if (worker.availabilityStatus !== AvailabilityStatus.ONLINE) {
+      throw new BadRequestException(
+        'This worker is no longer available. Please choose another.',
+      );
+    }
+    // Presence lease recheck: the worker may have gone stale (abandoned
+    // app / logged out elsewhere) between browsing the nearby-worker list
+    // and confirming the hire — same rule the matching-time eligibility
+    // gate applies everywhere else. Independent of location freshness.
+    if (
+      !worker.lastSeenAt ||
+      Date.now() - worker.lastSeenAt.getTime() > WORKER_PRESENCE_STALE_MS
+    ) {
       throw new BadRequestException(
         'This worker is no longer available. Please choose another.',
       );
@@ -1979,6 +2067,8 @@ export class BookingsService {
       inspectionReportSubmittedAt:
         booking.inspectionReport?.createdAt.toISOString() ?? null,
       sourceInspectionBookingId: booking.sourceInspectionBookingId ?? null,
+      attachedInspectionBookingId:
+        booking.attachedInspectionBookingId ?? null,
       linkedRepairBookingId: booking.repairBooking?.id ?? null,
       // Derived from the ORIGINAL inspection work unit reaching COMPLETED â€”
       // never from paymentStatus (a dead column), the existence of a report,

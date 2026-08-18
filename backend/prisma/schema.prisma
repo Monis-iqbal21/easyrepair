@@ -414,9 +414,29 @@ model WorkerProfile {
   profileCompleted   Boolean            @default(false)
   availabilityStatus AvailabilityStatus @default(OFFLINE)
   onlineAt           DateTime?          @db.Timestamptz(3)
+  /// Server-observed "this Worker's app is genuinely active" timestamp —
+  /// distinct from onlineAt (set once per Go-Online session) and from
+  /// locationUpdatedAt (GPS freshness, used for nearby-radius matching).
+  /// Refreshed only by legitimate Worker activity (go online, presence
+  /// sync, live-location ping while ONLINE) via touchWorkerPresence — never
+  /// by Client/Admin actions or background jobs. Used to expire a stale
+  /// ONLINE lease (see WORKER_ONLINE_STALE_HOURS) independently of GPS
+  /// freshness, which remains a separate, stricter check.
+  lastSeenAt         DateTime?          @db.Timestamptz(3)
   currentlyWorking   Boolean            @default(false)
   currentLat         Float?
   currentLng         Float?
+  /// PostGIS mirror of (currentLng, currentLat), maintained by the database
+  /// itself as a STORED generated column — there is no application write path
+  /// and therefore nothing that can drift out of sync with currentLat/
+  /// currentLng, which remain the authoritative, backward-compatible source.
+  ///
+  /// Prisma cannot model the `geography` type, so it is declared Unsupported:
+  /// it never appears in the generated client, is never read or written by
+  /// Prisma, and exists purely so the GIST-indexed `ST_DWithin` radius query
+  /// in BookingsRepository can run in the database. Only used when
+  /// USE_POSTGIS=true; the Haversine + bounding-box path is unaffected.
+  location           Unsupported("geography(Point, 4326)")?
   locationUpdatedAt  DateTime?          @db.Timestamptz(3)
   rating             Float              @default(0)
   totalRatings       Int                @default(0)
@@ -467,6 +487,30 @@ model WorkerProfile {
   inspectionReports    InspectionReport[]
   agreementAcceptances AgreementAcceptance[]
 
+  /// Supports the stale-ONLINE cleanup scan (WHERE availabilityStatus =
+  /// ONLINE AND lastSeenAt < cutoff) and the matching-time freshness check.
+  @@index([availabilityStatus, lastSeenAt])
+  /// LIVE-matching candidate filter (MatchingRepository.findCandidateWorkers and
+  /// BookingsRepository.findNearbyWorkers, both paths):
+  ///   WHERE availabilityStatus = 'ONLINE' AND currentlyWorking = FALSE
+  ///     AND status = 'ACTIVE' AND onboardingStatus = 'APPROVED'
+  ///     AND locationUpdatedAt >= cutoff AND lastSeenAt >= cutoff ...
+  /// The existing (availabilityStatus, lastSeenAt) index cannot serve this:
+  /// its second column is a range, so the equality predicates on
+  /// currentlyWorking/status/onboardingStatus can never be used as index
+  /// keys and every ONLINE row had to be heap-fetched and rechecked. Leading
+  /// with the four equality columns makes locationUpdatedAt the single
+  /// trailing range, which is the only shape Postgres can use end to end.
+  @@index([availabilityStatus, currentlyWorking, status, onboardingStatus, locationUpdatedAt], map: "worker_profiles_live_candidate_idx")
+  /// Geographic pre-filter for the non-PostGIS candidate query, which now
+  /// applies a lat/lng bounding box in SQL before any distance maths. Without
+  /// this the bounding box still had to scan every row it was filtering.
+  @@index([currentLat, currentLng], map: "worker_profiles_bbox_idx")
+  /// GIST index backing `ST_DWithin(wp.location, $job, $radius)` on the
+  /// PostGIS path. The previous PostGIS query built the geography inline from
+  /// currentLng/currentLat, which is an expression no index can serve — every
+  /// radius rung was a sequential scan of the whole table.
+  @@index([location], type: Gist, map: "worker_profiles_location_gist_idx")
   @@map("worker_profiles")
 }
 
@@ -480,7 +524,17 @@ model WorkerSkill {
   createdAt       DateTime        @default(now())
 
   @@unique([workerProfileId, categoryId])
+  /// Kept: still the only support for "which categories does this skill row
+  /// belong to" style lookups that start from categoryId alone.
   @@index([categoryId])
+  /// Skill matching runs `EXISTS (SELECT 1 FROM worker_skills WHERE
+  /// categoryId = $1 AND workerProfileId = wp.id)` (raw SQL) / `skills: {
+  /// some: { categoryId } }` (Prisma) for every candidate worker. Neither
+  /// existing index covers both columns in that order — the unique index is
+  /// keyed workerProfileId-first, and the categoryId index forces a heap
+  /// fetch per matching skill row. This one answers the semi-join from the
+  /// index alone.
+  @@index([categoryId, workerProfileId], map: "worker_skills_category_worker_idx")
   @@map("worker_skills")
 }
 
@@ -622,6 +676,28 @@ model Booking {
   /// Back-relation: the repair booking spawned from this inspection, if any.
   repairBooking             Booking? @relation("InspectionRepairLink")
 
+  /// Optional, purely INFORMATIONAL reference to a previously COMPLETED
+  /// inspection booking whose report the client manually attached while
+  /// independently posting this BIDDING job — supporting context for bidders,
+  /// nothing more.
+  ///
+  /// Deliberately SEPARATE from sourceInspectionBookingId above, which means
+  /// "this repair job was SPAWNED from that inspection" and drives real
+  /// business behavior: worker labour-cost earnings override, the
+  /// inspection-fee-paid derivation, original-inspector bidding exclusion,
+  /// BIDDING_LINKED notification copy, and Find-Other-Ustaad idempotency.
+  /// NONE of those apply here — the original inspection was closed and paid,
+  /// and the original inspecting Ustaad is explicitly still allowed to bid on
+  /// this new job.
+  ///
+  /// Intentionally NOT @unique (unlike sourceInspectionBookingId): one
+  /// historical report may be attached to any number of future bidding jobs.
+  /// onDelete: SetNull so removing either side never mutates the other.
+  attachedInspectionBookingId String?
+  attachedInspectionBooking   Booking?  @relation("AttachedInspectionRef", fields: [attachedInspectionBookingId], references: [id], onDelete: SetNull)
+  /// Back-relation: later bidding jobs that attached this inspection's report.
+  attachedByBookings          Booking[] @relation("AttachedInspectionRef")
+
   paymentStatus PaymentStatus @default(PENDING)
 
   /// Client-generated UUID for one booking-creation submission attempt.
@@ -651,6 +727,26 @@ model Booking {
   @@index([lane])
   @@index([standardServiceId])
   @@index([expiresAt])
+  /// Supports resolving "which later bidding jobs attached this inspection"
+  /// and keeps the FK lookup cheap. Not unique — see the field's own doc.
+  @@index([attachedInspectionBookingId])
+  /// The New Jobs discovery query — the hottest read in the Worker app
+  /// (BidsRepository.findAvailableJobsForWorker and
+  /// MatchingRepository.findOpenBookingsForCategories):
+  ///   WHERE status = 'PENDING' AND categoryId IN (...) AND createdAt >= cutoff
+  ///   ORDER BY createdAt DESC
+  /// The single-column @@index([status]) is useless here (PENDING is a large,
+  /// low-selectivity bucket) and @@index([categoryId]) still leaves the 48h
+  /// window and the sort to a heap filter + sort node. Leading with the two
+  /// equality columns makes createdAt both the range bound and the ordering
+  /// key, so the discovery window is a bounded index range scan.
+  @@index([status, categoryId, createdAt], map: "bookings_discovery_idx")
+  /// Worker earnings/stats aggregation (computeCompletedJobs,
+  /// computeCancellationRate, the batched nearby-worker stats groupBy) all run
+  /// `WHERE workerProfileId IN (...) AND status = ...`. The existing
+  /// @@index([workerProfileId]) alone re-checks status per heap row; adding
+  /// status as the second key keeps those counts index-resident.
+  @@index([workerProfileId, status], map: "bookings_worker_status_idx")
   @@map("bookings")
 }
 
@@ -877,6 +973,20 @@ model Notification {
 
   @@index([userId])
   @@index([userId, isRead])
+  /// Broadcast dedup — runs once per (worker, job) pair in every fan-out
+  /// (NotificationsRepository.existsForBookingAndUserSince / the new batched
+  /// findNotifiedUserIdsForBooking):
+  ///   WHERE bookingId = $1 AND eventKey = $2 AND userId IN (...)
+  ///     AND createdAt >= liveStartedAt
+  /// Previously this could only start from @@index([userId]) and then filter
+  /// every one of that user's notifications by hand. Leading with bookingId
+  /// (highly selective) collapses it to a handful of index entries.
+  @@index([bookingId, eventKey, createdAt], map: "notifications_booking_event_idx")
+  /// The notification history feed (findByUserId: WHERE userId ORDER BY
+  /// createdAt DESC LIMIT 50). @@index([userId]) supplies the rows but not
+  /// the order, so a heavy user forced a full sort of their history on every
+  /// open of the bell icon.
+  @@index([userId, createdAt], map: "notifications_user_created_idx")
   @@map("notifications")
 }
 

@@ -71,6 +71,7 @@ describe('AuthService — refresh token rotation', () => {
       {} as any,
       {} as any,
       chatService as any,
+      { handleWorkerLogout: jest.fn().mockResolvedValue(undefined) } as any,
     );
   });
 

@@ -401,6 +401,9 @@ class AppLocalizationsUr extends AppLocalizations {
   String get chatCouldNotOpenMaps => 'نقشہ نہیں کھل سکا';
 
   @override
+  String get chatCouldNotOpenDialer => 'فون ڈائلر نہیں کھل سکا';
+
+  @override
   String get chatSharedLocation => 'لوکیشن بھیجی گئی';
 
   @override
@@ -1370,6 +1373,34 @@ class AppLocalizationsUr extends AppLocalizations {
   String get discoveryTryAgain => 'دوبارہ کوشش کریں';
 
   @override
+  String get postJobInspectionReportSectionTitle => 'انسپکشن رپورٹ (اختیاری)';
+
+  @override
+  String get postJobAttachInspectionReport => 'پچھلی انسپکشن رپورٹ منسلک کریں';
+
+  @override
+  String get postJobAttachInspectionHint =>
+      'پہلے کی تشخیص شیئر کر کے بولی دینے والوں کو کام سمجھنے میں مدد دیں۔';
+
+  @override
+  String get postJobChangeInspectionReport => 'رپورٹ تبدیل کریں';
+
+  @override
+  String get postJobSelectInspectionReport => 'انسپکشن رپورٹ منتخب کریں';
+
+  @override
+  String get postJobNoInspectionReports =>
+      'اس سروس کے لیے کوئی پچھلی انسپکشن رپورٹ دستیاب نہیں۔';
+
+  @override
+  String get postJobInspectionReportsFailed =>
+      'آپ کی انسپکشن رپورٹس لوڈ نہیں ہو سکیں۔';
+
+  @override
+  String get postJobInspectionReportCleared =>
+      'سروس تبدیل ہونے کی وجہ سے منسلک انسپکشن رپورٹ ہٹا دی گئی۔';
+
+  @override
   String get inspectionReportTitle => 'معائنہ رپورٹ';
 
   @override
@@ -1981,6 +2012,9 @@ class AppLocalizationsUr extends AppLocalizations {
   String get workerNoJobsAssigned => 'ابھی کوئی کام نہیں ملا';
 
   @override
+  String get workerNoAppliedJobs => 'ابھی کوئی درخواست نہیں دی';
+
+  @override
   String get workerNewRequestsHere => 'نئی درخواستیں یہاں نظر آئیں گی';
 
   @override
@@ -1988,6 +2022,10 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get workerCancelledJobsHere => 'منسوخ کام یہاں نظر آئیں گے';
+
+  @override
+  String get workerAppliedJobsHere =>
+      'جن کاموں پر آپ نے آفر بھیجی ہے وہ یہاں نظر آئیں گے';
 
   @override
   String get workerAcceptToGetStarted => 'شروع کرنے کے لیے کوئی بکنگ قبول کریں';
@@ -3598,6 +3636,9 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get chatCouldNotOpenMaps => 'Map nahi khul saka';
 
   @override
+  String get chatCouldNotOpenDialer => 'Phone dialer nahi khul saka';
+
+  @override
   String get chatSharedLocation => 'Location bheji gayi';
 
   @override
@@ -4577,6 +4618,37 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get discoveryTryAgain => 'Dobara koshish karein';
 
   @override
+  String get postJobInspectionReportSectionTitle =>
+      'Inspection Report (Optional)';
+
+  @override
+  String get postJobAttachInspectionReport =>
+      'Pichli inspection report attach karein';
+
+  @override
+  String get postJobAttachInspectionHint =>
+      'Pehle ki diagnosis share kar ke bid dene walon ko kaam samajhne mein madad dein.';
+
+  @override
+  String get postJobChangeInspectionReport => 'Report tabdeel karein';
+
+  @override
+  String get postJobSelectInspectionReport =>
+      'Inspection report muntakhib karein';
+
+  @override
+  String get postJobNoInspectionReports =>
+      'Is service ke liye koi pichli inspection report dastyab nahi.';
+
+  @override
+  String get postJobInspectionReportsFailed =>
+      'Aap ki inspection reports load nahi ho sakein.';
+
+  @override
+  String get postJobInspectionReportCleared =>
+      'Service tabdeel hone ki wajah se attached inspection report hata di gayi.';
+
+  @override
   String get inspectionReportTitle => 'Muaina Report';
 
   @override
@@ -5193,6 +5265,9 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get workerNoJobsAssigned => 'Abhi koi kaam nahi mila';
 
   @override
+  String get workerNoAppliedJobs => 'Abhi koi offer nahi bheji';
+
+  @override
   String get workerNewRequestsHere => 'Nayi requests yahan nazar aayengi';
 
   @override
@@ -5200,6 +5275,10 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get workerCancelledJobsHere => 'Cancel kaam yahan nazar aayenge';
+
+  @override
+  String get workerAppliedJobsHere =>
+      'Jin kaamon par aapne offer bheji hai woh yahan nazar aayenge';
 
   @override
   String get workerAcceptToGetStarted =>

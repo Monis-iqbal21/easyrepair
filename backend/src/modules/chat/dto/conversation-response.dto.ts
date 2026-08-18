@@ -5,6 +5,12 @@ export class ConversationParticipantDto {
   avatarUrl: string | null;
   /** Populated only when the participant is a worker; null for clients. */
   rating: number | null;
+  /**
+   * The other participant's registered phone number — powers the chat
+   * header's call button. Null for the HandyGo Support thread (no invented
+   * support number is ever returned here).
+   */
+  phone: string | null;
 }
 
 export class ConversationResponseDto {
