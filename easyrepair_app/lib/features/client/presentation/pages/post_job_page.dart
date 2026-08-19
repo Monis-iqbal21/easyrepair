@@ -1257,6 +1257,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
       'cleaner' || 'cleaning' => 'assets/images/deepcleaning.png',
       'painter' => 'assets/images/painting.jpg',
       'carpenter' => 'assets/images/carpenter.jpg',
+      'appliances repair' => 'assets/images/appliance.png',
       'pest control' => 'assets/images/pest.png',
       'car wash' => 'assets/images/carwash.png',
       'gardener' => 'assets/images/gardening.jpg',
@@ -2729,21 +2730,53 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
 
   Widget _buildLaneSelector() {
     final categoriesAsync = ref.watch(clientBookingCategoriesProvider);
-    final categoriesLoaded = categoriesAsync.maybeWhen(
-      data: (_) => true,
-      orElse: () => false,
-    );
     final category = categoriesAsync.maybeWhen(
       data: _resolveCategory,
       orElse: () => null,
     );
-    final inspectionAvailable =
-        !categoriesLoaded || category?.inspectionFee != null;
+
+    // Which lanes a category allows is a property OF THAT CATEGORY, so until
+    // it has actually been resolved there is nothing truthful to render.
+    //
+    // This is the bug that made Appliances Repair show all three options: the
+    // rule used to read `category?.inspectionOnly ?? false`, so an
+    // unresolvable category (backend list not loaded yet, request failed, or
+    // the category genuinely missing from /categories) silently degraded to
+    // "every lane is allowed" — the least safe possible default — while the
+    // same null simultaneously disabled the Inspection card via
+    // `inspectionFee != null`. Guessing is now refused outright.
+    if (category == null) {
+      // Still fetching: a brief spinner, which resolves into the real options
+      // the moment the list arrives. Once the list HAS arrived and the
+      // category still is not in it, the spinner would never end — so that
+      // case falls through to an empty section instead, and the backend
+      // rejects the booking on submit as it always would.
+      return _sectionCard(
+        title: context.l10n.postJobWhatDoYouNeed,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Center(
+            child: categoriesAsync.isLoading
+                ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(strokeWidth: 2.5),
+                  )
+                : const SizedBox.shrink(),
+          ),
+        ),
+      );
+    }
+
+    final inspectionAvailable = category.inspectionFee != null;
     // Inspection-only category (see ServiceCategoryEntity.inspectionOnly):
     // there is nothing to choose between, so the other two lane cards are not
     // rendered at all and the client goes straight through the existing
-    // INSPECTION flow. The backend enforces the same rule independently.
-    final inspectionOnly = category?.inspectionOnly ?? false;
+    // INSPECTION flow. Driven purely by the category's own configuration —
+    // never by its name or id — so marking another category inspection-only
+    // later needs no Flutter change. The backend enforces the same rule
+    // independently (BookingsService.createBooking).
+    final inspectionOnly = category.inspectionOnly;
 
     return _sectionCard(
       title: context.l10n.postJobWhatDoYouNeed,

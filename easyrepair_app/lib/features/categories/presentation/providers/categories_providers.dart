@@ -50,6 +50,10 @@ final standardServicesProvider = FutureProvider.autoDispose
 
 // ── Fallback stubs (used when API is unreachable) ─────────────────────────────
 
+/// Names only — these stubs exist so the picker is not empty when
+/// `/categories` cannot be reached. They carry no id and no fee, so nothing
+/// can actually be booked from them; the real records replace them as soon as
+/// the request succeeds.
 const _kFallbackNames = [
   'AC Technician',
   'Electrician',
@@ -63,10 +67,18 @@ const _kFallbackNames = [
   'Gardener',
 ];
 
+/// Categories whose LANE RULE must survive even the offline stub, so an
+/// inspection-only category can never be rendered with Standard/Bidding just
+/// because the category request failed. The fee still comes from the backend.
+const _kFallbackInspectionOnlyNames = ['Appliances Repair'];
+
 List<ServiceCategoryEntity> _buildFallback() {
-  return _kFallbackNames
-      .map((name) => ServiceCategoryEntity(id: '', name: name))
-      .toList();
+  return [
+    for (final name in _kFallbackNames)
+      ServiceCategoryEntity(id: '', name: name),
+    for (final name in _kFallbackInspectionOnlyNames)
+      ServiceCategoryEntity(id: '', name: name, inspectionOnly: true),
+  ];
 }
 
 // ── Color lookup helpers (kept for post_job_page compatibility) ───────────────

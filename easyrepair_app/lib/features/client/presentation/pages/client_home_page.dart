@@ -113,12 +113,13 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage> {
           // Deliberately the shared defaults from service_data.dart rather
           // than a new bespoke pastel: adding one would mean a fresh
           // hardcoded colour, and this file's tile palette is scheduled to
-          // move onto the semantic tokens with the app-wide redesign. No
-          // artwork exists for this category yet, so the tile falls back to
-          // its emoji placeholder.
+          // move onto the semantic tokens with the app-wide redesign.
           bg: bgColorForCategory('Appliances Repair'),
           emojiBg: emojiBgForCategory('Appliances Repair'),
-          imagePath: null,
+          // Same Image.asset/BoxFit tile treatment as AC, Electrician,
+          // Plumber and Carpenter — resolved through the one shared lookup
+          // in service_data.dart rather than repeated here.
+          imagePath: imagePathForCategory('Appliances Repair'),
         ),
       ],
     ),
