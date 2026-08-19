@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/auth/presentation/pages/language_selection_page.dart';
 import '../../features/auth/presentation/pages/role_selection_page.dart';
 import '../../features/auth/presentation/pages/welcome_page.dart';
 import '../../features/auth/presentation/pages/client_otp_auth_page.dart';
@@ -128,6 +129,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/welcome',
         builder: (_, _) => const WelcomePage(),
+      ),
+      GoRoute(
+        // Onboarding language step, between the welcome screen and the
+        // existing role picker. Sits under /auth so the top-level redirect
+        // already treats it as a place a logged-out user may be — see
+        // resolveAuthRedirect's isLoggedOutRoute. No redirect rule changed.
+        path: '/auth/language',
+        builder: (_, _) => const LanguageSelectionPage(),
       ),
       GoRoute(
         path: '/auth/role-select',

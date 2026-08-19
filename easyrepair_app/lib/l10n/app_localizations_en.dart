@@ -18,6 +18,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get languageSheetTitle => 'Choose your language';
 
   @override
+  String get languageOnboardingTitle => 'Choose Language';
+
+  @override
+  String get languageOnboardingSubtitle =>
+      'Which language would you like to use the app in?';
+
+  @override
+  String get languageOptionRomanUrduSubtitle =>
+      'Simple words, easy to understand';
+
+  @override
+  String get languageOptionEnglishSubtitle => 'Full application in English';
+
+  @override
   String get authRoleQuestion => 'What would you like to do on HandyGo?';
 
   @override
@@ -767,6 +781,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get serviceCarpenter => 'Carpenter';
+
+  @override
+  String get serviceAppliancesRepair => 'Appliances Repair';
 
   @override
   String get serviceDeepCleaning => 'Deep Cleaning';

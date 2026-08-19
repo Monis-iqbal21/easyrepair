@@ -11,6 +11,7 @@ import '../../../notifications/presentation/providers/notification_providers.dar
 import '../../../../core/presentation/responsive_utils.dart';
 import '../widgets/client_bottom_nav_bar.dart';
 import '../widgets/service_card.dart';
+import '../widgets/service_data.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
 
 const _kGreen = Color(0xFFDB6234);
@@ -104,6 +105,20 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage> {
           bg: Color(0xFFEFEBE9),
           emojiBg: Color(0xFFD7CCC8),
           imagePath: 'assets/images/carpenter.jpg',
+        ),
+        _HomeServiceItem(
+          displayTitle: context.l10n.serviceAppliancesRepair,
+          backendName: 'Appliances Repair',
+          emoji: '🧺',
+          // Deliberately the shared defaults from service_data.dart rather
+          // than a new bespoke pastel: adding one would mean a fresh
+          // hardcoded colour, and this file's tile palette is scheduled to
+          // move onto the semantic tokens with the app-wide redesign. No
+          // artwork exists for this category yet, so the tile falls back to
+          // its emoji placeholder.
+          bg: bgColorForCategory('Appliances Repair'),
+          emojiBg: emojiBgForCategory('Appliances Repair'),
+          imagePath: null,
         ),
       ],
     ),

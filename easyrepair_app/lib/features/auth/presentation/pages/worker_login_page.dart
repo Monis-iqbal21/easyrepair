@@ -3,18 +3,23 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/errors/failure_messages.dart';
-import '../../domain/repositories/auth_repository.dart';
-import '../providers/auth_otp_providers.dart';
 import '../providers/auth_providers.dart';
 import '../widgets/auth_header.dart';
 import '../widgets/auth_primary_button.dart';
 import '../widgets/auth_text_field.dart';
-import '../widgets/otp_input_section.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
 
-/// Existing Ustaad login — OTP or password, both against the same phone
-/// field. Password login reuses the existing, unchanged `/auth/login` path
-/// (via `loginNotifierProvider`) so nothing about that behaviour changes.
+/// Existing Ustaad login — registered phone number + password, nothing else.
+///
+/// There is deliberately no OTP step here. Login goes straight to the existing
+/// `/auth/login` endpoint (via `loginNotifierProvider`), which bcrypt-compares
+/// the password and issues the normal access/refresh tokens; the router then
+/// dispatches the authenticated Ustaad to their home exactly as before.
+///
+/// OTP has NOT been weakened anywhere else: Ustaad REGISTRATION still verifies
+/// the phone by SMS (`/auth/worker/otp-register`), password reset still sends a
+/// code, and Client authentication is untouched. What was removed is the
+/// second, password-free way of logging an existing Ustaad in.
 class WorkerLoginPage extends ConsumerStatefulWidget {
   const WorkerLoginPage({super.key});
 
@@ -25,22 +30,6 @@ class WorkerLoginPage extends ConsumerStatefulWidget {
 class _WorkerLoginPageState extends ConsumerState<WorkerLoginPage> {
   final _phoneCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
-  String _otp = '';
-  bool _sendInFlight = false;
-  bool _otpVerifyInFlight = false;
-
-  @override
-  void initState() {
-    super.initState();
-    // otpRequestNotifierProvider is a global, non-autoDispose provider shared
-    // with the other OTP pages and never reset by any of them. Without this,
-    // an OTP requested earlier in the session leaves `expiresAt` non-null
-    // forever, so this page opens already in its "OTP sent" state and the
-    // number cannot be corrected. Clears state only — sends nothing.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) ref.read(otpRequestNotifierProvider.notifier).reset();
-    });
-  }
 
   @override
   void dispose() {
@@ -49,68 +38,34 @@ class _WorkerLoginPageState extends ConsumerState<WorkerLoginPage> {
     super.dispose();
   }
 
-  /// Editing the number invalidates the OTP requested for the previous one.
-  /// State-only: it must never re-request a code, or fixing one digit would
-  /// burn an SMS send.
-  void _onPhoneChanged(String _) {
-    if (ref.read(otpRequestNotifierProvider).valueOrNull != null) {
-      ref.read(otpRequestNotifierProvider.notifier).reset();
-    }
-  }
-
   String? _validatePhone(String? value) {
-    if (value == null || value.isEmpty) return context.l10n.authValidationPhoneRequired;
+    if (value == null || value.isEmpty) {
+      return context.l10n.authValidationPhoneRequired;
+    }
     if (!RegExp(r'^(\+92|0092|92|0)?[3][0-9]{9}$').hasMatch(value.trim())) {
       return context.l10n.authValidationPhoneInvalid;
     }
     return null;
   }
 
-  Future<void> _sendCode() async {
-    if (_sendInFlight) return;
-    final phoneError = _validatePhone(_phoneCtrl.text);
-    if (phoneError != null) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(phoneError)));
-      return;
-    }
-    setState(() => _sendInFlight = true);
-    try {
-      await ref
-          .read(otpRequestNotifierProvider.notifier)
-          .request(_phoneCtrl.text.trim(), OtpPurpose.workerLogin);
-    } finally {
-      if (mounted) setState(() => _sendInFlight = false);
-    }
+  void _showError(String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
-  Future<void> _verifyOtp() async {
-    if (_otp.length != 6 || _otpVerifyInFlight) return;
-    setState(() => _otpVerifyInFlight = true);
-    try {
-      await ref
-          .read(workerOtpLoginNotifierProvider.notifier)
-          .login(_phoneCtrl.text.trim(), _otp);
-    } finally {
-      if (mounted) setState(() => _otpVerifyInFlight = false);
-    }
-  }
-
-  Future<void> _loginWithPassword() async {
+  Future<void> _login() async {
     final phoneError = _validatePhone(_phoneCtrl.text);
     if (phoneError != null) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(phoneError)));
+      _showError(phoneError);
       return;
     }
     if (_passwordCtrl.text.isEmpty) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(context.l10n.authValidationPasswordRequired)));
+      _showError(context.l10n.authValidationPasswordRequired);
       return;
     }
+    // The server is the only authority here: it verifies the password, the
+    // role, and the account's active state before any token is issued.
     await ref
         .read(loginNotifierProvider.notifier)
         .login(_phoneCtrl.text.trim(), _passwordCtrl.text);
@@ -118,48 +73,19 @@ class _WorkerLoginPageState extends ConsumerState<WorkerLoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen(otpRequestNotifierProvider, (_, state) {
-      if (state is AsyncError) {
-        final message = failureMessage(
-          context.l10n,
-          state.error,
-          fallback: context.l10n.authErrorCodeSendFailed,
-        );
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(SnackBar(content: Text(message)));
-      }
-    });
-    ref.listen(workerOtpLoginNotifierProvider, (_, state) {
-      if (state is AsyncError) {
-        final message = failureMessage(
-          context.l10n,
-          state.error,
-          fallback: context.l10n.authErrorLoginFailed,
-        );
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(SnackBar(content: Text(message)));
-      }
-    });
     ref.listen(loginNotifierProvider, (_, state) {
       if (state is AsyncError) {
-        final message = failureMessage(
-          context.l10n,
-          state.error,
-          fallback: context.l10n.authErrorLoginFailed,
+        _showError(
+          failureMessage(
+            context.l10n,
+            state.error,
+            fallback: context.l10n.authErrorLoginFailed,
+          ),
         );
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(SnackBar(content: Text(message)));
       }
     });
 
-    final expiresAt = ref.watch(otpRequestNotifierProvider).valueOrNull;
-    final showOtp = expiresAt != null;
-    final otpLoginState = ref.watch(workerOtpLoginNotifierProvider);
-    final hasOtpError = otpLoginState is AsyncError;
-    final passwordLoginLoading = ref.watch(loginNotifierProvider).isLoading;
+    final loginLoading = ref.watch(loginNotifierProvider).isLoading;
 
     final mq = MediaQuery.of(context);
     final viewInsets = mq.viewInsets.bottom;
@@ -191,9 +117,6 @@ class _WorkerLoginPageState extends ConsumerState<WorkerLoginPage> {
                             showBackButton: true,
                           ),
                           SizedBox(height: isSmall ? 20 : 32),
-                          // Stays editable after the code is sent — editing
-                          // clears the previous request's countdown rather
-                          // than locking the field (see _onPhoneChanged).
                           AuthTextField(
                             controller: _phoneCtrl,
                             label: context.l10n.authForgotPasswordPrompt,
@@ -201,57 +124,15 @@ class _WorkerLoginPageState extends ConsumerState<WorkerLoginPage> {
                             keyboardType: TextInputType.phone,
                             prefixIcon: Icons.phone_outlined,
                             validator: _validatePhone,
-                            onChanged: _onPhoneChanged,
                           ),
                           const SizedBox(height: 20),
-                          if (showOtp) ...[
-                            OtpInputSection(
-                              expiresAt: expiresAt,
-                              hasError: hasOtpError,
-                              resendInFlight: _sendInFlight,
-                              onChanged: (v) => setState(() => _otp = v),
-                              onCompleted: (v) {
-                                setState(() => _otp = v);
-                                _verifyOtp();
-                              },
-                              onResend: _sendCode,
-                            ),
-                            const SizedBox(height: 16),
-                          ],
-                          AuthPrimaryButton(
-                            label: showOtp
-                                ? context.l10n.authLoginWithOtp
-                                : context.l10n.authSendOtp,
-                            isLoading: showOtp ? _otpVerifyInFlight : _sendInFlight,
-                            onPressed: showOtp
-                                ? (_otp.length == 6 ? _verifyOtp : null)
-                                : _sendCode,
-                          ),
-                          SizedBox(height: isSmall ? 20 : 28),
-                          Row(
-                            children: [
-                              const Expanded(child: Divider(color: kAuthBorder)),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 12),
-                                child: Text(
-                                  context.l10n.authOr,
-                                  style: TextStyle(
-                                    color: kAuthGray,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ),
-                              const Expanded(child: Divider(color: kAuthBorder)),
-                            ],
-                          ),
-                          SizedBox(height: isSmall ? 20 : 28),
                           AuthTextField(
                             controller: _passwordCtrl,
                             label: context.l10n.authFieldPassword,
                             prefixIcon: Icons.lock_outline_rounded,
                             obscureText: true,
                             textInputAction: TextInputAction.done,
-                            onFieldSubmitted: (_) => _loginWithPassword(),
+                            onFieldSubmitted: (_) => _login(),
                           ),
                           const SizedBox(height: 8),
                           Align(
@@ -259,7 +140,8 @@ class _WorkerLoginPageState extends ConsumerState<WorkerLoginPage> {
                             child: GestureDetector(
                               onTap: () => context.push('/forgot-password'),
                               child: Padding(
-                                padding: EdgeInsets.symmetric(vertical: 4),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 4),
                                 child: Text(
                                   context.l10n.authButtonForgotPassword,
                                   style: TextStyle(
@@ -271,11 +153,11 @@ class _WorkerLoginPageState extends ConsumerState<WorkerLoginPage> {
                               ),
                             ),
                           ),
-                          const SizedBox(height: 12),
+                          SizedBox(height: isSmall ? 16 : 20),
                           AuthPrimaryButton(
                             label: context.l10n.authLoginWithPassword,
-                            isLoading: passwordLoginLoading,
-                            onPressed: _loginWithPassword,
+                            isLoading: loginLoading,
+                            onPressed: _login,
                           ),
                         ],
                       ),

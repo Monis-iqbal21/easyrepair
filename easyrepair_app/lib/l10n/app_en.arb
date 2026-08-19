@@ -12,6 +12,22 @@
   "@languageSheetTitle": {
     "description": "Title of the language selector bottom sheet"
   },
+  "languageOnboardingTitle": "Choose Language",
+  "@languageOnboardingTitle": {
+    "description": "Heading of the onboarding language selection screen"
+  },
+  "languageOnboardingSubtitle": "Which language would you like to use the app in?",
+  "@languageOnboardingSubtitle": {
+    "description": "Supporting line under the onboarding language heading"
+  },
+  "languageOptionRomanUrduSubtitle": "Simple words, easy to understand",
+  "@languageOptionRomanUrduSubtitle": {
+    "description": "Supporting line on the Roman Urdu language card"
+  },
+  "languageOptionEnglishSubtitle": "Full application in English",
+  "@languageOptionEnglishSubtitle": {
+    "description": "Supporting line on the English language card"
+  },
   "authRoleQuestion": "What would you like to do on HandyGo?",
   "@authRoleQuestion": {
     "description": "Role selection screen heading"
@@ -373,6 +389,10 @@
   "serviceElectrician": "Electrician",
   "servicePlumber": "Plumber",
   "serviceCarpenter": "Carpenter",
+  "serviceAppliancesRepair": "Appliances Repair",
+  "@serviceAppliancesRepair": {
+    "description": "Service category name - inspection-only appliance repair"
+  },
   "serviceDeepCleaning": "Deep Cleaning",
   "servicePestControl": "Pest Control",
   "servicePainter": "Painter",

@@ -27,7 +27,6 @@ import { ForgotPasswordResetDto } from './dto/forgot-password-reset.dto';
 import { RequestOtpDto } from './dto/request-otp.dto';
 import { ClientOtpLoginDto } from './dto/client-otp-login.dto';
 import { WorkerOtpRegisterDto } from './dto/worker-otp-register.dto';
-import { WorkerOtpLoginDto } from './dto/worker-otp-login.dto';
 import { ClientPhoneCheckDto } from './dto/client-phone-check.dto';
 import { ClientPasswordLoginDto } from './dto/client-password-login.dto';
 import { ClientPasswordRegisterDto } from './dto/client-password-register.dto';
@@ -141,12 +140,18 @@ export class AuthController {
     );
   }
 
-  /** POST /auth/worker/otp-login — existing Ustaad, OTP instead of password. */
-  @Post('worker/otp-login')
-  @HttpCode(HttpStatus.OK)
-  workerOtpLogin(@Body() dto: WorkerOtpLoginDto) {
-    return this.authService.workerOtpLogin(dto.phone, dto.otp);
-  }
+  // POST /auth/worker/otp-login was REMOVED.
+  //
+  // Ustaad login is phone + password only (POST /auth/login, which already
+  // bcrypt-compares the password and issues the normal tokens). That route let
+  // an Ustaad authenticate with an SMS code and NO password, so leaving it
+  // routed would have kept a password-free login path reachable by any API
+  // client or older app build — the exact thing removing login OTP is meant to
+  // stop.
+  //
+  // OTP itself is untouched everywhere else: Client login/registration
+  // (/auth/client/otp-login), Ustaad REGISTRATION (/auth/worker/otp-register)
+  // and password reset (/auth/forgot-password/*) all still require it.
 
   @Post('forgot-password/request')
   @HttpCode(HttpStatus.OK)

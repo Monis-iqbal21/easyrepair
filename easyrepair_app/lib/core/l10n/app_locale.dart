@@ -38,6 +38,22 @@ enum AppLocale {
         AppLocale.romanUrdu => 'Roman Urdu',
       };
 
+  /// The name shown on the onboarding language cards (see
+  /// `LanguageSelectionPage`), where Roman Urdu is described more fully than
+  /// the short [displayLabel] used in the settings sheet.
+  ///
+  /// Lives here rather than in the ARB files for the same reason as
+  /// [displayLabel]: each option names itself, so the wording must be
+  /// identical whatever locale is currently active — a user who cannot read
+  /// the active language still has to be able to find their own. Putting it
+  /// in the ARB would mean three keys carrying the same English text, which
+  /// the translation set explicitly forbids (see arb_parity_test.dart).
+  String get onboardingLabel => switch (this) {
+        AppLocale.english => 'English',
+        AppLocale.urdu => 'اردو',
+        AppLocale.romanUrdu => 'Roman Urdu + Easy English',
+      };
+
   /// HandyGo never mirrors its interface: the layout is left-to-right in all
   /// three languages, and Urdu changes the words only. Enforced app-wide by
   /// `AlwaysLtrWidgetsLocalizationsDelegate`, which pins the ambient

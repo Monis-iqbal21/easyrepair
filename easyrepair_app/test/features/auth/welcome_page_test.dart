@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -62,6 +64,7 @@ GoRouter _router(ProviderContainer container, {String initialLocation = '/welcom
     routes: [
       GoRoute(path: '/splash', builder: (_, _) => _stub('SPLASH')),
       GoRoute(path: '/welcome', builder: (_, _) => const WelcomePage()),
+      GoRoute(path: '/auth/language', builder: (_, _) => _stub('LANGUAGE')),
       GoRoute(
         path: '/auth/role-select',
         builder: (_, _) => _stub('ROLE_SELECT'),
@@ -174,18 +177,36 @@ void main() {
   });
 
   group('navigation', () {
-    testWidgets('Shuru karein goes to the EXISTING role-selection route',
+    testWidgets('Shuru karein opens the onboarding language step, NOT the '
+        'role picker directly', (tester) async {
+      await _pump(tester);
+
+      await tester.tap(find.text('Shuru karein'));
+      await tester.pumpAndSettle();
+
+      // Asserted on what is actually on screen: an imperative push keeps the
+      // base location in currentConfiguration, so the rendered page is the
+      // honest signal here.
+      expect(find.text('LANGUAGE'), findsOneWidget);
+      expect(find.text('ROLE_SELECT'), findsNothing);
+    });
+
+    testWidgets('it PUSHES the language step, so Back returns to Welcome',
         (tester) async {
       final router = await _pump(tester);
 
       await tester.tap(find.text('Shuru karein'));
       await tester.pumpAndSettle();
+      expect(find.text('LANGUAGE'), findsOneWidget);
 
+      router.pop();
+      await tester.pumpAndSettle();
+
+      expect(find.text('Shuru karein'), findsOneWidget);
       expect(
         router.routerDelegate.currentConfiguration.uri.toString(),
-        '/auth/role-select',
+        '/welcome',
       );
-      expect(find.text('ROLE_SELECT'), findsOneWidget);
     });
   });
 
@@ -357,6 +378,42 @@ void main() {
   });
 
   group('colour architecture', () {
+    // HandyGo's primary brand colour, as used by the Client Home page today
+    // (client_home_page.dart's `_kGreen` — misleadingly named — and
+    // client_bottom_nav_bar.dart's `_kAccent`). Pinned here so the themed
+    // surfaces and the rest of the product cannot silently drift apart again.
+    const handyGoBrandOrange = Color(0xFFDB6234);
+
+    testWidgets('the central primary token IS the Client Home brand colour',
+        (tester) async {
+      await _pump(tester);
+
+      final colors = tester.element(find.byType(ElevatedButton)).semanticColors;
+      expect(colors.primary, handyGoBrandOrange);
+    });
+
+    testWidgets('the Shuru karein button therefore paints in the Client Home '
+        'brand colour, without the page naming it', (tester) async {
+      await _pump(tester);
+
+      final style =
+          tester.widget<ElevatedButton>(find.byType(ElevatedButton)).style!;
+      expect(style.backgroundColor!.resolve(const {}), handyGoBrandOrange);
+    });
+
+    testWidgets('onPrimary stays white, so the label and arrow remain legible '
+        'on the brand fill', (tester) async {
+      await _pump(tester);
+
+      final colors = tester.element(find.byType(ElevatedButton)).semanticColors;
+      expect(colors.onPrimary, const Color(0xFFFFFFFF));
+
+      // Sanity-check the contrast rather than trusting the eye: white on
+      // #DB6234 must clear the WCAG AA large-text bar (3:1).
+      final ratio = _contrastRatio(colors.onPrimary, colors.primary);
+      expect(ratio, greaterThan(3.0));
+    });
+
     testWidgets('the button paints from the central semantic tokens, not '
         'from literals baked into the page', (tester) async {
       await _pump(tester);
@@ -414,4 +471,17 @@ void main() {
       expect(style.foregroundColor!.resolve(const {}), swappedOn);
     });
   });
+}
+
+/// WCAG relative-luminance contrast ratio between two opaque colours.
+double _contrastRatio(Color a, Color b) {
+  double channel(double c) =>
+      c <= 0.03928 ? c / 12.92 : math.pow((c + 0.055) / 1.055, 2.4).toDouble();
+  double luminance(Color c) =>
+      0.2126 * channel(c.r) + 0.7152 * channel(c.g) + 0.0722 * channel(c.b);
+  final la = luminance(a);
+  final lb = luminance(b);
+  final lighter = la > lb ? la : lb;
+  final darker = la > lb ? lb : la;
+  return (lighter + 0.05) / (darker + 0.05);
 }

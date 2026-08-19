@@ -9,6 +9,7 @@ import '../../../../core/theme/app_semantic_colors.dart';
 /// Shown only when [resolveAuthRedirect] has confirmed there is no session
 /// (see `core/router/app_router.dart`). It has no timers and no auth logic of
 /// its own: it stays put until the Ustaad/Client taps "Shuru karein", which
+/// opens the onboarding language step (`/auth/language`); that screen then
 /// hands off to the EXISTING role-selection screen at `/auth/role-select`.
 /// An already-authenticated user is dispatched to their home by the router
 /// and never sees this page.
@@ -23,6 +24,10 @@ import '../../../../core/theme/app_semantic_colors.dart';
 /// value ("do not tint the system bar"), not a colour choice.
 class WelcomePage extends StatelessWidget {
   const WelcomePage({super.key});
+
+  /// Where "Shuru karein" leads: the onboarding language step, which then
+  /// hands off to the existing Client/Ustaad role picker.
+  static const languageRoute = '/auth/language';
 
   /// Full-bleed branded artwork. Decoration only — nothing is positioned
   /// relative to its contents.
@@ -175,7 +180,9 @@ class _ShuruKareinButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ElevatedButton(
-      onPressed: () => context.go('/auth/role-select'),
+      // push, not go: the language step is a forward move the user can back
+      // out of, so Android/iOS Back returns here rather than exiting.
+      onPressed: () => context.push(WelcomePage.languageRoute),
       style: ElevatedButton.styleFrom(
         backgroundColor: colors.primary,
         foregroundColor: colors.onPrimary,

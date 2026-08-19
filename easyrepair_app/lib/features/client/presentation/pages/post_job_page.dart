@@ -37,6 +37,7 @@ import '../../../../core/services/geocoding_service.dart';
 import '../widgets/location_picker_sheet.dart';
 import '../widgets/service_card.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
+import '../../../../core/theme/app_semantic_colors.dart';
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 const _kGreen = Color(0xFFDB6234);
@@ -1356,6 +1357,13 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                         });
                       }
                       _selectedService = cat.name;
+                      // An inspection-only category has no other lane to be
+                      // on. Reset any lane carried over from the previously
+                      // selected service so the form cannot proceed on a lane
+                      // this category does not support.
+                      if (cat.inspectionOnly) {
+                        _laneChoice = BookingLane.inspection;
+                      }
                     }),
                   );
                 },
@@ -2731,6 +2739,11 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     );
     final inspectionAvailable =
         !categoriesLoaded || category?.inspectionFee != null;
+    // Inspection-only category (see ServiceCategoryEntity.inspectionOnly):
+    // there is nothing to choose between, so the other two lane cards are not
+    // rendered at all and the client goes straight through the existing
+    // INSPECTION flow. The backend enforces the same rule independently.
+    final inspectionOnly = category?.inspectionOnly ?? false;
 
     return _sectionCard(
       title: context.l10n.postJobWhatDoYouNeed,
@@ -2747,7 +2760,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
           // INSPECTION-specific details step (see
           // _buildInspectionOverviewCard) so it appears only once the client
           // has actually committed to that lane.
-          if (!_isEditMode) ...[
+          if (!_isEditMode && !inspectionOnly) ...[
             _laneRowOption(
               lane: BookingLane.standard,
               icon: Icons.build_circle_rounded,
@@ -2757,26 +2770,32 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
             const SizedBox(height: 10),
           ],
           _laneHeroCard(enabled: inspectionAvailable),
-          const SizedBox(height: 16),
-          const Divider(height: 1, color: _kBorder),
-          const SizedBox(height: 12),
-          Text(
-            context.l10n.authOr,
-            style: TextStyle(
-              fontSize: 10.5,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF9AA0A8),
-              letterSpacing: 0.8,
+          if (!inspectionOnly) ...[
+            const SizedBox(height: 16),
+            const Divider(height: 1, color: _kBorder),
+            const SizedBox(height: 12),
+            Text(
+              context.l10n.authOr,
+              style: TextStyle(
+                fontSize: 10.5,
+                fontWeight: FontWeight.w700,
+                // Migrated to the semantic token because this line fell inside
+                // the scope touched by the inspection-only gating above. The
+                // rest of this page's legacy literals are deliberately left
+                // for the app-wide palette migration.
+                color: context.semanticColors.textSecondary,
+                letterSpacing: 0.8,
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          _laneSmallOption(
-            lane: BookingLane.bidding,
-            icon: Icons.forum_rounded,
-            title: context.l10n.postJobIKnowThePart,
-            subtitle: context.l10n.postJobIKnowThePartSubtitle,
-          ),
-          if (_laneChoice == BookingLane.bidding) ...[
+            const SizedBox(height: 8),
+            _laneSmallOption(
+              lane: BookingLane.bidding,
+              icon: Icons.forum_rounded,
+              title: context.l10n.postJobIKnowThePart,
+              subtitle: context.l10n.postJobIKnowThePartSubtitle,
+            ),
+          ],
+          if (!inspectionOnly && _laneChoice == BookingLane.bidding) ...[
             const SizedBox(height: 9),
             Container(
               padding: const EdgeInsets.all(11),

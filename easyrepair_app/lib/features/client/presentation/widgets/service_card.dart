@@ -14,6 +14,7 @@ const Set<String> kLaunchActiveServiceCategories = {
   'Electrician',
   'Plumber',
   'Carpenter',
+  'Appliances Repair',
 };
 
 class ServiceCard extends StatelessWidget {

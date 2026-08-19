@@ -7,6 +7,9 @@ export interface CategoryDto {
   description: string | null;
   iconUrl: string | null;
   inspectionFee: number | null;
+  /// True when this category offers the INSPECTION lane only — the client app
+  /// skips the lane picker entirely for it. See ServiceCategory.inspectionOnly.
+  inspectionOnly: boolean;
 }
 
 export interface StandardServiceDto {
@@ -32,6 +35,7 @@ export class CategoriesService {
         description: true,
         iconUrl: true,
         inspectionFee: true,
+        inspectionOnly: true,
       },
     });
     return rows;

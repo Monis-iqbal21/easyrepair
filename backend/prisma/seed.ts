@@ -2,7 +2,12 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-const SERVICE_CATEGORIES = [
+const SERVICE_CATEGORIES: {
+  name: string;
+  description: string;
+  inspectionFee: number | null;
+  inspectionOnly?: boolean;
+}[] = [
   {
     name: 'AC Technician',
     description: 'Air conditioning installation, repair & maintenance',
@@ -53,6 +58,17 @@ const SERVICE_CATEGORIES = [
     description: 'Garden maintenance, lawn care & landscaping',
     inspectionFee: null,
   },
+  {
+    // Inspection-only: an appliance fault cannot be quoted or priced from a
+    // catalog before somebody has actually looked at the machine, so this
+    // category deliberately offers the INSPECTION lane alone. Enforced
+    // server-side by BookingsService.createBooking.
+    name: 'Appliances Repair',
+    description:
+      'Washing machine, fridge, microwave & home appliance diagnosis and repair',
+    inspectionFee: 500,
+    inspectionOnly: true,
+  },
 ];
 
 // Prototype fixed-price catalog per category. Only categories with entries
@@ -99,12 +115,14 @@ async function main() {
         description: category.description,
         isActive: true,
         inspectionFee: category.inspectionFee ?? undefined,
+        inspectionOnly: category.inspectionOnly ?? false,
       },
       create: {
         name: category.name,
         description: category.description,
         isActive: true,
         inspectionFee: category.inspectionFee ?? undefined,
+        inspectionOnly: category.inspectionOnly ?? false,
       },
     });
     categoryIdByName.set(result.name, result.id);

@@ -18,6 +18,19 @@ class AppLocalizationsUr extends AppLocalizations {
   String get languageSheetTitle => 'اپنی زبان منتخب کریں';
 
   @override
+  String get languageOnboardingTitle => 'زبان منتخب کریں';
+
+  @override
+  String get languageOnboardingSubtitle =>
+      'آپ کس زبان میں ایپ استعمال کرنا چاہتے ہیں؟';
+
+  @override
+  String get languageOptionRomanUrduSubtitle => 'آسان الفاظ، سمجھنے میں آسان';
+
+  @override
+  String get languageOptionEnglishSubtitle => 'پوری ایپ انگریزی میں';
+
+  @override
   String get authRoleQuestion => 'HandyGo پر آپ کیا کرنا چاہتے ہیں؟';
 
   @override
@@ -760,6 +773,9 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get serviceCarpenter => 'کارپینٹر';
+
+  @override
+  String get serviceAppliancesRepair => 'گھریلو آلات کی مرمت';
 
   @override
   String get serviceDeepCleaning => 'گہری صفائی';
@@ -3247,6 +3263,20 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get languageSheetTitle => 'Apni zaban chunein';
 
   @override
+  String get languageOnboardingTitle => 'Zabaan chunein';
+
+  @override
+  String get languageOnboardingSubtitle =>
+      'Aap kis zabaan mein application use karna chahte hain?';
+
+  @override
+  String get languageOptionRomanUrduSubtitle =>
+      'Asaan alfaaz, samajhne mein aasan';
+
+  @override
+  String get languageOptionEnglishSubtitle => 'Poori application English mein';
+
+  @override
   String get authRoleQuestion => 'HandyGo par aap kya karna chahte hain?';
 
   @override
@@ -3997,6 +4027,9 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get serviceCarpenter => 'Carpenter';
+
+  @override
+  String get serviceAppliancesRepair => 'Appliances Repair';
 
   @override
   String get serviceDeepCleaning => 'Deep Cleaning';

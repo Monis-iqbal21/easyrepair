@@ -564,6 +564,16 @@ model ServiceCategory {
   /// Fixed fee charged for an inspection-lane booking in this category.
   /// Null means inspection is not offered for this category.
   inspectionFee Float?
+  /// When true this category offers the INSPECTION lane and nothing else —
+  /// the client is never asked to pick a lane, and STANDARD/BIDDING bookings
+  /// are rejected server-side (see BookingsService.createBooking).
+  ///
+  /// The complement of [inspectionFee]'s existing rule: a null fee means
+  /// "inspection NOT offered", this flag means "ONLY inspection offered". A
+  /// category with this set must therefore also carry an inspectionFee.
+  /// Defaults false, so every pre-existing category keeps all three lanes
+  /// exactly as before.
+  inspectionOnly Boolean @default(false)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

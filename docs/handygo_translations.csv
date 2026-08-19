@@ -991,3 +991,8 @@ settingsAppVersionTitle,Settings / About page,App Version,ایپ ورژن,App Ve
 aboutAppDescription,About HandyGo page,HandyGo connects clients with nearby verified Ustaads for home repair and maintenance services.,HandyGo کلائنٹس کو قریبی تصدیق شدہ اُستادوں سے گھر کی مرمت اور دیکھ بھال کی خدمات سے جوڑتا ہے۔,HandyGo clients ko nearby verified Ustaadon se ghar ki marammat aur maintenance ki khidmat ke liye jorta hai.,Short factual description shown on the About HandyGo page
 aboutWebsiteLabel,About HandyGo page,Website,ویب سائٹ,Website,Label above the official HandyGo website link on the About page
 aboutVersionValue,About HandyGo page / Settings,Version {version} ({build}),ورژن {version} ({build}),Version {version} ({build}),Runtime app version/build shown on the About page and Settings row
+languageOnboardingTitle,Onboarding / Language selection,Choose Language,زبان منتخب کریں,Zabaan chunein,Heading of the onboarding language screen shown after the Welcome screen
+languageOnboardingSubtitle,Onboarding / Language selection,Which language would you like to use the app in?,آپ کس زبان میں ایپ استعمال کرنا چاہتے ہیں؟,Aap kis zabaan mein application use karna chahte hain?,Supporting line under the heading
+languageOptionRomanUrduSubtitle,Onboarding / Language selection,"Simple words, easy to understand",آسان الفاظ، سمجھنے میں آسان,"Asaan alfaaz, samajhne mein aasan",Supporting line on the Roman Urdu card
+languageOptionEnglishSubtitle,Onboarding / Language selection,Full application in English,پوری ایپ انگریزی میں,Poori application English mein,Supporting line on the English card
+serviceAppliancesRepair,Client home / Service categories,Appliances Repair,گھریلو آلات کی مرمت,Appliances Repair,Inspection-only service category (Rs. 500 inspection fee)

@@ -6,6 +6,7 @@ class ServiceCategoryModel {
   final String? description;
   final String? iconUrl;
   final double? inspectionFee;
+  final bool inspectionOnly;
 
   const ServiceCategoryModel({
     required this.id,
@@ -13,6 +14,7 @@ class ServiceCategoryModel {
     this.description,
     this.iconUrl,
     this.inspectionFee,
+    this.inspectionOnly = false,
   });
 
   factory ServiceCategoryModel.fromJson(Map<String, dynamic> json) {
@@ -22,6 +24,9 @@ class ServiceCategoryModel {
       description: json['description'] as String?,
       iconUrl: json['iconUrl'] as String?,
       inspectionFee: (json['inspectionFee'] as num?)?.toDouble(),
+      // Defaults false when absent so an older backend (or a cached payload
+      // written before this field existed) keeps every lane, exactly as before.
+      inspectionOnly: json['inspectionOnly'] as bool? ?? false,
     );
   }
 
@@ -31,5 +36,6 @@ class ServiceCategoryModel {
         description: description,
         iconUrl: iconUrl,
         inspectionFee: inspectionFee,
+        inspectionOnly: inspectionOnly,
       );
 }

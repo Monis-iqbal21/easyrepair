@@ -117,6 +117,30 @@ abstract class AppLocalizations {
   /// **'Choose your language'**
   String get languageSheetTitle;
 
+  /// Heading of the onboarding language selection screen
+  ///
+  /// In en, this message translates to:
+  /// **'Choose Language'**
+  String get languageOnboardingTitle;
+
+  /// Supporting line under the onboarding language heading
+  ///
+  /// In en, this message translates to:
+  /// **'Which language would you like to use the app in?'**
+  String get languageOnboardingSubtitle;
+
+  /// Supporting line on the Roman Urdu language card
+  ///
+  /// In en, this message translates to:
+  /// **'Simple words, easy to understand'**
+  String get languageOptionRomanUrduSubtitle;
+
+  /// Supporting line on the English language card
+  ///
+  /// In en, this message translates to:
+  /// **'Full application in English'**
+  String get languageOptionEnglishSubtitle;
+
   /// Role selection screen heading
   ///
   /// In en, this message translates to:
@@ -1466,6 +1490,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Carpenter'**
   String get serviceCarpenter;
+
+  /// Service category name - inspection-only appliance repair
+  ///
+  /// In en, this message translates to:
+  /// **'Appliances Repair'**
+  String get serviceAppliancesRepair;
 
   /// No description provided for @serviceDeepCleaning.
   ///

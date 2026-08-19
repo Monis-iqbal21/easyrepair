@@ -12,17 +12,24 @@ import 'package:handygo_app/features/auth/presentation/pages/worker_login_page.d
 
 import '../../../support/l10n_test_app.dart';
 
-/// Pins the role-privacy requirement on the Worker side: a Client-owned or
-/// genuinely nonexistent phone through the Worker login page (OTP or
-/// password) must show the exact same generic "not registered" copy the
-/// Client page shows for the mirror case — never a role-revealing message,
-/// never a "use Client login" redirect.
+/// Ustaad login: registered phone + password, and nothing else.
+///
+/// Covers two things. First, the contract itself — there is no OTP step on
+/// this page any more, and neither field may be skipped. Second, the
+/// role-privacy requirement that predates this change: a Client-owned or
+/// genuinely nonexistent phone must show the exact same generic "not
+/// registered" copy the Client page shows for the mirror case — never a
+/// role-revealing message, never a "use Client login" redirect.
 class _FakeAuthRepository implements AuthRepository {
   Failure? workerOtpLoginFailure;
   Failure? loginFailure;
   Failure? requestOtpFailure;
   DateTime? lastExpiresAt;
   int requestOtpCalls = 0;
+  int workerOtpLoginCalls = 0;
+  int loginCalls = 0;
+  String? lastLoginPhone;
+  String? lastLoginPassword;
   Duration nextExpiresIn = const Duration(minutes: 5);
 
   AuthTokensEntity _tokens() => AuthTokensEntity(
@@ -54,6 +61,7 @@ class _FakeAuthRepository implements AuthRepository {
     required String phone,
     required String otp,
   }) async {
+    workerOtpLoginCalls++;
     if (workerOtpLoginFailure != null) return Left(workerOtpLoginFailure!);
     return Right(_tokens());
   }
@@ -63,6 +71,9 @@ class _FakeAuthRepository implements AuthRepository {
     required String phone,
     required String password,
   }) async {
+    loginCalls++;
+    lastLoginPhone = phone;
+    lastLoginPassword = password;
     if (loginFailure != null) return Left(loginFailure!);
     return Right(_tokens());
   }
@@ -156,6 +167,104 @@ Widget _wrap(_FakeAuthRepository repo) {
 }
 
 void main() {
+  group('login is phone + password, with no OTP step', () {
+    testWidgets('the page offers no OTP entry, no "send code" action and no '
+        'OTP login button', (tester) async {
+      await tester.pumpWidget(_wrap(_FakeAuthRepository()));
+
+      expect(find.text('OTP Bhejein'), findsNothing);
+      expect(find.text('OTP se login karein'), findsNothing);
+      expect(find.text('Code dobara bhejein'), findsNothing);
+      // Phone + password, and no third entry field for a code.
+      expect(find.byType(TextFormField), findsNWidgets(2));
+    });
+
+    testWidgets('requesting an OTP is never even attempted', (tester) async {
+      final repo = _FakeAuthRepository();
+      await tester.pumpWidget(_wrap(repo));
+
+      await tester.enterText(find.byType(TextFormField).first, '03378372427');
+      await tester.enterText(find.byType(TextFormField).last, 'password123');
+      await tester.ensureVisible(find.text('Password Se Login Karein'));
+      await tester.tap(find.text('Password Se Login Karein'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      expect(repo.requestOtpCalls, 0,
+          reason: 'no SMS may be sent for an Ustaad login');
+      expect(repo.workerOtpLoginCalls, 0,
+          reason: 'the password-free login endpoint must never be called');
+    });
+
+    testWidgets('correct phone + password authenticates through the password '
+        'endpoint', (tester) async {
+      final repo = _FakeAuthRepository();
+      await tester.pumpWidget(_wrap(repo));
+
+      await tester.enterText(find.byType(TextFormField).first, '03378372427');
+      await tester.enterText(find.byType(TextFormField).last, 'password123');
+      await tester.ensureVisible(find.text('Password Se Login Karein'));
+      await tester.tap(find.text('Password Se Login Karein'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      expect(repo.loginCalls, 1);
+      expect(repo.lastLoginPhone, '03378372427');
+      expect(repo.lastLoginPassword, 'password123');
+      // No error surfaced: the session is established and the router (not
+      // this page) dispatches the authenticated Ustaad onward.
+      expect(find.text('Ye number registered nahi hai.'), findsNothing);
+    });
+  });
+
+  group('credentials are still mandatory', () {
+    testWidgets('a missing password is rejected locally — a phone number '
+        'alone can never log an Ustaad in', (tester) async {
+      final repo = _FakeAuthRepository();
+      await tester.pumpWidget(_wrap(repo));
+
+      await tester.enterText(find.byType(TextFormField).first, '03378372427');
+      await tester.ensureVisible(find.text('Password Se Login Karein'));
+      await tester.tap(find.text('Password Se Login Karein'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      expect(repo.loginCalls, 0);
+    });
+
+    testWidgets('a malformed phone is rejected before any request',
+        (tester) async {
+      final repo = _FakeAuthRepository();
+      await tester.pumpWidget(_wrap(repo));
+
+      await tester.enterText(find.byType(TextFormField).first, '12345');
+      await tester.enterText(find.byType(TextFormField).last, 'password123');
+      await tester.ensureVisible(find.text('Password Se Login Karein'));
+      await tester.tap(find.text('Password Se Login Karein'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      expect(repo.loginCalls, 0);
+    });
+
+    testWidgets('a wrong password surfaces the server rejection and creates '
+        'no session', (tester) async {
+      final repo = _FakeAuthRepository()
+        ..loginFailure = const UnauthorizedFailure('');
+      await tester.pumpWidget(_wrap(repo));
+
+      await tester.enterText(find.byType(TextFormField).first, '03378372427');
+      await tester.enterText(find.byType(TextFormField).last, 'wrong-password');
+      await tester.ensureVisible(find.text('Password Se Login Karein'));
+      await tester.tap(find.text('Password Se Login Karein'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      expect(repo.loginCalls, 1);
+      expect(find.byType(SnackBar), findsOneWidget);
+    });
+  });
+
   testWidgets(
     'a Client-owned (or nonexistent) phone via Worker password login shows '
     'the exact same generic message as the Client-side mirror case — no '
@@ -174,65 +283,6 @@ void main() {
 
       expect(find.text('Ye number registered nahi hai.'), findsOneWidget);
       expect(find.textContaining('Client'), findsNothing);
-    },
-  );
-
-  testWidgets(
-    'a Client-owned (or nonexistent) phone via Worker OTP login shows the '
-    'exact same generic message',
-    (tester) async {
-      final repo = _FakeAuthRepository()
-        ..workerOtpLoginFailure = const PhoneNotRegisteredFailure('');
-      await tester.pumpWidget(_wrap(repo));
-
-      await tester.enterText(find.byType(TextFormField).first, '03378372427');
-      await tester.tap(find.text('OTP Bhejein'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 50));
-
-      // Unlike the Client page, OTP and password fields are both visible at
-      // once here (single merged page) — the Pinput is EditableText index 1
-      // (0 is the phone field; the always-visible password field comes
-      // after it), not the last one.
-      await tester.enterText(find.byType(EditableText).at(1), '123456');
-      await tester.pump();
-
-      await tester.ensureVisible(find.text('OTP se login karein'));
-      await tester.tap(find.text('OTP se login karein'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 50));
-
-      expect(find.text('Ye number registered nahi hai.'), findsOneWidget);
-    },
-  );
-
-  testWidgets(
-    'a failed resend keeps the OTP box visible instead of reverting to the phone-only form',
-    (tester) async {
-      final repo = _FakeAuthRepository()
-        // Backdate the first send's expiresAt so the resend cooldown has
-        // already elapsed by the time it renders — see the identical
-        // Client-page test for why this avoids the widget's own 1s ticker.
-        ..nextExpiresIn = const Duration(minutes: 5) - const Duration(seconds: 61);
-      await tester.pumpWidget(_wrap(repo));
-
-      await tester.enterText(find.byType(TextFormField).first, '03378372427');
-      await tester.tap(find.text('OTP Bhejein'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 50));
-      expect(find.text('OTP se login karein'), findsOneWidget);
-      expect(find.text('Code dobara bhejein'), findsOneWidget);
-
-      // The resend itself is rejected — same shared OtpRequestNotifier as
-      // the Client page, so the fix (and the test) mirrors it exactly.
-      repo.requestOtpFailure = const OtpResendTooSoonFailure('too soon');
-      await tester.ensureVisible(find.text('Code dobara bhejein'));
-      await tester.tap(find.text('Code dobara bhejein'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 50));
-
-      expect(repo.requestOtpCalls, 2);
-      expect(find.text('OTP se login karein'), findsOneWidget);
     },
   );
 }

@@ -227,6 +227,17 @@ export class BookingsService {
     let inspectionFeeSnapshot: number | undefined;
     let estimatedPrice: number | undefined;
 
+    // Inspection-only categories (see ServiceCategory.inspectionOnly) accept
+    // the INSPECTION lane and nothing else. The client app already hides the
+    // other lanes, but the rule is enforced here because the server owns it —
+    // an older build, a replayed request or a direct API call must not be able
+    // to open a STANDARD or BIDDING booking on such a category.
+    if (category.inspectionOnly && lane !== BookingLane.INSPECTION) {
+      throw new BadRequestException(
+        `"${category.name}" is available for inspection bookings only.`,
+      );
+    }
+
     if (lane === BookingLane.STANDARD) {
       // standardServiceIds (multi-select) takes precedence over the legacy
       // singular standardServiceId when both are present.

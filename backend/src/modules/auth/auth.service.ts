@@ -1278,7 +1278,22 @@ export class AuthService {
     );
   }
 
-  /** POST /auth/worker/otp-login — existing Ustaad, OTP instead of password. */
+  /**
+   * NO LONGER ROUTED — Ustaad login is phone + password only.
+   *
+   * The `POST /auth/worker/otp-login` endpoint that called this was removed
+   * (see auth.controller.ts): it authenticated an Ustaad from an SMS code
+   * alone, with no password. Nothing in the application reaches this method
+   * any more.
+   *
+   * It is kept, rather than deleted, purely because several existing specs
+   * drive it as a convenient representative caller for behaviour that is NOT
+   * about worker login — generic OTP verification (auth.service.spec.ts),
+   * worker suspension state (auth.worker-suspension.spec.ts) and the support
+   * account guard (support-auth.spec.ts). Deleting it would mean rewriting
+   * those unrelated suites, which is out of scope here. Safe to remove once
+   * they are pointed at `login()` instead.
+   */
   async workerOtpLogin(
     rawPhone: string,
     otp: string,
