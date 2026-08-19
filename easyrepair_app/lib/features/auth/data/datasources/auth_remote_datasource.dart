@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import '../../domain/entities/auth_tokens_entity.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -66,31 +67,55 @@ class AuthRemoteDatasource {
     return DateTime.parse(data['expiresAt'] as String);
   }
 
+  /// Client LOGIN by one-time code — authentication only, so the body is a
+  /// phone and a code and nothing else. The endpoint no longer accepts a
+  /// name; registration is where one belongs.
   Future<AuthResponseModel> clientOtpLogin({
-    required String fullName,
     required String phone,
     required String otp,
   }) async {
     final response = await _publicDio.post(
       '/auth/client/otp-login',
-      data: {'fullName': fullName, 'phone': phone, 'otp': otp},
+      data: {'phone': phone, 'otp': otp},
     );
     return AuthResponseModel.fromJson(response.data as Map<String, dynamic>);
   }
 
+  /// Step 2 of Ustaad registration: spends the code and returns the token
+  /// that authorises finishing the registration. Creates nothing.
+  Future<WorkerRegistrationToken> workerOtpVerify({
+    required String phone,
+    required String otp,
+  }) async {
+    final response = await _publicDio.post(
+      '/auth/worker/otp-verify',
+      data: {'phone': phone, 'otp': otp},
+    );
+    final data = response.data['data'] ?? response.data;
+    return WorkerRegistrationToken(
+      token: data['registrationToken'] as String,
+      expiresAt: DateTime.parse(data['expiresAt'] as String),
+    );
+  }
+
+  /// Creates the Ustaad account. Proof of the number is either the
+  /// [registrationToken] from Step 2 or, for the original single-call path,
+  /// an [otp] — the backend requires exactly one.
   Future<AuthResponseModel> workerOtpRegister({
     required String fullName,
     required String phone,
-    required String otp,
+    String? otp,
     required String password,
     required String categoryId,
+    String? registrationToken,
   }) async {
     final response = await _publicDio.post(
       '/auth/worker/otp-register',
       data: {
         'fullName': fullName,
         'phone': phone,
-        'otp': otp,
+        if (otp != null) 'otp': otp,
+        if (registrationToken != null) 'registrationToken': registrationToken,
         'password': password,
         'categoryId': categoryId,
       },
@@ -167,14 +192,24 @@ class AuthRemoteDatasource {
     return AuthResponseModel.fromJson(response.data as Map<String, dynamic>);
   }
 
+  /// Client REGISTRATION — the one call that carries a name, and the one
+  /// that creates an account. Sending [otp] makes it atomic: the backend
+  /// verifies the code before writing anything, so a rejected code leaves no
+  /// half-registered account behind.
   Future<AuthResponseModel> clientPasswordRegister({
     required String fullName,
     required String phone,
     required String password,
+    required String otp,
   }) async {
     final response = await _publicDio.post(
       '/auth/client/password-register',
-      data: {'fullName': fullName, 'phone': phone, 'password': password},
+      data: {
+        'fullName': fullName,
+        'phone': phone,
+        'password': password,
+        'otp': otp,
+      },
     );
     return AuthResponseModel.fromJson(response.data as Map<String, dynamic>);
   }

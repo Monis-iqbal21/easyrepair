@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'onboarding_routes.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
 
@@ -10,7 +11,13 @@ const _kGray = Color(0xFF6B7280);
 /// Worker Home load per app session (see [onboardingModalShownProvider]).
 /// Has a close button; the worker can always reach the same destination
 /// later via the persistent banner on Worker Home.
-Future<void> showProfileCompletionModal(BuildContext context) {
+/// [route] is where the CTA goes — the caller decides, because only it knows
+/// whether this Ustaad can resume the new registration at Step 4 or needs the
+/// legacy form. See `resumeOnboardingRoute`.
+Future<void> showProfileCompletionModal(
+  BuildContext context, {
+  String route = legacyProfileCompletionRoute,
+}) {
   return showDialog<void>(
     context: context,
     barrierDismissible: true,
@@ -63,7 +70,7 @@ Future<void> showProfileCompletionModal(BuildContext context) {
               child: ElevatedButton(
                 onPressed: () {
                   Navigator.of(ctx).pop();
-                  context.push('/worker/profile-completion');
+                  context.push(route);
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _kOrange,

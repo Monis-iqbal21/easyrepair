@@ -1,4 +1,11 @@
-import { IsString, IsUUID, Matches, MinLength } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  IsUUID,
+  Matches,
+  MinLength,
+  ValidateIf,
+} from 'class-validator';
 
 export class WorkerOtpRegisterDto {
   @IsString()
@@ -11,9 +18,25 @@ export class WorkerOtpRegisterDto {
   })
   phone: string;
 
+  /**
+   * Proof that the number belongs to the caller. Exactly one of [otp] and
+   * [registrationToken] must be present:
+   *
+   *  * [registrationToken] is what the 4-step Ustaad registration sends — the
+   *    code was already verified and consumed at Step 2, so it cannot expire
+   *    while the Ustaad fills in their profile.
+   *  * [otp] is the original single-call path, still accepted so an older app
+   *    build keeps working.
+   */
+  @ValidateIf((dto: WorkerOtpRegisterDto) => dto.registrationToken === undefined)
   @IsString()
   @Matches(/^[0-9]{6}$/, { message: 'otp must be 6 digits' })
-  otp: string;
+  otp?: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(1, { message: 'registrationToken must not be empty' })
+  registrationToken?: string;
 
   @IsString()
   @MinLength(8, { message: 'password must be at least 8 characters' })

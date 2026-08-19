@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:handygo_app/features/auth/domain/entities/auth_tokens_entity.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fpdart/fpdart.dart';
@@ -17,12 +18,35 @@ import 'package:handygo_app/features/auth/presentation/providers/auth_otp_provid
 /// nothing to react to and no way to retry.
 
 class _FakeAuthRepository implements AuthRepository {
+  int workerOtpVerifyCalls = 0;
+  String? lastWorkerVerifyPhone;
+  String? lastWorkerVerifyOtp;
+  Failure? workerOtpVerifyFailure;
+
   _FakeAuthRepository(this._result);
 
   final Either<Failure, DateTime> Function() _result;
   int calls = 0;
   String? lastPhone;
   OtpPurpose? lastPurpose;
+
+  @override
+  Future<Either<Failure, WorkerRegistrationToken>> workerOtpVerify({
+    required String phone,
+    required String otp,
+  }) async {
+    workerOtpVerifyCalls++;
+    lastWorkerVerifyPhone = phone;
+    lastWorkerVerifyOtp = otp;
+    await Future<void>.delayed(const Duration(milliseconds: 30));
+    if (workerOtpVerifyFailure != null) return Left(workerOtpVerifyFailure!);
+    return Right(
+      WorkerRegistrationToken(
+        token: 'registration.token',
+        expiresAt: DateTime.now().add(const Duration(minutes: 45)),
+      ),
+    );
+  }
 
   @override
   Future<Either<Failure, DateTime>> requestOtp({

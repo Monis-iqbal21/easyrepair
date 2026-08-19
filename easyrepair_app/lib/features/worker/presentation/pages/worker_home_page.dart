@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../widgets/onboarding_routes.dart';
+import '../../../../core/theme/app_semantic_colors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
@@ -75,10 +77,20 @@ class _WorkerHomePageState extends ConsumerState<WorkerHomePage>
     ref.listen(workerProfileProvider, (previous, next) {
       final profile = next.valueOrNull;
       if (profile == null || profile.isOnboardingApproved) return;
+      // Only an Ustaad who still owes us something gets the modal. A profile
+      // that is already SUBMITTED_FOR_REVIEW has nothing left to fill in —
+      // asking again would be asking for what they just gave, and the backend
+      // would refuse the edits anyway.
+      if (!profile.needsProfileAction) return;
       if (ref.read(onboardingModalShownProvider)) return;
       ref.read(onboardingModalShownProvider.notifier).state = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (context.mounted) showProfileCompletionModal(context);
+        if (context.mounted) {
+          showProfileCompletionModal(
+            context,
+            route: resumeOnboardingRoute(profile),
+          );
+        }
       });
     });
 
@@ -127,9 +139,17 @@ class _HomeBody extends ConsumerWidget {
           const SliverToBoxAdapter(child: _Header()),
           // Persistent profile-completion CTA — always visible (not just the
           // modal) so the worker has a way back without waiting for a resume.
-          if (!profile.isOnboardingApproved)
+          // Three different reasons an Ustaad may not be working yet, and
+          // three different things to say about them — see the widgets below.
+          if (profile.needsProfileAction)
             SliverToBoxAdapter(
-              child: _ProfileCompletionBanner(profile: profile),
+              child: _ProfileActionBanner(profile: profile),
+            )
+          else if (profile.isPendingReview)
+            const SliverToBoxAdapter(child: _PendingReviewCard())
+          else if (profile.isOnboardingRejected)
+            SliverToBoxAdapter(
+              child: _ProfileActionBanner(profile: profile),
             ),
           // Hero card (online status + stats)
           SliverToBoxAdapter(child: _HeroCard(profile: profile)),
@@ -149,20 +169,27 @@ class _HomeBody extends ConsumerWidget {
   }
 }
 
-// ── Profile completion banner ────────────────────────────────────────────────
+// ── Onboarding status cards ──────────────────────────────────────────────────
+//
+// `!isOnboardingApproved` used to drive a single banner that always linked to
+// the profile-completion form. That was wrong for a submitted Ustaad: they
+// were shown a "complete your profile" call to action for a profile they had
+// already completed, and tapping it opened a form the backend refuses to
+// accept edits from. The two states are now separate widgets.
 
-class _ProfileCompletionBanner extends StatelessWidget {
+/// DRAFT and CHANGES_REQUIRED — the Ustaad still has something to do, so this
+/// is a call to action and it navigates.
+///
+/// REJECTED reuses it deliberately: a rejected profile is actionable too, and
+/// its existing wording already says so.
+class _ProfileActionBanner extends StatelessWidget {
   final WorkerProfileEntity profile;
-  const _ProfileCompletionBanner({required this.profile});
+  const _ProfileActionBanner({required this.profile});
 
-  /// [profile.onboardingStatus] is the raw backend token — only the banner's
-  /// wording is translated.
+  /// [profile.onboardingStatus] is the raw backend token — only the wording
+  /// is translated.
   (String, String) _statusLabel(AppLocalizations l10n) =>
       switch (profile.onboardingStatus) {
-        'SUBMITTED_FOR_REVIEW' => (
-            l10n.workerOnboardingSubmitted,
-            l10n.workerOnboardingSubmittedBody,
-          ),
         'CHANGES_REQUIRED' => (
             l10n.workerOnboardingChangesRequired,
             l10n.workerOnboardingChangesRequiredBody,
@@ -180,21 +207,23 @@ class _ProfileCompletionBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (title, subtitle) = _statusLabel(context.l10n);
+    final colors = context.semanticColors;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
       child: GestureDetector(
-        onTap: () => context.push('/worker/profile-completion'),
+        onTap: () => context.push(resumeOnboardingRoute(profile)),
         child: Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: const Color(0xFFFFF7ED),
+            color: colors.urgentSoft,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFFDBA74)),
+            border: Border.all(color: colors.urgent),
           ),
           child: Row(
             children: [
-              const Icon(Icons.assignment_late_outlined,
-                  color: Color(0xFFC2541D), size: 22),
+              Icon(Icons.assignment_late_outlined,
+                  color: colors.urgent, size: 22),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -202,24 +231,85 @@ class _ProfileCompletionBanner extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13.5,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFFC2541D),
+                        color: colors.urgent,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       subtitle,
-                      style: const TextStyle(fontSize: 12, color: _kGray),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: colors.textSecondary,
+                      ),
                     ),
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right_rounded,
-                  color: Color(0xFFC2541D), size: 20),
+              Icon(Icons.chevron_right_rounded,
+                  color: colors.urgent, size: 20),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// SUBMITTED_FOR_REVIEW — informational only.
+///
+/// No chevron, no tap target and no route: there is nothing for the Ustaad to
+/// open. The restrictions on work are unchanged; this just explains that the
+/// reason is an admin queue rather than a missing form.
+class _PendingReviewCard extends StatelessWidget {
+  const _PendingReviewCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final colors = context.semanticColors;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: colors.softTeal,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: colors.border),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.hourglass_top_rounded, color: colors.primary, size: 22),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.workerPendingReviewTitle,
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w700,
+                      color: colors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    l10n.workerPendingReviewBody,
+                    style: TextStyle(
+                      fontSize: 12,
+                      height: 1.45,
+                      color: colors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -656,7 +746,14 @@ class _HeroCard extends ConsumerWidget {
 
   Future<void> _handleGoOnline(BuildContext context, WidgetRef ref) async {
     if (!profile.isOnboardingApproved) {
-      _showSnack(context, context.l10n.workerApprovalRequired);
+      // Blocked either way — the backend refuses ONLINE below APPROVED — but
+      // a submitted Ustaad is waiting on an admin, not on paperwork.
+      _showSnack(
+        context,
+        profile.isPendingReview
+            ? context.l10n.workerPendingReviewBody
+            : context.l10n.workerApprovalRequired,
+      );
       return;
     }
 

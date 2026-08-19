@@ -119,7 +119,39 @@ class WorkerProfileEntity {
   });
 
   /// The single gate for hireability — go online, matching, bidding, hire.
+  // ── Onboarding state ──────────────────────────────────────────────────
+  //
+  // The UI needs three different answers from `onboardingStatus`, and asking
+  // `!isOnboardingApproved` conflates all of them: an Ustaad who has just
+  // submitted is blocked from work for a completely different reason than one
+  // who never finished their forms, and must not be told to go and fill them
+  // in again. These getters are the single place those distinctions live.
+
+  /// Still owes us something: never finished registration, or an admin sent
+  /// the profile back. This is the only state that should offer a form.
+  bool get needsProfileAction =>
+      onboardingStatus == 'DRAFT' || onboardingStatus == 'CHANGES_REQUIRED';
+
+  /// Submitted and waiting on an admin. Blocked from work, but there is
+  /// nothing left for the Ustaad to do — and nothing left to edit, since the
+  /// backend only accepts profile changes while DRAFT or CHANGES_REQUIRED.
+  bool get isPendingReview => onboardingStatus == 'SUBMITTED_FOR_REVIEW';
+
+  bool get isOnboardingRejected => onboardingStatus == 'REJECTED';
+
   bool get isOnboardingApproved => onboardingStatus == 'APPROVED';
+
+  /// True when the profile already carries everything the 4-step registration
+  /// collects, so an unfinished registration can be resumed at its last step
+  /// instead of being restarted in the legacy full form.
+  ///
+  /// Deliberately conservative: a legacy DRAFT profile that predates the new
+  /// flow will be missing at least one of these and correctly falls back.
+  bool get hasRegistrationProfileData =>
+      (fullLegalName?.trim().isNotEmpty ?? false) &&
+      (cnicNumber?.trim().isNotEmpty ?? false) &&
+      (residentialAddress?.trim().isNotEmpty ?? false) &&
+      skills.isNotEmpty;
 
   WorkerProfileEntity copyWith({
     AvailabilityStatus? availabilityStatus,

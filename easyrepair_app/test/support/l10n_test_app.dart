@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:handygo_app/core/l10n/app_locale.dart';
 import 'package:handygo_app/core/l10n/l10n_config.dart';
+import 'package:handygo_app/core/theme/app_theme.dart';
 
 /// Wraps [home] in a MaterialApp configured exactly like the real app root.
 ///
@@ -22,5 +23,25 @@ MaterialApp localizedApp(
     navigatorObservers: [?navigatorObserver],
     routes: routes,
     home: home,
+  );
+}
+
+/// The router-driven counterpart of [localizedApp], for pages that navigate.
+///
+/// Same delegates and locale handling; the only difference is that navigation
+/// goes through a real [GoRouter], so a page's `context.push`/`context.go`
+/// behaves exactly as it does in the app.
+MaterialApp localizedRouterApp(
+  RouterConfig<Object> router, {
+  AppLocale locale = AppLocale.english,
+  ThemeData? theme,
+}) {
+  return MaterialApp.router(
+    theme: theme ?? AppTheme.lightTheme,
+    routerConfig: router,
+    locale: locale.locale,
+    supportedLocales: appSupportedLocales,
+    localizationsDelegates: appLocalizationsDelegates,
+    localeResolutionCallback: (_, _) => locale.locale,
   );
 }

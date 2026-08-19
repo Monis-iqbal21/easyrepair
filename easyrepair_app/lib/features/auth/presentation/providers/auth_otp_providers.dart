@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../domain/entities/auth_tokens_entity.dart';
 
 import '../../../../core/errors/failures.dart';
 import '../../data/repositories/auth_repository_impl.dart';
@@ -70,10 +71,15 @@ class ClientOtpAuthNotifier extends AsyncNotifier<void> {
   @override
   Future<void> build() async {}
 
-  Future<bool> verify(String fullName, String phone, String otp) async {
+  /// Logs an EXISTING Client in with a one-time code.
+  ///
+  /// Takes no name: login is authentication, and the endpoint behind it no
+  /// longer accepts registration data. An unknown or Worker-owned number
+  /// fails here with [FailureCode.phoneNotRegistered] rather than quietly
+  /// creating an account.
+  Future<bool> verify(String phone, String otp) async {
     state = const AsyncLoading();
     final result = await ref.read(authRepositoryProvider).clientOtpLogin(
-          fullName: fullName,
           phone: phone,
           otp: otp,
         );
@@ -96,6 +102,41 @@ final clientOtpAuthNotifierProvider =
   ClientOtpAuthNotifier.new,
 );
 
+/// Ustaad registration Step 2 — spends the code for a registration token.
+///
+/// Holds the token only so the screen can react to success/failure; the token
+/// itself is copied into the registration draft and lives nowhere else.
+class UstaadOtpVerifyNotifier extends AsyncNotifier<WorkerRegistrationToken?> {
+  @override
+  Future<WorkerRegistrationToken?> build() async => null;
+
+  Future<WorkerRegistrationToken?> verify(String phone, String otp) async {
+    state = const AsyncLoading();
+    final result = await ref
+        .read(authRepositoryProvider)
+        .workerOtpVerify(phone: phone, otp: otp);
+    return result.fold(
+      (failure) {
+        state = AsyncError(failure, StackTrace.current);
+        return null;
+      },
+      (token) {
+        state = AsyncData(token);
+        return token;
+      },
+    );
+  }
+
+  /// Clears a previous verification so re-entering the flow never starts in an
+  /// already-verified state.
+  void reset() => state = const AsyncData(null);
+}
+
+final ustaadOtpVerifyNotifierProvider =
+    AsyncNotifierProvider<UstaadOtpVerifyNotifier, WorkerRegistrationToken?>(
+  UstaadOtpVerifyNotifier.new,
+);
+
 class WorkerOtpRegisterNotifier extends AsyncNotifier<void> {
   @override
   Future<void> build() async {}
@@ -103,9 +144,10 @@ class WorkerOtpRegisterNotifier extends AsyncNotifier<void> {
   Future<bool> register({
     required String fullName,
     required String phone,
-    required String otp,
+    String? otp,
     required String password,
     required String categoryId,
+    String? registrationToken,
   }) async {
     state = const AsyncLoading();
     final result = await ref.read(authRepositoryProvider).workerOtpRegister(
@@ -114,6 +156,7 @@ class WorkerOtpRegisterNotifier extends AsyncNotifier<void> {
           otp: otp,
           password: password,
           categoryId: categoryId,
+          registrationToken: registrationToken,
         );
     return result.fold(
       (failure) {

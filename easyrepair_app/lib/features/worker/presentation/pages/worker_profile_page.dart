@@ -638,7 +638,12 @@ class _ProfileApprovalCard extends ConsumerWidget {
               ),
             ),
           ],
-          if (status != 'APPROVED') ...[
+          // Only while there is actually something to do. A profile sitting
+          // in the review queue has nothing to complete, and the backend
+          // refuses edits to it — see WorkerProfileEntity.needsProfileAction.
+          if (status == 'DRAFT' ||
+              status == 'CHANGES_REQUIRED' ||
+              status == 'REJECTED') ...[
             const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,

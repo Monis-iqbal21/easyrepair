@@ -943,11 +943,21 @@ export class AuthService {
    * untouched), no account -> create CLIENT + login, existing WORKER ->
    * reject (this is not the Worker login surface).
    */
-  async clientOtpLoginOrRegister(
-    fullName: string,
-    rawPhone: string,
-    otp: string,
-  ): Promise<AuthResponseDto> {
+  /**
+   * POST /auth/client/otp-login — Client LOGIN by one-time code.
+   *
+   * AUTHENTICATION ONLY. This used to be `clientOtpLoginOrRegister`, which
+   * created a CLIENT when the number was unknown and therefore needed a
+   * `fullName` on the request. That forced the app to invent one on the login
+   * screen (it sent the phone number as the name) — so the create branch has
+   * moved to `clientPasswordRegister`, which is where a name legitimately
+   * comes from, and this method now NEVER creates a user.
+   *
+   * Every "this number cannot log in" outcome — no account, a Worker-owned
+   * number, a soft-deleted account — returns the SAME privacy-safe rejection,
+   * so the response can never be used to probe which role owns a number.
+   */
+  async clientOtpLogin(rawPhone: string, otp: string): Promise<AuthResponseDto> {
     this._assertNotSupportAccount(rawPhone);
     const normalized = normalizePakistaniPhone(rawPhone);
     if (!normalized) {
@@ -963,92 +973,33 @@ export class AuthService {
       otp,
     );
 
-    const variants = phoneLookupVariants(normalized);
-    const existing =
-      await this.authRepository.findUserByPhoneVariants(variants);
+    const existing = await this.authRepository.findUserByPhoneVariants(
+      phoneLookupVariants(normalized),
+    );
 
-    if (existing) {
-      if (existing.role === Role.WORKER) {
-        // checkClientPhoneStatus already classified this phone as 'NEW' to
-        // the Client auth page (see below), so from the app's perspective
-        // this OTP verification is a registration attempt that just
-        // discovered the phone already has an account — same rejection a
-        // genuine same-role duplicate gets, never revealing it's a Worker.
-        throw this._phoneAlreadyRegisteredError();
-      }
-      // A soft-deleted CLIENT account must not be able to log back in via
-      // OTP — same privacy-safe rejection every other login path gives a
-      // deleted/nonexistent number. Phone numbers are deliberately reserved
-      // (User.phone stays unique/occupied) rather than freed for reuse —
-      // see the class-level note on deleted-phone reuse policy.
-      if (existing.deletedAt !== null) {
-        throw this._phoneNotRegisteredError();
-      }
-      if (!existing.isActive) {
-        throw new ForbiddenException('Account is deactivated');
-      }
-      // A successful OTP verification just proved control of this phone
-      // right now, regardless of how the account was originally created.
-      await this.authRepository.markPhoneVerified(existing.id);
-      const profile = await this._getProfileName(existing.id, existing.role);
-      return this._buildAuthResponse(
-        existing.id,
-        existing.phone,
-        existing.role,
-        profile.firstName,
-        profile.lastName,
-        profile.verificationStatus,
-        profile.workerStatus,
-        existing.accountStatus,
-      );
+    // Nonexistent, Worker-owned and soft-deleted are deliberately
+    // indistinguishable here — the same rejection `clientPasswordLogin` gives,
+    // and the same one `checkClientPhoneStatus` implies by reporting 'NEW'.
+    if (!existing || existing.role === Role.WORKER || existing.deletedAt !== null) {
+      throw this._phoneNotRegisteredError();
+    }
+    if (!existing.isActive) {
+      throw new ForbiddenException('Account is deactivated');
     }
 
-    const { firstName, lastName } = this._splitFullName(fullName);
-    let user;
-    try {
-      user = await this.authRepository.createUserWithProfile({
-        phone: normalized,
-        passwordHash: null,
-        firstName,
-        lastName,
-        role: Role.CLIENT,
-        phoneVerified: true,
-      });
-    } catch (err) {
-      // Two concurrent OTP verifications for the same brand-new number both
-      // reaching this point — the `phone` unique constraint lets exactly one
-      // insert win; the loser just logs into the account the winner created,
-      // instead of failing, so no duplicate account and no user-facing error.
-      if (
-        err instanceof Prisma.PrismaClientKnownRequestError &&
-        err.code === 'P2002'
-      ) {
-        const winner =
-          await this.authRepository.findUserByPhoneVariants(variants);
-        if (winner) {
-          await this.authRepository.markPhoneVerified(winner.id);
-          const profile = await this._getProfileName(winner.id, winner.role);
-          return this._buildAuthResponse(
-            winner.id,
-            winner.phone,
-            winner.role,
-            profile.firstName,
-            profile.lastName,
-            profile.verificationStatus,
-            profile.workerStatus,
-            winner.accountStatus,
-          );
-        }
-      }
-      throw err;
-    }
-
+    // A successful verification just proved control of this phone right now,
+    // regardless of how the account was originally created.
+    await this.authRepository.markPhoneVerified(existing.id);
+    const profile = await this._getProfileName(existing.id, existing.role);
     return this._buildAuthResponse(
-      user.id,
-      user.phone,
-      user.role,
-      firstName,
-      lastName,
+      existing.id,
+      existing.phone,
+      existing.role,
+      profile.firstName,
+      profile.lastName,
+      profile.verificationStatus,
+      profile.workerStatus,
+      existing.accountStatus,
     );
   }
 
@@ -1139,10 +1090,24 @@ export class AuthService {
    * created `phoneVerified: false` (schema default, not passed explicitly)
    * since no OTP was ever verified for this phone — never claim otherwise.
    */
+  /**
+   * POST /auth/client/password-register — new Client.
+   *
+   * When [otp] is supplied the code is verified BEFORE anything is created,
+   * and the account is created with its phone already verified. That makes
+   * registration a single atomic step: no account exists until the number has
+   * been proven, so there is no window in which a half-registered, unverified
+   * user holds tokens.
+   *
+   * [otp] stays optional so an older app build that registers without one
+   * keeps working exactly as before — creating the account `phoneVerified:
+   * false`, which is what that build has always done.
+   */
   async clientPasswordRegister(
     fullName: string,
     rawPhone: string,
     password: string,
+    otp?: string,
   ): Promise<AuthResponseDto> {
     this._assertNotSupportAccount(rawPhone);
     const normalized = normalizePakistaniPhone(rawPhone);
@@ -1151,6 +1116,16 @@ export class AuthService {
         message: 'Sahi Pakistani mobile number likhein.',
         error: 'INVALID_PHONE',
       });
+    }
+
+    // Verified first: a rejected or expired code must not leave an account
+    // behind, so nothing is written until the number is proven.
+    if (otp !== undefined) {
+      await this._verifyAuthOtp(
+        normalized,
+        AuthOtpPurpose.CLIENT_LOGIN_REGISTER,
+        otp,
+      );
     }
 
     const variants = phoneLookupVariants(normalized);
@@ -1174,9 +1149,12 @@ export class AuthService {
         firstName,
         lastName,
         role: Role.CLIENT,
+        // Proven above when a code was supplied; otherwise the schema default
+        // (false) stands, exactly as before.
+        ...(otp !== undefined ? { phoneVerified: true } : {}),
       });
     } catch (err) {
-      // Same concurrent-registration race as clientOtpLoginOrRegister: the
+      // Same concurrent-registration race the OTP login path used to carry: the
       // loser logs into whichever account won the insert instead of
       // failing, so two near-simultaneous registrations never produce a
       // duplicate account or a user-facing error.
@@ -1213,12 +1191,127 @@ export class AuthService {
   }
 
   /** POST /auth/worker/otp-register — OTP-verified Ustaad registration. */
+  /**
+   * Lifetime of a Worker-registration token.
+   *
+   * Long enough to photograph a CNIC, pick a trade and type an address
+   * without racing the 5-minute OTP; short enough that an abandoned
+   * registration cannot be resumed days later. The OTP itself is already
+   * gone by then — consumed at Step 2 — so this is the only thing standing
+   * between a half-finished registration and a created account.
+   */
+  private static readonly WORKER_REGISTRATION_TOKEN_TTL_SECONDS = 45 * 60;
+
+  /**
+   * Marks a token as authorisation to FINISH a Worker registration, and
+   * nothing else. `JwtStrategy` resolves `sub` to a User row, and this token's
+   * `sub` is a phone number that by definition has no account yet — so it can
+   * never authenticate a request. The explicit purpose claim is the second
+   * lock, checked on the way back in.
+   */
+  private static readonly WORKER_REGISTRATION_TOKEN_PURPOSE =
+    'WORKER_REGISTRATION';
+
+  /**
+   * POST /auth/worker/otp-verify — Step 2 of Ustaad registration.
+   *
+   * Verifies and CONSUMES the registration OTP, then hands back a token that
+   * authorises finishing the registration later. Nothing is created here: no
+   * user, no profile, no session. The code is single-use and is not returned
+   * to the caller, so the app never has to hold it while the Ustaad fills in
+   * their profile.
+   */
+  async workerOtpVerify(
+    rawPhone: string,
+    otp: string,
+  ): Promise<{ registrationToken: string; expiresAt: string }> {
+    this._assertNotSupportAccount(rawPhone);
+    const normalized = normalizePakistaniPhone(rawPhone);
+    if (!normalized) {
+      throw new BadRequestException({
+        message: 'Sahi Pakistani mobile number likhein.',
+        error: 'INVALID_PHONE',
+      });
+    }
+
+    // Rejected before the code is spent: a number that already has an account
+    // cannot be registered, so verifying would burn the OTP for nothing. The
+    // rejection is the same whichever role owns the number.
+    const existing = await this.authRepository.findUserByPhoneVariants(
+      phoneLookupVariants(normalized),
+    );
+    if (existing) {
+      throw this._phoneAlreadyRegisteredError();
+    }
+
+    await this._verifyAuthOtp(normalized, AuthOtpPurpose.WORKER_REGISTER, otp);
+
+    const ttl = AuthService.WORKER_REGISTRATION_TOKEN_TTL_SECONDS;
+    const registrationToken = this.jwtService.sign(
+      {
+        sub: normalized,
+        purpose: AuthService.WORKER_REGISTRATION_TOKEN_PURPOSE,
+      } as object,
+      { expiresIn: ttl },
+    );
+
+    return {
+      registrationToken,
+      expiresAt: new Date(Date.now() + ttl * 1000).toISOString(),
+    };
+  }
+
+  /**
+   * Unwraps a registration token and returns the phone it was issued for.
+   *
+   * Rejects anything that is not this exact kind of token — an expired one, a
+   * forged one, or a perfectly valid ACCESS token someone tried to reuse here
+   * (it carries no registration purpose). The caller must then check that the
+   * phone still matches the registration it is completing.
+   */
+  private _phoneFromWorkerRegistrationToken(token: string): string {
+    let payload: { sub?: string; purpose?: string };
+    try {
+      payload = this.jwtService.verify(token);
+    } catch {
+      throw new UnauthorizedException({
+        message: '',
+        error: 'REGISTRATION_TOKEN_INVALID',
+      });
+    }
+    if (
+      payload.purpose !== AuthService.WORKER_REGISTRATION_TOKEN_PURPOSE ||
+      typeof payload.sub !== 'string'
+    ) {
+      throw new UnauthorizedException({
+        message: '',
+        error: 'REGISTRATION_TOKEN_INVALID',
+      });
+    }
+    return payload.sub;
+  }
+
+  /**
+   * POST /auth/worker/otp-register — creates the Ustaad account.
+   *
+   * Proof that the number belongs to the caller comes from ONE of two things:
+   *
+   *  * [registrationToken] — issued by `workerOtpVerify` at Step 2. This is
+   *    what the 4-step registration uses: the code was already spent then, so
+   *    the Ustaad can spend as long as they like on their profile without the
+   *    OTP expiring underneath them.
+   *  * [otp] — the original single-call path, still accepted so an older app
+   *    build keeps working unchanged.
+   *
+   * Exactly one is required; the DTO enforces that.
+   */
   async workerOtpRegister(
     fullName: string,
     rawPhone: string,
-    otp: string,
+    otp: string | undefined,
     password: string,
     categoryId: string,
+    registrationToken?: string,
   ): Promise<AuthResponseDto> {
     this._assertNotSupportAccount(rawPhone);
     const normalized = normalizePakistaniPhone(rawPhone);
@@ -1229,7 +1322,30 @@ export class AuthService {
       });
     }
 
-    await this._verifyAuthOtp(normalized, AuthOtpPurpose.WORKER_REGISTER, otp);
+    if (registrationToken !== undefined) {
+      // The token is bound to the number it was issued for, so it cannot be
+      // used to register a different one.
+      const tokenPhone = this._phoneFromWorkerRegistrationToken(
+        registrationToken,
+      );
+      if (tokenPhone !== normalized) {
+        throw new UnauthorizedException({
+          message: '',
+          error: 'REGISTRATION_TOKEN_INVALID',
+        });
+      }
+    } else if (otp !== undefined) {
+      await this._verifyAuthOtp(
+        normalized,
+        AuthOtpPurpose.WORKER_REGISTER,
+        otp,
+      );
+    } else {
+      throw new BadRequestException({
+        message: '',
+        error: 'REGISTRATION_PROOF_REQUIRED',
+      });
+    }
 
     const variants = phoneLookupVariants(normalized);
     const existing =

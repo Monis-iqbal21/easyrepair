@@ -70,16 +70,25 @@ class ClientPasswordRegisterNotifier extends AsyncNotifier<void> {
   @override
   Future<void> build() async {}
 
+  /// Creates the account and starts its session — one call, one step.
+  ///
+  /// [otp] is verified by the backend BEFORE anything is created, so there is
+  /// no longer any window in which an unverified account holds tokens. This
+  /// replaces the previous two-call sequence (create, then verify by logging
+  /// in again), which existed only because the register endpoint could not
+  /// accept a code.
   Future<bool> register({
     required String fullName,
     required String phone,
     required String password,
+    required String otp,
   }) async {
     state = const AsyncLoading();
     final result = await ref.read(authRepositoryProvider).clientPasswordRegister(
           fullName: fullName,
           phone: phone,
           password: password,
+          otp: otp,
         );
     return result.fold(
       (failure) {

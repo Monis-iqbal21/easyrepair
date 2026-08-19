@@ -4,7 +4,7 @@
 
     <!--
       ============================================================
-      HANDYGO NATIVE SPLASH FALLBACK COLOUR - SINGLE SOURCE OF TRUTH
+      HANDYGO NATIVE SPLASH COLOUR - SINGLE SOURCE OF TRUTH
       ============================================================
       This is the ONLY place the Android launch-screen colour is defined.
       Everything that needs it references @color/handygo_splash_background:
@@ -14,22 +14,18 @@
         * values-v31/styles.xml                   (Android 12+ splash API)
         * values-night/styles.xml                 (via the same drawables)
 
-      WHY THIS VALUE: it matches the flat, near-white canvas that fills the
-      middle and bottom of assets/images/background.png - the region the
-      Flutter welcome screen shows behind the logo and the "Shuru karein"
-      button. Keeping them equal is what removes the white/black flash
-      between the native launch screen and the Flutter screen.
+      WHY THIS VALUE: #082B28 is HandyGo's startup teal - the deep end of the
+      brand teal that the primary #11645D sits in. The native launch screen
+      shows this colour with the off-white wrench centred on it and NOTHING
+      else: no wordmark, no tagline, no spinner. Flutter then paints its own
+      loading/welcome screen in the primary teal, so the hand-off is one step
+      within a single hue rather than a flash between unrelated colours.
 
-      The native launch screen deliberately shows this flat colour plus the
-      centred logo rather than the full background artwork: the artwork is a
-      fixed-aspect illustration and would crop differently from Flutter's
-      BoxFit.cover on many devices, which would read as a visible jump.
-      Brand identity comes from the logo and this colour; the full artwork
-      appears the instant Flutter draws.
-
-      WHEN THE FINAL HANDYGO PALETTE IS CHOSEN: change this one value (and
-      the iOS counterpart - see ios/Runner/Base.lproj/LaunchScreen.storyboard
-      and the README in ios/Runner/Assets.xcassets/LaunchImage.imageset/).
+      Native launch resources cannot read Flutter's runtime theme, so this
+      literal is deliberate and correct here - it is the platform counterpart
+      of AppSemanticColors, not a hardcoded colour escaping the design system.
+      Its Flutter-side sibling is lib/core/theme/app_semantic_colors.dart and
+      its iOS counterpart is ios/Runner/Base.lproj/LaunchScreen.storyboard.
     -->
-    <color name="handygo_splash_background">#FDFAF6</color>
+    <color name="handygo_splash_background">#082B28</color>
 </resources>

@@ -27,6 +27,7 @@ import { ForgotPasswordResetDto } from './dto/forgot-password-reset.dto';
 import { RequestOtpDto } from './dto/request-otp.dto';
 import { ClientOtpLoginDto } from './dto/client-otp-login.dto';
 import { WorkerOtpRegisterDto } from './dto/worker-otp-register.dto';
+import { WorkerOtpVerifyDto } from './dto/worker-otp-verify.dto';
 import { ClientPhoneCheckDto } from './dto/client-phone-check.dto';
 import { ClientPasswordLoginDto } from './dto/client-password-login.dto';
 import { ClientPasswordRegisterDto } from './dto/client-password-register.dto';
@@ -114,20 +115,33 @@ export class AuthController {
   }
 
   /**
-   * POST /auth/client/otp-login — combined Client login/registration. The
-   * backend (not Flutter) decides login vs. register vs. reject-as-Worker.
+   * POST /auth/client/otp-login — Client LOGIN by one-time code.
+   *
+   * Authentication only: existing CLIENT accounts. It never creates a user and
+   * never accepts a name — registration owns both (see client/password-register
+   * below). An unknown number, a Worker-owned number and a deleted account all
+   * get the same privacy-safe rejection.
    */
   @Post('client/otp-login')
   @HttpCode(HttpStatus.OK)
   clientOtpLogin(@Body() dto: ClientOtpLoginDto) {
-    return this.authService.clientOtpLoginOrRegister(
-      dto.fullName,
-      dto.phone,
-      dto.otp,
-    );
+    return this.authService.clientOtpLogin(dto.phone, dto.otp);
   }
 
-  /** POST /auth/worker/otp-register — OTP-verified new Ustaad registration. */
+  /**
+   * POST /auth/worker/otp-verify — Step 2 of Ustaad registration.
+   *
+   * Consumes the registration code and returns a short-lived token that
+   * authorises finishing the registration. Creates nothing: no user, no
+   * profile, no session, and the token cannot authenticate any other request.
+   */
+  @Post('worker/otp-verify')
+  @HttpCode(HttpStatus.OK)
+  workerOtpVerify(@Body() dto: WorkerOtpVerifyDto) {
+    return this.authService.workerOtpVerify(dto.phone, dto.otp);
+  }
+
+  /** POST /auth/worker/otp-register — creates the Ustaad account. */
   @Post('worker/otp-register')
   @HttpCode(HttpStatus.CREATED)
   workerOtpRegister(@Body() dto: WorkerOtpRegisterDto) {
@@ -137,6 +151,7 @@ export class AuthController {
       dto.otp,
       dto.password,
       dto.categoryId,
+      dto.registrationToken,
     );
   }
 
@@ -190,6 +205,7 @@ export class AuthController {
       dto.fullName,
       dto.phone,
       dto.password,
+      dto.otp,
     );
   }
 

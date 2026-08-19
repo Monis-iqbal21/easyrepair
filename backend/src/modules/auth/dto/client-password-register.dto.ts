@@ -1,4 +1,4 @@
-import { IsString, Matches, MinLength } from 'class-validator';
+import { IsOptional, IsString, Matches, MinLength } from 'class-validator';
 
 export class ClientPasswordRegisterDto {
   @IsString()
@@ -14,4 +14,17 @@ export class ClientPasswordRegisterDto {
   @IsString()
   @MinLength(8, { message: 'password must be at least 8 characters' })
   password: string;
+
+  /**
+   * The code sent to `phone`. Supplying it makes registration atomic: the
+   * code is verified before anything is created, and the new account starts
+   * with its phone already verified.
+   *
+   * Optional so an older app build that registers without one keeps its
+   * existing (unverified) behaviour rather than breaking.
+   */
+  @IsOptional()
+  @IsString()
+  @Matches(/^[0-9]{6}$/, { message: 'otp must be 6 digits' })
+  otp?: string;
 }

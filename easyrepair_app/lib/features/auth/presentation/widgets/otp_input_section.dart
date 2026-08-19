@@ -8,7 +8,13 @@ import 'package:smart_auth/smart_auth.dart';
 import 'auth_primary_button.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
 
-const _otpLength = 6;
+/// How many digits an OTP has.
+///
+/// Backend-owned: `AuthService` issues `crypto.randomInt(100000, 1000000)`
+/// and every verify DTO validates `/^[0-9]{6}$/`, so this is a mirror of a
+/// server constant, not a UI choice. Screens that render OTP boxes or say
+/// "n-digit code" must read it from here rather than hardcoding a number.
+const otpLength = 6;
 
 /// How long a requested OTP stays valid — must match backend OTP_EXPIRY_MS.
 const otpValidityDuration = Duration(minutes: 5);
@@ -39,7 +45,7 @@ DateTime expiresAtFromRetryAfter(int retryAfterSeconds) {
 /// API). Every call already catches its own errors internally, so a failure
 /// here (iOS, no Play Services, user dismissed the dialog) just means
 /// autofill silently doesn't happen — manual entry is unaffected either way.
-class _ConsentApiSmsRetriever implements SmsRetriever {
+class ConsentApiSmsRetriever implements SmsRetriever {
   @override
   bool get listenForMultipleSms => false;
 
@@ -87,7 +93,7 @@ class _OtpInputSectionState extends State<OtpInputSection>
     with WidgetsBindingObserver {
   final _controller = TextEditingController();
   final _focusNode = FocusNode();
-  final _smsRetriever = _ConsentApiSmsRetriever();
+  final _smsRetriever = ConsentApiSmsRetriever();
   Timer? _ticker;
   Duration _remaining = Duration.zero;
 
@@ -184,7 +190,7 @@ class _OtpInputSectionState extends State<OtpInputSection>
         Directionality(
           textDirection: TextDirection.ltr,
           child: Pinput(
-          length: _otpLength,
+          length: otpLength,
           controller: _controller,
           focusNode: _focusNode,
           autofocus: true,

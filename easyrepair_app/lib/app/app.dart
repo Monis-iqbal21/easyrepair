@@ -486,7 +486,12 @@ class _EasyRepairAppState extends ConsumerState<EasyRepairApp>
     return MaterialApp.router(
       title: 'EasyRepair',
       debugShowCheckedModeBanner: false,
+      // Both brightnesses are built from the same semantic palette — see
+      // core/theme/app_semantic_colors.dart. AppTheme.themeMode is the single
+      // switch between them.
       theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: AppTheme.themeMode,
       routerConfig: router,
       locale: appLocale.locale,
       supportedLocales: appSupportedLocales,

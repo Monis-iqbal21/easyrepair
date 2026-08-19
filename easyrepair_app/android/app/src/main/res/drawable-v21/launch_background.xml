@@ -1,8 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  HandyGo launch screen (API 21-30). Same composition as the pre-21 drawable:
-  the shared fallback colour from values/colors.xml plus the centred logo, so
-  the hand-off into Flutter's welcome screen shows no flash.
+  HandyGo launch screen (API 21-30).
+
+  Composition, deliberately minimal: the startup teal filling the whole
+  window, plus the off-white wrench centred on it. Nothing else - no
+  wordmark, no tagline, no spinner, no card. The wordmark and tagline are
+  real Flutter text on the screen that follows.
+
+  The colour is @color/handygo_splash_background from values/colors.xml, the
+  single place it is defined. Do not inline a hex value here.
+
+  The bitmap is @drawable/handygo_splash_logo, generated from
+  assets/images/logo-only.png at a 120dp square per density bucket, so it is
+  drawn at its natural size and aspect ratio and is never stretched.
 
   On API 31+ this drawable is ignored by the platform in favour of the system
   splash API - see values-v31/styles.xml.

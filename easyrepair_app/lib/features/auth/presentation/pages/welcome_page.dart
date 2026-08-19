@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_semantic_colors.dart';
+import '../../../../core/widgets/handygo_brand_lockup.dart';
 
 /// The logged-out landing screen — HandyGo's branded welcome.
 ///
@@ -14,11 +15,21 @@ import '../../../../core/theme/app_semantic_colors.dart';
 /// An already-authenticated user is dispatched to their home by the router
 /// and never sees this page.
 ///
+/// ## Composition
+///
+/// A full-bleed [AppSemanticColors.primary] canvas carrying the
+/// [HandyGoBrandLockup] — wrench, "HandyGo", "Har maslay ka ustaad" — with
+/// the CTA anchored low. The previous decorative artwork
+/// (`assets/images/background.png`) and the baked-in logo lockup
+/// (`assets/images/handygo_logo.png`) are deliberately not used here: the
+/// wordmark and tagline are now real text, so they scale with the device and
+/// the user's text-size setting.
+///
 /// ## Colour architecture
 ///
 /// Every Flutter-drawn pixel here reads from [AppSemanticColors]. There is
-/// deliberately not a single brand hex literal in this file, so choosing the
-/// final HandyGo palette — or adding a dark theme — is a change to
+/// deliberately not a single brand hex literal in this file, so a palette
+/// change — or the light/dark switch — is a change to
 /// `core/theme/app_semantic_colors.dart` alone. The only literal is
 /// `Colors.transparent` for the status-bar overlay, which is a platform
 /// value ("do not tint the system bar"), not a colour choice.
@@ -29,54 +40,30 @@ class WelcomePage extends StatelessWidget {
   /// hands off to the existing Client/Ustaad role picker.
   static const languageRoute = '/auth/language';
 
-  /// Full-bleed branded artwork. Decoration only — nothing is positioned
-  /// relative to its contents.
-  static const backgroundAsset = 'assets/images/background.png';
-
-  /// The complete lockup: icon, "HandyGo" wordmark, "(Private) Limited" and
-  /// the "Har maslay ka ustaad" tagline. Never rebuilt as Flutter text.
-  static const logoAsset = 'assets/images/handygo_logo.png';
-
-  /// The asset is 1536x1024. Its own transparent padding means the visible
-  /// mark occupies ~75% of that box, which the sizing below accounts for.
-  static const logoAspectRatio = 1536 / 1024;
+  /// The wrench mark. Re-exported from [HandyGoBrandLockup] so the splash
+  /// screen and the tests have one name to reference.
+  static const logoAsset = HandyGoBrandLockup.wrenchAsset;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.semanticColors;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      // The artwork is light, so the OS bars need dark icons. Set here rather
-      // than globally so no other screen's chrome is affected.
+      // The canvas is a dark brand teal, so the OS bars need light icons. Set
+      // here rather than globally so no other screen's chrome is affected.
       value: SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark, // Android
-        statusBarBrightness: Brightness.light, // iOS
-        systemNavigationBarColor: colors.background,
-        systemNavigationBarIconBrightness: Brightness.dark,
+        statusBarIconBrightness: Brightness.light, // Android
+        statusBarBrightness: Brightness.dark, // iOS
+        systemNavigationBarColor: colors.primary,
+        systemNavigationBarIconBrightness: Brightness.light,
       ),
       child: Scaffold(
-        // Shows for the frame or two before the artwork decodes, and behind
-        // any edge the artwork does not cover — never a white/black flash.
-        backgroundColor: colors.background,
-        body: Stack(
-          children: [
-            Positioned.fill(
-              child: Image.asset(
-                backgroundAsset,
-                fit: BoxFit.cover,
-                // The skyline is the distinctive part of the artwork and sits
-                // at the top; anchoring there keeps it intact and lets the
-                // plain lower canvas absorb the crop on shorter/wider screens.
-                alignment: Alignment.topCenter,
-                // Decorative: the page's meaning comes from the logo and the
-                // button, so screen readers should skip it entirely.
-                excludeFromSemantics: true,
-              ),
-            ),
-            SafeArea(child: _WelcomeContent(colors: colors)),
-          ],
-        ),
+        // Fills the WHOLE window, including behind the status/navigation bars,
+        // so SafeArea insets the content without framing the screen in the
+        // page background colour.
+        backgroundColor: colors.primary,
+        body: SafeArea(child: _WelcomeContent(colors: colors)),
       ),
     );
   }
@@ -98,18 +85,9 @@ class _WelcomeContent extends StatelessWidget {
         final sidePadding = maxWidth < 340 ? 20.0 : 28.0;
         final usableWidth = maxWidth - sidePadding * 2;
 
-        // Logo: bounded by BOTH the available width and the available height,
-        // so it can never crowd the button on a short screen nor balloon on a
-        // tablet. `contain` + a fixed AspectRatio keeps it undistorted.
-        final widthCap = (usableWidth * 0.84).clamp(0.0, 420.0);
-        final heightCap = maxHeight * 0.30;
-        final logoWidth =
-            widthCap < heightCap * WelcomePage.logoAspectRatio
-                ? widthCap
-                : heightCap * WelcomePage.logoAspectRatio;
-
-        // Buttons stay a comfortable mobile width even on tablets.
-        final actionWidth = usableWidth > 460.0 ? 460.0 : usableWidth;
+        // The lockup and the CTA stay a comfortable phone width even on a
+        // tablet or a landscape window, rather than stretching edge to edge.
+        final contentWidth = usableWidth > 460.0 ? 460.0 : usableWidth;
 
         // Scroll only kicks in when the content genuinely cannot fit (a very
         // short screen at a very large text scale). Above that threshold the
@@ -127,26 +105,18 @@ class _WelcomeContent extends StatelessWidget {
                   children: [
                     // Top negative space.
                     const Spacer(flex: 4),
-                    Semantics(
-                      label: 'HandyGo',
-                      image: true,
-                      child: SizedBox(
-                        width: logoWidth,
-                        child: AspectRatio(
-                          aspectRatio: WelcomePage.logoAspectRatio,
-                          child: Image.asset(
-                            WelcomePage.logoAsset,
-                            fit: BoxFit.contain,
-                            excludeFromSemantics: true,
-                          ),
-                        ),
+                    SizedBox(
+                      width: contentWidth,
+                      child: HandyGoBrandLockup(
+                        widthBudget: contentWidth,
+                        heightBudget: maxHeight,
                       ),
                     ),
-                    // Larger gap below the logo so it reads slightly above the
-                    // optical centre, with the CTA anchored low.
+                    // Larger gap below the lockup so it reads slightly above
+                    // the optical centre, with the CTA anchored low.
                     const Spacer(flex: 5),
                     SizedBox(
-                      width: actionWidth,
+                      width: contentWidth,
                       child: _ShuruKareinButton(colors: colors),
                     ),
                     SizedBox(height: maxHeight < 620 ? 16 : 28),
@@ -165,16 +135,20 @@ class _WelcomeContent extends StatelessWidget {
 ///
 /// Composed locally rather than reusing `AuthPrimaryButton`: that widget has
 /// no trailing-icon slot and hardcodes its brand colours, and re-styling it
-/// would change every existing auth screen — out of scope here. The colours
-/// below come from [AppSemanticColors], which is the part that matters.
+/// would change every existing auth screen — out of scope here.
+///
+/// Because the page itself is filled with [AppSemanticColors.primary], a
+/// primary-filled button would vanish into it. The inverse pairing is used
+/// instead — a [AppSemanticColors.surface] fill with a `primary` label — which
+/// is the highest-contrast treatment the palette offers in either brightness,
+/// and still names nothing but tokens.
 class _ShuruKareinButton extends StatelessWidget {
   const _ShuruKareinButton({required this.colors});
 
   final AppSemanticColors colors;
 
   // l10n-ignore: Fixed Roman Urdu brand CTA, identical in every supported
-  // language — the same treatment as the "Har maslay ka ustaad" tagline that
-  // is baked into the logo artwork.
+  // language — the same treatment as the "Har maslay ka ustaad" tagline.
   static const _label = 'Shuru karein';
 
   @override
@@ -184,8 +158,8 @@ class _ShuruKareinButton extends StatelessWidget {
       // out of, so Android/iOS Back returns here rather than exiting.
       onPressed: () => context.push(WelcomePage.languageRoute),
       style: ElevatedButton.styleFrom(
-        backgroundColor: colors.primary,
-        foregroundColor: colors.onPrimary,
+        backgroundColor: colors.surface,
+        foregroundColor: colors.primary,
         disabledBackgroundColor: colors.disabled,
         elevation: 0,
         // Grows with the text scale instead of clipping; never below the
@@ -222,7 +196,7 @@ class _ShuruKareinButton extends StatelessWidget {
               size: 22,
               // Inherits the button's foregroundColor, but stated explicitly
               // so the token dependency is visible at the call site.
-              color: colors.onPrimary,
+              color: colors.primary,
             ),
           ),
         ],

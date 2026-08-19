@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!--
-      Dark-mode launch theme. The branded artwork is intentionally the SAME in
-      both modes for now (no dark splash asset exists yet), so this points at
-      the same drawable and the same @color/handygo_splash_background as the
-      light theme. When a dark palette/asset is introduced, override
+      Dark-mode launch theme. HandyGo's native splash is already a dark teal
+      canvas with an off-white mark on it, so it needs no separate dark
+      variant: this points at the same drawable and the same
+      @color/handygo_splash_background as the light theme, and the two modes
+      are intentionally identical. Should that ever change, override
       handygo_splash_background in values-night/colors.xml - that stays the
       single place the colour is decided.
     -->

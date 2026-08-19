@@ -28,14 +28,18 @@
   "@languageOptionEnglishSubtitle": {
     "description": "Supporting line on the English language card"
   },
-  "authRoleQuestion": "What would you like to do on HandyGo?",
+  "authRoleQuestion": "What would you like to do?",
   "@authRoleQuestion": {
     "description": "Role selection screen heading"
   },
-  "authRoleClientTitle": "I need an Ustaad for work at home",
-  "authRoleClientSubtitle": "Book verified Ustaads and get your work done easily.",
-  "authRoleWorkerTitle": "I am an Ustaad and want to find work",
-  "authRoleWorkerSubtitle": "Join HandyGo and find work that matches your skills.",
+  "authRoleSubtitle": "Choose an option",
+  "@authRoleSubtitle": {
+    "description": "Role selection screen supporting line, under the heading"
+  },
+  "authRoleClientTitle": "I need a home service",
+  "authRoleClientSubtitle": "Book an Ustaad for repair, service, or installation.",
+  "authRoleWorkerTitle": "I am an Ustaad",
+  "authRoleWorkerSubtitle": "Register to find and accept jobs.",
   "authWorkerTypeQuestion": "Are you already a HandyGo\nUstaad?",
   "@authWorkerTypeQuestion": {
     "description": "Ustaad new-or-existing screen heading. The line break is deliberate."
@@ -104,6 +108,377 @@
   "authButtonUstaadLogin": "Ustaad Login",
   "authErrorGeneric": "Something went wrong.",
   "authErrorOtpSendFailed": "The OTP could not be sent right now. Continue with your password, or try again shortly.",
+  "authClientLoginHeading": "Welcome Back",
+  "@authClientLoginHeading": {
+    "description": "Client login screen heading"
+  },
+  "authClientLoginSubtitle": "Login with your mobile number and password.",
+  "@authClientLoginSubtitle": {
+    "description": "Client login screen supporting line"
+  },
+  "authClientPasswordShow": "Show",
+  "@authClientPasswordShow": {
+    "description": "In-field action that reveals the typed password"
+  },
+  "authClientForgotPassword": "Forgot Password?",
+  "@authClientForgotPassword": {
+    "description": "Client login link to the password-reset flow"
+  },
+  "authClientLoginButton": "Login",
+  "@authClientLoginButton": {
+    "description": "Client login primary button"
+  },
+  "authClientLoginAction": "Login",
+  "@authClientLoginAction": {
+    "description": "Client registration footer action back to login"
+  },
+  "authClientOtpLoginButton": "Login with OTP",
+  "@authClientOtpLoginButton": {
+    "description": "Client login secondary button opening the OTP login flow"
+  },
+  "authClientLoginWithPassword": "Login with Password",
+  "@authClientLoginWithPassword": {
+    "description": "Client login: switches the page back from OTP mode to password mode"
+  },
+  "authClientNoAccountFound": "No Client account was found for this number. Create an account.",
+  "@authClientNoAccountFound": {
+    "description": "Shown when OTP login is attempted with a number that has no Client account. Deliberately identical for an unknown number and a Worker-owned one, so it cannot be used to probe roles."
+  },
+  "ustaadLoginBrandSubtitle": "Work with HandyGo",
+  "@ustaadLoginBrandSubtitle": {
+    "description": "Supporting line beside the Ustaad header"
+  },
+  "ustaadLoginSubtitle": "Login with your mobile number to find work.",
+  "@ustaadLoginSubtitle": {
+    "description": "Ustaad login supporting line"
+  },
+  "ustaadLoginInfoBox": "Every Ustaad's CNIC is verified. Approval is usually completed within 24 hours after registration.",
+  "@ustaadLoginInfoBox": {
+    "description": "Reassurance box on the Ustaad login screen"
+  },
+  "ustaadLoginNewPrompt": "New Ustaad?",
+  "@ustaadLoginNewPrompt": {
+    "description": "Ustaad login footer prompt before the register action"
+  },
+  "ustaadLoginRegisterAction": "Register",
+  "@ustaadLoginRegisterAction": {
+    "description": "Ustaad login footer action opening registration"
+  },
+  "ustaadRegisterHeader": "Ustaad registration",
+  "@ustaadRegisterHeader": {
+    "description": "Header on Ustaad registration step 1"
+  },
+  "ustaadStepIndicator": "Step {current} / {total}",
+  "@ustaadStepIndicator": {
+    "description": "Progress line under each Ustaad registration heading",
+    "placeholders": { "current": { "type": "int" }, "total": { "type": "int" } }
+  },
+  "ustaadStep1Heading": "Enter your details",
+  "@ustaadStep1Heading": {
+    "description": "Ustaad registration step 1 heading"
+  },
+  "ustaadFullNameLabel": "Full Name \u00b7 As shown on CNIC",
+  "@ustaadFullNameLabel": {
+    "description": "Ustaad registration full-name label"
+  },
+  "ustaadFullNameHint": "For example: Kamran Sheikh",
+  "@ustaadFullNameHint": {
+    "description": "Ustaad registration full-name placeholder"
+  },
+  "ustaadCnicLabel": "CNIC Number",
+  "@ustaadCnicLabel": {
+    "description": "Ustaad registration CNIC label"
+  },
+  "ustaadCreatePasswordLabel": "Create Password",
+  "@ustaadCreatePasswordLabel": {
+    "description": "Ustaad registration password label"
+  },
+  "ustaadSendOtpButton": "Send OTP",
+  "@ustaadSendOtpButton": {
+    "description": "Ustaad registration step 1 primary button"
+  },
+  "ustaadVerificationHeader": "Verification",
+  "@ustaadVerificationHeader": {
+    "description": "Header on the Ustaad OTP and CNIC steps"
+  },
+  "ustaadStep2Heading": "Verify your number",
+  "@ustaadStep2Heading": {
+    "description": "Ustaad registration step 2 heading"
+  },
+  "ustaadStep2Subtitle": "Code sent to +92 {phone} \u00b7 Step 2 / 4",
+  "@ustaadStep2Subtitle": {
+    "description": "Ustaad registration step 2 supporting line",
+    "placeholders": { "phone": { "type": "String" } }
+  },
+  "ustaadVerifyButton": "Verify",
+  "@ustaadVerifyButton": {
+    "description": "Ustaad registration step 2 primary button"
+  },
+  "ustaadStep3Heading": "Profile and work",
+  "@ustaadStep3Heading": {
+    "description": "Ustaad registration step 3 heading"
+  },
+  "ustaadPhotoTitle": "Add your photo",
+  "@ustaadPhotoTitle": {
+    "description": "Ustaad registration profile-photo card title"
+  },
+  "ustaadPhotoSubtitle": "This is the photo customers see",
+  "@ustaadPhotoSubtitle": {
+    "description": "Ustaad registration profile-photo card subtitle"
+  },
+  "ustaadPhotoPlaceholder": "PHOTO",
+  "@ustaadPhotoPlaceholder": {
+    "description": "Placeholder text inside the empty profile-photo circle"
+  },
+  "ustaadPhotoUpload": "Upload",
+  "@ustaadPhotoUpload": {
+    "description": "Ustaad registration profile-photo upload button"
+  },
+  "ustaadSkillsTitle": "What work do you do?",
+  "@ustaadSkillsTitle": {
+    "description": "Ustaad registration skills section title"
+  },
+  "ustaadExperienceTitle": "How many years of experience?",
+  "@ustaadExperienceTitle": {
+    "description": "Ustaad registration experience section title"
+  },
+  "ustaadAddressTitle": "Home address",
+  "@ustaadAddressTitle": {
+    "description": "Ustaad registration home-address section title"
+  },
+  "ustaadAddressSubtitle": "Where you live \u2014 for verification. Customers never see this.",
+  "@ustaadAddressSubtitle": {
+    "description": "Ustaad registration home-address privacy note"
+  },
+  "ustaadAreaLabel": "Area",
+  "@ustaadAreaLabel": {
+    "description": "Ustaad registration address area label"
+  },
+  "ustaadAreaHint": "For example: Saddar",
+  "@ustaadAreaHint": {
+    "description": "Ustaad registration address area placeholder"
+  },
+  "ustaadStreetLabel": "Street",
+  "@ustaadStreetLabel": {
+    "description": "Ustaad registration address street label"
+  },
+  "ustaadHouseLabel": "House / Flat number",
+  "@ustaadHouseLabel": {
+    "description": "Ustaad registration address house label"
+  },
+  "ustaadLandmarkLabel": "Landmark \u00b7 optional",
+  "@ustaadLandmarkLabel": {
+    "description": "Ustaad registration address landmark label"
+  },
+  "ustaadLandmarkHint": "Opposite the mosque",
+  "@ustaadLandmarkHint": {
+    "description": "Ustaad registration address landmark placeholder"
+  },
+  "ustaadStep4Heading": "CNIC verification",
+  "@ustaadStep4Heading": {
+    "description": "Ustaad registration step 4 heading"
+  },
+  "ustaadStep4Subtitle": "Step 4 / 4 \u00b7 customers never see this",
+  "@ustaadStep4Subtitle": {
+    "description": "Ustaad registration step 4 supporting line"
+  },
+  "ustaadCnicFrontTitle": "CNIC front",
+  "@ustaadCnicFrontTitle": {
+    "description": "Ustaad registration CNIC front card title"
+  },
+  "ustaadCnicFrontSubtitle": "Clear photo, whole card",
+  "@ustaadCnicFrontSubtitle": {
+    "description": "Ustaad registration CNIC front card subtitle"
+  },
+  "ustaadCnicBackTitle": "CNIC back",
+  "@ustaadCnicBackTitle": {
+    "description": "Ustaad registration CNIC back card title"
+  },
+  "ustaadCnicBackSubtitle": "The back side",
+  "@ustaadCnicBackSubtitle": {
+    "description": "Ustaad registration CNIC back card subtitle"
+  },
+  "ustaadUploadAction": "UPLOAD",
+  "@ustaadUploadAction": {
+    "description": "Label inside an empty CNIC upload tile"
+  },
+  "ustaadPendingBadge": "Pending",
+  "@ustaadPendingBadge": {
+    "description": "Badge on a CNIC card that has not been uploaded yet"
+  },
+  "ustaadUploadedBadge": "Added",
+  "@ustaadUploadedBadge": {
+    "description": "Badge on a CNIC card that has been uploaded"
+  },
+  "ustaadAgreementsLabel": "AGREEMENTS",
+  "@ustaadAgreementsLabel": {
+    "description": "Section label above the Ustaad agreement cards"
+  },
+  "ustaadReadAction": "Read \u2192",
+  "@ustaadReadAction": {
+    "description": "Opens the full agreement document"
+  },
+  "ustaadSubmitButton": "Submit for Verification",
+  "@ustaadSubmitButton": {
+    "description": "Ustaad registration step 4 primary button"
+  },
+  "workerPendingReviewTitle": "Profile under review",
+  "@workerPendingReviewTitle": {
+    "description": "Title of the calm status card a Worker sees while an admin reviews their submitted profile. Deliberately not a call to action."
+  },
+  "workerPendingReviewBody": "Your details have been submitted for verification. You can start receiving jobs after approval.",
+  "@workerPendingReviewBody": {
+    "description": "Body of the pending-review status card. No time promise."
+  },
+  "ustaadForgotHeading": "Reset Password",
+  "@ustaadForgotHeading": {
+    "description": "Ustaad password-reset step 1 heading"
+  },
+  "ustaadForgotSubtitle": "Enter your registered mobile number.",
+  "@ustaadForgotSubtitle": {
+    "description": "Ustaad password-reset step 1 supporting line"
+  },
+  "ustaadForgotOtpHeading": "Verify Code",
+  "@ustaadForgotOtpHeading": {
+    "description": "Ustaad password-reset OTP step heading"
+  },
+  "ustaadForgotOtpBody": "A code was sent to +92 {phone}.",
+  "@ustaadForgotOtpBody": {
+    "description": "Ustaad password-reset OTP step supporting line",
+    "placeholders": { "phone": { "type": "String" } }
+  },
+  "ustaadForgotNewPasswordHeading": "Create a New Password",
+  "@ustaadForgotNewPasswordHeading": {
+    "description": "Ustaad password-reset new-password step heading"
+  },
+  "ustaadConfirmPasswordLabel": "Confirm Password",
+  "@ustaadConfirmPasswordLabel": {
+    "description": "Ustaad password-reset confirm-password field label"
+  },
+  "ustaadChangePasswordButton": "Change Password",
+  "@ustaadChangePasswordButton": {
+    "description": "Ustaad password-reset primary button"
+  },
+  "ustaadResetSuccessTitle": "Password changed",
+  "@ustaadResetSuccessTitle": {
+    "description": "Ustaad password-reset success heading"
+  },
+  "ustaadResetSuccessBody": "You can now login with your new password.",
+  "@ustaadResetSuccessBody": {
+    "description": "Ustaad password-reset success body"
+  },
+  "ustaadGoToLoginButton": "Go to Login",
+  "@ustaadGoToLoginButton": {
+    "description": "Returns to the login screen after a successful password reset"
+  },
+  "ustaadNewPasswordLabel": "New Password",
+  "@ustaadNewPasswordLabel": {
+    "description": "Ustaad password-reset new-password field label. The Roman Urdu deliberately keeps the English words, unlike the settings screen."
+  },
+  "ustaadAgreementGeneralSummary": "How work is done, punctuality, uniform and ID, and the rate rules.",
+  "@ustaadAgreementGeneralSummary": {
+    "description": "One-line summary under the Ustaad General Agreement card. The binding text is the backend document itself; this only says what it covers."
+  },
+  "ustaadAgreementTradeSummary": "Matched to your trade \u2014 parts, grade and safety rules.",
+  "@ustaadAgreementTradeSummary": {
+    "description": "One-line summary under the Trade Specific Agreement card."
+  },
+  "ustaadAgreementBackgroundSummary": "Permission for CNIC, police verification and reference checks.",
+  "@ustaadAgreementBackgroundSummary": {
+    "description": "One-line summary under the Background Verification Consent card."
+  },
+  "authClientOtpHelp": "An OTP will be sent to your registered mobile number.",
+  "@authClientOtpHelp": {
+    "description": "Helper line under the OTP login button"
+  },
+  "authClientNewHere": "New here?",
+  "@authClientNewHere": {
+    "description": "Client login footer prompt before Create Account"
+  },
+  "authClientRegisterSubtitle": "Create your account once. After that, login with your mobile number and password.",
+  "@authClientRegisterSubtitle": {
+    "description": "Client registration step 1 supporting line"
+  },
+  "authClientCreatePasswordLabel": "Create password",
+  "@authClientCreatePasswordLabel": {
+    "description": "Client registration new-password field label"
+  },
+  "authClientPasswordHint": "At least 8 characters",
+  "@authClientPasswordHint": {
+    "description": "Client registration new-password placeholder"
+  },
+  "authClientConfirmPasswordLabel": "Confirm password",
+  "@authClientConfirmPasswordLabel": {
+    "description": "Client registration confirm-password field label"
+  },
+  "authClientConfirmPasswordHint": "Enter your password again",
+  "@authClientConfirmPasswordHint": {
+    "description": "Client registration confirm-password placeholder"
+  },
+  "authClientAddressNotice": "We do not need your address yet. We will ask for it when you make your first booking.",
+  "@authClientAddressNotice": {
+    "description": "Client registration reassurance box about address"
+  },
+  "authClientHaveAccount": "Already have an account?",
+  "@authClientHaveAccount": {
+    "description": "Client registration footer prompt before the login action"
+  },
+  "authClientVerifyHeading": "Verify Mobile Number",
+  "@authClientVerifyHeading": {
+    "description": "Client registration OTP screen heading"
+  },
+  "authClientResendPrompt": "Didn't receive the code?",
+  "@authClientResendPrompt": {
+    "description": "Client registration OTP resend prompt"
+  },
+  "authClientResendAction": "Resend",
+  "@authClientResendAction": {
+    "description": "Client registration OTP resend action"
+  },
+  "authClientVerifyButton": "Verify & Create Account",
+  "@authClientVerifyButton": {
+    "description": "Client registration OTP primary button"
+  },
+  "authClientReadyHeading": "Your account is ready",
+  "@authClientReadyHeading": {
+    "description": "Client registration success heading"
+  },
+  "authClientReadySubtitle": "Welcome to HandyGo. You can now book a service.",
+  "@authClientReadySubtitle": {
+    "description": "Client registration success supporting line"
+  },
+  "authClientAccountCardLabel": "YOUR ACCOUNT",
+  "@authClientAccountCardLabel": {
+    "description": "Label above the new account details on the success screen"
+  },
+  "authClientRoleCustomer": "Customer",
+  "@authClientRoleCustomer": {
+    "description": "Role shown beside the phone number on the success screen"
+  },
+  "authClientVerifySentTo": "A {count}-digit code was sent to +92 {phone}.",
+  "authClientCreateAccountTitle": "Create Account",
+  "@authClientCreateAccountTitle": {
+    "description": "Client registration heading and the login footer action"
+  },
+  "authClientFullNameLabel": "Full name",
+  "@authClientFullNameLabel": {
+    "description": "Client full-name field label"
+  },
+  "authClientSendOtpButton": "Send OTP",
+  "@authClientSendOtpButton": {
+    "description": "Client registration primary button"
+  },
+  "authClientGoHome": "Go to Home",
+  "@authClientGoHome": {
+    "description": "Client registration success primary button"
+  },
+  "@authClientVerifySentTo": {
+    "description": "Client registration OTP screen supporting line. count is the OTP length the backend actually issues; phone is the national number, already grouped for reading.",
+    "placeholders": {
+      "count": { "type": "int" },
+      "phone": { "type": "String" }
+    }
+  },
   "commonCancel": "Cancel",
   "commonSave": "Save",
   "commonDelete": "Delete",

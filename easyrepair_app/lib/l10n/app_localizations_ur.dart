@@ -31,21 +31,23 @@ class AppLocalizationsUr extends AppLocalizations {
   String get languageOptionEnglishSubtitle => 'پوری ایپ انگریزی میں';
 
   @override
-  String get authRoleQuestion => 'HandyGo پر آپ کیا کرنا چاہتے ہیں؟';
+  String get authRoleQuestion => 'آپ کیا کرنا چاہتے ہیں؟';
 
   @override
-  String get authRoleClientTitle => 'مجھے گھر کے کام کے لیے استاد چاہیے';
+  String get authRoleSubtitle => 'اپنا آپشن منتخب کریں';
+
+  @override
+  String get authRoleClientTitle => 'گھر کا کام کروانا ہے';
 
   @override
   String get authRoleClientSubtitle =>
-      'تصدیق شدہ استاد بک کریں اور اپنا کام آسانی سے کروائیں۔';
+      'مرمت، سروس یا انسٹالیشن کے لیے استاد بک کریں۔';
 
   @override
-  String get authRoleWorkerTitle => 'میں استاد ہوں اور کام حاصل کرنا چاہتا ہوں';
+  String get authRoleWorkerTitle => 'میں استاد ہوں';
 
   @override
-  String get authRoleWorkerSubtitle =>
-      'HandyGo جوائن کریں اور اپنی مہارت کے مطابق کام حاصل کریں۔';
+  String get authRoleWorkerSubtitle => 'کام لینے کے لیے رجسٹر کریں۔';
 
   @override
   String get authWorkerTypeQuestion => 'کیا آپ پہلے سے HandyGo\nاستاد ہیں؟';
@@ -174,6 +176,299 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get authErrorOtpSendFailed =>
       'OTP فی الحال نہیں بھیجا جا سکا۔ پاس ورڈ سے آگے بڑھیں یا تھوڑی دیر بعد دوبارہ کوشش کریں۔';
+
+  @override
+  String get authClientLoginHeading => 'خوش آمدید';
+
+  @override
+  String get authClientLoginSubtitle =>
+      'موبائل نمبر اور پاس ورڈ سے لاگ ان کریں۔';
+
+  @override
+  String get authClientPasswordShow => 'دکھائیں';
+
+  @override
+  String get authClientForgotPassword => 'پاس ورڈ بھول گئے؟';
+
+  @override
+  String get authClientLoginButton => 'لاگ ان';
+
+  @override
+  String get authClientLoginAction => 'لاگ ان کریں';
+
+  @override
+  String get authClientOtpLoginButton => 'OTP سے لاگ ان کریں';
+
+  @override
+  String get authClientLoginWithPassword => 'پاس ورڈ سے لاگ ان کریں';
+
+  @override
+  String get authClientNoAccountFound =>
+      'اس نمبر کا کلائنٹ اکاؤنٹ نہیں ملا۔ اکاؤنٹ بنائیں۔';
+
+  @override
+  String get ustaadLoginBrandSubtitle => 'HandyGo کے ساتھ کام کریں';
+
+  @override
+  String get ustaadLoginSubtitle => 'کام لینے کے لیے اپنے نمبر سے لاگ ان کریں۔';
+
+  @override
+  String get ustaadLoginInfoBox =>
+      'ہر استاد کا شناختی کارڈ تصدیق ہوتا ہے۔ رجسٹریشن کے بعد 24 گھنٹے میں منظوری۔';
+
+  @override
+  String get ustaadLoginNewPrompt => 'نئے استاد ہیں؟';
+
+  @override
+  String get ustaadLoginRegisterAction => 'رجسٹر کریں';
+
+  @override
+  String get ustaadRegisterHeader => 'استاد رجسٹریشن';
+
+  @override
+  String ustaadStepIndicator(int current, int total) {
+    return 'مرحلہ $current / $total';
+  }
+
+  @override
+  String get ustaadStep1Heading => 'اپنی تفصیلات دیں';
+
+  @override
+  String get ustaadFullNameLabel => 'پورا نام · شناختی کارڈ کے مطابق';
+
+  @override
+  String get ustaadFullNameHint => 'مثلاً: کامران شیخ';
+
+  @override
+  String get ustaadCnicLabel => 'شناختی کارڈ نمبر';
+
+  @override
+  String get ustaadCreatePasswordLabel => 'پاس ورڈ بنائیں';
+
+  @override
+  String get ustaadSendOtpButton => 'OTP بھیجیں';
+
+  @override
+  String get ustaadVerificationHeader => 'تصدیق';
+
+  @override
+  String get ustaadStep2Heading => 'اپنا نمبر تصدیق کریں';
+
+  @override
+  String ustaadStep2Subtitle(String phone) {
+    return 'کوڈ +92 $phone پر بھیجا گیا · مرحلہ 2 / 4';
+  }
+
+  @override
+  String get ustaadVerifyButton => 'تصدیق کریں';
+
+  @override
+  String get ustaadStep3Heading => 'پروفائل اور کام';
+
+  @override
+  String get ustaadPhotoTitle => 'اپنی تصویر لگائیں';
+
+  @override
+  String get ustaadPhotoSubtitle => 'گاہک کو یہی تصویر دکھتی ہے';
+
+  @override
+  String get ustaadPhotoPlaceholder => 'تصویر';
+
+  @override
+  String get ustaadPhotoUpload => 'اپ لوڈ';
+
+  @override
+  String get ustaadSkillsTitle => 'آپ کیا کام کرتے ہیں؟';
+
+  @override
+  String get ustaadExperienceTitle => 'کتنے سال کا تجربہ؟';
+
+  @override
+  String get ustaadAddressTitle => 'گھر کا پتہ';
+
+  @override
+  String get ustaadAddressSubtitle =>
+      'جہاں آپ رہتے ہیں — تصدیق کے لیے۔ گاہک کو یہ کبھی نہیں دکھتا۔';
+
+  @override
+  String get ustaadAreaLabel => 'علاقہ';
+
+  @override
+  String get ustaadAreaHint => 'مثلاً: صدر';
+
+  @override
+  String get ustaadStreetLabel => 'گلی';
+
+  @override
+  String get ustaadHouseLabel => 'گھر / فلیٹ نمبر';
+
+  @override
+  String get ustaadLandmarkLabel => 'نشانی · اختیاری';
+
+  @override
+  String get ustaadLandmarkHint => 'مسجد کے سامنے';
+
+  @override
+  String get ustaadStep4Heading => 'شناختی کارڈ کی تصدیق';
+
+  @override
+  String get ustaadStep4Subtitle => 'مرحلہ 4 / 4 · یہ گاہک کو کبھی نہیں دکھتا';
+
+  @override
+  String get ustaadCnicFrontTitle => 'شناختی کارڈ سامنے';
+
+  @override
+  String get ustaadCnicFrontSubtitle => 'صاف تصویر، پورا کارڈ';
+
+  @override
+  String get ustaadCnicBackTitle => 'شناختی کارڈ پیچھے';
+
+  @override
+  String get ustaadCnicBackSubtitle => 'پیچھے کا رخ';
+
+  @override
+  String get ustaadUploadAction => 'اپ لوڈ';
+
+  @override
+  String get ustaadPendingBadge => 'باقی ہے';
+
+  @override
+  String get ustaadUploadedBadge => 'لگ گیا';
+
+  @override
+  String get ustaadAgreementsLabel => 'معاہدے';
+
+  @override
+  String get ustaadReadAction => 'پڑھیں ←';
+
+  @override
+  String get ustaadSubmitButton => 'تصدیق کے لیے بھیجیں';
+
+  @override
+  String get workerPendingReviewTitle => 'پروفائل جائزے میں ہے';
+
+  @override
+  String get workerPendingReviewBody =>
+      'آپ کی تفصیلات تصدیق کے لیے بھیج دی گئی ہیں۔ منظوری کے بعد آپ کام لینا شروع کر سکتے ہیں۔';
+
+  @override
+  String get ustaadForgotHeading => 'پاس ورڈ ری سیٹ کریں';
+
+  @override
+  String get ustaadForgotSubtitle => 'اپنا رجسٹرڈ موبائل نمبر لکھیں۔';
+
+  @override
+  String get ustaadForgotOtpHeading => 'کوڈ کی تصدیق کریں';
+
+  @override
+  String ustaadForgotOtpBody(String phone) {
+    return 'کوڈ +92 $phone پر بھیجا گیا۔';
+  }
+
+  @override
+  String get ustaadForgotNewPasswordHeading => 'نیا پاس ورڈ بنائیں';
+
+  @override
+  String get ustaadConfirmPasswordLabel => 'پاس ورڈ کی تصدیق کریں';
+
+  @override
+  String get ustaadChangePasswordButton => 'پاس ورڈ تبدیل کریں';
+
+  @override
+  String get ustaadResetSuccessTitle => 'پاس ورڈ تبدیل ہو گیا';
+
+  @override
+  String get ustaadResetSuccessBody => 'اب اپنے نئے پاس ورڈ سے لاگ ان کریں۔';
+
+  @override
+  String get ustaadGoToLoginButton => 'لاگ ان پر جائیں';
+
+  @override
+  String get ustaadNewPasswordLabel => 'نیا پاس ورڈ';
+
+  @override
+  String get ustaadAgreementGeneralSummary =>
+      'کام کا طریقہ، وقت کی پابندی، یونیفارم اور شناخت، اور ریٹ کے اصول۔';
+
+  @override
+  String get ustaadAgreementTradeSummary =>
+      'آپ کے کام کے مطابق — پرزے، گریڈ اور حفاظت کے اصول۔';
+
+  @override
+  String get ustaadAgreementBackgroundSummary =>
+      'شناختی کارڈ، پولیس ویریفیکیشن اور حوالہ جات کی جانچ کی اجازت۔';
+
+  @override
+  String get authClientOtpHelp =>
+      'OTP آپ کے رجسٹرڈ موبائل نمبر پر بھیجا جائے گا۔';
+
+  @override
+  String get authClientNewHere => 'نئے ہیں؟';
+
+  @override
+  String get authClientRegisterSubtitle =>
+      'صرف ایک بار۔ اس کے بعد موبائل نمبر اور پاس ورڈ سے لاگ ان کریں۔';
+
+  @override
+  String get authClientCreatePasswordLabel => 'پاس ورڈ بنائیں';
+
+  @override
+  String get authClientPasswordHint => 'کم از کم 8 حروف';
+
+  @override
+  String get authClientConfirmPasswordLabel => 'پاس ورڈ کی تصدیق کریں';
+
+  @override
+  String get authClientConfirmPasswordHint => 'پاس ورڈ دوبارہ لکھیں';
+
+  @override
+  String get authClientAddressNotice =>
+      'ابھی پتہ درکار نہیں۔ پہلی بکنگ کے وقت پوچھیں گے۔';
+
+  @override
+  String get authClientHaveAccount => 'پہلے سے اکاؤنٹ ہے؟';
+
+  @override
+  String get authClientVerifyHeading => 'موبائل نمبر کی تصدیق کریں';
+
+  @override
+  String get authClientResendPrompt => 'کوڈ نہیں ملا؟';
+
+  @override
+  String get authClientResendAction => 'دوبارہ بھیجیں';
+
+  @override
+  String get authClientVerifyButton => 'تصدیق کرکے اکاؤنٹ بنائیں';
+
+  @override
+  String get authClientReadyHeading => 'اکاؤنٹ تیار ہے';
+
+  @override
+  String get authClientReadySubtitle =>
+      'HandyGo میں خوش آمدید۔ اب آپ سروس بک کر سکتے ہیں۔';
+
+  @override
+  String get authClientAccountCardLabel => 'آپ کا اکاؤنٹ';
+
+  @override
+  String get authClientRoleCustomer => 'کسٹمر';
+
+  @override
+  String authClientVerifySentTo(int count, String phone) {
+    return '$count ہندسوں کا کوڈ +92 $phone پر بھیجا گیا۔';
+  }
+
+  @override
+  String get authClientCreateAccountTitle => 'اکاؤنٹ بنائیں';
+
+  @override
+  String get authClientFullNameLabel => 'پورا نام';
+
+  @override
+  String get authClientSendOtpButton => 'OTP بھیجیں';
+
+  @override
+  String get authClientGoHome => 'ہوم پر جائیں';
 
   @override
   String get commonCancel => 'منسوخ کریں';
@@ -3277,22 +3572,23 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get languageOptionEnglishSubtitle => 'Poori application English mein';
 
   @override
-  String get authRoleQuestion => 'HandyGo par aap kya karna chahte hain?';
+  String get authRoleQuestion => 'Aap kya karna chahte hain?';
 
   @override
-  String get authRoleClientTitle => 'Mujhe ghar ke kaam ke liye Ustaad chahiye';
+  String get authRoleSubtitle => 'Apna option select karein';
+
+  @override
+  String get authRoleClientTitle => 'Ghar ka kaam karwana hai';
 
   @override
   String get authRoleClientSubtitle =>
-      'Verified Ustaad book karein aur apna kaam asaani se karwayein.';
+      'Repair, service ya installation ke liye Ustaad book karein.';
 
   @override
-  String get authRoleWorkerTitle =>
-      'Main Ustaad hoon aur kaam hasil karna chahta hoon';
+  String get authRoleWorkerTitle => 'Main Ustaad hoon';
 
   @override
-  String get authRoleWorkerSubtitle =>
-      'HandyGo join karein aur apni skill ke mutabiq kaam hasil karein.';
+  String get authRoleWorkerSubtitle => 'Kaam lene ke liye register karein.';
 
   @override
   String get authWorkerTypeQuestion => 'Aap pehle se HandyGo\nUstaad hain?';
@@ -3343,7 +3639,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get authFieldFullNameShort => 'Pura Naam';
 
   @override
-  String get authHintFullName => 'Apna poora naam likhein';
+  String get authHintFullName => 'Aap ka poora naam';
 
   @override
   String get authFieldMobileNumber => 'Mobile number';
@@ -3426,6 +3722,301 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   @override
   String get authErrorOtpSendFailed =>
       'OTP filhal send nahi ho saka. Password se continue karein ya thori dair baad dobara koshish karein.';
+
+  @override
+  String get authClientLoginHeading => 'Welcome Back';
+
+  @override
+  String get authClientLoginSubtitle =>
+      'Mobile number aur password se Login karein.';
+
+  @override
+  String get authClientPasswordShow => 'Show';
+
+  @override
+  String get authClientForgotPassword => 'Forgot Password?';
+
+  @override
+  String get authClientLoginButton => 'Login';
+
+  @override
+  String get authClientLoginAction => 'Login karein';
+
+  @override
+  String get authClientOtpLoginButton => 'Login with OTP';
+
+  @override
+  String get authClientLoginWithPassword => 'Login with Password';
+
+  @override
+  String get authClientNoAccountFound =>
+      'Is number ka Client account nahi mila. Create Account karein.';
+
+  @override
+  String get ustaadLoginBrandSubtitle => 'HandyGo par kaam lein';
+
+  @override
+  String get ustaadLoginSubtitle =>
+      'Kaam lene ke liye apne number se Login karein.';
+
+  @override
+  String get ustaadLoginInfoBox =>
+      'Har Ustaad ka CNIC verify hota hai. Registration ke baad 24 ghante mein approval.';
+
+  @override
+  String get ustaadLoginNewPrompt => 'Naye Ustaad hain?';
+
+  @override
+  String get ustaadLoginRegisterAction => 'Register karein';
+
+  @override
+  String get ustaadRegisterHeader => 'Ustaad registration';
+
+  @override
+  String ustaadStepIndicator(int current, int total) {
+    return 'Step $current / $total';
+  }
+
+  @override
+  String get ustaadStep1Heading => 'Apni details dein';
+
+  @override
+  String get ustaadFullNameLabel => 'Poora Naam · CNIC ke mutabiq';
+
+  @override
+  String get ustaadFullNameHint => 'Maslan: Kamran Sheikh';
+
+  @override
+  String get ustaadCnicLabel => 'CNIC Number';
+
+  @override
+  String get ustaadCreatePasswordLabel => 'Password banayein';
+
+  @override
+  String get ustaadSendOtpButton => 'OTP bhejein';
+
+  @override
+  String get ustaadVerificationHeader => 'Verification';
+
+  @override
+  String get ustaadStep2Heading => 'Number verify karein';
+
+  @override
+  String ustaadStep2Subtitle(String phone) {
+    return '+92 $phone par code bheja · Step 2 / 4';
+  }
+
+  @override
+  String get ustaadVerifyButton => 'Verify karein';
+
+  @override
+  String get ustaadStep3Heading => 'Profile aur kaam';
+
+  @override
+  String get ustaadPhotoTitle => 'Apni photo lagayein';
+
+  @override
+  String get ustaadPhotoSubtitle => 'Customer ko yehi photo dikhti hai';
+
+  @override
+  String get ustaadPhotoPlaceholder => 'PHOTO';
+
+  @override
+  String get ustaadPhotoUpload => 'Upload';
+
+  @override
+  String get ustaadSkillsTitle => 'Aap kya kaam karte hain?';
+
+  @override
+  String get ustaadExperienceTitle => 'Kitne saal ka tajurba?';
+
+  @override
+  String get ustaadAddressTitle => 'Ghar ka address';
+
+  @override
+  String get ustaadAddressSubtitle =>
+      'Jahan aap rehte hain — verification ke liye. Customer ko ye kabhi nahi dikhta.';
+
+  @override
+  String get ustaadAreaLabel => 'Area';
+
+  @override
+  String get ustaadAreaHint => 'Maslan: Saddar';
+
+  @override
+  String get ustaadStreetLabel => 'Street';
+
+  @override
+  String get ustaadHouseLabel => 'Ghar / Flat number';
+
+  @override
+  String get ustaadLandmarkLabel => 'Nishani · optional';
+
+  @override
+  String get ustaadLandmarkHint => 'Masjid ke saamne';
+
+  @override
+  String get ustaadStep4Heading => 'CNIC verification';
+
+  @override
+  String get ustaadStep4Subtitle =>
+      'Step 4 / 4 · ye customer ko kabhi nahi dikhta';
+
+  @override
+  String get ustaadCnicFrontTitle => 'CNIC front';
+
+  @override
+  String get ustaadCnicFrontSubtitle => 'Saaf tasveer, poora card';
+
+  @override
+  String get ustaadCnicBackTitle => 'CNIC back';
+
+  @override
+  String get ustaadCnicBackSubtitle => 'Peechay ka rukh';
+
+  @override
+  String get ustaadUploadAction => 'UPLOAD';
+
+  @override
+  String get ustaadPendingBadge => 'Baqi hai';
+
+  @override
+  String get ustaadUploadedBadge => 'Lag gaya';
+
+  @override
+  String get ustaadAgreementsLabel => 'AGREEMENTS';
+
+  @override
+  String get ustaadReadAction => 'Parhein →';
+
+  @override
+  String get ustaadSubmitButton => 'Verification ke liye bhejein';
+
+  @override
+  String get workerPendingReviewTitle => 'Profile review mein hai';
+
+  @override
+  String get workerPendingReviewBody =>
+      'Aap ki details verification ke liye bhej di gayi hain. Approval ke baad aap jobs lena shuru kar sakte hain.';
+
+  @override
+  String get ustaadForgotHeading => 'Password reset karein';
+
+  @override
+  String get ustaadForgotSubtitle => 'Apna registered mobile number likhein.';
+
+  @override
+  String get ustaadForgotOtpHeading => 'Code verify karein';
+
+  @override
+  String ustaadForgotOtpBody(String phone) {
+    return '+92 $phone par code bheja gaya.';
+  }
+
+  @override
+  String get ustaadForgotNewPasswordHeading => 'Naya password banayein';
+
+  @override
+  String get ustaadConfirmPasswordLabel => 'Confirm Password';
+
+  @override
+  String get ustaadChangePasswordButton => 'Password change karein';
+
+  @override
+  String get ustaadResetSuccessTitle => 'Password change ho gaya';
+
+  @override
+  String get ustaadResetSuccessBody => 'Ab apne naye password se Login karein.';
+
+  @override
+  String get ustaadGoToLoginButton => 'Login par jayein';
+
+  @override
+  String get ustaadNewPasswordLabel => 'New Password';
+
+  @override
+  String get ustaadAgreementGeneralSummary =>
+      'Kaam ka tareeqa, waqt ki pabandi, uniform aur ID, aur rate ke usool.';
+
+  @override
+  String get ustaadAgreementTradeSummary =>
+      'Aap ke kaam ke mutabiq — parts, grade aur safety ke usool.';
+
+  @override
+  String get ustaadAgreementBackgroundSummary =>
+      'CNIC, police verification aur reference check ki ijazat.';
+
+  @override
+  String get authClientOtpHelp =>
+      'OTP aapke registered mobile number par bheja jayega.';
+
+  @override
+  String get authClientNewHere => 'New here?';
+
+  @override
+  String get authClientRegisterSubtitle =>
+      'Sirf aik dafa. Phir mobile number aur password se Login karein.';
+
+  @override
+  String get authClientCreatePasswordLabel => 'Create password';
+
+  @override
+  String get authClientPasswordHint => 'Kam az kam 8 harf';
+
+  @override
+  String get authClientConfirmPasswordLabel => 'Confirm password';
+
+  @override
+  String get authClientConfirmPasswordHint => 'Password dobara likhein';
+
+  @override
+  String get authClientAddressNotice =>
+      'Address abhi nahi chahiye. Pehli booking ke waqt poochenge.';
+
+  @override
+  String get authClientHaveAccount => 'Pehle se account hai?';
+
+  @override
+  String get authClientVerifyHeading => 'Verify Mobile Number';
+
+  @override
+  String get authClientResendPrompt => 'Code nahi mila?';
+
+  @override
+  String get authClientResendAction => 'Resend';
+
+  @override
+  String get authClientVerifyButton => 'Verify & Create Account';
+
+  @override
+  String get authClientReadyHeading => 'Account ready hai';
+
+  @override
+  String get authClientReadySubtitle =>
+      'Welcome to HandyGo. Ab aap service book kar sakte hain.';
+
+  @override
+  String get authClientAccountCardLabel => 'AAP KA ACCOUNT';
+
+  @override
+  String get authClientRoleCustomer => 'Customer';
+
+  @override
+  String authClientVerifySentTo(int count, String phone) {
+    return '$count-digit code +92 $phone par bheja gaya.';
+  }
+
+  @override
+  String get authClientCreateAccountTitle => 'Create Account';
+
+  @override
+  String get authClientFullNameLabel => 'Full name';
+
+  @override
+  String get authClientSendOtpButton => 'Send OTP';
+
+  @override
+  String get authClientGoHome => 'Go to Home';
 
   @override
   String get commonCancel => 'Cancel';

@@ -25,6 +25,11 @@ class _FakeSecureStorage extends SecureStorageService {
 }
 
 class _FakeAuthRepository implements AuthRepository {
+  int workerOtpVerifyCalls = 0;
+  String? lastWorkerVerifyPhone;
+  String? lastWorkerVerifyOtp;
+  Failure? workerOtpVerifyFailure;
+
   _FakeAuthRepository(this._getCurrentUser);
   final Future<Either<Failure, UserEntity>> Function() _getCurrentUser;
 
@@ -47,6 +52,7 @@ class _FakeAuthRepository implements AuthRepository {
     required String fullName,
     required String phone,
     required String password,
+    required String otp,
   }) => throw UnimplementedError();
 
   @override
@@ -69,18 +75,36 @@ class _FakeAuthRepository implements AuthRepository {
 
   @override
   Future<Either<Failure, AuthTokensEntity>> clientOtpLogin({
-    required String fullName,
     required String phone,
     required String otp,
   }) => throw UnimplementedError();
 
   @override
+  Future<Either<Failure, WorkerRegistrationToken>> workerOtpVerify({
+    required String phone,
+    required String otp,
+  }) async {
+    workerOtpVerifyCalls++;
+    lastWorkerVerifyPhone = phone;
+    lastWorkerVerifyOtp = otp;
+    await Future<void>.delayed(const Duration(milliseconds: 30));
+    if (workerOtpVerifyFailure != null) return Left(workerOtpVerifyFailure!);
+    return Right(
+      WorkerRegistrationToken(
+        token: 'registration.token',
+        expiresAt: DateTime.now().add(const Duration(minutes: 45)),
+      ),
+    );
+  }
+
+  @override
   Future<Either<Failure, AuthTokensEntity>> workerOtpRegister({
     required String fullName,
     required String phone,
-    required String otp,
+    String? otp,
     required String password,
     required String categoryId,
+    String? registrationToken,
   }) => throw UnimplementedError();
 
   @override

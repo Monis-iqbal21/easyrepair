@@ -6,19 +6,19 @@
       layout is not possible, so this is the closest supported match rather
       than a reproduction of the Flutter screen.
 
-      windowSplashScreenAnimatedIcon is deliberately the LAUNCHER icon, not
-      the wide HandyGo wordmark: the platform masks this icon to a circle and
-      only the inner two thirds are guaranteed visible, so a 3:2 wordmark
-      would be clipped. The launcher icon is already drawn for that mask.
-      The full wordmark, tagline and "(Private) Limited" lockup appear
-      immediately afterwards on the Flutter welcome screen.
+      windowSplashScreenAnimatedIcon is @drawable/handygo_splash_icon: the
+      off-white wrench padded to ~66% of a square canvas. The platform masks
+      this icon to a circle and only guarantees the inner two thirds, so the
+      padding is what keeps the wrench whole. It is deliberately the wrench
+      ALONE - no wordmark, no tagline - which is also why it is not the
+      launcher icon.
 
-      The background colour is the shared fallback from values/colors.xml -
-      the single place it is defined. Not duplicated as a hex literal here.
+      The background colour is the shared value from values/colors.xml - the
+      single place it is defined. Not duplicated as a hex literal here.
     -->
     <style name="LaunchTheme" parent="@android:style/Theme.Light.NoTitleBar">
         <item name="android:windowSplashScreenBackground">@color/handygo_splash_background</item>
-        <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/handygo_splash_icon</item>
     </style>
 
     <style name="NormalTheme" parent="@android:style/Theme.Light.NoTitleBar">

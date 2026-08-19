@@ -394,11 +394,11 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(
-          find.text('HandyGo par aap kya karna chahte hain?'),
+          find.text('Aap kya karna chahte hain?'),
           findsOneWidget,
         );
         expect(
-          find.text('What would you like to do on HandyGo?'),
+          find.text('What would you like to do?'),
           findsNothing,
         );
       },
@@ -435,7 +435,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(
-          find.text('HandyGo par aap kya karna chahte hain?'),
+          find.text('Aap kya karna chahte hain?'),
           findsOneWidget,
         );
 
@@ -445,11 +445,11 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(
-          find.text('What would you like to do on HandyGo?'),
+          find.text('What would you like to do?'),
           findsOneWidget,
         );
         expect(
-          find.text('HandyGo par aap kya karna chahte hain?'),
+          find.text('Aap kya karna chahte hain?'),
           findsNothing,
         );
       },

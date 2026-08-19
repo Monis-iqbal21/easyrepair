@@ -556,8 +556,8 @@ void main() {
         storage,
       );
 
+      // Login carries no name — the contract is a phone and a code.
       final result = await repo.clientOtpLogin(
-        fullName: 'Ali Khan',
         phone: '03001234567',
         otp: '123456',
       );

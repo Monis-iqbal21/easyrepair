@@ -676,6 +676,12 @@ class ProfileCompletionNotifier extends AsyncNotifier<void> {
     );
   }
 
+  /// The customer-facing profile photo. Same shape as the document uploads,
+  /// so a failure surfaces through the same AsyncError path.
+  Future<String?> uploadAvatar(File file) => _upload(
+        (repo) => repo.uploadAvatar(file),
+      );
+
   Future<String?> uploadCnicFront(File file) => _upload(
         (repo) => repo.uploadCnicFront(file),
       );

@@ -51,6 +51,9 @@ abstract class WorkerRemoteDatasource {
   /// storage URL is never exposed, so this is the only way to read one.
   Future<List<int>> downloadAgreementPdf(String acceptanceId);
 
+  /// Existing `PATCH /workers/avatar` — the customer-facing profile photo.
+  Future<String> uploadAvatar(File file);
+
   Future<String> uploadCnicFront(File file);
   Future<String> uploadCnicBack(File file);
   Future<String> uploadLiveSelfie(File file);
@@ -260,6 +263,21 @@ class WorkerRemoteDatasourceImpl implements WorkerRemoteDatasource {
     final data = response.data!['data'] as Map<String, dynamic>;
     // Each endpoint returns a differently-named URL field — just take the
     // single value present.
+    return data.values.first as String;
+  }
+
+  @override
+  Future<String> uploadAvatar(File file) async {
+    // PATCH, not POST — the existing endpoint's verb. Same multipart 'file'
+    // field as the document uploads.
+    final formData = FormData.fromMap({
+      'file': await MultipartFile.fromFile(file.path),
+    });
+    final response = await _dio.patch<Map<String, dynamic>>(
+      '/workers/avatar',
+      data: formData,
+    );
+    final data = response.data!['data'] as Map<String, dynamic>;
     return data.values.first as String;
   }
 

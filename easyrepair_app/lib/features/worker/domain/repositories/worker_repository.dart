@@ -29,6 +29,9 @@ abstract class WorkerRepository {
     bool? legalNameConfirmed,
   });
 
+  /// The customer-facing profile photo — existing `PATCH /workers/avatar`.
+  Future<Either<Failure, String>> uploadAvatar(File file);
+
   Future<Either<Failure, String>> uploadCnicFront(File file);
   Future<Either<Failure, String>> uploadCnicBack(File file);
   Future<Either<Failure, String>> uploadLiveSelfie(File file);

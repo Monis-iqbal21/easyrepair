@@ -207,7 +207,12 @@ void main() {
     testWidgets('it is never transliterated', (tester) async {
       for (final locale in AppLocale.values) {
         final l10n = await _l10nFor(tester, locale);
-        expect(l10n.authRoleQuestion, contains('HandyGo'));
+        // authRoleQuestion deliberately no longer names the brand — the
+        // approved role-selection copy is "Aap kya karna chahte hain?" /
+        // "What would you like to do?". authWorkerTypeQuestion is the
+        // brand-carrying heading on the very next screen, so the probe moved
+        // there rather than being dropped.
+        expect(l10n.authWorkerTypeQuestion, contains('HandyGo'));
         expect(l10n.authWorkerTypeNewSubtitle, contains('HandyGo'));
         expect(l10n.chatSupportBanner, contains('HandyGo'));
       }

@@ -1,14 +1,19 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/errors/failure_messages.dart';
-import '../../data/repositories/auth_repository_impl.dart';
-import '../widgets/auth_header.dart';
-import '../widgets/auth_primary_button.dart';
-import '../widgets/auth_text_field.dart';
-import '../widgets/otp_input_section.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
+import '../../../../core/theme/app_semantic_colors.dart';
+import '../../../../l10n/app_localizations.dart';
+import '../../data/repositories/auth_repository_impl.dart';
+import '../widgets/client_auth_widgets.dart';
+import '../widgets/otp_input_section.dart'
+    show otpLength, otpResendCooldownDuration, otpValidityDuration;
+import 'client_login_page.dart' show kPkPhonePattern, validateClientPhone;
+import 'ustaad_login_page.dart';
 
 // ── Providers ─────────────────────────────────────────────────────────────────
 
@@ -38,8 +43,7 @@ class _RequestNotifier extends AutoDisposeAsyncNotifier<DateTime?> {
         await ref.read(authRepositoryProvider).forgotPasswordRequest(phone);
     return result.fold(
       (f) {
-        state = AsyncError<DateTime?>(f, StackTrace.current)
-            .copyWithPrevious(state);
+        state = AsyncError(f, StackTrace.current);
         return false;
       },
       (expiresAt) {
@@ -85,12 +89,28 @@ class _ResetNotifier extends AutoDisposeAsyncNotifier<void> {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
+/// Which part of the reset the screen is showing.
+enum _ResetStage { phone, code, newPassword, done }
+
 /// Ustaad-only password recovery — Client accounts never reach this page
-/// (linked only from the password section of `WorkerLoginPage`) and never
-/// receive a reset OTP even if a Client phone number is entered here (the
-/// backend silently no-ops for non-Worker phones).
+/// (linked only from [UstaadLoginPage]) and never receive a reset OTP even if
+/// a Client phone number is entered here: the backend silently no-ops for
+/// non-Worker phones. Clients have their own page and their own endpoints at
+/// `/auth/client/forgot-password`, so the two roles can never cross over or
+/// return to the wrong login screen.
+///
+/// ## The code is verified by the reset call, not before it
+///
+/// `POST /auth/forgot-password/reset` takes the phone, the code and the new
+/// password together and verifies the code there. This screen therefore shows
+/// the code and the password as two steps for readability, but does not
+/// pretend to have "verified" anything in between — inventing a client-side
+/// verified flag would be a fiction the backend never agreed to. The code is
+/// held only until the single reset call that spends it.
 class ForgotPasswordPage extends ConsumerStatefulWidget {
   const ForgotPasswordPage({super.key});
+
+  static const route = '/forgot-password';
 
   @override
   ConsumerState<ForgotPasswordPage> createState() =>
@@ -99,58 +119,121 @@ class ForgotPasswordPage extends ConsumerStatefulWidget {
 
 class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
   final _phoneKey = GlobalKey<FormState>();
-  final _resetKey = GlobalKey<FormState>();
+  final _passwordKey = GlobalKey<FormState>();
   final _phoneCtrl = TextEditingController();
   final _newPasswordCtrl = TextEditingController();
   final _confirmCtrl = TextEditingController();
 
+  _ResetStage _stage = _ResetStage.phone;
   String _otp = '';
   bool _sendInFlight = false;
   bool _resetInFlight = false;
+  Timer? _ticker;
 
   @override
   void dispose() {
+    _ticker?.cancel();
     _phoneCtrl.dispose();
     _newPasswordCtrl.dispose();
     _confirmCtrl.dispose();
     super.dispose();
   }
 
-  /// Editing the number invalidates the OTP requested for the previous one,
-  /// returning the screen to step 1. State-only — never re-requests a code.
+  // ── Backend-authoritative time ──────────────────────────────────────────
+
+  DateTime? get _expiresAt =>
+      ref.read(_forgotPasswordRequestProvider).valueOrNull;
+
+  Duration get _remaining {
+    final expiresAt = _expiresAt;
+    if (expiresAt == null) return Duration.zero;
+    final left = expiresAt.difference(DateTime.now());
+    return left.isNegative ? Duration.zero : left;
+  }
+
+  bool get _codeLive => _expiresAt != null && _remaining > Duration.zero;
+  bool get _codeExpired => _expiresAt != null && _remaining <= Duration.zero;
+
+  int get _cooldownRemaining {
+    final expiresAt = _expiresAt;
+    if (expiresAt == null) return 0;
+    final requestedAt = expiresAt.subtract(otpValidityDuration);
+    final elapsed = DateTime.now().difference(requestedAt).inSeconds;
+    final left = otpResendCooldownDuration.inSeconds - elapsed;
+    return left > 0 ? left : 0;
+  }
+
+  String get _clock {
+    final minutes = _remaining.inMinutes.toString().padLeft(2, '0');
+    final seconds = (_remaining.inSeconds % 60).toString().padLeft(2, '0');
+    return '$minutes:$seconds';
+  }
+
+  /// Ticks only while something is counting down, and stops itself when
+  /// nothing is.
+  void _syncTicker() {
+    final counting = _remaining > Duration.zero || _cooldownRemaining > 0;
+    if (counting) {
+      _ticker ??= Timer.periodic(const Duration(seconds: 1), (_) {
+        if (!mounted) return;
+        setState(() {});
+        if (_remaining <= Duration.zero && _cooldownRemaining <= 0) {
+          _ticker?.cancel();
+          _ticker = null;
+        }
+      });
+    } else {
+      _ticker?.cancel();
+      _ticker = null;
+    }
+  }
+
+  // ── Actions ─────────────────────────────────────────────────────────────
+
+  /// Editing the number invalidates the code requested for the previous one
+  /// and returns the screen to the phone step. State-only — it never
+  /// re-requests, or correcting one digit would burn an SMS.
   void _onPhoneChanged(String _) {
     if (ref.read(_forgotPasswordRequestProvider).valueOrNull != null) {
       ref.invalidate(_forgotPasswordRequestProvider);
-      setState(() => _otp = '');
+      setState(() {
+        _otp = '';
+        _stage = _ResetStage.phone;
+      });
+      _syncTicker();
     }
   }
 
-  String? _validatePhone(String? value) {
-    if (value == null || value.isEmpty) return context.l10n.authValidationPhoneRequired;
-    if (!RegExp(r'^(\+92|0092|92|0)?[3][0-9]{9}$').hasMatch(value.trim())) {
-      return context.l10n.authValidationPhoneInvalid;
-    }
-    return null;
-  }
-
-  Future<void> _sendCode() async {
-    if (!_phoneKey.currentState!.validate() || _sendInFlight) return;
+  Future<void> _sendCode({bool advance = true}) async {
+    if (_sendInFlight) return;
+    // The phone form only exists on the phone step. A resend from the code
+    // step has nothing left to validate — the number was already accepted to
+    // get here — so a null form state means "already valid", not "invalid".
+    final phoneForm = _phoneKey.currentState;
+    if (phoneForm != null && !phoneForm.validate()) return;
+    if (!kPkPhonePattern.hasMatch(_phoneCtrl.text.trim())) return;
     setState(() => _sendInFlight = true);
     try {
-      await ref
+      final sent = await ref
           .read(_forgotPasswordRequestProvider.notifier)
           .request(_phoneCtrl.text.trim());
+      if (!mounted || !sent) return;
+      setState(() {
+        // A new code always starts from an empty box row.
+        _otp = '';
+        if (advance) _stage = _ResetStage.code;
+      });
+      _syncTicker();
     } finally {
       if (mounted) setState(() => _sendInFlight = false);
     }
   }
 
   Future<void> _resetPassword() async {
-    if (!_resetKey.currentState!.validate() ||
-        _otp.length != 6 ||
-        _resetInFlight) {
-      return;
-    }
+    if (_resetInFlight) return;
+    if (!(_passwordKey.currentState?.validate() ?? false)) return;
+    if (_otp.length != otpLength || !_codeLive) return;
+
     setState(() => _resetInFlight = true);
     try {
       final ok = await ref.read(_forgotPasswordResetProvider.notifier).reset(
@@ -158,192 +241,390 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
             otp: _otp,
             newPassword: _newPasswordCtrl.text,
           );
-      if (ok && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(context.l10n.authPasswordResetSuccess),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-        if (context.canPop()) {
-          context.pop();
-        } else {
-          context.go('/auth/worker/login');
-        }
-      }
+      if (!mounted || !ok) return;
+      setState(() {
+        // Spent. There is nothing left to hold, and the session is
+        // deliberately NOT established — the backend issues no tokens here, so
+        // the Ustaad logs in with the password they just chose.
+        _otp = '';
+        _stage = _ResetStage.done;
+      });
+      _ticker?.cancel();
+      _ticker = null;
     } finally {
       if (mounted) setState(() => _resetInFlight = false);
     }
   }
 
+  /// Back walks the stages rather than the navigator: leaving the code step
+  /// should return to the number, not drop the whole reset. Only the first
+  /// step pops the route.
+  void _back() {
+    switch (_stage) {
+      case _ResetStage.phone:
+        Navigator.of(context).maybePop();
+      case _ResetStage.code:
+        setState(() => _stage = _ResetStage.phone);
+      case _ResetStage.newPassword:
+        setState(() => _stage = _ResetStage.code);
+      case _ResetStage.done:
+        _goToLogin();
+    }
+  }
+
+  void _goToLogin() {
+    // Replace, not pop: the reset is finished, so it must not stay behind the
+    // login screen on the stack.
+    context.go(UstaadLoginPage.route);
+  }
+
+  // ── Build ───────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
     ref.listen(_forgotPasswordRequestProvider, (_, s) {
-      if (s is AsyncError && mounted) {
-        final message = failureMessage(
-          context.l10n,
-          s.error,
-          fallback: context.l10n.authErrorCodeSendFailed,
-        );
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(SnackBar(content: Text(message)));
+      if (s is AsyncError) {
+        _showError(s.error, context.l10n.authErrorCodeSendFailed);
       }
     });
     ref.listen(_forgotPasswordResetProvider, (_, s) {
-      if (s is AsyncError && mounted) {
-        final message = failureMessage(
-          context.l10n,
-          s.error,
-          fallback: context.l10n.authErrorPasswordChangeFailed,
-        );
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(SnackBar(content: Text(message)));
+      if (s is AsyncError) {
+        _showError(s.error, context.l10n.authErrorPasswordChangeFailed);
       }
     });
 
-    final expiresAt = ref.watch(_forgotPasswordRequestProvider).valueOrNull;
-    final showOtp = expiresAt != null;
-    final resetState = ref.watch(_forgotPasswordResetProvider);
-    final hasOtpError = resetState is AsyncError;
+    final l10n = context.l10n;
 
-    final mq = MediaQuery.of(context);
-    final viewInsets = mq.viewInsets.bottom;
-    final isSmall = mq.size.height < 680;
+    return switch (_stage) {
+      _ResetStage.phone => _phoneStep(l10n),
+      _ResetStage.code => _codeStep(l10n),
+      _ResetStage.newPassword => _passwordStep(l10n),
+      _ResetStage.done => _successStep(l10n),
+    };
+  }
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              keyboardDismissBehavior:
-                  ScrollViewKeyboardDismissBehavior.onDrag,
-              padding: EdgeInsets.only(bottom: viewInsets + 24),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 420),
+  Widget _phoneStep(AppLocalizations l10n) {
+    return ClientAuthScaffold(
+      footer: ClientPrimaryButton(
+        label: l10n.ustaadSendOtpButton,
+        isLoading: _sendInFlight,
+        onPressed: kPkPhonePattern.hasMatch(_phoneCtrl.text.trim())
+            ? _sendCode
+            : null,
+      ),
+      child: Form(
+        key: _phoneKey,
+        autovalidateMode: AutovalidateMode.onUserInteraction,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _Heading(
+              title: l10n.ustaadForgotHeading,
+              subtitle: l10n.ustaadForgotSubtitle,
+              onBack: _back,
+            ),
+            const SizedBox(height: 26),
+            ClientFieldLabel(l10n.authFieldMobileNumberTitle),
+            ClientPhoneField(
+              controller: _phoneCtrl,
+              validator: (v) => validateClientPhone(context, v),
+              onChanged: (v) {
+                setState(() {});
+                _onPhoneChanged(v);
+              },
+              textInputAction: TextInputAction.done,
+              onFieldSubmitted: (_) => _sendCode(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _codeStep(AppLocalizations l10n) {
+    final colors = context.semanticColors;
+    final cooldown = _cooldownRemaining;
+
+    return ClientAuthScaffold(
+      footer: ClientPrimaryButton(
+        label: l10n.ustaadVerifyButton,
+        isLoading: false,
+        // Nothing is verified server-side yet — this only carries a complete,
+        // unexpired code forward to the password step, which spends it.
+        onPressed: _otp.length == otpLength && _codeLive
+            ? () => setState(() => _stage = _ResetStage.newPassword)
+            : null,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _Heading(
+            title: l10n.ustaadForgotOtpHeading,
+            subtitle: l10n.ustaadForgotOtpBody(
+              formatPkNationalPhone(_phoneCtrl.text),
+            ),
+            onBack: _back,
+          ),
+          const SizedBox(height: 26),
+          ClientOtpField(
+            // A new request means a new code: rebuilding on the expiry drops
+            // digits typed for the previous one.
+            key: ValueKey(_expiresAt),
+            onChanged: (v) => setState(() => _otp = v),
+            onCompleted: (v) => setState(() => _otp = v),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            _codeExpired ? l10n.authOtpExpired : l10n.authOtpExpiresIn(_clock),
+            style: TextStyle(
+              fontSize: 14,
+              height: 1.4,
+              color: _codeExpired ? colors.error : colors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Text(
+                l10n.authClientResendPrompt,
+                style: TextStyle(fontSize: 15, color: colors.textSecondary),
+              ),
+              const SizedBox(width: 6),
+              if (_sendInFlight)
+                SizedBox(
+                  height: 18,
+                  width: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: colors.primary,
+                  ),
+                )
+              else
+                Semantics(
+                  button: true,
+                  enabled: cooldown == 0,
+                  child: InkWell(
+                    // The backend enforces the cooldown; mirroring it here
+                    // only stops the tap becoming a guaranteed rejection.
+                    onTap: cooldown == 0
+                        ? () => _sendCode(advance: false)
+                        : null,
+                    borderRadius: BorderRadius.circular(8),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          SizedBox(height: isSmall ? 16 : 28),
-                          AuthHeader(
-                            title: showOtp
-                                ? context.l10n.authSetNewPasswordTitle
-                                : context.l10n.authForgotPasswordTitle,
-                            subtitle: showOtp
-                                ? context.l10n.authEnterCodeSentToNumber
-                                : context.l10n.authForgotPasswordWorkerOnly,
-                            isSmall: isSmall,
-                            showBackButton: true,
-                          ),
-                          SizedBox(height: isSmall ? 20 : 32),
-                          // The phone field stays MOUNTED in both steps. It
-                          // used to be removed from the tree once the code was
-                          // sent, which left no way to correct a mistyped
-                          // number without leaving the screen. Editing it
-                          // clears the pending request (see _onPhoneChanged)
-                          // and returns to step 1.
-                          Form(
-                            key: _phoneKey,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                AuthTextField(
-                                  controller: _phoneCtrl,
-                                  label: context.l10n.authForgotPasswordPrompt,
-                                  hint: '03XXXXXXXXX',
-                                  keyboardType: TextInputType.phone,
-                                  prefixIcon: Icons.phone_outlined,
-                                  validator: _validatePhone,
-                                  onChanged: _onPhoneChanged,
-                                ),
-                                if (!showOtp) ...[
-                                  const SizedBox(height: 24),
-                                  AuthPrimaryButton(
-                                    label: context.l10n.authSendOtp,
-                                    isLoading: _sendInFlight,
-                                    onPressed: _sendCode,
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                          if (showOtp)
-                            Form(
-                              key: _resetKey,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  const SizedBox(height: 20),
-                                  OtpInputSection(
-                                    expiresAt: expiresAt,
-                                    hasError: hasOtpError,
-                                    resendInFlight: _sendInFlight,
-                                    onChanged: (v) => setState(() => _otp = v),
-                                    onCompleted: (v) =>
-                                        setState(() => _otp = v),
-                                    onResend: _sendCode,
-                                  ),
-                                  const SizedBox(height: 20),
-                                  AuthTextField(
-                                    controller: _newPasswordCtrl,
-                                    label: context.l10n.generalNewPassword,
-                                    prefixIcon: Icons.lock_outline_rounded,
-                                    obscureText: true,
-                                    validator: (v) {
-                                      if (v == null || v.isEmpty) {
-                                        return context.l10n.authNewPasswordRequired;
-                                      }
-                                      if (v.length < 8) {
-                                        return context.l10n.authValidationPasswordTooShort;
-                                      }
-                                      return null;
-                                    },
-                                  ),
-                                  const SizedBox(height: 14),
-                                  AuthTextField(
-                                    controller: _confirmCtrl,
-                                    label: context.l10n.generalConfirmNewPassword,
-                                    prefixIcon: Icons.lock_outline_rounded,
-                                    obscureText: true,
-                                    textInputAction: TextInputAction.done,
-                                    validator: (v) {
-                                      if (v == null || v.isEmpty) {
-                                        return context.l10n.authValidationConfirmPasswordRequired;
-                                      }
-                                      if (v != _newPasswordCtrl.text) {
-                                        return context.l10n.authValidationPasswordsDoNotMatch;
-                                      }
-                                      return null;
-                                    },
-                                  ),
-                                  const SizedBox(height: 24),
-                                  AuthPrimaryButton(
-                                    label: context.l10n.authConfirmNewPasswordButton,
-                                    isLoading: _resetInFlight,
-                                    onPressed: _otp.length == 6
-                                        ? _resetPassword
-                                        : null,
-                                  ),
-                                ],
-                              ),
-                            ),
-                        ],
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 6,
+                      ),
+                      child: Text(
+                        cooldown == 0
+                            ? l10n.authClientResendAction
+                            : l10n.authOtpResendCooldown(cooldown),
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: cooldown == 0
+                              ? colors.primary
+                              : colors.textSecondary,
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-            );
-          },
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _passwordStep(AppLocalizations l10n) {
+    final canSubmit = _newPasswordCtrl.text.length >= 8 &&
+        _confirmCtrl.text == _newPasswordCtrl.text &&
+        _otp.length == otpLength &&
+        _codeLive;
+
+    return ClientAuthScaffold(
+      footer: ClientPrimaryButton(
+        label: l10n.ustaadChangePasswordButton,
+        isLoading: _resetInFlight,
+        onPressed: canSubmit ? _resetPassword : null,
+      ),
+      child: Form(
+        key: _passwordKey,
+        autovalidateMode: AutovalidateMode.onUserInteraction,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _Heading(
+              title: l10n.ustaadForgotNewPasswordHeading,
+              subtitle: '',
+              onBack: _back,
+            ),
+            const SizedBox(height: 26),
+            ClientFieldLabel(l10n.ustaadNewPasswordLabel),
+            ClientPasswordField(
+              controller: _newPasswordCtrl,
+              hint: l10n.authClientPasswordHint,
+              showLabel: l10n.authClientPasswordShow,
+              validator: (v) {
+                if (v == null || v.isEmpty) {
+                  return l10n.authNewPasswordRequired;
+                }
+                if (v.length < 8) return l10n.authValidationPasswordTooShort;
+                return null;
+              },
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: 18),
+            ClientFieldLabel(l10n.ustaadConfirmPasswordLabel),
+            ClientPasswordField(
+              controller: _confirmCtrl,
+              hint: l10n.authClientConfirmPasswordHint,
+              showLabel: l10n.authClientPasswordShow,
+              textInputAction: TextInputAction.done,
+              validator: (v) {
+                if (v == null || v.isEmpty) {
+                  return l10n.authValidationConfirmPasswordRequired;
+                }
+                if (v != _newPasswordCtrl.text) {
+                  return l10n.authValidationPasswordsDoNotMatch;
+                }
+                return null;
+              },
+              onChanged: (_) => setState(() {}),
+              onFieldSubmitted: (_) => _resetPassword(),
+            ),
+          ],
         ),
       ),
+    );
+  }
+
+  Widget _successStep(AppLocalizations l10n) {
+    final colors = context.semanticColors;
+
+    return ClientAuthScaffold(
+      footer: ClientPrimaryButton(
+        label: l10n.ustaadGoToLoginButton,
+        isLoading: false,
+        onPressed: _goToLogin,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SizedBox(height: 40),
+          Center(
+            child: Container(
+              width: 96,
+              height: 96,
+              decoration: BoxDecoration(
+                color: colors.softTeal,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.check_rounded,
+                size: 48,
+                color: colors.success,
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            l10n.ustaadResetSuccessTitle,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 26,
+              fontWeight: FontWeight.w800,
+              height: 1.2,
+              color: colors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            l10n.ustaadResetSuccessBody,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 15,
+              height: 1.45,
+              color: colors.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showError(Object? error, String fallback) {
+    if (!mounted) return;
+    final message = failureMessage(context.l10n, error, fallback: fallback);
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
+}
+
+/// Back arrow, heading and supporting line — the same block every step opens
+/// with, so the header does not jump between stages.
+class _Heading extends StatelessWidget {
+  const _Heading({
+    required this.title,
+    required this.subtitle,
+    this.onBack,
+  });
+
+  final String title;
+  final String subtitle;
+
+  /// Stage-aware: the reset screen walks its own steps backwards before it
+  /// pops the route. Null falls back to popping.
+  final VoidCallback? onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.semanticColors;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Semantics(
+          button: true,
+          label: MaterialLocalizations.of(context).backButtonTooltip,
+          child: InkResponse(
+            onTap: onBack ?? () => Navigator.of(context).maybePop(),
+            radius: 24,
+            child: Padding(
+              padding: const EdgeInsets.all(8),
+              child: Icon(
+                Icons.arrow_back_rounded,
+                size: 24,
+                color: colors.textPrimary,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 30,
+            fontWeight: FontWeight.w800,
+            height: 1.15,
+            color: colors.textPrimary,
+          ),
+        ),
+        if (subtitle.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          Text(
+            subtitle,
+            style: TextStyle(
+              fontSize: 15,
+              height: 1.45,
+              color: colors.textSecondary,
+            ),
+          ),
+        ],
+      ],
     );
   }
 }

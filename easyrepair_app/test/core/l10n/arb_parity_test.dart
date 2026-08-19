@@ -70,11 +70,55 @@ void main() {
   test('no two English keys carry the same text', () {
     // Duplicate values mean two keys for one meaning — the thing that makes a
     // translation set drift out of sync over time.
+    //
+    // The exceptions below are keys whose ENGLISH coincides but whose Roman
+    // Urdu deliberately does not, so they cannot be collapsed into one key.
+    // The Client auth screens use the approved English loanwords ("Login",
+    // "Send OTP", "Create Account", "Full name", "Go to Home") in Roman Urdu
+    // too, while the Ustaad screens and the shared surfaces keep their
+    // translated wording ("Login Karein", "OTP Bhejein", "Account Banayein",
+    // "Pura Naam", "Home Par Jayein"). Each entry lists exactly which keys may
+    // share that English, so an accidental duplicate is still caught.
+    const allowedDuplicates = <String, Set<String>>{
+      'Login': {'authClientLoginButton', 'authClientLoginAction'},
+      'Create Account': {
+        'authButtonCreateAccount',
+        'authClientCreateAccountTitle',
+      },
+      'Full name': {'authFieldFullNameShort', 'authClientFullNameLabel'},
+      // Three screens, three approved Roman Urdu wordings, one English:
+      // the shared reset button says "OTP Bhejein", the Client one "Send OTP"
+      // and the Ustaad registration CTA "OTP bhejein".
+      'Send OTP': {
+        'authSendOtp',
+        'authClientSendOtpButton',
+        'ustaadSendOtpButton',
+      },
+      'Go to Home': {'commonGoHome', 'authClientGoHome'},
+      // "CNIC Number" as the Ustaad registration field label, against the
+      // profile screen's existing "CNIC number".
+      'CNIC Number': {'workerCnicNumber', 'ustaadCnicLabel'},
+      // A CNIC upload that has not happened yet reads "Baqi hai" in Roman
+      // Urdu; a bid awaiting an answer keeps the loanword "Pending".
+      'Pending': {'bidStatusPending', 'ustaadPendingBadge'},
+      // The reset screen says "Password change karein" / "New Password" in
+      // Roman Urdu; the settings screen keeps its own "Password Change
+      // Karein" / "Naya Password".
+      'Change Password': {'generalChangePassword', 'ustaadChangePasswordButton'},
+      'New Password': {'generalNewPassword', 'ustaadNewPasswordLabel'},
+    };
+
     final byValue = <String, List<String>>{};
     for (final entry in en.entries) {
       byValue.putIfAbsent(entry.value, () => []).add(entry.key);
     }
-    final duplicates = byValue.entries.where((e) => e.value.length > 1).toList();
+    final duplicates = byValue.entries
+        .where((e) => e.value.length > 1)
+        .where((e) {
+          final allowed = allowedDuplicates[e.key];
+          return allowed == null || !allowed.containsAll(e.value);
+        })
+        .toList();
 
     expect(
       duplicates,

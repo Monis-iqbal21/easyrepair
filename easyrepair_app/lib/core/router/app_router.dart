@@ -5,10 +5,16 @@ import 'package:go_router/go_router.dart';
 import '../../features/auth/presentation/pages/language_selection_page.dart';
 import '../../features/auth/presentation/pages/role_selection_page.dart';
 import '../../features/auth/presentation/pages/welcome_page.dart';
-import '../../features/auth/presentation/pages/client_otp_auth_page.dart';
+import '../../features/auth/presentation/pages/client_account_ready_page.dart';
+import '../../features/auth/presentation/pages/client_login_page.dart';
+import '../../features/auth/presentation/pages/client_register_otp_page.dart';
+import '../../features/auth/presentation/pages/client_register_page.dart';
 import '../../features/auth/presentation/pages/worker_type_selection_page.dart';
-import '../../features/auth/presentation/pages/worker_otp_register_page.dart';
-import '../../features/auth/presentation/pages/worker_login_page.dart';
+import '../../features/auth/presentation/pages/ustaad_login_page.dart';
+import '../../features/auth/presentation/pages/ustaad_register_step1_page.dart';
+import '../../features/auth/presentation/pages/ustaad_register_step2_page.dart';
+import '../../features/auth/presentation/pages/ustaad_register_step3_page.dart';
+import '../../features/auth/presentation/pages/ustaad_register_step4_page.dart';
 import '../../features/auth/presentation/pages/forgot_password_page.dart';
 import '../../features/auth/presentation/pages/client_forgot_password_page.dart';
 import '../../features/auth/presentation/providers/auth_providers.dart';
@@ -144,19 +150,64 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/auth/client',
-        builder: (_, __) => const ClientOtpAuthPage(),
+        builder: (_, _) => const ClientLoginPage(),
+      ),
+      GoRoute(
+        // OTP login is a MODE of the Client login page, not a page of its own
+        // — see ClientLoginPage.ClientLoginMode. This path existed briefly as
+        // a separate screen, so it is kept as a redirect rather than removed:
+        // an old deep link still lands on the login screen instead of 404ing.
+        path: '/auth/client/otp-login',
+        redirect: (_, _) => ClientLoginPage.route,
+      ),
+      GoRoute(
+        path: ClientRegisterPage.route,
+        builder: (_, _) => const ClientRegisterPage(),
+      ),
+      GoRoute(
+        path: ClientRegisterOtpPage.route,
+        builder: (_, state) {
+          final draft = state.extra;
+          // Reached without the step-1 values (a deep link, or a process
+          // death that dropped `extra`) there is nothing to verify, so start
+          // the registration over rather than showing an empty OTP screen.
+          if (draft is! ClientRegistrationDraft) {
+            return const ClientRegisterPage();
+          }
+          return ClientRegisterOtpPage(draft: draft);
+        },
+      ),
+      GoRoute(
+        // Under /client, not /auth: by the time this shows the session is
+        // live, and every /auth location dispatches a logged-in user to their
+        // home. No redirect rule changed — see ClientAccountReadyPage.
+        path: ClientAccountReadyPage.route,
+        builder: (_, state) => ClientAccountReadyPage(
+          summary: state.extra is ClientAccountSummary
+              ? state.extra! as ClientAccountSummary
+              : null,
+        ),
       ),
       GoRoute(
         path: '/auth/worker/choice',
         builder: (_, __) => const WorkerTypeSelectionPage(),
       ),
       GoRoute(
-        path: '/auth/worker/register',
-        builder: (_, __) => const WorkerOtpRegisterPage(),
+        path: UstaadRegisterStep1Page.route,
+        builder: (_, _) => const UstaadRegisterStep1Page(),
       ),
       GoRoute(
-        path: '/auth/worker/login',
-        builder: (_, __) => const WorkerLoginPage(),
+        path: UstaadRegisterStep2Page.route,
+        builder: (_, _) => const UstaadRegisterStep2Page(),
+      ),
+      GoRoute(
+        // Entered logged-out; its CTA is what creates the account.
+        path: UstaadRegisterStep3Page.route,
+        builder: (_, _) => const UstaadRegisterStep3Page(),
+      ),
+      GoRoute(
+        path: UstaadLoginPage.route,
+        builder: (_, _) => const UstaadLoginPage(),
       ),
       GoRoute(
         path: '/forgot-password',
@@ -252,6 +303,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/worker/profile',
         builder: (_, __) => const WorkerProfilePage(),
+      ),
+      GoRoute(
+        // The last registration step, reached once the account exists.
+        path: UstaadRegisterStep4Page.route,
+        builder: (_, _) => const UstaadRegisterStep4Page(),
       ),
       GoRoute(
         path: '/worker/profile-completion',

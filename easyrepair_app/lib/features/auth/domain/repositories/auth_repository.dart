@@ -40,12 +40,15 @@ abstract class AuthRepository {
     required String password,
   });
 
-  /// Client password fallback — new account only; created `phoneVerified:
-  /// false` on the backend since no OTP was ever verified for this phone.
+  /// Client REGISTRATION — the only Client auth call that carries a name,
+  /// and the only one that creates an account. The backend verifies [otp]
+  /// before writing anything and creates the account already phone-verified,
+  /// so a rejected code cannot leave a half-registered user behind.
   Future<Either<Failure, AuthTokensEntity>> clientPasswordRegister({
     required String fullName,
     required String phone,
     required String password,
+    required String otp,
   });
 
   /// Client-only password reset OTP request — same authoritative-`expiresAt`
@@ -66,20 +69,37 @@ abstract class AuthRepository {
     required OtpPurpose purpose,
   });
 
-  /// Combined Client login/registration — the backend alone decides whether
-  /// this verifies into a login or a new-account registration.
+  /// Client LOGIN by one-time code — EXISTING Clients only.
+  ///
+  /// Authentication carries no registration data, so there is no name here.
+  /// A number with no Client account, a Worker-owned number and a deleted
+  /// account all fail identically with [FailureCode.phoneNotRegistered];
+  /// nothing is ever created.
   Future<Either<Failure, AuthTokensEntity>> clientOtpLogin({
-    required String fullName,
     required String phone,
     required String otp,
   });
 
+  /// Ustaad registration Step 2 — verifies and CONSUMES the code, returning
+  /// the short-lived token that authorises finishing the registration. No
+  /// account and no session are created here, and the token cannot
+  /// authenticate anything else.
+  Future<Either<Failure, WorkerRegistrationToken>> workerOtpVerify({
+    required String phone,
+    required String otp,
+  });
+
+  /// Creates the Ustaad account. Exactly one proof of the number is required:
+  /// [registrationToken] from Step 2 (what the 4-step flow uses, so the code
+  /// cannot expire while the profile is filled in), or [otp] for the original
+  /// single-call path.
   Future<Either<Failure, AuthTokensEntity>> workerOtpRegister({
     required String fullName,
     required String phone,
-    required String otp,
+    String? otp,
     required String password,
     required String categoryId,
+    String? registrationToken,
   });
 
   Future<Either<Failure, AuthTokensEntity>> workerOtpLogin({

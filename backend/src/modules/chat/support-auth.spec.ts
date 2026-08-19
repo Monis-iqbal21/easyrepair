@@ -55,7 +55,7 @@ describe('Support account cannot be signed into', () => {
 
   it('rejects client OTP login/registration', async () => {
     await expect(
-      service.clientOtpLoginOrRegister('Support', SUPPORT_PHONE, '123456'),
+      service.clientOtpLogin(SUPPORT_PHONE, '123456'),
     ).rejects.toThrow(reject);
   });
 

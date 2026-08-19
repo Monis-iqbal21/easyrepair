@@ -8,7 +8,12 @@ import 'package:handygo_app/features/auth/data/repositories/auth_repository_impl
 import 'package:handygo_app/features/auth/domain/entities/auth_tokens_entity.dart';
 import 'package:handygo_app/features/auth/domain/entities/user_entity.dart';
 import 'package:handygo_app/features/auth/domain/repositories/auth_repository.dart';
-import 'package:handygo_app/features/auth/presentation/pages/worker_login_page.dart';
+import 'package:handygo_app/features/auth/presentation/pages/ustaad_login_page.dart';
+import 'package:handygo_app/features/auth/presentation/pages/ustaad_register_step1_page.dart';
+import 'package:handygo_app/features/auth/presentation/widgets/client_auth_widgets.dart';
+import 'package:handygo_app/core/theme/app_semantic_colors.dart';
+import 'package:handygo_app/core/theme/app_theme.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../support/l10n_test_app.dart';
 
@@ -21,6 +26,11 @@ import '../../../support/l10n_test_app.dart';
 /// registered" copy the Client page shows for the mirror case — never a
 /// role-revealing message, never a "use Client login" redirect.
 class _FakeAuthRepository implements AuthRepository {
+  int workerOtpVerifyCalls = 0;
+  String? lastWorkerVerifyPhone;
+  String? lastWorkerVerifyOtp;
+  Failure? workerOtpVerifyFailure;
+
   Failure? workerOtpLoginFailure;
   Failure? loginFailure;
   Failure? requestOtpFailure;
@@ -94,6 +104,7 @@ class _FakeAuthRepository implements AuthRepository {
     required String fullName,
     required String phone,
     required String password,
+    required String otp,
   }) => throw UnimplementedError();
 
   @override
@@ -110,18 +121,36 @@ class _FakeAuthRepository implements AuthRepository {
 
   @override
   Future<Either<Failure, AuthTokensEntity>> clientOtpLogin({
-    required String fullName,
     required String phone,
     required String otp,
   }) => throw UnimplementedError();
 
   @override
+  Future<Either<Failure, WorkerRegistrationToken>> workerOtpVerify({
+    required String phone,
+    required String otp,
+  }) async {
+    workerOtpVerifyCalls++;
+    lastWorkerVerifyPhone = phone;
+    lastWorkerVerifyOtp = otp;
+    await Future<void>.delayed(const Duration(milliseconds: 30));
+    if (workerOtpVerifyFailure != null) return Left(workerOtpVerifyFailure!);
+    return Right(
+      WorkerRegistrationToken(
+        token: 'registration.token',
+        expiresAt: DateTime.now().add(const Duration(minutes: 45)),
+      ),
+    );
+  }
+
+  @override
   Future<Either<Failure, AuthTokensEntity>> workerOtpRegister({
     required String fullName,
     required String phone,
-    required String otp,
+    String? otp,
     required String password,
     required String categoryId,
+    String? registrationToken,
   }) => throw UnimplementedError();
 
   @override
@@ -156,14 +185,50 @@ class _FakeAuthRepository implements AuthRepository {
   Future<Either<Failure, void>> deleteAccount() => throw UnimplementedError();
 }
 
-Widget _wrap(_FakeAuthRepository repo) {
+Widget _wrap(
+  _FakeAuthRepository repo, {
+  AppLocale locale = AppLocale.romanUrdu,
+  ThemeData? theme,
+}) {
+  final router = GoRouter(
+    initialLocation: UstaadLoginPage.route,
+    routes: [
+      GoRoute(
+        path: UstaadLoginPage.route,
+        builder: (_, _) => const UstaadLoginPage(),
+      ),
+      GoRoute(
+        path: UstaadRegisterStep1Page.route,
+        builder: (_, _) => const Scaffold(body: Text('USTAAD_REGISTER_1')),
+      ),
+      GoRoute(
+        path: '/forgot-password',
+        builder: (_, _) => const Scaffold(body: Text('FORGOT_PASSWORD')),
+      ),
+    ],
+  );
   return ProviderScope(
     overrides: [authRepositoryProvider.overrideWithValue(repo)],
-    child: localizedApp(
-      const WorkerLoginPage(),
-      locale: AppLocale.romanUrdu,
-    ),
+    child: localizedRouterApp(router, locale: locale, theme: theme),
   );
+}
+
+/// Fills the form and taps Login, scrolling it into view first.
+Future<void> _submit(
+  WidgetTester tester, {
+  String phone = '03378372427',
+  String? password = 'password123',
+}) async {
+  await tester.enterText(find.byType(TextFormField).first, phone);
+  if (password != null) {
+    await tester.enterText(find.byType(TextFormField).last, password);
+  }
+  await tester.pump();
+  await tester.ensureVisible(find.text('Login'));
+  await tester.pump();
+  await tester.tap(find.text('Login'), warnIfMissed: false);
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 50));
 }
 
 void main() {
@@ -172,9 +237,11 @@ void main() {
         'OTP login button', (tester) async {
       await tester.pumpWidget(_wrap(_FakeAuthRepository()));
 
-      expect(find.text('OTP Bhejein'), findsNothing);
-      expect(find.text('OTP se login karein'), findsNothing);
+      expect(find.text('OTP bhejein'), findsNothing);
+      expect(find.text('Login with OTP'), findsNothing);
       expect(find.text('Code dobara bhejein'), findsNothing);
+      // And no name/username either — login is authentication only.
+      expect(find.text('Poora Naam · CNIC ke mutabiq'), findsNothing);
       // Phone + password, and no third entry field for a code.
       expect(find.byType(TextFormField), findsNWidgets(2));
     });
@@ -183,12 +250,7 @@ void main() {
       final repo = _FakeAuthRepository();
       await tester.pumpWidget(_wrap(repo));
 
-      await tester.enterText(find.byType(TextFormField).first, '03378372427');
-      await tester.enterText(find.byType(TextFormField).last, 'password123');
-      await tester.ensureVisible(find.text('Password Se Login Karein'));
-      await tester.tap(find.text('Password Se Login Karein'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 50));
+      await _submit(tester);
 
       expect(repo.requestOtpCalls, 0,
           reason: 'no SMS may be sent for an Ustaad login');
@@ -201,12 +263,7 @@ void main() {
       final repo = _FakeAuthRepository();
       await tester.pumpWidget(_wrap(repo));
 
-      await tester.enterText(find.byType(TextFormField).first, '03378372427');
-      await tester.enterText(find.byType(TextFormField).last, 'password123');
-      await tester.ensureVisible(find.text('Password Se Login Karein'));
-      await tester.tap(find.text('Password Se Login Karein'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 50));
+      await _submit(tester);
 
       expect(repo.loginCalls, 1);
       expect(repo.lastLoginPhone, '03378372427');
@@ -223,11 +280,7 @@ void main() {
       final repo = _FakeAuthRepository();
       await tester.pumpWidget(_wrap(repo));
 
-      await tester.enterText(find.byType(TextFormField).first, '03378372427');
-      await tester.ensureVisible(find.text('Password Se Login Karein'));
-      await tester.tap(find.text('Password Se Login Karein'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 50));
+      await _submit(tester, password: null);
 
       expect(repo.loginCalls, 0);
     });
@@ -237,12 +290,7 @@ void main() {
       final repo = _FakeAuthRepository();
       await tester.pumpWidget(_wrap(repo));
 
-      await tester.enterText(find.byType(TextFormField).first, '12345');
-      await tester.enterText(find.byType(TextFormField).last, 'password123');
-      await tester.ensureVisible(find.text('Password Se Login Karein'));
-      await tester.tap(find.text('Password Se Login Karein'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 50));
+      await _submit(tester, phone: '12345');
 
       expect(repo.loginCalls, 0);
     });
@@ -253,12 +301,7 @@ void main() {
         ..loginFailure = const UnauthorizedFailure('');
       await tester.pumpWidget(_wrap(repo));
 
-      await tester.enterText(find.byType(TextFormField).first, '03378372427');
-      await tester.enterText(find.byType(TextFormField).last, 'wrong-password');
-      await tester.ensureVisible(find.text('Password Se Login Karein'));
-      await tester.tap(find.text('Password Se Login Karein'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 50));
+      await _submit(tester, password: 'wrong-password');
 
       expect(repo.loginCalls, 1);
       expect(find.byType(SnackBar), findsOneWidget);
@@ -274,15 +317,145 @@ void main() {
         ..loginFailure = const PhoneNotRegisteredFailure('');
       await tester.pumpWidget(_wrap(repo));
 
-      await tester.enterText(find.byType(TextFormField).first, '03378372427');
-      await tester.enterText(find.byType(TextFormField).last, 'password123');
-      await tester.ensureVisible(find.text('Password Se Login Karein'));
-      await tester.tap(find.text('Password Se Login Karein'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 50));
+      await _submit(tester);
 
       expect(find.text('Ye number registered nahi hai.'), findsOneWidget);
       expect(find.textContaining('Client'), findsNothing);
     },
   );
+
+  group('the Ustaad login screen', () {
+    testWidgets('shows the approved Roman Urdu copy', (tester) async {
+      await tester.pumpWidget(_wrap(_FakeAuthRepository()));
+
+      expect(find.text('Ustaad'), findsOneWidget);
+      expect(find.text('HandyGo par kaam lein'), findsOneWidget);
+      expect(find.text('Ustaad Login'), findsOneWidget);
+      expect(
+        find.text('Kaam lene ke liye apne number se Login karein.'),
+        findsOneWidget,
+      );
+      expect(find.text('Mobile Number'), findsOneWidget);
+      expect(find.text('Forgot Password?'), findsOneWidget);
+      expect(
+        find.text('Har Ustaad ka CNIC verify hota hai. Registration ke baad '
+            '24 ghante mein approval.'),
+        findsOneWidget,
+      );
+      expect(find.text('Naye Ustaad hain?'), findsOneWidget);
+      expect(find.text('Register karein'), findsOneWidget);
+    });
+
+    testWidgets('becomes fully English under the English locale',
+        (tester) async {
+      await tester.pumpWidget(
+        _wrap(_FakeAuthRepository(), locale: AppLocale.english),
+      );
+
+      expect(find.text('Work with HandyGo'), findsOneWidget);
+      expect(
+        find.text('Login with your mobile number to find work.'),
+        findsOneWidget,
+      );
+      expect(find.text('New Ustaad?'), findsOneWidget);
+      expect(find.text('Register'), findsOneWidget);
+      expect(find.text('HandyGo par kaam lein'), findsNothing);
+    });
+
+    testWidgets('keeps Login disabled until phone and password are valid',
+        (tester) async {
+      await tester.pumpWidget(_wrap(_FakeAuthRepository()));
+
+      bool enabled() => tester
+          .widget<ElevatedButton>(find.byType(ElevatedButton).last)
+          .enabled;
+      expect(enabled(), isFalse);
+
+      await tester.enterText(find.byType(TextFormField).first, '0337');
+      await tester.pump();
+      expect(enabled(), isFalse);
+
+      await tester.enterText(find.byType(TextFormField).first, '03378372427');
+      await tester.pump();
+      expect(enabled(), isFalse, reason: 'the password is still empty');
+
+      await tester.enterText(find.byType(TextFormField).last, 'password123');
+      await tester.pump();
+      expect(enabled(), isTrue);
+    });
+
+    testWidgets('Show reveals the password without clearing it',
+        (tester) async {
+      await tester.pumpWidget(_wrap(_FakeAuthRepository()));
+      await tester.enterText(find.byType(TextFormField).last, 'password123');
+      await tester.pump();
+
+      EditableText field() =>
+          tester.widget<EditableText>(find.byType(EditableText).last);
+      expect(field().obscureText, isTrue);
+
+      await tester.tap(find.text('Show'));
+      await tester.pump();
+
+      expect(field().obscureText, isFalse);
+      expect(field().controller.text, 'password123');
+    });
+
+    testWidgets('Forgot Password opens the Ustaad reset flow', (tester) async {
+      await tester.pumpWidget(_wrap(_FakeAuthRepository()));
+
+      await tester.tap(find.text('Forgot Password?'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(find.text('FORGOT_PASSWORD'), findsOneWidget);
+    });
+
+    testWidgets('Register opens registration step 1', (tester) async {
+      await tester.pumpWidget(_wrap(_FakeAuthRepository()));
+
+      await tester.ensureVisible(find.text('Register karein'));
+      await tester.pump();
+      await tester.tap(find.text('Register karein'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(find.text('USTAAD_REGISTER_1'), findsOneWidget);
+    });
+
+    testWidgets('paints from the semantic palette, in both themes',
+        (tester) async {
+      await tester.pumpWidget(_wrap(_FakeAuthRepository()));
+      final context = tester.element(find.byType(UstaadLoginPage));
+      expect(
+        tester.widget<Scaffold>(find.byType(Scaffold)).backgroundColor,
+        context.semanticColors.background,
+      );
+
+      await tester.pumpWidget(
+        _wrap(_FakeAuthRepository(), theme: AppTheme.darkTheme),
+      );
+      // MaterialApp animates theme changes through AnimatedTheme, so the
+      // first frame after a swap is still mid-lerp.
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      expect(tester.takeException(), isNull);
+      expect(
+        tester.widget<Scaffold>(find.byType(Scaffold)).backgroundColor,
+        AppSemanticColors.dark.background,
+      );
+    });
+
+    testWidgets('fits a 320x568 screen', (tester) async {
+      tester.view.physicalSize = const Size(320, 568);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(_wrap(_FakeAuthRepository()));
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(ClientPhoneField), findsOneWidget);
+    });
+  });
 }

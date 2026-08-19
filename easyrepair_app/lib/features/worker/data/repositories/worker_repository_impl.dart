@@ -124,6 +124,17 @@ class WorkerRepositoryImpl implements WorkerRepository {
   }
 
   @override
+  Future<Either<Failure, String>> uploadAvatar(File file) async {
+    try {
+      return Right(await _datasource.uploadAvatar(file));
+    } on DioException catch (e) {
+      return Left(dioExceptionToFailure(e));
+    } catch (e) {
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
+    }
+  }
+
+  @override
   Future<Either<Failure, String>> uploadCnicFront(File file) async {
     try {
       return Right(await _datasource.uploadCnicFront(file));

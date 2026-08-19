@@ -32,21 +32,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get languageOptionEnglishSubtitle => 'Full application in English';
 
   @override
-  String get authRoleQuestion => 'What would you like to do on HandyGo?';
+  String get authRoleQuestion => 'What would you like to do?';
 
   @override
-  String get authRoleClientTitle => 'I need an Ustaad for work at home';
+  String get authRoleSubtitle => 'Choose an option';
+
+  @override
+  String get authRoleClientTitle => 'I need a home service';
 
   @override
   String get authRoleClientSubtitle =>
-      'Book verified Ustaads and get your work done easily.';
+      'Book an Ustaad for repair, service, or installation.';
 
   @override
-  String get authRoleWorkerTitle => 'I am an Ustaad and want to find work';
+  String get authRoleWorkerTitle => 'I am an Ustaad';
 
   @override
-  String get authRoleWorkerSubtitle =>
-      'Join HandyGo and find work that matches your skills.';
+  String get authRoleWorkerSubtitle => 'Register to find and accept jobs.';
 
   @override
   String get authWorkerTypeQuestion => 'Are you already a HandyGo\nUstaad?';
@@ -178,6 +180,301 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get authErrorOtpSendFailed =>
       'The OTP could not be sent right now. Continue with your password, or try again shortly.';
+
+  @override
+  String get authClientLoginHeading => 'Welcome Back';
+
+  @override
+  String get authClientLoginSubtitle =>
+      'Login with your mobile number and password.';
+
+  @override
+  String get authClientPasswordShow => 'Show';
+
+  @override
+  String get authClientForgotPassword => 'Forgot Password?';
+
+  @override
+  String get authClientLoginButton => 'Login';
+
+  @override
+  String get authClientLoginAction => 'Login';
+
+  @override
+  String get authClientOtpLoginButton => 'Login with OTP';
+
+  @override
+  String get authClientLoginWithPassword => 'Login with Password';
+
+  @override
+  String get authClientNoAccountFound =>
+      'No Client account was found for this number. Create an account.';
+
+  @override
+  String get ustaadLoginBrandSubtitle => 'Work with HandyGo';
+
+  @override
+  String get ustaadLoginSubtitle =>
+      'Login with your mobile number to find work.';
+
+  @override
+  String get ustaadLoginInfoBox =>
+      'Every Ustaad\'s CNIC is verified. Approval is usually completed within 24 hours after registration.';
+
+  @override
+  String get ustaadLoginNewPrompt => 'New Ustaad?';
+
+  @override
+  String get ustaadLoginRegisterAction => 'Register';
+
+  @override
+  String get ustaadRegisterHeader => 'Ustaad registration';
+
+  @override
+  String ustaadStepIndicator(int current, int total) {
+    return 'Step $current / $total';
+  }
+
+  @override
+  String get ustaadStep1Heading => 'Enter your details';
+
+  @override
+  String get ustaadFullNameLabel => 'Full Name · As shown on CNIC';
+
+  @override
+  String get ustaadFullNameHint => 'For example: Kamran Sheikh';
+
+  @override
+  String get ustaadCnicLabel => 'CNIC Number';
+
+  @override
+  String get ustaadCreatePasswordLabel => 'Create Password';
+
+  @override
+  String get ustaadSendOtpButton => 'Send OTP';
+
+  @override
+  String get ustaadVerificationHeader => 'Verification';
+
+  @override
+  String get ustaadStep2Heading => 'Verify your number';
+
+  @override
+  String ustaadStep2Subtitle(String phone) {
+    return 'Code sent to +92 $phone · Step 2 / 4';
+  }
+
+  @override
+  String get ustaadVerifyButton => 'Verify';
+
+  @override
+  String get ustaadStep3Heading => 'Profile and work';
+
+  @override
+  String get ustaadPhotoTitle => 'Add your photo';
+
+  @override
+  String get ustaadPhotoSubtitle => 'This is the photo customers see';
+
+  @override
+  String get ustaadPhotoPlaceholder => 'PHOTO';
+
+  @override
+  String get ustaadPhotoUpload => 'Upload';
+
+  @override
+  String get ustaadSkillsTitle => 'What work do you do?';
+
+  @override
+  String get ustaadExperienceTitle => 'How many years of experience?';
+
+  @override
+  String get ustaadAddressTitle => 'Home address';
+
+  @override
+  String get ustaadAddressSubtitle =>
+      'Where you live — for verification. Customers never see this.';
+
+  @override
+  String get ustaadAreaLabel => 'Area';
+
+  @override
+  String get ustaadAreaHint => 'For example: Saddar';
+
+  @override
+  String get ustaadStreetLabel => 'Street';
+
+  @override
+  String get ustaadHouseLabel => 'House / Flat number';
+
+  @override
+  String get ustaadLandmarkLabel => 'Landmark · optional';
+
+  @override
+  String get ustaadLandmarkHint => 'Opposite the mosque';
+
+  @override
+  String get ustaadStep4Heading => 'CNIC verification';
+
+  @override
+  String get ustaadStep4Subtitle => 'Step 4 / 4 · customers never see this';
+
+  @override
+  String get ustaadCnicFrontTitle => 'CNIC front';
+
+  @override
+  String get ustaadCnicFrontSubtitle => 'Clear photo, whole card';
+
+  @override
+  String get ustaadCnicBackTitle => 'CNIC back';
+
+  @override
+  String get ustaadCnicBackSubtitle => 'The back side';
+
+  @override
+  String get ustaadUploadAction => 'UPLOAD';
+
+  @override
+  String get ustaadPendingBadge => 'Pending';
+
+  @override
+  String get ustaadUploadedBadge => 'Added';
+
+  @override
+  String get ustaadAgreementsLabel => 'AGREEMENTS';
+
+  @override
+  String get ustaadReadAction => 'Read →';
+
+  @override
+  String get ustaadSubmitButton => 'Submit for Verification';
+
+  @override
+  String get workerPendingReviewTitle => 'Profile under review';
+
+  @override
+  String get workerPendingReviewBody =>
+      'Your details have been submitted for verification. You can start receiving jobs after approval.';
+
+  @override
+  String get ustaadForgotHeading => 'Reset Password';
+
+  @override
+  String get ustaadForgotSubtitle => 'Enter your registered mobile number.';
+
+  @override
+  String get ustaadForgotOtpHeading => 'Verify Code';
+
+  @override
+  String ustaadForgotOtpBody(String phone) {
+    return 'A code was sent to +92 $phone.';
+  }
+
+  @override
+  String get ustaadForgotNewPasswordHeading => 'Create a New Password';
+
+  @override
+  String get ustaadConfirmPasswordLabel => 'Confirm Password';
+
+  @override
+  String get ustaadChangePasswordButton => 'Change Password';
+
+  @override
+  String get ustaadResetSuccessTitle => 'Password changed';
+
+  @override
+  String get ustaadResetSuccessBody =>
+      'You can now login with your new password.';
+
+  @override
+  String get ustaadGoToLoginButton => 'Go to Login';
+
+  @override
+  String get ustaadNewPasswordLabel => 'New Password';
+
+  @override
+  String get ustaadAgreementGeneralSummary =>
+      'How work is done, punctuality, uniform and ID, and the rate rules.';
+
+  @override
+  String get ustaadAgreementTradeSummary =>
+      'Matched to your trade — parts, grade and safety rules.';
+
+  @override
+  String get ustaadAgreementBackgroundSummary =>
+      'Permission for CNIC, police verification and reference checks.';
+
+  @override
+  String get authClientOtpHelp =>
+      'An OTP will be sent to your registered mobile number.';
+
+  @override
+  String get authClientNewHere => 'New here?';
+
+  @override
+  String get authClientRegisterSubtitle =>
+      'Create your account once. After that, login with your mobile number and password.';
+
+  @override
+  String get authClientCreatePasswordLabel => 'Create password';
+
+  @override
+  String get authClientPasswordHint => 'At least 8 characters';
+
+  @override
+  String get authClientConfirmPasswordLabel => 'Confirm password';
+
+  @override
+  String get authClientConfirmPasswordHint => 'Enter your password again';
+
+  @override
+  String get authClientAddressNotice =>
+      'We do not need your address yet. We will ask for it when you make your first booking.';
+
+  @override
+  String get authClientHaveAccount => 'Already have an account?';
+
+  @override
+  String get authClientVerifyHeading => 'Verify Mobile Number';
+
+  @override
+  String get authClientResendPrompt => 'Didn\'t receive the code?';
+
+  @override
+  String get authClientResendAction => 'Resend';
+
+  @override
+  String get authClientVerifyButton => 'Verify & Create Account';
+
+  @override
+  String get authClientReadyHeading => 'Your account is ready';
+
+  @override
+  String get authClientReadySubtitle =>
+      'Welcome to HandyGo. You can now book a service.';
+
+  @override
+  String get authClientAccountCardLabel => 'YOUR ACCOUNT';
+
+  @override
+  String get authClientRoleCustomer => 'Customer';
+
+  @override
+  String authClientVerifySentTo(int count, String phone) {
+    return 'A $count-digit code was sent to +92 $phone.';
+  }
+
+  @override
+  String get authClientCreateAccountTitle => 'Create Account';
+
+  @override
+  String get authClientFullNameLabel => 'Full name';
+
+  @override
+  String get authClientSendOtpButton => 'Send OTP';
+
+  @override
+  String get authClientGoHome => 'Go to Home';
 
   @override
   String get commonCancel => 'Cancel';

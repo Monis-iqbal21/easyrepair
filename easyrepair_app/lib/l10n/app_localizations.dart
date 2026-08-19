@@ -144,31 +144,37 @@ abstract class AppLocalizations {
   /// Role selection screen heading
   ///
   /// In en, this message translates to:
-  /// **'What would you like to do on HandyGo?'**
+  /// **'What would you like to do?'**
   String get authRoleQuestion;
+
+  /// Role selection screen supporting line, under the heading
+  ///
+  /// In en, this message translates to:
+  /// **'Choose an option'**
+  String get authRoleSubtitle;
 
   /// No description provided for @authRoleClientTitle.
   ///
   /// In en, this message translates to:
-  /// **'I need an Ustaad for work at home'**
+  /// **'I need a home service'**
   String get authRoleClientTitle;
 
   /// No description provided for @authRoleClientSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Book verified Ustaads and get your work done easily.'**
+  /// **'Book an Ustaad for repair, service, or installation.'**
   String get authRoleClientSubtitle;
 
   /// No description provided for @authRoleWorkerTitle.
   ///
   /// In en, this message translates to:
-  /// **'I am an Ustaad and want to find work'**
+  /// **'I am an Ustaad'**
   String get authRoleWorkerTitle;
 
   /// No description provided for @authRoleWorkerSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Join HandyGo and find work that matches your skills.'**
+  /// **'Register to find and accept jobs.'**
   String get authRoleWorkerSubtitle;
 
   /// Ustaad new-or-existing screen heading. The line break is deliberate.
@@ -404,6 +410,552 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The OTP could not be sent right now. Continue with your password, or try again shortly.'**
   String get authErrorOtpSendFailed;
+
+  /// Client login screen heading
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome Back'**
+  String get authClientLoginHeading;
+
+  /// Client login screen supporting line
+  ///
+  /// In en, this message translates to:
+  /// **'Login with your mobile number and password.'**
+  String get authClientLoginSubtitle;
+
+  /// In-field action that reveals the typed password
+  ///
+  /// In en, this message translates to:
+  /// **'Show'**
+  String get authClientPasswordShow;
+
+  /// Client login link to the password-reset flow
+  ///
+  /// In en, this message translates to:
+  /// **'Forgot Password?'**
+  String get authClientForgotPassword;
+
+  /// Client login primary button
+  ///
+  /// In en, this message translates to:
+  /// **'Login'**
+  String get authClientLoginButton;
+
+  /// Client registration footer action back to login
+  ///
+  /// In en, this message translates to:
+  /// **'Login'**
+  String get authClientLoginAction;
+
+  /// Client login secondary button opening the OTP login flow
+  ///
+  /// In en, this message translates to:
+  /// **'Login with OTP'**
+  String get authClientOtpLoginButton;
+
+  /// Client login: switches the page back from OTP mode to password mode
+  ///
+  /// In en, this message translates to:
+  /// **'Login with Password'**
+  String get authClientLoginWithPassword;
+
+  /// Shown when OTP login is attempted with a number that has no Client account. Deliberately identical for an unknown number and a Worker-owned one, so it cannot be used to probe roles.
+  ///
+  /// In en, this message translates to:
+  /// **'No Client account was found for this number. Create an account.'**
+  String get authClientNoAccountFound;
+
+  /// Supporting line beside the Ustaad header
+  ///
+  /// In en, this message translates to:
+  /// **'Work with HandyGo'**
+  String get ustaadLoginBrandSubtitle;
+
+  /// Ustaad login supporting line
+  ///
+  /// In en, this message translates to:
+  /// **'Login with your mobile number to find work.'**
+  String get ustaadLoginSubtitle;
+
+  /// Reassurance box on the Ustaad login screen
+  ///
+  /// In en, this message translates to:
+  /// **'Every Ustaad\'s CNIC is verified. Approval is usually completed within 24 hours after registration.'**
+  String get ustaadLoginInfoBox;
+
+  /// Ustaad login footer prompt before the register action
+  ///
+  /// In en, this message translates to:
+  /// **'New Ustaad?'**
+  String get ustaadLoginNewPrompt;
+
+  /// Ustaad login footer action opening registration
+  ///
+  /// In en, this message translates to:
+  /// **'Register'**
+  String get ustaadLoginRegisterAction;
+
+  /// Header on Ustaad registration step 1
+  ///
+  /// In en, this message translates to:
+  /// **'Ustaad registration'**
+  String get ustaadRegisterHeader;
+
+  /// Progress line under each Ustaad registration heading
+  ///
+  /// In en, this message translates to:
+  /// **'Step {current} / {total}'**
+  String ustaadStepIndicator(int current, int total);
+
+  /// Ustaad registration step 1 heading
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your details'**
+  String get ustaadStep1Heading;
+
+  /// Ustaad registration full-name label
+  ///
+  /// In en, this message translates to:
+  /// **'Full Name · As shown on CNIC'**
+  String get ustaadFullNameLabel;
+
+  /// Ustaad registration full-name placeholder
+  ///
+  /// In en, this message translates to:
+  /// **'For example: Kamran Sheikh'**
+  String get ustaadFullNameHint;
+
+  /// Ustaad registration CNIC label
+  ///
+  /// In en, this message translates to:
+  /// **'CNIC Number'**
+  String get ustaadCnicLabel;
+
+  /// Ustaad registration password label
+  ///
+  /// In en, this message translates to:
+  /// **'Create Password'**
+  String get ustaadCreatePasswordLabel;
+
+  /// Ustaad registration step 1 primary button
+  ///
+  /// In en, this message translates to:
+  /// **'Send OTP'**
+  String get ustaadSendOtpButton;
+
+  /// Header on the Ustaad OTP and CNIC steps
+  ///
+  /// In en, this message translates to:
+  /// **'Verification'**
+  String get ustaadVerificationHeader;
+
+  /// Ustaad registration step 2 heading
+  ///
+  /// In en, this message translates to:
+  /// **'Verify your number'**
+  String get ustaadStep2Heading;
+
+  /// Ustaad registration step 2 supporting line
+  ///
+  /// In en, this message translates to:
+  /// **'Code sent to +92 {phone} · Step 2 / 4'**
+  String ustaadStep2Subtitle(String phone);
+
+  /// Ustaad registration step 2 primary button
+  ///
+  /// In en, this message translates to:
+  /// **'Verify'**
+  String get ustaadVerifyButton;
+
+  /// Ustaad registration step 3 heading
+  ///
+  /// In en, this message translates to:
+  /// **'Profile and work'**
+  String get ustaadStep3Heading;
+
+  /// Ustaad registration profile-photo card title
+  ///
+  /// In en, this message translates to:
+  /// **'Add your photo'**
+  String get ustaadPhotoTitle;
+
+  /// Ustaad registration profile-photo card subtitle
+  ///
+  /// In en, this message translates to:
+  /// **'This is the photo customers see'**
+  String get ustaadPhotoSubtitle;
+
+  /// Placeholder text inside the empty profile-photo circle
+  ///
+  /// In en, this message translates to:
+  /// **'PHOTO'**
+  String get ustaadPhotoPlaceholder;
+
+  /// Ustaad registration profile-photo upload button
+  ///
+  /// In en, this message translates to:
+  /// **'Upload'**
+  String get ustaadPhotoUpload;
+
+  /// Ustaad registration skills section title
+  ///
+  /// In en, this message translates to:
+  /// **'What work do you do?'**
+  String get ustaadSkillsTitle;
+
+  /// Ustaad registration experience section title
+  ///
+  /// In en, this message translates to:
+  /// **'How many years of experience?'**
+  String get ustaadExperienceTitle;
+
+  /// Ustaad registration home-address section title
+  ///
+  /// In en, this message translates to:
+  /// **'Home address'**
+  String get ustaadAddressTitle;
+
+  /// Ustaad registration home-address privacy note
+  ///
+  /// In en, this message translates to:
+  /// **'Where you live — for verification. Customers never see this.'**
+  String get ustaadAddressSubtitle;
+
+  /// Ustaad registration address area label
+  ///
+  /// In en, this message translates to:
+  /// **'Area'**
+  String get ustaadAreaLabel;
+
+  /// Ustaad registration address area placeholder
+  ///
+  /// In en, this message translates to:
+  /// **'For example: Saddar'**
+  String get ustaadAreaHint;
+
+  /// Ustaad registration address street label
+  ///
+  /// In en, this message translates to:
+  /// **'Street'**
+  String get ustaadStreetLabel;
+
+  /// Ustaad registration address house label
+  ///
+  /// In en, this message translates to:
+  /// **'House / Flat number'**
+  String get ustaadHouseLabel;
+
+  /// Ustaad registration address landmark label
+  ///
+  /// In en, this message translates to:
+  /// **'Landmark · optional'**
+  String get ustaadLandmarkLabel;
+
+  /// Ustaad registration address landmark placeholder
+  ///
+  /// In en, this message translates to:
+  /// **'Opposite the mosque'**
+  String get ustaadLandmarkHint;
+
+  /// Ustaad registration step 4 heading
+  ///
+  /// In en, this message translates to:
+  /// **'CNIC verification'**
+  String get ustaadStep4Heading;
+
+  /// Ustaad registration step 4 supporting line
+  ///
+  /// In en, this message translates to:
+  /// **'Step 4 / 4 · customers never see this'**
+  String get ustaadStep4Subtitle;
+
+  /// Ustaad registration CNIC front card title
+  ///
+  /// In en, this message translates to:
+  /// **'CNIC front'**
+  String get ustaadCnicFrontTitle;
+
+  /// Ustaad registration CNIC front card subtitle
+  ///
+  /// In en, this message translates to:
+  /// **'Clear photo, whole card'**
+  String get ustaadCnicFrontSubtitle;
+
+  /// Ustaad registration CNIC back card title
+  ///
+  /// In en, this message translates to:
+  /// **'CNIC back'**
+  String get ustaadCnicBackTitle;
+
+  /// Ustaad registration CNIC back card subtitle
+  ///
+  /// In en, this message translates to:
+  /// **'The back side'**
+  String get ustaadCnicBackSubtitle;
+
+  /// Label inside an empty CNIC upload tile
+  ///
+  /// In en, this message translates to:
+  /// **'UPLOAD'**
+  String get ustaadUploadAction;
+
+  /// Badge on a CNIC card that has not been uploaded yet
+  ///
+  /// In en, this message translates to:
+  /// **'Pending'**
+  String get ustaadPendingBadge;
+
+  /// Badge on a CNIC card that has been uploaded
+  ///
+  /// In en, this message translates to:
+  /// **'Added'**
+  String get ustaadUploadedBadge;
+
+  /// Section label above the Ustaad agreement cards
+  ///
+  /// In en, this message translates to:
+  /// **'AGREEMENTS'**
+  String get ustaadAgreementsLabel;
+
+  /// Opens the full agreement document
+  ///
+  /// In en, this message translates to:
+  /// **'Read →'**
+  String get ustaadReadAction;
+
+  /// Ustaad registration step 4 primary button
+  ///
+  /// In en, this message translates to:
+  /// **'Submit for Verification'**
+  String get ustaadSubmitButton;
+
+  /// Title of the calm status card a Worker sees while an admin reviews their submitted profile. Deliberately not a call to action.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile under review'**
+  String get workerPendingReviewTitle;
+
+  /// Body of the pending-review status card. No time promise.
+  ///
+  /// In en, this message translates to:
+  /// **'Your details have been submitted for verification. You can start receiving jobs after approval.'**
+  String get workerPendingReviewBody;
+
+  /// Ustaad password-reset step 1 heading
+  ///
+  /// In en, this message translates to:
+  /// **'Reset Password'**
+  String get ustaadForgotHeading;
+
+  /// Ustaad password-reset step 1 supporting line
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your registered mobile number.'**
+  String get ustaadForgotSubtitle;
+
+  /// Ustaad password-reset OTP step heading
+  ///
+  /// In en, this message translates to:
+  /// **'Verify Code'**
+  String get ustaadForgotOtpHeading;
+
+  /// Ustaad password-reset OTP step supporting line
+  ///
+  /// In en, this message translates to:
+  /// **'A code was sent to +92 {phone}.'**
+  String ustaadForgotOtpBody(String phone);
+
+  /// Ustaad password-reset new-password step heading
+  ///
+  /// In en, this message translates to:
+  /// **'Create a New Password'**
+  String get ustaadForgotNewPasswordHeading;
+
+  /// Ustaad password-reset confirm-password field label
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Password'**
+  String get ustaadConfirmPasswordLabel;
+
+  /// Ustaad password-reset primary button
+  ///
+  /// In en, this message translates to:
+  /// **'Change Password'**
+  String get ustaadChangePasswordButton;
+
+  /// Ustaad password-reset success heading
+  ///
+  /// In en, this message translates to:
+  /// **'Password changed'**
+  String get ustaadResetSuccessTitle;
+
+  /// Ustaad password-reset success body
+  ///
+  /// In en, this message translates to:
+  /// **'You can now login with your new password.'**
+  String get ustaadResetSuccessBody;
+
+  /// Returns to the login screen after a successful password reset
+  ///
+  /// In en, this message translates to:
+  /// **'Go to Login'**
+  String get ustaadGoToLoginButton;
+
+  /// Ustaad password-reset new-password field label. The Roman Urdu deliberately keeps the English words, unlike the settings screen.
+  ///
+  /// In en, this message translates to:
+  /// **'New Password'**
+  String get ustaadNewPasswordLabel;
+
+  /// One-line summary under the Ustaad General Agreement card. The binding text is the backend document itself; this only says what it covers.
+  ///
+  /// In en, this message translates to:
+  /// **'How work is done, punctuality, uniform and ID, and the rate rules.'**
+  String get ustaadAgreementGeneralSummary;
+
+  /// One-line summary under the Trade Specific Agreement card.
+  ///
+  /// In en, this message translates to:
+  /// **'Matched to your trade — parts, grade and safety rules.'**
+  String get ustaadAgreementTradeSummary;
+
+  /// One-line summary under the Background Verification Consent card.
+  ///
+  /// In en, this message translates to:
+  /// **'Permission for CNIC, police verification and reference checks.'**
+  String get ustaadAgreementBackgroundSummary;
+
+  /// Helper line under the OTP login button
+  ///
+  /// In en, this message translates to:
+  /// **'An OTP will be sent to your registered mobile number.'**
+  String get authClientOtpHelp;
+
+  /// Client login footer prompt before Create Account
+  ///
+  /// In en, this message translates to:
+  /// **'New here?'**
+  String get authClientNewHere;
+
+  /// Client registration step 1 supporting line
+  ///
+  /// In en, this message translates to:
+  /// **'Create your account once. After that, login with your mobile number and password.'**
+  String get authClientRegisterSubtitle;
+
+  /// Client registration new-password field label
+  ///
+  /// In en, this message translates to:
+  /// **'Create password'**
+  String get authClientCreatePasswordLabel;
+
+  /// Client registration new-password placeholder
+  ///
+  /// In en, this message translates to:
+  /// **'At least 8 characters'**
+  String get authClientPasswordHint;
+
+  /// Client registration confirm-password field label
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm password'**
+  String get authClientConfirmPasswordLabel;
+
+  /// Client registration confirm-password placeholder
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your password again'**
+  String get authClientConfirmPasswordHint;
+
+  /// Client registration reassurance box about address
+  ///
+  /// In en, this message translates to:
+  /// **'We do not need your address yet. We will ask for it when you make your first booking.'**
+  String get authClientAddressNotice;
+
+  /// Client registration footer prompt before the login action
+  ///
+  /// In en, this message translates to:
+  /// **'Already have an account?'**
+  String get authClientHaveAccount;
+
+  /// Client registration OTP screen heading
+  ///
+  /// In en, this message translates to:
+  /// **'Verify Mobile Number'**
+  String get authClientVerifyHeading;
+
+  /// Client registration OTP resend prompt
+  ///
+  /// In en, this message translates to:
+  /// **'Didn\'t receive the code?'**
+  String get authClientResendPrompt;
+
+  /// Client registration OTP resend action
+  ///
+  /// In en, this message translates to:
+  /// **'Resend'**
+  String get authClientResendAction;
+
+  /// Client registration OTP primary button
+  ///
+  /// In en, this message translates to:
+  /// **'Verify & Create Account'**
+  String get authClientVerifyButton;
+
+  /// Client registration success heading
+  ///
+  /// In en, this message translates to:
+  /// **'Your account is ready'**
+  String get authClientReadyHeading;
+
+  /// Client registration success supporting line
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome to HandyGo. You can now book a service.'**
+  String get authClientReadySubtitle;
+
+  /// Label above the new account details on the success screen
+  ///
+  /// In en, this message translates to:
+  /// **'YOUR ACCOUNT'**
+  String get authClientAccountCardLabel;
+
+  /// Role shown beside the phone number on the success screen
+  ///
+  /// In en, this message translates to:
+  /// **'Customer'**
+  String get authClientRoleCustomer;
+
+  /// Client registration OTP screen supporting line. count is the OTP length the backend actually issues; phone is the national number, already grouped for reading.
+  ///
+  /// In en, this message translates to:
+  /// **'A {count}-digit code was sent to +92 {phone}.'**
+  String authClientVerifySentTo(int count, String phone);
+
+  /// Client registration heading and the login footer action
+  ///
+  /// In en, this message translates to:
+  /// **'Create Account'**
+  String get authClientCreateAccountTitle;
+
+  /// Client full-name field label
+  ///
+  /// In en, this message translates to:
+  /// **'Full name'**
+  String get authClientFullNameLabel;
+
+  /// Client registration primary button
+  ///
+  /// In en, this message translates to:
+  /// **'Send OTP'**
+  String get authClientSendOtpButton;
+
+  /// Client registration success primary button
+  ///
+  /// In en, this message translates to:
+  /// **'Go to Home'**
+  String get authClientGoHome;
 
   /// No description provided for @commonCancel.
   ///

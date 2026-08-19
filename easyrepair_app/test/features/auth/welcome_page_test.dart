@@ -16,6 +16,12 @@ import 'package:handygo_app/features/auth/presentation/providers/auth_providers.
 /// The HandyGo branded welcome screen: what it shows, where its button goes,
 /// that an authenticated user is never trapped on it, and that it survives
 /// every phone size and text scale without overflowing.
+///
+/// The screen is a full-bleed `primary` canvas carrying the wrench mark plus
+/// the "HandyGo" wordmark and "Har maslay ka ustaad" tagline as REAL TEXT —
+/// the old decorative artwork and the baked-in logo lockup are gone. The
+/// colour group at the bottom pins that every pixel still comes from the
+/// central palette rather than from literals in the page.
 
 const _client = UserEntity(
   id: 'c1',
@@ -117,6 +123,10 @@ Future<GoRouter> _pump(
   return router;
 }
 
+/// The wrench mark — the only image on the screen now that the wordmark and
+/// tagline are real text.
+final Finder _wrench = find.byType(Image);
+
 Image _imageWithAsset(WidgetTester tester, String assetName) {
   return tester
       .widgetList<Image>(find.byType(Image))
@@ -132,13 +142,49 @@ void main() {
       expect(logo.fit, BoxFit.contain, reason: 'never stretched or clipped');
     });
 
-    testWidgets('renders the branded background full-bleed', (tester) async {
+    testWidgets('renders "HandyGo" and the tagline as real Flutter text, '
+        'not as an image', (tester) async {
       await _pump(tester);
 
-      final bg = _imageWithAsset(tester, WelcomePage.backgroundAsset);
-      expect(bg.fit, BoxFit.cover,
-          reason: 'BoxFit.fill would distort the artwork');
-      expect(find.byType(Positioned).evaluate(), isNotEmpty);
+      expect(find.text('HandyGo'), findsOneWidget);
+      expect(find.text('Har maslay ka ustaad'), findsOneWidget);
+    });
+
+    testWidgets('the tagline sits below the wordmark, which sits below the '
+        'wrench', (tester) async {
+      await _pump(tester);
+
+      final wrench = tester.getCenter(
+        find.byType(Image).first,
+      );
+      final wordmark = tester.getCenter(find.text('HandyGo'));
+      final tagline = tester.getCenter(find.text('Har maslay ka ustaad'));
+
+      expect(wordmark.dy, greaterThan(wrench.dy));
+      expect(tagline.dy, greaterThan(wordmark.dy));
+    });
+
+    testWidgets('the old decorative artwork and baked-in wordmark are gone',
+        (tester) async {
+      await _pump(tester);
+
+      final assets = tester
+          .widgetList<Image>(find.byType(Image))
+          .map((img) => (img.image as AssetImage).assetName)
+          .toList();
+
+      expect(assets, contains('assets/images/logo-only.png'));
+      expect(assets, isNot(contains('assets/images/background.png')));
+      expect(assets, isNot(contains('assets/images/handygo_logo.png')));
+    });
+
+    testWidgets('the canvas is the primary colour edge to edge — no cream '
+        'frame around it', (tester) async {
+      await _pump(tester);
+
+      final context = tester.element(find.byType(ElevatedButton));
+      final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
+      expect(scaffold.backgroundColor, context.semanticColors.primary);
     });
 
     testWidgets('shows the Shuru karein button with a trailing arrow',
@@ -158,21 +204,23 @@ void main() {
       expect(arrow.dx, greaterThan(label.dx));
     });
 
-    testWidgets('exposes the logo to screen readers as "HandyGo"',
-        (tester) async {
+    testWidgets('exposes the brand name to screen readers exactly once — the '
+        'wrench is decorative now that the wordmark is text', (tester) async {
       await _pump(tester);
+
       expect(find.bySemanticsLabel('HandyGo'), findsOneWidget);
+      expect(find.bySemanticsLabel('Har maslay ka ustaad'), findsOneWidget);
     });
 
-    testWidgets('sets dark system-bar icons for the light artwork',
+    testWidgets('sets light system-bar icons for the dark teal canvas',
         (tester) async {
       await _pump(tester);
 
       final region = tester.widget<AnnotatedRegion<SystemUiOverlayStyle>>(
         find.byType(AnnotatedRegion<SystemUiOverlayStyle>).first,
       );
-      expect(region.value.statusBarIconBrightness, Brightness.dark);
-      expect(region.value.statusBarBrightness, Brightness.light);
+      expect(region.value.statusBarIconBrightness, Brightness.light);
+      expect(region.value.statusBarBrightness, Brightness.dark);
     });
   });
 
@@ -311,7 +359,7 @@ void main() {
       });
     });
 
-    testWidgets('the logo keeps its aspect ratio at every size',
+    testWidgets('the wrench keeps its aspect ratio at every size',
         (tester) async {
       for (final size in const [
         Size(320, 568),
@@ -320,31 +368,52 @@ void main() {
       ]) {
         await _pump(tester, size: size);
 
-        final box = tester.getRect(find.byType(AspectRatio).first);
+        final box = tester.getRect(_wrench);
         expect(
           box.width / box.height,
-          closeTo(WelcomePage.logoAspectRatio, 0.01),
-          reason: 'the lockup must never be stretched',
+          closeTo(1.0, 0.01),
+          reason: 'the mark is drawn in a square box and never stretched',
         );
+        final image = tester.widget<Image>(_wrench);
+        expect(image.fit, BoxFit.contain);
       }
     });
 
-    testWidgets('the logo does not become absurd on a tablet', (tester) async {
+    testWidgets('the wrench does not become absurd on a tablet',
+        (tester) async {
       await _pump(tester, size: const Size(768, 1024));
 
-      final logo = tester.getRect(find.byType(AspectRatio).first);
-      expect(logo.width, lessThanOrEqualTo(420.0),
+      final wrench = tester.getRect(_wrench);
+      expect(wrench.width, lessThanOrEqualTo(168.0),
           reason: 'capped so it does not balloon on wide screens');
-      expect(logo.width / 768, lessThan(0.7));
+      expect(wrench.width / 768, lessThan(0.4));
     });
 
-    testWidgets('the logo stays legible on the smallest screen',
+    testWidgets('the whole lockup is constrained on a wide screen',
+        (tester) async {
+      await _pump(tester, size: const Size(768, 1024));
+
+      final wordmark = tester.getRect(find.text('HandyGo'));
+      expect(wordmark.width, lessThanOrEqualTo(460.0));
+    });
+
+    testWidgets('the wrench stays legible on the smallest screen',
         (tester) async {
       await _pump(tester, size: const Size(320, 568));
 
-      final logo = tester.getRect(find.byType(AspectRatio).first);
-      expect(logo.width, greaterThan(150),
+      final wrench = tester.getRect(_wrench);
+      expect(wrench.width, greaterThan(90),
           reason: 'must not shrink into illegibility');
+    });
+
+    testWidgets('the lockup shrinks rather than crowding a short screen',
+        (tester) async {
+      await _pump(tester, size: const Size(640, 360));
+
+      expect(tester.takeException(), isNull);
+      final wrench = tester.getRect(_wrench);
+      expect(wrench.width, lessThan(120),
+          reason: 'the height budget, not the width, governs a short screen');
     });
 
     testWidgets('the button is capped to a comfortable width on a tablet',
@@ -378,78 +447,95 @@ void main() {
   });
 
   group('colour architecture', () {
-    // HandyGo's primary brand colour, as used by the Client Home page today
-    // (client_home_page.dart's `_kGreen` — misleadingly named — and
-    // client_bottom_nav_bar.dart's `_kAccent`). Pinned here so the themed
-    // surfaces and the rest of the product cannot silently drift apart again.
-    const handyGoBrandOrange = Color(0xFFDB6234);
+    // HandyGo's FINAL brand primary. Pinned here so a stray edit to the
+    // central palette cannot quietly move the brand colour.
+    const handyGoTeal = Color(0xFF11645D);
 
-    testWidgets('the central primary token IS the Client Home brand colour',
+    testWidgets('the central primary token IS the HandyGo brand teal',
         (tester) async {
       await _pump(tester);
 
       final colors = tester.element(find.byType(ElevatedButton)).semanticColors;
-      expect(colors.primary, handyGoBrandOrange);
+      expect(colors.primary, handyGoTeal);
+      expect(colors.primaryPressed, const Color(0xFF0D514B));
     });
 
-    testWidgets('the Shuru karein button therefore paints in the Client Home '
-        'brand colour, without the page naming it', (tester) async {
+    testWidgets('the old orange is no longer the brand primary anywhere '
+        'central', (tester) async {
       await _pump(tester);
 
-      final style =
-          tester.widget<ElevatedButton>(find.byType(ElevatedButton)).style!;
-      expect(style.backgroundColor!.resolve(const {}), handyGoBrandOrange);
+      const retiredOrange = Color(0xFFDB6234);
+      final colors = tester.element(find.byType(ElevatedButton)).semanticColors;
+      final theme = Theme.of(tester.element(find.byType(ElevatedButton)));
+
+      expect(colors.primary, isNot(retiredOrange));
+      expect(theme.colorScheme.primary, isNot(retiredOrange));
+      expect(theme.colorScheme.primary, handyGoTeal);
     });
 
-    testWidgets('onPrimary stays white, so the label and arrow remain legible '
+    testWidgets('the page paints its canvas from the primary token, without '
+        'naming a colour itself', (tester) async {
+      await _pump(tester);
+
+      final colors = tester.element(find.byType(ElevatedButton)).semanticColors;
+      final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
+      expect(scaffold.backgroundColor, colors.primary);
+    });
+
+    testWidgets('the lockup text uses the on-primary token and stays legible '
         'on the brand fill', (tester) async {
       await _pump(tester);
 
       final colors = tester.element(find.byType(ElevatedButton)).semanticColors;
-      expect(colors.onPrimary, const Color(0xFFFFFFFF));
+      final wordmark = tester.widget<Text>(find.text('HandyGo'));
+      expect(wordmark.style!.color, colors.onPrimary);
 
-      // Sanity-check the contrast rather than trusting the eye: white on
-      // #DB6234 must clear the WCAG AA large-text bar (3:1).
+      // Sanity-check the contrast rather than trusting the eye: the wordmark
+      // must clear the WCAG AA large-text bar (3:1) on the primary canvas.
       final ratio = _contrastRatio(colors.onPrimary, colors.primary);
       expect(ratio, greaterThan(3.0));
     });
 
-    testWidgets('the button paints from the central semantic tokens, not '
-        'from literals baked into the page', (tester) async {
+    testWidgets('the CTA takes the inverse pairing, so it cannot disappear '
+        'into the primary canvas', (tester) async {
       await _pump(tester);
 
       final context = tester.element(find.byType(ElevatedButton));
       final colors = context.semanticColors;
 
-      final button = tester.widget<ElevatedButton>(
-        find.byType(ElevatedButton),
-      );
-      final style = button.style!;
+      final style =
+          tester.widget<ElevatedButton>(find.byType(ElevatedButton)).style!;
       const enabled = <WidgetState>{};
 
-      expect(style.backgroundColor!.resolve(enabled), colors.primary);
-      expect(style.foregroundColor!.resolve(enabled), colors.onPrimary);
+      expect(style.backgroundColor!.resolve(enabled), colors.surface);
+      expect(style.foregroundColor!.resolve(enabled), colors.primary);
 
       final arrow = tester.widget<Icon>(
         find.byIcon(Icons.arrow_forward_rounded),
       );
-      expect(arrow.color, colors.onPrimary);
+      expect(arrow.color, colors.primary);
+
+      expect(_contrastRatio(colors.surface, colors.primary),
+          greaterThan(4.5),
+          reason: 'the CTA carries body-sized text');
     });
 
-    testWidgets('changing the central palette repaints the button — no page '
+    testWidgets('changing the central palette repaints the page — no page '
         'edit required', (tester) async {
       // Proves the indirection is real: swap ONLY the theme extension and the
-      // button follows. This is what makes the future HandyGo palette change
-      // a one-file job.
-      const swapped = Color(0xFF123456);
-      const swappedOn = Color(0xFF654321);
+      // canvas, the lockup and the button all follow. This is what makes a
+      // future palette change a one-file job.
+      const swappedPrimary = Color(0xFF123456);
+      const swappedOnPrimary = Color(0xFF654321);
+      const swappedSurface = Color(0xFFABCDEF);
 
       final base = AppTheme.lightTheme;
       final theme = base.copyWith(
         extensions: <ThemeExtension<dynamic>>[
-          AppSemanticColors.fromColorScheme(base.colorScheme).copyWith(
-            primary: swapped,
-            onPrimary: swappedOn,
+          AppSemanticColors.light.copyWith(
+            primary: swappedPrimary,
+            onPrimary: swappedOnPrimary,
+            surface: swappedSurface,
           ),
         ],
       );
@@ -464,11 +550,42 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      expect(
+        tester.widget<Scaffold>(find.byType(Scaffold)).backgroundColor,
+        swappedPrimary,
+      );
+      expect(
+        tester.widget<Text>(find.text('HandyGo')).style!.color,
+        swappedOnPrimary,
+      );
       final style = tester.widget<ElevatedButton>(
         find.byType(ElevatedButton),
       ).style!;
-      expect(style.backgroundColor!.resolve(const {}), swapped);
-      expect(style.foregroundColor!.resolve(const {}), swappedOn);
+      expect(style.backgroundColor!.resolve(const {}), swappedSurface);
+      expect(style.foregroundColor!.resolve(const {}), swappedPrimary);
+    });
+
+    testWidgets('the same page renders from the DARK palette with no page '
+        'change — the tokens carry both brightnesses', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.darkTheme,
+          supportedLocales: appSupportedLocales,
+          localizationsDelegates: appLocalizationsDelegates,
+          home: const WelcomePage(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(
+        tester.widget<Scaffold>(find.byType(Scaffold)).backgroundColor,
+        AppSemanticColors.dark.primary,
+      );
+      expect(
+        tester.widget<Text>(find.text('HandyGo')).style!.color,
+        AppSemanticColors.dark.onPrimary,
+      );
     });
   });
 }

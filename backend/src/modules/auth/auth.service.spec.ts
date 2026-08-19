@@ -1,4 +1,5 @@
 import * as bcrypt from 'bcrypt';
+import * as jwt from 'jsonwebtoken';
 import { AuthOtpPurpose, Role } from '@prisma/client';
 import { AuthService } from './auth.service';
 
@@ -15,6 +16,7 @@ describe('AuthService — SMS OTP login/registration', () => {
   // A public address: 10.0.0.1 is a private/proxy-side address, which the
   // service deliberately refuses to rate-limit on (see isUsableClientIp).
   const IP = '203.0.113.9';
+  const JWT_SECRET = 'test-jwt-secret';
   const PHONE_RAW = '03378372427';
   const PHONE_NORMALIZED = '+923378372427';
 
@@ -83,7 +85,17 @@ describe('AuthService — SMS OTP login/registration', () => {
       updatePassword: jest.fn().mockResolvedValue(undefined),
       markPhoneVerified: jest.fn().mockResolvedValue(undefined),
     };
-    jwtService = { sign: jest.fn().mockReturnValue('signed.jwt.token') };
+    // Access tokens keep the fixed stub the existing assertions rely on, but
+    // the Ustaad registration token is signed and verified for real — its whole
+    // point is that the claims survive a round trip and a forged one does not.
+    jwtService = {
+      sign: jest.fn((payload: any, options?: any) =>
+        payload?.purpose === 'WORKER_REGISTRATION'
+          ? jwt.sign(payload, JWT_SECRET, options)
+          : 'signed.jwt.token',
+      ),
+      verify: jest.fn((token: string) => jwt.verify(token, JWT_SECRET)),
+    };
     config = {
       getOrThrow: jest.fn().mockReturnValue('15m'),
       get: jest.fn().mockReturnValue(undefined),
@@ -259,9 +271,9 @@ describe('AuthService — SMS OTP login/registration', () => {
     });
   });
 
-  // ── Client combined login/register ───────────────────────────────────────
+  // ── Client OTP LOGIN (authentication only) ───────────────────────────────
 
-  describe('clientOtpLoginOrRegister', () => {
+  describe('clientOtpLogin', () => {
     beforeEach(async () => {
       const otpHash = await bcrypt.hash('123456', 10);
       repository.findActiveAuthOtp.mockResolvedValue(
@@ -269,31 +281,54 @@ describe('AuthService — SMS OTP login/registration', () => {
       );
     });
 
-    it('logs in an existing CLIENT without touching their saved name', async () => {
+    it('takes only a phone and a code — there is no name in the contract', () => {
+      // The signature itself is the guarantee: a login endpoint that accepted
+      // a name is what forced the app to invent one.
+      expect(service.clientOtpLogin).toHaveLength(2);
+    });
+
+    it('logs in an existing CLIENT and keeps their saved name', async () => {
       repository.findUserByPhoneVariants.mockResolvedValue(CLIENT_USER);
-      const result = await service.clientOtpLoginOrRegister(
-        'Different Typed Name',
-        PHONE_RAW,
-        '123456',
-      );
+      const result = await service.clientOtpLogin(PHONE_RAW, '123456');
       expect(repository.createUserWithProfile).not.toHaveBeenCalled();
       expect(result.user.firstName).toBe('Existing');
       expect(result.user.lastName).toBe('Client');
       expect(repository.markPhoneVerified).toHaveBeenCalledWith(CLIENT_USER.id);
     });
 
-    it('rejects a soft-deleted CLIENT account with the same privacy-safe "not registered" message as a nonexistent number', async () => {
+    it('NEVER creates a user for an unknown number — it rejects instead', async () => {
+      repository.findUserByPhoneVariants.mockResolvedValue(null);
+      await expect(
+        service.clientOtpLogin(PHONE_RAW, '123456'),
+      ).rejects.toMatchObject({
+        response: { error: 'PHONE_NOT_REGISTERED', message: '' },
+      });
+      expect(repository.createUserWithProfile).not.toHaveBeenCalled();
+    });
+
+    it('gives a Worker-owned number the SAME rejection as an unknown one, so '
+      + 'the response cannot be used to probe roles', async () => {
+      repository.findUserByPhoneVariants.mockResolvedValue(WORKER_USER);
+      await expect(
+        service.clientOtpLogin(PHONE_RAW, '123456'),
+      ).rejects.toMatchObject({
+        response: { error: 'PHONE_NOT_REGISTERED', message: '' },
+      });
+      expect(repository.createUserWithProfile).not.toHaveBeenCalled();
+      expect(repository.markPhoneVerified).not.toHaveBeenCalled();
+    });
+
+    it('rejects a soft-deleted CLIENT with that same privacy-safe message', async () => {
       repository.findUserByPhoneVariants.mockResolvedValue({
         ...CLIENT_USER,
         deletedAt: new Date(),
       });
       await expect(
-        service.clientOtpLoginOrRegister('Ali Khan', PHONE_RAW, '123456'),
+        service.clientOtpLogin(PHONE_RAW, '123456'),
       ).rejects.toMatchObject({
         response: { error: 'PHONE_NOT_REGISTERED', message: '' },
       });
       expect(repository.markPhoneVerified).not.toHaveBeenCalled();
-      expect(repository.createUserWithProfile).not.toHaveBeenCalled();
     });
 
     it('rejects a deactivated (isActive: false) CLIENT account', async () => {
@@ -302,51 +337,59 @@ describe('AuthService — SMS OTP login/registration', () => {
         isActive: false,
       });
       await expect(
-        service.clientOtpLoginOrRegister('Ali Khan', PHONE_RAW, '123456'),
+        service.clientOtpLogin(PHONE_RAW, '123456'),
       ).rejects.toThrow('Account is deactivated');
       expect(repository.markPhoneVerified).not.toHaveBeenCalled();
     });
 
-    it('includes accountStatus in the response for an existing CLIENT login', async () => {
+    it('carries accountStatus through, so a restricted Client is still gated', async () => {
       repository.findUserByPhoneVariants.mockResolvedValue({
         ...CLIENT_USER,
         accountStatus: 'SUSPENDED',
       });
-      const result = await service.clientOtpLoginOrRegister(
-        'Ali Khan',
-        PHONE_RAW,
-        '123456',
-      );
+      const result = await service.clientOtpLogin(PHONE_RAW, '123456');
       expect(result.user.accountStatus).toBe('SUSPENDED');
     });
 
-    it('defaults accountStatus to ACTIVE for a brand-new CLIENT registration', async () => {
+    it('does not log anyone in when the code is wrong', async () => {
+      const otpHash = await bcrypt.hash('999999', 10);
+      repository.findActiveAuthOtp.mockResolvedValue(
+        activeOtpRecord({ otpHash }),
+      );
+      repository.findUserByPhoneVariants.mockResolvedValue(CLIENT_USER);
+      await expect(
+        service.clientOtpLogin(PHONE_RAW, '123456'),
+      ).rejects.toMatchObject({ response: { error: 'OTP_INVALID' } });
+      expect(repository.markPhoneVerified).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── Client registration (the only place a name belongs) ──────────────────
+
+  describe('clientPasswordRegister with an OTP', () => {
+    beforeEach(async () => {
+      const otpHash = await bcrypt.hash('123456', 10);
+      repository.findActiveAuthOtp.mockResolvedValue(
+        activeOtpRecord({ otpHash }),
+      );
       repository.findUserByPhoneVariants.mockResolvedValue(null);
       repository.createUserWithProfile.mockResolvedValue({
         id: 'new-client',
         phone: PHONE_NORMALIZED,
         role: Role.CLIENT,
       });
-      const result = await service.clientOtpLoginOrRegister(
-        'Ali Khan',
-        PHONE_RAW,
-        '123456',
-      );
-      expect(result.user.accountStatus).toBe('ACTIVE');
     });
 
-    it('creates a new CLIENT (passwordless, normalized phone, phoneVerified true) when no account exists', async () => {
-      repository.findUserByPhoneVariants.mockResolvedValue(null);
-      repository.createUserWithProfile.mockResolvedValue({
-        id: 'new-client',
-        phone: PHONE_NORMALIZED,
-        role: Role.CLIENT,
-      });
-      await service.clientOtpLoginOrRegister('Ali Khan', PHONE_RAW, '123456');
+    it('creates the Client with the supplied name and a verified phone', async () => {
+      await service.clientPasswordRegister(
+        'Ali Khan',
+        PHONE_RAW,
+        'password123',
+        '123456',
+      );
       expect(repository.createUserWithProfile).toHaveBeenCalledWith(
         expect.objectContaining({
           phone: PHONE_NORMALIZED,
-          passwordHash: null,
           firstName: 'Ali',
           lastName: 'Khan',
           role: Role.CLIENT,
@@ -355,49 +398,242 @@ describe('AuthService — SMS OTP login/registration', () => {
       );
     });
 
-    it('rejects the Client flow when the phone already belongs to a WORKER, without revealing the role', async () => {
+    it('creates NOTHING when the code is wrong — no half-registered account', async () => {
+      const otpHash = await bcrypt.hash('999999', 10);
+      repository.findActiveAuthOtp.mockResolvedValue(
+        activeOtpRecord({ otpHash }),
+      );
+      await expect(
+        service.clientPasswordRegister(
+          'Ali Khan',
+          PHONE_RAW,
+          'password123',
+          '123456',
+        ),
+      ).rejects.toMatchObject({ response: { error: 'OTP_INVALID' } });
+      expect(repository.createUserWithProfile).not.toHaveBeenCalled();
+    });
+
+    it('still works without a code, leaving the phone unverified as before', async () => {
+      await service.clientPasswordRegister('Ali Khan', PHONE_RAW, 'password123');
+      expect(repository.findActiveAuthOtp).not.toHaveBeenCalled();
+      const created = repository.createUserWithProfile.mock.calls[0][0];
+      expect(created.phoneVerified).toBeUndefined();
+    });
+
+    it('rejects a number that already has an account, whatever role owns it', async () => {
       repository.findUserByPhoneVariants.mockResolvedValue(WORKER_USER);
       await expect(
-        service.clientOtpLoginOrRegister('Ali Khan', PHONE_RAW, '123456'),
+        service.clientPasswordRegister(
+          'Ali Khan',
+          PHONE_RAW,
+          'password123',
+          '123456',
+        ),
       ).rejects.toMatchObject({
         response: { error: 'PHONE_ALREADY_REGISTERED', message: '' },
       });
       expect(repository.createUserWithProfile).not.toHaveBeenCalled();
     });
+  });
 
-    it('never creates an account when OTP verification fails', async () => {
-      const otpHash = await bcrypt.hash('999999', 10);
+  // ── Ustaad registration Step 2: verify only ──────────────────────────────
+
+  describe('workerOtpVerify', () => {
+    beforeEach(async () => {
+      const otpHash = await bcrypt.hash('123456', 10);
       repository.findActiveAuthOtp.mockResolvedValue(
         activeOtpRecord({ otpHash }),
       );
       repository.findUserByPhoneVariants.mockResolvedValue(null);
+    });
+
+    it('consumes the code and returns a registration token — creating nothing',
+      async () => {
+        const result = await service.workerOtpVerify(PHONE_RAW, '123456');
+
+        expect(result.registrationToken).toEqual(expect.any(String));
+        expect(new Date(result.expiresAt).getTime()).toBeGreaterThan(Date.now());
+        expect(repository.consumeAuthOtp).toHaveBeenCalled();
+        expect(repository.createUserWithProfile).not.toHaveBeenCalled();
+      });
+
+    it('issues a token that cannot authenticate — it carries a registration '
+      + 'purpose and a phone where an access token carries a user id',
+      async () => {
+        const { registrationToken } = await service.workerOtpVerify(
+          PHONE_RAW,
+          '123456',
+        );
+        const payload = jwt.verify(registrationToken, JWT_SECRET) as {
+          sub: string;
+          purpose: string;
+          role?: string;
+        };
+
+        expect(payload.purpose).toBe('WORKER_REGISTRATION');
+        expect(payload.sub).toBe(PHONE_NORMALIZED);
+        expect(payload.role).toBeUndefined();
+      });
+
+    it('rejects a wrong code and issues nothing', async () => {
+      const otpHash = await bcrypt.hash('999999', 10);
+      repository.findActiveAuthOtp.mockResolvedValue(
+        activeOtpRecord({ otpHash }),
+      );
       await expect(
-        service.clientOtpLoginOrRegister('Ali Khan', PHONE_RAW, '123456'),
+        service.workerOtpVerify(PHONE_RAW, '123456'),
       ).rejects.toMatchObject({ response: { error: 'OTP_INVALID' } });
+    });
+
+    it('refuses a number that already has an account, without spending the '
+      + 'code', async () => {
+        repository.findUserByPhoneVariants.mockResolvedValue(CLIENT_USER);
+        await expect(
+          service.workerOtpVerify(PHONE_RAW, '123456'),
+        ).rejects.toMatchObject({
+          response: { error: 'PHONE_ALREADY_REGISTERED' },
+        });
+        expect(repository.consumeAuthOtp).not.toHaveBeenCalled();
+      });
+  });
+
+  describe('workerOtpRegister with a registration token', () => {
+    const CATEGORY_ID = '11111111-1111-4111-8111-111111111111';
+
+    beforeEach(() => {
+      repository.findUserByPhoneVariants.mockResolvedValue(null);
+      repository.createUserWithProfile.mockResolvedValue({
+        id: 'new-worker',
+        phone: PHONE_NORMALIZED,
+        role: Role.WORKER,
+      });
+    });
+
+    async function token(phone = PHONE_RAW) {
+      const otpHash = await bcrypt.hash('123456', 10);
+      repository.findActiveAuthOtp.mockResolvedValue(
+        activeOtpRecord({ otpHash }),
+      );
+      const { registrationToken } = await service.workerOtpVerify(
+        phone,
+        '123456',
+      );
+      repository.findActiveAuthOtp.mockReset();
+      repository.findUserByPhoneVariants.mockResolvedValue(null);
+      return registrationToken;
+    }
+
+    it('creates the Ustaad without looking at any OTP — the code was already '
+      + 'spent at Step 2', async () => {
+        const registrationToken = await token();
+
+        await service.workerOtpRegister(
+          'Kamran Sheikh',
+          PHONE_RAW,
+          undefined,
+          'password123',
+          CATEGORY_ID,
+          registrationToken,
+        );
+
+        expect(repository.findActiveAuthOtp).not.toHaveBeenCalled();
+        expect(repository.createUserWithProfile).toHaveBeenCalledWith(
+          expect.objectContaining({
+            phone: PHONE_NORMALIZED,
+            firstName: 'Kamran',
+            lastName: 'Sheikh',
+            role: Role.WORKER,
+            categoryId: CATEGORY_ID,
+            phoneVerified: true,
+          }),
+        );
+      });
+
+    it('refuses a token issued for a different number', async () => {
+      const registrationToken = await token('03001234567');
+
+      await expect(
+        service.workerOtpRegister(
+          'Kamran Sheikh',
+          PHONE_RAW,
+          undefined,
+          'password123',
+          CATEGORY_ID,
+          registrationToken,
+        ),
+      ).rejects.toMatchObject({
+        response: { error: 'REGISTRATION_TOKEN_INVALID' },
+      });
       expect(repository.createUserWithProfile).not.toHaveBeenCalled();
     });
 
-    it('gracefully logs in instead of erroring when two concurrent registrations race (P2002)', async () => {
-      repository.findUserByPhoneVariants
-        .mockResolvedValueOnce(null) // initial lookup: no account yet
-        .mockResolvedValueOnce(CLIENT_USER); // re-fetch after the race: winner's row
-      const p2002 = Object.assign(new Error('Unique constraint failed'), {
-        code: 'P2002',
-        name: 'PrismaClientKnownRequestError',
+    it('refuses a forged or expired token', async () => {
+      await expect(
+        service.workerOtpRegister(
+          'Kamran Sheikh',
+          PHONE_RAW,
+          undefined,
+          'password123',
+          CATEGORY_ID,
+          'not-a-token',
+        ),
+      ).rejects.toMatchObject({
+        response: { error: 'REGISTRATION_TOKEN_INVALID' },
       });
-      Object.setPrototypeOf(
-        p2002,
-        require('@prisma/client').Prisma.PrismaClientKnownRequestError.prototype,
-      );
-      repository.createUserWithProfile.mockRejectedValue(p2002);
+      expect(repository.createUserWithProfile).not.toHaveBeenCalled();
+    });
 
-      const result = await service.clientOtpLoginOrRegister(
-        'Ali Khan',
+    it('refuses an ACCESS token reused here — it carries no registration '
+      + 'purpose', async () => {
+        const accessToken = jwt.sign(
+          { sub: 'some-user-id', phone: PHONE_NORMALIZED, role: Role.WORKER },
+          JWT_SECRET,
+        );
+
+        await expect(
+          service.workerOtpRegister(
+            'Kamran Sheikh',
+            PHONE_RAW,
+            undefined,
+            'password123',
+            CATEGORY_ID,
+            accessToken,
+          ),
+        ).rejects.toMatchObject({
+          response: { error: 'REGISTRATION_TOKEN_INVALID' },
+        });
+      });
+
+    it('still accepts the original single-call OTP path', async () => {
+      const otpHash = await bcrypt.hash('123456', 10);
+      repository.findActiveAuthOtp.mockResolvedValue(
+        activeOtpRecord({ otpHash }),
+      );
+
+      await service.workerOtpRegister(
+        'Kamran Sheikh',
         PHONE_RAW,
         '123456',
+        'password123',
+        CATEGORY_ID,
       );
-      expect(result.user.firstName).toBe('Existing');
-      expect(repository.findUserByPhoneVariants).toHaveBeenCalledTimes(2);
+
+      expect(repository.createUserWithProfile).toHaveBeenCalled();
+    });
+
+    it('refuses a registration with neither proof', async () => {
+      await expect(
+        service.workerOtpRegister(
+          'Kamran Sheikh',
+          PHONE_RAW,
+          undefined,
+          'password123',
+          CATEGORY_ID,
+        ),
+      ).rejects.toMatchObject({
+        response: { error: 'REGISTRATION_PROOF_REQUIRED' },
+      });
     });
   });
 

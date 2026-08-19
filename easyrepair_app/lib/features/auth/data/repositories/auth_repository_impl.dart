@@ -36,13 +36,11 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<Either<Failure, AuthTokensEntity>> clientOtpLogin({
-    required String fullName,
     required String phone,
     required String otp,
   }) async {
     try {
       final model = await _datasource.clientOtpLogin(
-        fullName: fullName,
         phone: phone,
         otp: otp,
       );
@@ -59,12 +57,31 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<Either<Failure, WorkerRegistrationToken>> workerOtpVerify({
+    required String phone,
+    required String otp,
+  }) async {
+    try {
+      // Deliberately not persisted: this is authorisation to finish a
+      // registration, not a session, so it lives in the in-memory draft only.
+      return Right(
+        await _datasource.workerOtpVerify(phone: phone, otp: otp),
+      );
+    } on DioException catch (e) {
+      return Left(dioExceptionToFailure(e, preserveUnauthorizedMessage: true));
+    } catch (e) {
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
+    }
+  }
+
+  @override
   Future<Either<Failure, AuthTokensEntity>> workerOtpRegister({
     required String fullName,
     required String phone,
-    required String otp,
+    String? otp,
     required String password,
     required String categoryId,
+    String? registrationToken,
   }) async {
     try {
       final model = await _datasource.workerOtpRegister(
@@ -73,6 +90,7 @@ class AuthRepositoryImpl implements AuthRepository {
         otp: otp,
         password: password,
         categoryId: categoryId,
+        registrationToken: registrationToken,
       );
       await _storage.saveTokens(
         accessToken: model.accessToken,
@@ -273,12 +291,14 @@ class AuthRepositoryImpl implements AuthRepository {
     required String fullName,
     required String phone,
     required String password,
+    required String otp,
   }) async {
     try {
       final model = await _datasource.clientPasswordRegister(
         fullName: fullName,
         phone: phone,
         password: password,
+        otp: otp,
       );
       await _storage.saveTokens(
         accessToken: model.accessToken,
