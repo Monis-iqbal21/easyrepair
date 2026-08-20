@@ -36,6 +36,12 @@ class _UstaadLoginPageState extends ConsumerState<UstaadLoginPage> {
   final _phoneCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
 
+  /// Set when a submit is attempted, so every invalid field reveals its error
+  /// at once rather than only after being visited and left. Separate from the
+  /// CTA-enabled calculation: a disabled button and a visible error answer two
+  /// different questions.
+  bool _submitted = false;
+
   @override
   void dispose() {
     _phoneCtrl.dispose();
@@ -51,6 +57,7 @@ class _UstaadLoginPageState extends ConsumerState<UstaadLoginPage> {
 
   Future<void> _login() async {
     if (ref.read(loginNotifierProvider).isLoading) return;
+    setState(() => _submitted = true);
     if (!(_formKey.currentState?.validate() ?? false)) return;
     await ref
         .read(loginNotifierProvider.notifier)
@@ -75,7 +82,6 @@ class _UstaadLoginPageState extends ConsumerState<UstaadLoginPage> {
       ),
       child: Form(
         key: _formKey,
-        autovalidateMode: AutovalidateMode.onUserInteraction,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -106,6 +112,7 @@ class _UstaadLoginPageState extends ConsumerState<UstaadLoginPage> {
             ClientFieldLabel(l10n.authFieldMobileNumberTitle),
             ClientPhoneField(
               controller: _phoneCtrl,
+              forceError: _submitted,
               validator: (v) => validateClientPhone(context, v),
               onChanged: (_) => setState(() {}),
             ),
@@ -113,6 +120,7 @@ class _UstaadLoginPageState extends ConsumerState<UstaadLoginPage> {
             ClientFieldLabel(l10n.authFieldPassword),
             ClientPasswordField(
               controller: _passwordCtrl,
+              forceError: _submitted,
               hint: l10n.authFieldPassword,
               showLabel: l10n.authClientPasswordShow,
               textInputAction: TextInputAction.done,

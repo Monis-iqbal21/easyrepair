@@ -761,9 +761,13 @@ describe('AuthService — SMS OTP login/registration', () => {
   // ── Regression: existing password login is untouched ─────────────────────
 
   describe('existing password login (regression)', () => {
+    // Stubbed on findUserByPhoneVariants, not findUserByPhone: this path used
+    // to match the raw string exactly, which is what stopped a legacy Ustaad
+    // stored as `+92…` logging in once the redesigned field started sending
+    // the bare national number. See auth.worker-login-phone-formats.spec.ts.
     it('still logs in a Worker by phone + password', async () => {
       const passwordHash = await bcrypt.hash('password123', 12);
-      repository.findUserByPhone.mockResolvedValue({
+      repository.findUserByPhoneVariants.mockResolvedValue({
         ...WORKER_USER,
         passwordHash,
       });
@@ -777,7 +781,7 @@ describe('AuthService — SMS OTP login/registration', () => {
 
     it('rejects a Client-owned phone with the same role-privacy-safe rejection as a nonexistent one (Worker password login is role-scoped)', async () => {
       const passwordHash = await bcrypt.hash('password123', 12);
-      repository.findUserByPhone.mockResolvedValue({
+      repository.findUserByPhoneVariants.mockResolvedValue({
         ...CLIENT_USER,
         passwordHash,
       });

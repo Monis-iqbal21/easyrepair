@@ -43,6 +43,13 @@ class _UstaadRegisterStep1PageState
   final _passwordCtrl = TextEditingController();
   bool _sendInFlight = false;
 
+  /// Set when a submit is attempted, so every invalid field reveals its error
+  /// at once rather than only after being visited and left. Separate from the
+  /// CTA-enabled calculation: a disabled button and a visible error answer two
+  /// different questions.
+  bool _submitted = false;
+
+
   @override
   void initState() {
     super.initState();
@@ -82,7 +89,9 @@ class _UstaadRegisterStep1PageState
       _passwordCtrl.text.length >= 8;
 
   Future<void> _sendOtp() async {
-    if (_sendInFlight || !(_formKey.currentState?.validate() ?? false)) return;
+    if (_sendInFlight) return;
+    setState(() => _submitted = true);
+    if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() => _sendInFlight = true);
     final phone = _phoneCtrl.text.trim();
     try {
@@ -124,7 +133,6 @@ class _UstaadRegisterStep1PageState
       ),
       child: Form(
         key: _formKey,
-        autovalidateMode: AutovalidateMode.onUserInteraction,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -148,6 +156,7 @@ class _UstaadRegisterStep1PageState
             ClientFieldLabel(l10n.ustaadFullNameLabel),
             ClientTextField(
               controller: _nameCtrl,
+              forceError: _submitted,
               hint: l10n.ustaadFullNameHint,
               autofillHints: const [AutofillHints.name],
               validator: (v) => (v == null || v.trim().isEmpty)
@@ -159,6 +168,7 @@ class _UstaadRegisterStep1PageState
             ClientFieldLabel(l10n.authFieldMobileNumberTitle),
             ClientPhoneField(
               controller: _phoneCtrl,
+              forceError: _submitted,
               validator: (v) => validateClientPhone(context, v),
               onChanged: (_) => setState(() {}),
             ),
@@ -166,6 +176,7 @@ class _UstaadRegisterStep1PageState
             ClientFieldLabel(l10n.ustaadCnicLabel),
             ClientTextField(
               controller: _cnicCtrl,
+              forceError: _submitted,
               hint: kCnicHint,
               keyboardType: TextInputType.number,
               inputFormatters: [_CnicInputFormatter()],
@@ -178,6 +189,7 @@ class _UstaadRegisterStep1PageState
             ClientFieldLabel(l10n.ustaadCreatePasswordLabel),
             ClientPasswordField(
               controller: _passwordCtrl,
+              forceError: _submitted,
               hint: l10n.authClientPasswordHint,
               showLabel: l10n.authClientPasswordShow,
               textInputAction: TextInputAction.done,
@@ -227,9 +239,37 @@ class _CnicInputFormatter extends TextInputFormatter {
       buffer.write(capped[i]);
     }
     final text = buffer.toString();
+
+    // Put the caret back where the user's edit left it, expressed in digits
+    // rather than characters. Pinning it to `text.length` — as this did —
+    // sends it to the end of the field after EVERY keystroke, so correcting a
+    // mistyped district code is impossible: the digit lands at the end and the
+    // caret jumps away again. Counting digits is what survives the dashes this
+    // formatter inserts, since they shift character offsets but not digits.
+    final digitsBeforeCaret = newValue.text
+        .substring(0, newValue.selection.end.clamp(0, newValue.text.length))
+        .replaceAll(RegExp(r'\D'), '')
+        .length;
+
+    var offset = text.length;
+    var seen = 0;
+    for (var i = 0; i < text.length; i++) {
+      if (text[i] != '-') seen++;
+      if (seen == digitsBeforeCaret) {
+        // Just past this digit — and past a dash that immediately follows it,
+        // so typing the 5th digit leaves the caret after "42101-" ready for
+        // the 6th rather than stranded before the separator.
+        offset = i + 1;
+        if (offset < text.length && text[offset] == '-') offset++;
+        break;
+      }
+    }
+    if (digitsBeforeCaret == 0) offset = 0;
+
     return TextEditingValue(
       text: text,
-      selection: TextSelection.collapsed(offset: text.length),
+      selection: TextSelection.collapsed(offset: offset),
+      composing: TextRange.empty,
     );
   }
 }

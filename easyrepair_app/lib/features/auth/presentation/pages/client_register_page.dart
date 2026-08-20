@@ -39,6 +39,13 @@ class _ClientRegisterPageState extends ConsumerState<ClientRegisterPage> {
   final _confirmCtrl = TextEditingController();
   bool _sendInFlight = false;
 
+  /// Set when a submit is attempted, so every invalid field reveals its error
+  /// at once rather than only after being visited and left. Separate from the
+  /// CTA-enabled calculation: a disabled button and a visible error answer two
+  /// different questions.
+  bool _submitted = false;
+
+
   @override
   void initState() {
     super.initState();
@@ -71,7 +78,9 @@ class _ClientRegisterPageState extends ConsumerState<ClientRegisterPage> {
       _confirmCtrl.text == _passwordCtrl.text;
 
   Future<void> _sendOtp() async {
-    if (_sendInFlight || !_formKey.currentState!.validate()) return;
+    if (_sendInFlight) return;
+    setState(() => _submitted = true);
+    if (!_formKey.currentState!.validate()) return;
     setState(() => _sendInFlight = true);
     final phone = _phoneCtrl.text.trim();
     try {
@@ -128,7 +137,6 @@ class _ClientRegisterPageState extends ConsumerState<ClientRegisterPage> {
       ),
       child: Form(
         key: _formKey,
-        autovalidateMode: AutovalidateMode.onUserInteraction,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -140,6 +148,7 @@ class _ClientRegisterPageState extends ConsumerState<ClientRegisterPage> {
             ClientFieldLabel(l10n.authClientFullNameLabel),
             ClientTextField(
               controller: _nameCtrl,
+              forceError: _submitted,
               hint: l10n.authHintFullName,
               textInputAction: TextInputAction.next,
               autofillHints: const [AutofillHints.name],
@@ -152,6 +161,7 @@ class _ClientRegisterPageState extends ConsumerState<ClientRegisterPage> {
             ClientFieldLabel(l10n.authFieldMobileNumber),
             ClientPhoneField(
               controller: _phoneCtrl,
+              forceError: _submitted,
               validator: (v) => validateClientPhone(context, v),
               onChanged: (_) => setState(() {}),
             ),
@@ -159,6 +169,7 @@ class _ClientRegisterPageState extends ConsumerState<ClientRegisterPage> {
             ClientFieldLabel(l10n.authClientCreatePasswordLabel),
             ClientPasswordField(
               controller: _passwordCtrl,
+              forceError: _submitted,
               hint: l10n.authClientPasswordHint,
               showLabel: l10n.authClientPasswordShow,
               validator: (v) {
@@ -174,6 +185,7 @@ class _ClientRegisterPageState extends ConsumerState<ClientRegisterPage> {
             ClientFieldLabel(l10n.authClientConfirmPasswordLabel),
             ClientPasswordField(
               controller: _confirmCtrl,
+              forceError: _submitted,
               hint: l10n.authClientConfirmPasswordHint,
               showLabel: l10n.authClientPasswordShow,
               textInputAction: TextInputAction.done,

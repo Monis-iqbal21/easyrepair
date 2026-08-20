@@ -128,6 +128,15 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
   String _otp = '';
   bool _sendInFlight = false;
   bool _resetInFlight = false;
+
+  /// Set when a submit is attempted on the step in question, so every invalid
+  /// field on it reveals its error at once rather than only after being
+  /// visited and left. Two flags because the two steps are two forms — a
+  /// rejected number must not pre-flag the password fields the user has not
+  /// reached yet. Separate from the CTA-enabled calculations: a disabled
+  /// button and a visible error answer two different questions.
+  bool _phoneSubmitted = false;
+  bool _passwordSubmitted = false;
   Timer? _ticker;
 
   @override
@@ -210,7 +219,10 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
     // step has nothing left to validate — the number was already accepted to
     // get here — so a null form state means "already valid", not "invalid".
     final phoneForm = _phoneKey.currentState;
-    if (phoneForm != null && !phoneForm.validate()) return;
+    if (phoneForm != null) {
+      setState(() => _phoneSubmitted = true);
+      if (!phoneForm.validate()) return;
+    }
     if (!kPkPhonePattern.hasMatch(_phoneCtrl.text.trim())) return;
     setState(() => _sendInFlight = true);
     try {
@@ -231,6 +243,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
 
   Future<void> _resetPassword() async {
     if (_resetInFlight) return;
+    setState(() => _passwordSubmitted = true);
     if (!(_passwordKey.currentState?.validate() ?? false)) return;
     if (_otp.length != otpLength || !_codeLive) return;
 
@@ -314,7 +327,6 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
       ),
       child: Form(
         key: _phoneKey,
-        autovalidateMode: AutovalidateMode.onUserInteraction,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -327,6 +339,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
             ClientFieldLabel(l10n.authFieldMobileNumberTitle),
             ClientPhoneField(
               controller: _phoneCtrl,
+              forceError: _phoneSubmitted,
               validator: (v) => validateClientPhone(context, v),
               onChanged: (v) {
                 setState(() {});
@@ -452,7 +465,6 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
       ),
       child: Form(
         key: _passwordKey,
-        autovalidateMode: AutovalidateMode.onUserInteraction,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -465,6 +477,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
             ClientFieldLabel(l10n.ustaadNewPasswordLabel),
             ClientPasswordField(
               controller: _newPasswordCtrl,
+              forceError: _passwordSubmitted,
               hint: l10n.authClientPasswordHint,
               showLabel: l10n.authClientPasswordShow,
               validator: (v) {
@@ -480,6 +493,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
             ClientFieldLabel(l10n.ustaadConfirmPasswordLabel),
             ClientPasswordField(
               controller: _confirmCtrl,
+              forceError: _passwordSubmitted,
               hint: l10n.authClientConfirmPasswordHint,
               showLabel: l10n.authClientPasswordShow,
               textInputAction: TextInputAction.done,

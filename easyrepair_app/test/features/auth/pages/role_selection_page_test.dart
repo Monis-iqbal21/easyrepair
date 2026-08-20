@@ -72,8 +72,11 @@ Widget _app(
 Map<String, WidgetBuilder> _routes() => {
       '/auth/role-select': (_) => const RoleSelectionPage(),
       '/auth/client': (_) => const Scaffold(body: Text('CLIENT_PAGE')),
+      '/auth/worker/login': (_) =>
+          const Scaffold(body: Text('USTAAD_LOGIN_PAGE')),
+      // Still routed for old deep links, but the flow must never reach it.
       '/auth/worker/choice': (_) =>
-          const Scaffold(body: Text('WORKER_CHOICE_PAGE')),
+          const Scaffold(body: Text('OBSOLETE_CHOICE_PAGE')),
     };
 
 Future<void> _pump(
@@ -174,14 +177,16 @@ void main() {
       expect(find.text('CLIENT_PAGE'), findsOneWidget);
     });
 
-    testWidgets('tapping the Ustaad card navigates to /auth/worker/choice',
-        (tester) async {
+    testWidgets('tapping the Ustaad card opens Ustaad Login directly — the '
+        'new-or-existing question in between is gone', (tester) async {
       await _pump(tester);
 
       await tester.tap(find.text(_romanUrdu.workerTitle));
       await tester.pumpAndSettle();
 
-      expect(find.text('WORKER_CHOICE_PAGE'), findsOneWidget);
+      expect(find.text('USTAAD_LOGIN_PAGE'), findsOneWidget);
+      expect(find.text('OBSOLETE_CHOICE_PAGE'), findsNothing,
+          reason: 'the obsolete page must never be visited by the flow');
     });
 
     testWidgets('the same routes are used in English', (tester) async {
@@ -190,7 +195,7 @@ void main() {
       await tester.tap(find.text(_english.workerTitle));
       await tester.pumpAndSettle();
 
-      expect(find.text('WORKER_CHOICE_PAGE'), findsOneWidget);
+      expect(find.text('USTAAD_LOGIN_PAGE'), findsOneWidget);
     });
 
     testWidgets('the whole card is tappable, not just its title',
@@ -231,18 +236,18 @@ void main() {
         await tester.pumpWidget(_app('/auth/role-select', {
           '/auth/role-select': (_) => const RoleSelectionPage(),
           '/auth/client': (_) => const Scaffold(body: Text('CLIENT_PAGE')),
-          '/auth/worker/choice': (context) => Scaffold(
+          '/auth/worker/login': (context) => Scaffold(
                 appBar: AppBar(
                   leading: BackButton(onPressed: () => context.pop()),
                 ),
-                body: const Text('WORKER_CHOICE_PAGE'),
+                body: const Text('USTAAD_LOGIN_PAGE'),
               ),
         }));
 
-        // Select Worker — pushes /auth/worker/choice.
+        // Select Worker — pushes Ustaad Login.
         await tester.tap(find.text(_romanUrdu.workerTitle));
         await tester.pumpAndSettle();
-        expect(find.text('WORKER_CHOICE_PAGE'), findsOneWidget);
+        expect(find.text('USTAAD_LOGIN_PAGE'), findsOneWidget);
 
         // Back to role selection. RoleSelectionPage's State was never
         // disposed (push doesn't dispose the page underneath), so without
@@ -272,8 +277,8 @@ void main() {
                 ),
                 body: const Text('CLIENT_PAGE'),
               ),
-          '/auth/worker/choice': (_) =>
-              const Scaffold(body: Text('WORKER_CHOICE_PAGE')),
+          '/auth/worker/login': (_) =>
+              const Scaffold(body: Text('USTAAD_LOGIN_PAGE')),
         }));
 
         await tester.tap(find.text(_romanUrdu.clientTitle));
@@ -287,7 +292,7 @@ void main() {
         await tester.tap(find.text(_romanUrdu.workerTitle));
         await tester.pumpAndSettle();
 
-        expect(find.text('WORKER_CHOICE_PAGE'), findsOneWidget);
+        expect(find.text('USTAAD_LOGIN_PAGE'), findsOneWidget);
       },
     );
 

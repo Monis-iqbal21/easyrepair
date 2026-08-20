@@ -189,6 +189,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(
+        // No longer part of the Ustaad flow: Role Selection goes straight to
+        // Ustaad Login, whose footer already offers registration. Kept routed
+        // rather than deleted so an older deep link still resolves instead of
+        // 404ing; nothing in the app navigates here any more.
         path: '/auth/worker/choice',
         builder: (_, __) => const WorkerTypeSelectionPage(),
       ),

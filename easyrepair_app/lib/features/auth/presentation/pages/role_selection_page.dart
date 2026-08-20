@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/l10n/l10n_extensions.dart';
 import '../../../../core/theme/app_semantic_colors.dart';
+import 'ustaad_login_page.dart';
 
 /// New auth entry page — replaces the old direct Login/Register screen.
 ///
@@ -122,7 +123,12 @@ class _RoleSelectionPageState extends State<RoleSelectionPage> {
                             emphasized: false,
                             isPressed: _selected == 'worker',
                             onTap: () =>
-                                _select('worker', '/auth/worker/choice'),
+                                // Straight to Ustaad Login. The old
+                                // new-or-existing-Ustaad question in between
+                                // asked something the login screen already
+                                // answers: it carries "Naya Ustaad hain?
+                                // Register karein" at the bottom.
+                                _select('worker', UstaadLoginPage.route),
                           ),
                         ],
                       ),
@@ -145,8 +151,7 @@ class _RoleSelectionPageState extends State<RoleSelectionPage> {
 /// tappable; the difference is visual weight only.
 ///
 /// Deliberately private to this page rather than an edit to the shared
-/// `SelectionCard`: that widget is also used by the Ustaad new-or-existing
-/// screen, which is not part of this redesign.
+/// `SelectionCard`, which other screens still use.
 class _RoleCard extends StatelessWidget {
   const _RoleCard({
     required this.icon,

@@ -173,13 +173,36 @@ class ClientFieldLabel extends StatelessWidget {
   }
 }
 
-/// The rounded outlined input the Client screens use.
+/// The rounded outlined input the auth screens use.
 ///
-/// Deliberately a thin wrapper over [TextFormField] rather than a fork of
-/// `AuthTextField`: the controller, validator, focus and error semantics stay
-/// exactly Flutter's, so nothing about form behaviour changes — only the
-/// chrome does.
-class ClientTextField extends StatelessWidget {
+/// ## When an error is allowed to appear
+///
+/// Never on first tap. `AutovalidateMode.onUserInteraction` cannot express
+/// that: `TextFormField` marks a field "interacted" from its controller
+/// listener, and a `TextEditingController` notifies on SELECTION changes as
+/// well as text changes — so merely placing the caret in an empty field
+/// validated it and printed "must be at least 8 characters" before a single
+/// keystroke.
+///
+/// This field therefore tracks interaction itself:
+///
+///  * **pristine** — never focused, or focused but not yet left. Silent, no
+///    matter how invalid the value is.
+///  * **touched** — the field has been left at least once (blur). From then on
+///    it shows its error, and re-validates on every keystroke so a correction
+///    clears the message live.
+///  * **submitted** — the form was submitted; [forceError] turns every
+///    invalid field visible at once, without waiting to be blurred.
+///
+/// ## The outline never turns red
+///
+/// The border stays `controlBorder` when idle and `primary` when focused,
+/// exactly as when valid. An invalid value is communicated by a line of
+/// [AppSemanticColors.error] text underneath, which is quieter and does not
+/// fight the focus treatment. This is why the decoration below sets every
+/// error border to the same colours as the normal ones rather than leaving
+/// Flutter's red defaults in place.
+class ClientTextField extends StatefulWidget {
   const ClientTextField({
     super.key,
     required this.controller,
@@ -195,7 +218,18 @@ class ClientTextField extends StatelessWidget {
     this.suffix,
     this.inputFormatters,
     this.autofillHints,
+    this.forceError = false,
+    this.focusNode,
   });
+
+  /// Set by the page after a rejected submit: shows this field's error even
+  /// if it was never focused. Independent of whether the CTA is enabled —
+  /// a disabled button and a visible error are different questions.
+  final bool forceError;
+
+  /// Optional; one is created and owned here when not supplied, because blur
+  /// is what promotes a field from pristine to touched.
+  final FocusNode? focusNode;
 
   final TextEditingController controller;
   final String? hint;
@@ -211,56 +245,129 @@ class ClientTextField extends StatelessWidget {
   final List<TextInputFormatter>? inputFormatters;
   final Iterable<String>? autofillHints;
 
+  @override
+  State<ClientTextField> createState() => _ClientTextFieldState();
+}
+
+class _ClientTextFieldState extends State<ClientTextField> {
+  FocusNode? _ownedFocusNode;
+  FocusNode get _focusNode =>
+      widget.focusNode ?? (_ownedFocusNode ??= FocusNode());
+
+  /// True once the field has been left after the user actually put something
+  /// in it. Tapping in is not enough, and neither is tapping straight back
+  /// out again — the brief states the error belongs to "entered invalid data,
+  /// then moved away", not to passing through.
+  bool _touched = false;
+
+  /// Whether a keystroke has ever landed. Tracked separately from the text
+  /// itself because a field can be non-empty from a prefilled draft, which is
+  /// not the user having typed anything.
+  bool _edited = false;
+  late String _lastText;
+
+  @override
+  void initState() {
+    super.initState();
+    _lastText = widget.controller.text;
+    _focusNode.addListener(_onFocusChange);
+    // Deliberately not `addListener` on the controller for the touched flag:
+    // a TextEditingController notifies on SELECTION changes too, so a bare tap
+    // would count as an edit. `onChanged` fires on text only, and this
+    // listener exists purely to catch programmatic/formatter-driven changes.
+    widget.controller.addListener(_onControllerChanged);
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_onControllerChanged);
+    _focusNode.removeListener(_onFocusChange);
+    _ownedFocusNode?.dispose();
+    super.dispose();
+  }
+
+  void _onControllerChanged() {
+    if (widget.controller.text != _lastText) {
+      _lastText = widget.controller.text;
+      _edited = true; // no setState: nothing visible changes until blur
+    }
+  }
+
+  void _onFocusChange() {
+    // Promotion happens on blur, never on focus.
+    if (!_focusNode.hasFocus && !_touched && _edited) {
+      setState(() => _touched = true);
+    }
+  }
+
   /// Phone numbers and passwords are Latin/numeric values. Under Urdu they
   /// would otherwise render right-aligned with the cursor on the wrong side,
   /// so those field types stay left-to-right whatever the app language —
   /// the same rule the shared `AuthTextField` applies.
   bool get _forcesLtr =>
-      obscureText ||
-      keyboardType == TextInputType.phone ||
-      keyboardType == TextInputType.number;
+      widget.obscureText ||
+      widget.keyboardType == TextInputType.phone ||
+      widget.keyboardType == TextInputType.number;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.semanticColors;
+    final showErrors = widget.forceError || _touched;
 
     OutlineInputBorder border(Color color, double width) => OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide(color: color, width: width),
         );
 
+    // The same borders in every state. Flutter swaps to errorBorder/
+    // focusedErrorBorder the moment a validator returns a message; pointing
+    // both at the normal colours is what keeps an invalid field from turning
+    // red while still letting the message render underneath.
+    final idle = border(colors.controlBorder, 1);
+    final focused = border(colors.primary, 1.6);
+
     return TextFormField(
-      controller: controller,
-      enabled: enabled,
-      obscureText: obscureText,
-      keyboardType: keyboardType,
-      textInputAction: textInputAction,
+      controller: widget.controller,
+      focusNode: _focusNode,
+      enabled: widget.enabled,
+      obscureText: widget.obscureText,
+      keyboardType: widget.keyboardType,
+      textInputAction: widget.textInputAction,
       textDirection: _forcesLtr ? TextDirection.ltr : null,
       textAlign: _forcesLtr ? TextAlign.left : TextAlign.start,
-      validator: validator,
-      onChanged: onChanged,
-      onFieldSubmitted: onFieldSubmitted,
-      inputFormatters: inputFormatters,
-      autofillHints: autofillHints,
+      // The gate is on DISPLAY, never on the validator: `disabled` means the
+      // field simply does not validate itself, so nothing shows until either
+      // this field is touched or the page calls `Form.validate()` on submit.
+      // The validator itself always tells the truth — suppressing it would
+      // make `validate()` return true for an empty form and let the request
+      // go out.
+      autovalidateMode: showErrors
+          ? AutovalidateMode.always
+          : AutovalidateMode.disabled,
+      validator: widget.validator,
+      onChanged: widget.onChanged,
+      onFieldSubmitted: widget.onFieldSubmitted,
+      inputFormatters: widget.inputFormatters,
+      autofillHints: widget.autofillHints,
       style: TextStyle(fontSize: 16, color: colors.textPrimary),
       cursorColor: colors.primary,
       decoration: InputDecoration(
-        hintText: hint,
+        hintText: widget.hint,
         hintStyle: TextStyle(fontSize: 16, color: colors.textSecondary),
         filled: true,
-        fillColor: enabled ? colors.surface : colors.surfaceSubtle,
+        fillColor: widget.enabled ? colors.surface : colors.surfaceSubtle,
         isDense: false,
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
-        prefixIcon: prefix,
+        prefixIcon: widget.prefix,
         prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
-        suffixIcon: suffix,
+        suffixIcon: widget.suffix,
         suffixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
-        enabledBorder: border(colors.controlBorder, 1),
-        focusedBorder: border(colors.primary, 1.6),
+        enabledBorder: idle,
+        focusedBorder: focused,
         disabledBorder: border(colors.border, 1),
-        errorBorder: border(colors.error, 1),
-        focusedErrorBorder: border(colors.error, 1.6),
+        errorBorder: idle,
+        focusedErrorBorder: focused,
         errorStyle: TextStyle(fontSize: 12.5, color: colors.error),
       ),
     );
@@ -278,6 +385,7 @@ class ClientPhoneField extends StatelessWidget {
     this.onFieldSubmitted,
     this.textInputAction = TextInputAction.next,
     this.enabled = true,
+    this.forceError = false,
   });
 
   final TextEditingController controller;
@@ -286,6 +394,9 @@ class ClientPhoneField extends StatelessWidget {
   final ValueChanged<String>? onFieldSubmitted;
   final TextInputAction textInputAction;
   final bool enabled;
+
+  /// See [ClientTextField.forceError].
+  final bool forceError;
 
   @override
   Widget build(BuildContext context) {
@@ -300,6 +411,7 @@ class ClientPhoneField extends StatelessWidget {
       onChanged: onChanged,
       onFieldSubmitted: onFieldSubmitted,
       enabled: enabled,
+      forceError: forceError,
       autofillHints: const [AutofillHints.telephoneNumberNational],
       prefix: Padding(
         padding: const EdgeInsetsDirectional.only(start: 18, end: 14),
@@ -337,9 +449,13 @@ class ClientPasswordField extends StatefulWidget {
     this.onChanged,
     this.onFieldSubmitted,
     this.textInputAction = TextInputAction.next,
+    this.forceError = false,
   });
 
   final TextEditingController controller;
+
+  /// See [ClientTextField.forceError].
+  final bool forceError;
 
   /// The localized in-field action label ("Show").
   final String showLabel;
@@ -370,6 +486,7 @@ class _ClientPasswordFieldState extends State<ClientPasswordField> {
       validator: widget.validator,
       onChanged: widget.onChanged,
       onFieldSubmitted: widget.onFieldSubmitted,
+      forceError: widget.forceError,
       suffix: Padding(
         padding: const EdgeInsetsDirectional.only(start: 8, end: 16),
         child: Semantics(

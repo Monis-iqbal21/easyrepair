@@ -63,6 +63,13 @@ class _ClientLoginPageState extends ConsumerState<ClientLoginPage> {
   String _otp = '';
   bool _requestInFlight = false;
 
+  /// Set when a submit is attempted, so every invalid field reveals its error
+  /// at once instead of waiting to be visited and left. Kept apart from the
+  /// CTA-enabled calculation below: whether the button is tappable and whether
+  /// an error is on screen are two different questions.
+  bool _phoneSubmitted = false;
+  bool _passwordSubmitted = false;
+
   /// Recomputes the expiry/cooldown labels once a second. It only runs while
   /// there is something counting down, and stops itself when there is not —
   /// a permanently ticking setState would rebuild this screen forever.
@@ -163,6 +170,10 @@ class _ClientLoginPageState extends ConsumerState<ClientLoginPage> {
   Future<void> _passwordLogin() async {
     // `read`, not `watch`: this runs from a tap, outside build.
     if (ref.read(clientPasswordLoginNotifierProvider).isLoading) return;
+    setState(() {
+      _phoneSubmitted = true;
+      _passwordSubmitted = true;
+    });
     final phoneOk = _phoneFormKey.currentState?.validate() ?? false;
     final passwordOk = _passwordFormKey.currentState?.validate() ?? false;
     if (!phoneOk || !passwordOk) return;
@@ -185,6 +196,10 @@ class _ClientLoginPageState extends ConsumerState<ClientLoginPage> {
   /// branch can never leak which role owns a number.
   Future<void> _requestOtp() async {
     if (_requestInFlight) return;
+    // Only the number is being submitted here — the password field, which is
+    // still on screen in password mode, has no part in this and must not be
+    // made to show an error by it.
+    setState(() => _phoneSubmitted = true);
     if (!(_phoneFormKey.currentState?.validate() ?? false)) return;
 
     setState(() => _requestInFlight = true);
@@ -291,9 +306,9 @@ class _ClientLoginPageState extends ConsumerState<ClientLoginPage> {
           ClientFieldLabel(l10n.authFieldMobileNumberTitle),
           Form(
             key: _phoneFormKey,
-            autovalidateMode: AutovalidateMode.onUserInteraction,
             child: ClientPhoneField(
               controller: _phoneCtrl,
+              forceError: _phoneSubmitted,
               validator: (v) => validateClientPhone(context, v),
               // Stays editable in OTP mode — a mistyped number is the
               // commonest reason to come back to this field.
@@ -318,9 +333,9 @@ class _ClientLoginPageState extends ConsumerState<ClientLoginPage> {
       ClientFieldLabel(l10n.authFieldPassword),
       Form(
         key: _passwordFormKey,
-        autovalidateMode: AutovalidateMode.onUserInteraction,
         child: ClientPasswordField(
           controller: _passwordCtrl,
+          forceError: _passwordSubmitted,
           hint: l10n.authFieldPassword,
           showLabel: l10n.authClientPasswordShow,
           textInputAction: TextInputAction.done,

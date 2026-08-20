@@ -199,7 +199,27 @@ export class AuthService {
    */
   async login(dto: LoginDto): Promise<AuthResponseDto> {
     this._assertNotSupportAccount(dto.phone);
-    const user = await this.authRepository.findUserByPhone(dto.phone);
+
+    // Normalized and looked up across every historical format, exactly like
+    // every other auth path.
+    //
+    // This used to be an EXACT match on the raw string the app sent, which
+    // made the endpoint the only one that cared how the Ustaad happened to
+    // type their number. It worked while the login field asked for
+    // `03XXXXXXXXX`; the redesigned field shows `+92` as a prefix and asks for
+    // `3XX XXX XXXX`, so the app started sending the bare national number and
+    // an account stored as `+923…` or `03…` no longer matched — a legacy
+    // Ustaad with a perfectly good account was told their number was not
+    // registered. Normalizing here fixes it for every stored format at once.
+    const normalized = normalizePakistaniPhone(dto.phone);
+    if (!normalized) {
+      // Same privacy-safe rejection an unknown number gets: a malformed one
+      // must not be distinguishable from a number without an account.
+      throw this._phoneNotRegisteredError();
+    }
+    const user = await this.authRepository.findUserByPhoneVariants(
+      phoneLookupVariants(normalized),
+    );
     if (!user || user.deletedAt !== null || user.role !== Role.WORKER) {
       throw this._phoneNotRegisteredError();
     }
