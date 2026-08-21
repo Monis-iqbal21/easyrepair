@@ -46,7 +46,15 @@ describe('WorkersProcessor', () => {
     it('does not throw if Redis/the queue is unreachable at boot', async () => {
       queue.add.mockRejectedValue(new Error('redis down'));
 
-      await expect(processor.onModuleInit()).resolves.toBeUndefined();
+      expect(processor.onModuleInit()).toBeUndefined();
+      await Promise.resolve();
+    });
+
+    it('does not block module initialization if Bull keeps retrying forever', () => {
+      queue.add.mockReturnValue(new Promise(() => undefined));
+
+      expect(processor.onModuleInit()).toBeUndefined();
+      expect(queue.add).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -62,9 +70,7 @@ describe('WorkersProcessor', () => {
         data: { workerProfileId: 'worker-1', userId: 'worker-user-1' },
       } as any);
 
-      expect(workersRepository.setOfflineById).toHaveBeenCalledWith(
-        'worker-1',
-      );
+      expect(workersRepository.setOfflineById).toHaveBeenCalledWith('worker-1');
       expect(notificationsService.notify).toHaveBeenCalledTimes(1);
     });
 

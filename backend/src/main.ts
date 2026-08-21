@@ -5,9 +5,13 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 import { GlobalExceptionFilter } from './common/filters/http-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
+import { AdminOperationsScheduler } from './modules/admin/admin-operations.processor';
+import { bindHttpThenStartBackgroundServices } from './common/startup/http-startup';
 
 async function bootstrap() {
+  console.log('[startup] creating Nest application');
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  console.log('[startup] Nest application created; configuring HTTP');
 
   const configService = app.get(ConfigService);
   const port = configService.get<number>('port') ?? 3000;
@@ -47,8 +51,12 @@ async function bootstrap() {
     }),
   );
 
-  await app.listen(port, '0.0.0.0');
+  console.log(`[startup] binding HTTP server on configured port ${port}`);
+  await bindHttpThenStartBackgroundServices(app, port, [
+    app.get(AdminOperationsScheduler),
+  ]);
   console.log(`Application running on port ${port}`);
+  console.log('[startup] nightly commission scheduler start dispatched');
 }
 
 bootstrap().catch((err) => {

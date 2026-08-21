@@ -21,19 +21,14 @@ import {
 } from './admin-operations.controller';
 import { AdminOperationsService } from './admin-operations.service';
 import { AdminOperationsRepository } from './admin-operations.repository';
-import { BullModule } from '@nestjs/bull';
 import {
-  AdminOperationsProcessor,
-  ADMIN_OPERATIONS_QUEUE,
+  AdminOperationsScheduler,
+  ADMIN_OPERATIONS_QUEUE_FACTORY,
+  defaultAdminOperationsQueueFactory,
 } from './admin-operations.processor';
 
 @Module({
-  imports: [
-    AgreementsModule,
-    NotificationsModule,
-    StorageModule,
-    BullModule.registerQueue({ name: ADMIN_OPERATIONS_QUEUE }),
-  ],
+  imports: [AgreementsModule, NotificationsModule, StorageModule],
   controllers: [
     AdminController,
     AdminStatsController,
@@ -54,7 +49,12 @@ import {
     AdminClientsRepository,
     AdminOperationsService,
     AdminOperationsRepository,
-    AdminOperationsProcessor,
+    AdminOperationsScheduler,
+    {
+      provide: ADMIN_OPERATIONS_QUEUE_FACTORY,
+      useValue: defaultAdminOperationsQueueFactory,
+    },
   ],
+  exports: [AdminOperationsScheduler],
 })
 export class AdminModule {}

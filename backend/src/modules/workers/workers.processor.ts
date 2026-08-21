@@ -36,9 +36,11 @@ export class WorkersProcessor implements OnModuleInit {
    * jobs by their (name, repeat options, jobId) key, so this never produces
    * more than one active schedule.
    */
-  async onModuleInit(): Promise<void> {
-    try {
-      await this.queue.add(
+  onModuleInit(): void {
+    // Never await Redis from a Nest lifecycle hook. Bull may keep this promise
+    // pending while reconnecting, and app.listen() has not bound HTTP yet.
+    void this.queue
+      .add(
         STALE_PRESENCE_CLEANUP_JOB,
         {},
         {
@@ -47,15 +49,15 @@ export class WorkersProcessor implements OnModuleInit {
           removeOnComplete: true,
           removeOnFail: true,
         },
-      );
-    } catch (err) {
-      // Redis unreachable at boot — the matching-time eligibility gate
-      // (checkJobEligibility) still enforces the presence lease independently,
-      // so this is a scheduling-only degradation, never a correctness gap.
-      this.logger.warn(
-        `[stale-presence-cleanup] failed to schedule repeatable job: ${(err as Error)?.message}`,
-      );
-    }
+      )
+      .catch((err: unknown) => {
+        // Redis unreachable at boot — the matching-time eligibility gate
+        // (checkJobEligibility) still enforces the presence lease independently,
+        // so this is a scheduling-only degradation, never a correctness gap.
+        this.logger.warn(
+          `[stale-presence-cleanup] failed to schedule repeatable job: ${(err as Error)?.message}`,
+        );
+      });
   }
 
   @Process(AUTO_OFFLINE_JOB)
