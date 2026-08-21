@@ -20,7 +20,7 @@ import {
   AdminSettlementCasesController,
 } from './admin-operations.controller';
 import { AdminOperationsService } from './admin-operations.service';
-import { AdminOperationsRepository } from './admin-operations.repository';
+import { AdminOperationsModule } from './admin-operations.module';
 import {
   AdminOperationsScheduler,
   ADMIN_OPERATIONS_QUEUE_FACTORY,
@@ -28,7 +28,12 @@ import {
 } from './admin-operations.processor';
 
 @Module({
-  imports: [AgreementsModule, NotificationsModule, StorageModule],
+  imports: [
+    AgreementsModule,
+    NotificationsModule,
+    StorageModule,
+    AdminOperationsModule,
+  ],
   controllers: [
     AdminController,
     AdminStatsController,
@@ -47,8 +52,6 @@ import {
     AdminOtpRepository,
     AdminClientsService,
     AdminClientsRepository,
-    AdminOperationsService,
-    AdminOperationsRepository,
     AdminOperationsScheduler,
     {
       provide: ADMIN_OPERATIONS_QUEUE_FACTORY,

@@ -27,6 +27,8 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Role } from '../../common/enums/role.enum';
+import { AdminOperationsService } from '../admin/admin-operations.service';
+import { ConfirmCashPaymentDto } from './dto/confirm-cash-payment.dto';
 
 const ALLOWED_MIME_TYPES = [
   'image/jpeg',
@@ -49,7 +51,10 @@ const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
 @Controller('bookings')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class BookingsController {
-  constructor(private readonly bookingsService: BookingsService) {}
+  constructor(
+    private readonly bookingsService: BookingsService,
+    private readonly adminOperationsService: AdminOperationsService,
+  ) {}
 
   /** POST /bookings — client creates a service request */
   @Post()
@@ -114,6 +119,22 @@ export class BookingsController {
     @Body() dto: CreateReviewDto,
   ) {
     return this.bookingsService.submitReview(user.id, bookingId, dto);
+  }
+
+  /** Confirm the actual whole-rupee CASH/COD amount paid for a completed job. */
+  @Post(':bookingId/confirm-cash-payment')
+  @Roles(Role.CLIENT)
+  @HttpCode(HttpStatus.OK)
+  confirmCashPayment(
+    @CurrentUser() user: { id: string },
+    @Param('bookingId') bookingId: string,
+    @Body() dto: ConfirmCashPaymentDto,
+  ) {
+    return this.adminOperationsService.confirmClientCashPayment(
+      bookingId,
+      dto.receivedCashTotal,
+      user.id,
+    );
   }
 
   /** PATCH /bookings/:id/cancel — client cancels their booking. Reason required. */

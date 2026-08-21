@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
   Optional,
@@ -12,6 +13,7 @@ import {
   CommissionCollectionStatus,
   InspectionDecisionStatus,
   SettlementCaseType,
+  SettlementSource,
 } from '@prisma/client';
 import { settleBooking } from '../../common/utils/commission.util';
 import {
@@ -32,6 +34,7 @@ import {
   UpdateCollectionDto,
   UpdateSettlementCaseDto,
 } from './dto/admin-operations.dto';
+import type { ClientCashPaymentConfirmationDto } from '../bookings/dto/confirm-cash-payment.dto';
 
 @Injectable()
 export class AdminOperationsService {
@@ -57,6 +60,94 @@ export class AdminOperationsService {
     actorUserId: string,
   ) {
     return this.persistSettlement(bookingId, dto, actorUserId);
+  }
+
+  async confirmClientCashPayment(
+    bookingId: string,
+    receivedCashTotal: number,
+    clientUserId: string,
+  ): Promise<ClientCashPaymentConfirmationDto> {
+    const booking = await this.repository.findBooking(bookingId);
+    if (!booking) throw new NotFoundException('Booking not found');
+    if (booking.clientProfile?.user?.id !== clientUserId) {
+      throw new ForbiddenException('Not your booking');
+    }
+
+    const current = booking.settlements.find((row) => row.isCurrent);
+    if (current) {
+      return this.resolveClientConfirmationRetry(
+        current,
+        receivedCashTotal,
+        clientUserId,
+      );
+    }
+    if (booking.status !== BookingStatus.COMPLETED) {
+      throw new BadRequestException(
+        'Cash payment can only be confirmed for a completed booking',
+      );
+    }
+
+    try {
+      const created = await this.persistSettlement(
+        bookingId,
+        {
+          received: receivedCashTotal,
+          source: SettlementSource.CLIENT,
+        },
+        clientUserId,
+      );
+      return this.toClientConfirmation(created);
+    } catch (error) {
+      // A concurrent mobile retry can lose the partial-unique-index race.
+      // Resolve it against the winner and return it only when it is the exact
+      // same CLIENT confirmation; all other changes require Admin correction.
+      if (error instanceof ConflictException) {
+        const refreshed = await this.repository.findBooking(bookingId);
+        const winner = refreshed?.settlements.find((row) => row.isCurrent);
+        if (winner) {
+          return this.resolveClientConfirmationRetry(
+            winner,
+            receivedCashTotal,
+            clientUserId,
+          );
+        }
+      }
+      throw error;
+    }
+  }
+
+  private resolveClientConfirmationRetry(
+    settlement: any,
+    receivedCashTotal: number,
+    clientUserId: string,
+  ): ClientCashPaymentConfirmationDto {
+    if (
+      settlement.source === SettlementSource.CLIENT &&
+      settlement.settledByUserId === clientUserId &&
+      settlement.received === receivedCashTotal
+    ) {
+      return this.toClientConfirmation(settlement);
+    }
+    throw new ConflictException(
+      settlement.received === receivedCashTotal
+        ? 'Booking already has a settlement; Admin correction is required'
+        : 'Cash payment was already confirmed with a different amount; Admin correction is required',
+    );
+  }
+
+  private toClientConfirmation(
+    settlement: any,
+  ): ClientCashPaymentConfirmationDto {
+    return {
+      settlementId: settlement.id,
+      bookingId: settlement.bookingId,
+      receivedCashTotal: settlement.received,
+      expectedTotal: settlement.expectedTotal,
+      shortfall: settlement.shortfall,
+      recordedAt: settlement.settledAt,
+      confirmationStatus: 'CONFIRMED',
+      isCurrent: true,
+    };
   }
 
   correctSettlement(

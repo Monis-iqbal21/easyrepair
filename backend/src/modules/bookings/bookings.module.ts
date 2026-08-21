@@ -8,12 +8,14 @@ import { StorageModule } from '../storage/storage.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { ChatModule } from '../chat/chat.module';
 import { MatchingModule } from '../matching/matching.module';
+import { AdminOperationsModule } from '../admin/admin-operations.module';
 
 @Module({
   imports: [
     StorageModule,
     NotificationsModule,
     MatchingModule,
+    AdminOperationsModule,
     // forwardRef: ChatService now also needs BookingsService's shared
     // chat-eligibility check — forwardRef on both sides breaks that cycle.
     forwardRef(() => ChatModule),
