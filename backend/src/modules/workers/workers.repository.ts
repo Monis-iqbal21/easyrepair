@@ -5,6 +5,7 @@ import {
   BookingLane,
   BookingStatus,
   CommissionStatus,
+  InspectionDecisionStatus,
   Prisma,
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -14,6 +15,7 @@ import {
   computeCompletedJobs,
 } from '../../common/utils/worker-stats.util';
 import {
+  calculateCommissionBase,
   calculateGrossWorkerEarning,
   calculatePlatformFee,
   calculateWorkerEarning,
@@ -182,7 +184,9 @@ export class WorkersRepository {
         // lastSeenAt renews the presence lease on every authenticated
         // Go-Online call (see touchWorkerPresence semantics in
         // job-eligibility.util.ts) — never touched for BUSY/OFFLINE.
-        ...(goingOnline ? { onlineAt: new Date(), lastSeenAt: new Date() } : {}),
+        ...(goingOnline
+          ? { onlineAt: new Date(), lastSeenAt: new Date() }
+          : {}),
         ...(goingOffline ? { onlineAt: null } : {}),
         ...(lat !== undefined && lng !== undefined
           ? {
@@ -280,7 +284,10 @@ export class WorkersRepository {
    */
   async setOfflineIfStillOnline(workerProfileId: string): Promise<boolean> {
     const { count } = await this.prisma.workerProfile.updateMany({
-      where: { id: workerProfileId, availabilityStatus: AvailabilityStatus.ONLINE },
+      where: {
+        id: workerProfileId,
+        availabilityStatus: AvailabilityStatus.ONLINE,
+      },
       data: {
         availabilityStatus: AvailabilityStatus.OFFLINE,
         isOnline: false,
@@ -654,7 +661,13 @@ export class WorkersRepository {
           completedAt: true,
           commissionStatus: true,
           category: { select: { name: true } },
-          inspectionReport: { select: { labourCost: true, decisionStatus: true } },
+          inspectionReport: {
+            select: {
+              labourCost: true,
+              decisionStatus: true,
+              workerProfileId: true,
+            },
+          },
           // See getJobStats — labour-only earning for a rehired-inspector
           // repair on a linked BIDDING child booking.
           sourceInspectionBooking: {
@@ -709,9 +722,12 @@ export class WorkersRepository {
       isInspectionOnly: boolean;
     };
 
-    /** Gross → {commissionAmount, ustaadEarning} via the one shared 18% source. */
-    const splitGross = (grossEarning: number) => {
-      const commissionAmount = calculatePlatformFee(grossEarning);
+    /** Gross and labour base stay distinct because inspection fees earn 100%. */
+    const splitGross = (
+      grossEarning: number,
+      commissionBase = grossEarning,
+    ) => {
+      const commissionAmount = calculatePlatformFee(commissionBase);
       return {
         commissionAmount,
         ustaadEarning: calculateWorkerEarning(grossEarning, commissionAmount),
@@ -723,6 +739,12 @@ export class WorkersRepository {
       const isRehiredInspectorRepair =
         b.lane === BookingLane.BIDDING &&
         sourceReport?.workerProfileId === workerProfileId;
+      const isInspectionFeeOnly =
+        b.lane === BookingLane.INSPECTION &&
+        b.inspectionReport?.decisionStatus !==
+          InspectionDecisionStatus.ACCEPTED_REPAIR &&
+        (!b.inspectionReport ||
+          b.inspectionReport.workerProfileId === workerProfileId);
       const grossEarning = isRehiredInspectorRepair
         ? sourceReport.labourCost
         : calculateGrossWorkerEarning({
@@ -730,12 +752,21 @@ export class WorkersRepository {
             finalPrice: b.finalPrice,
             inspectionReport: b.inspectionReport,
           });
+      const commissionBase = isRehiredInspectorRepair
+        ? sourceReport.labourCost
+        : isInspectionFeeOnly
+          ? 0
+          : (calculateCommissionBase({
+              lane: b.lane,
+              finalPrice: b.finalPrice,
+              inspectionReport: b.inspectionReport,
+            }) ?? 0);
       return {
         bookingId: b.id,
         lane: b.lane,
         serviceCategory: b.category.name,
         grossEarning,
-        ...splitGross(grossEarning),
+        ...splitGross(grossEarning, commissionBase),
         commissionStatus: b.commissionStatus,
         completedAt: b.completedAt!,
         isInspectionOnly: false,
@@ -750,7 +781,7 @@ export class WorkersRepository {
         lane: BookingLane.INSPECTION,
         serviceCategory: r.booking.category.name,
         grossEarning: fee,
-        ...splitGross(fee),
+        ...splitGross(fee, 0),
         commissionStatus: r.booking.commissionStatus,
         completedAt: r.booking.completedAt!,
         isInspectionOnly: true,
@@ -884,23 +915,25 @@ export class WorkersRepository {
       booking: WorkerJobWithRelations;
     }[]
   > {
-    return this.prisma.bid.findMany({
-      where: { workerProfileId },
-      orderBy: { updatedAt: 'desc' },
-      select: {
-        status: true,
-        amount: true,
-        updatedAt: true,
-        booking: { include: WORKER_JOB_INCLUDE },
-      },
-    }).then((rows) =>
-      rows.map((r) => ({
-        bidStatus: r.status,
-        bidAmount: r.amount,
-        bidUpdatedAt: r.updatedAt,
-        booking: r.booking,
-      })),
-    );
+    return this.prisma.bid
+      .findMany({
+        where: { workerProfileId },
+        orderBy: { updatedAt: 'desc' },
+        select: {
+          status: true,
+          amount: true,
+          updatedAt: true,
+          booking: { include: WORKER_JOB_INCLUDE },
+        },
+      })
+      .then((rows) =>
+        rows.map((r) => ({
+          bidStatus: r.status,
+          bidAmount: r.amount,
+          bidUpdatedAt: r.updatedAt,
+          booking: r.booking,
+        })),
+      );
   }
 
   /**

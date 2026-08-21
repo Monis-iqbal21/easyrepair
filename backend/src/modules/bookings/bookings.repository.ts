@@ -361,10 +361,7 @@ export class BookingsRepository {
           },
         });
 
-        if (
-          data.standardServiceItems &&
-          data.standardServiceItems.length > 0
-        ) {
+        if (data.standardServiceItems && data.standardServiceItems.length > 0) {
           await tx.bookingStandardServiceItem.createMany({
             data: data.standardServiceItems.map((item) => ({
               bookingId: booking.id,
@@ -635,8 +632,7 @@ export class BookingsRepository {
         const oldAvg = worker.rating;
         const newCount = oldCount + 1;
         const newAvg =
-          Math.round(((oldAvg * oldCount + data.rating) / newCount) * 10) /
-          10;
+          Math.round(((oldAvg * oldCount + data.rating) / newCount) * 10) / 10;
 
         // 3. Write updated stats.
         await tx.workerProfile.update({
@@ -1293,7 +1289,11 @@ export class BookingsRepository {
       // assignWorker/acceptBid) can never both win — the loser gets
       // changed: false and never touches the worker's busy flag below.
       const bookingRes = await tx.booking.updateMany({
-        where: { id: bookingId, status: BookingStatus.PENDING, workerProfileId: null },
+        where: {
+          id: bookingId,
+          status: BookingStatus.PENDING,
+          workerProfileId: null,
+        },
         data: {
           workerProfileId,
           status: BookingStatus.ACCEPTED,
@@ -1749,7 +1749,11 @@ export class BookingsRepository {
             workerProfileId: cancelledWorkerProfileId,
           },
         },
-        create: { bookingId, workerProfileId: cancelledWorkerProfileId, reason },
+        create: {
+          bookingId,
+          workerProfileId: cancelledWorkerProfileId,
+          reason,
+        },
         update: { reason },
       });
 

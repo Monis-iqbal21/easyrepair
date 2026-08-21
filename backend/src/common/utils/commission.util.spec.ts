@@ -5,6 +5,7 @@ import {
   calculateGrossWorkerEarning,
   calculatePlatformFee,
   calculateWorkerEarning,
+  settleBooking,
 } from './commission.util';
 
 describe('commission.util', () => {
@@ -52,7 +53,7 @@ describe('commission.util', () => {
       expect(base).not.toBe(9999);
     });
 
-    it('INSPECTION + CLOSED_AFTER_INSPECTION (fee-only outcome) uses finalPrice, which is the fee snapshot set at assignment', () => {
+    it('INSPECTION + CLOSED_AFTER_INSPECTION has zero commissionable labour', () => {
       const base = calculateCommissionBase({
         lane: BookingLane.INSPECTION,
         finalPrice: 500,
@@ -61,17 +62,17 @@ describe('commission.util', () => {
           decisionStatus: InspectionDecisionStatus.CLOSED_AFTER_INSPECTION,
         },
       });
-      expect(base).toBe(500);
+      expect(base).toBe(0);
     });
 
-    it('INSPECTION with no report at all falls back to finalPrice', () => {
+    it('INSPECTION with no report has zero commissionable labour', () => {
       expect(
         calculateCommissionBase({
           lane: BookingLane.INSPECTION,
           finalPrice: 500,
           inspectionReport: null,
         }),
-      ).toBe(500);
+      ).toBe(0);
     });
 
     it('returns null when finalPrice was never set', () => {
@@ -107,12 +108,12 @@ describe('commission.util', () => {
   });
 
   describe('separate worker earnings for inspector vs. work-performing worker (Task 4)', () => {
-    it('inspecting worker earns 18% commission on the inspection fee only', () => {
+    it('inspection fee is earned in full and is never commissioned', () => {
       const fee = 500;
-      const platformFee = calculatePlatformFee(fee);
+      const platformFee = calculatePlatformFee(0);
       const inspectorEarning = calculateWorkerEarning(fee, platformFee);
-      expect(platformFee).toBe(90);
-      expect(inspectorEarning).toBe(410);
+      expect(platformFee).toBe(0);
+      expect(inspectorEarning).toBe(500);
     });
 
     it("work-performing worker earns 18% commission on the accepted bid only, never the inspection fee or the inspector's quote", () => {
@@ -130,6 +131,138 @@ describe('commission.util', () => {
       expect(base).toBe(acceptedBid);
       expect(platformFee).toBe(540);
       expect(workerEarning).toBe(2460);
+    });
+  });
+
+  describe('settleBooking acceptance rows', () => {
+    const calculate = (
+      quoteParts: number,
+      quoteLabour: number,
+      inspectionFee: number,
+      received: number,
+      autoSettled = false,
+    ) =>
+      settleBooking({
+        quoteParts,
+        quoteLabour,
+        inspectionFee,
+        received,
+        autoSettled,
+      });
+
+    it('STANDARD Rs 2,100', () => {
+      expect(calculate(0, 2100, 0, 2100)).toMatchObject({
+        expectedTotal: 2100,
+        commission: 378,
+        munafa: 1722,
+      });
+    });
+
+    it('INSPECTION repair paid in full', () => {
+      expect(calculate(4200, 1500, 0, 5700)).toMatchObject({
+        partsPaid: 4200,
+        labourPaid: 1500,
+        commission: 270,
+        munafa: 1230,
+      });
+    });
+
+    it('INSPECTION repair short payment', () => {
+      expect(calculate(4200, 1500, 0, 5000)).toMatchObject({
+        partsPaid: 4200,
+        labourPaid: 800,
+        commission: 144,
+        munafa: 656,
+        shortfall: 700,
+        caseTypes: ['SHORT'],
+      });
+    });
+
+    it('allocates a Rs 3,000 short payment to parts before labour', () => {
+      expect(calculate(2000, 1500, 0, 3000)).toMatchObject({
+        partsPaid: 2000,
+        labourPaid: 1000,
+        commission: 180,
+        munafa: 820,
+        shortfall: 500,
+        caseTypes: ['SHORT'],
+      });
+    });
+
+    it('declined inspection fee paid', () => {
+      expect(calculate(0, 0, 500, 500)).toMatchObject({
+        feePaid: 500,
+        commission: 0,
+        munafa: 500,
+      });
+    });
+
+    it('inspection fee unpaid is covered by HandyGo', () => {
+      expect(calculate(0, 0, 500, 0)).toMatchObject({
+        commission: 0,
+        munafa: 500,
+        shortfall: 500,
+        handygoPays: 500,
+        caseTypes: ['UNPAID_FEE'],
+      });
+    });
+
+    it('partially paid inspection fee is covered by HandyGo', () => {
+      expect(calculate(0, 0, 500, 200)).toMatchObject({
+        feePaid: 200,
+        commission: 0,
+        munafa: 500,
+        shortfall: 300,
+        handygoPays: 300,
+        caseTypes: ['UNPAID_FEE'],
+      });
+    });
+
+    it('fully unpaid STANDARD labour', () => {
+      expect(calculate(0, 2100, 0, 0)).toMatchObject({
+        labourPaid: 0,
+        commission: 0,
+        munafa: 0,
+        shortfall: 2100,
+        caseTypes: ['UNPAID_LABOUR'],
+      });
+    });
+
+    it('opens separate labour and fee cases when both debts exist', () => {
+      expect(calculate(0, 2100, 500, 0)).toMatchObject({
+        shortfall: 2600,
+        caseTypes: ['UNPAID_LABOUR', 'UNPAID_FEE'],
+      });
+    });
+
+    it('keeps a partial labour shortage and unpaid fee as separate cases', () => {
+      expect(calculate(0, 2100, 500, 1000)).toMatchObject({
+        shortfall: 1600,
+        caseTypes: ['SHORT', 'UNPAID_FEE'],
+      });
+    });
+
+    it('rejects received cash above the payable total', () => {
+      expect(() => calculate(0, 2100, 0, 2101)).toThrow(
+        'Received cash cannot exceed the payable total',
+      );
+    });
+
+    it('BIDDING paid in full', () => {
+      expect(calculate(1900, 1400, 0, 3300)).toMatchObject({
+        partsPaid: 1900,
+        labourPaid: 1400,
+        commission: 252,
+        munafa: 1148,
+      });
+    });
+
+    it('BIDDING auto-settle adds its case marker without changing money', () => {
+      expect(calculate(1900, 1400, 0, 3300, true)).toMatchObject({
+        commission: 252,
+        munafa: 1148,
+        caseTypes: ['AUTO_SETTLE'],
+      });
     });
   });
 

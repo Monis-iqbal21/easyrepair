@@ -32,7 +32,9 @@ describe('BookingsRepository.closeInspectionAndOpenRepairBidding', () => {
 
   beforeEach(() => {
     tx = {
-      inspectionReport: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
+      inspectionReport: {
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
       booking: {
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
         create: jest.fn().mockResolvedValue({ id: 'child-1' }),
@@ -195,7 +197,14 @@ describe('BookingsRepository idempotency guards', () => {
         create: jest.fn().mockResolvedValue({ id: 'booking-1' }),
         update: jest.fn().mockResolvedValue({}),
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        findUniqueOrThrow: jest.fn().mockResolvedValue({
+          lane: 'STANDARD',
+          finalPrice: 1000,
+          workerProfile: { userId: 'worker-user-1' },
+          settlements: [],
+        }),
       },
+      bookingSettlement: { create: jest.fn().mockResolvedValue({}) },
       bookingStandardServiceItem: { createMany: jest.fn() },
       bookingStatusHistory: { create: jest.fn().mockResolvedValue({}) },
       workerProfile: {
@@ -344,20 +353,28 @@ describe('BookingsRepository idempotency guards', () => {
       ]);
 
       expect(tx.booking.updateMany).toHaveBeenCalledWith({
-        where: { id: 'booking-1', status: { in: ['ACCEPTED', 'EN_ROUTE', 'ARRIVED', 'IN_PROGRESS'] } },
+        where: {
+          id: 'booking-1',
+          status: { in: ['ACCEPTED', 'EN_ROUTE', 'ARRIVED', 'IN_PROGRESS'] },
+        },
         data: { status: 'COMPLETED', completedAt: expect.any(Date) },
       });
-      const writtenKeys = Object.keys(tx.booking.updateMany.mock.calls[0][0].data);
+      const writtenKeys = Object.keys(
+        tx.booking.updateMany.mock.calls[0][0].data,
+      );
       expect(writtenKeys).not.toContain('finalPrice');
       expect(writtenKeys).not.toContain('platformFee');
+      expect(tx.bookingSettlement.create).not.toHaveBeenCalled();
     });
 
     it('a retry that loses the atomic guard (already completed) writes nothing — no duplicate history row, no worker-flag reset', async () => {
       tx.booking.updateMany.mockResolvedValue({ count: 0 });
 
-      const result = await repo.completeBookingLifecycle('booking-1', 'worker-1', [
-        'IN_PROGRESS',
-      ]);
+      const result = await repo.completeBookingLifecycle(
+        'booking-1',
+        'worker-1',
+        ['IN_PROGRESS'],
+      );
 
       expect(result.changed).toBe(false);
       expect(tx.bookingStatusHistory.create).not.toHaveBeenCalled();
@@ -365,9 +382,11 @@ describe('BookingsRepository idempotency guards', () => {
     });
 
     it('the winning completion writes the history row and frees the worker exactly once', async () => {
-      const result = await repo.completeBookingLifecycle('booking-1', 'worker-1', [
-        'IN_PROGRESS',
-      ]);
+      const result = await repo.completeBookingLifecycle(
+        'booking-1',
+        'worker-1',
+        ['IN_PROGRESS'],
+      );
 
       expect(result.changed).toBe(true);
       expect(tx.bookingStatusHistory.create).toHaveBeenCalledTimes(1);

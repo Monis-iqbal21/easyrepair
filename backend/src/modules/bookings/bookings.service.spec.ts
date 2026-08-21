@@ -1215,6 +1215,43 @@ describe('BookingsService idempotency', () => {
     expect(bookingsRepository.assignWorkerToBooking).toHaveBeenCalled();
   });
 
+  it('assignWorker: never commissions an INSPECTION visit fee', async () => {
+    bookingsRepository.findBookingById.mockResolvedValue(
+      makeBooking('PENDING', {
+        workerProfileId: null,
+        lane: 'INSPECTION',
+        inspection: true,
+        inspectionFeeSnapshot: 500,
+        finalPrice: null,
+      }),
+    );
+    bookingsRepository.findWorkerProfileById.mockResolvedValue({
+      id: 'worker-1',
+      availabilityStatus: 'ONLINE',
+      profileCompleted: true,
+      currentlyWorking: false,
+      status: 'ACTIVE',
+      onboardingStatus: 'APPROVED',
+      lastSeenAt: new Date(),
+    });
+    bookingsRepository.assignWorkerToBooking.mockResolvedValue({
+      booking: makeBooking('ACCEPTED', {
+        workerProfileId: 'worker-1',
+        lane: 'INSPECTION',
+      }),
+      changed: true,
+    });
+
+    await service.assignWorker('client-user-1', 'booking-1', 'worker-1');
+
+    expect(bookingsRepository.assignWorkerToBooking).toHaveBeenCalledWith(
+      'booking-1',
+      'worker-1',
+      500,
+      0,
+    );
+  });
+
   it('completeJob: retrying after it already succeeded returns success without duplicate earnings/notification', async () => {
     bookingsRepository.findWorkerProfileByUserId.mockResolvedValue({
       id: 'worker-1',

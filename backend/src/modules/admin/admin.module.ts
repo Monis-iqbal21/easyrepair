@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { AdminController } from './admin.controller';
 import { AdminStatsController } from './admin-stats.controller';
 import { AdminClientAgreementsController } from './admin-client-agreements.controller';
-import { AdminBookingsController } from './admin-bookings.controller';
 import { AdminUsersController } from './admin-users.controller';
 import { AdminOtpController } from './admin-otp.controller';
 import { AdminClientsController } from './admin-clients.controller';
@@ -15,17 +14,36 @@ import { AdminClientsRepository } from './admin-clients.repository';
 import { AgreementsModule } from '../agreements/agreements.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { StorageModule } from '../storage/storage.module';
+import {
+  AdminBookingOperationsController,
+  AdminCommissionCollectionsController,
+  AdminSettlementCasesController,
+} from './admin-operations.controller';
+import { AdminOperationsService } from './admin-operations.service';
+import { AdminOperationsRepository } from './admin-operations.repository';
+import { BullModule } from '@nestjs/bull';
+import {
+  AdminOperationsProcessor,
+  ADMIN_OPERATIONS_QUEUE,
+} from './admin-operations.processor';
 
 @Module({
-  imports: [AgreementsModule, NotificationsModule, StorageModule],
+  imports: [
+    AgreementsModule,
+    NotificationsModule,
+    StorageModule,
+    BullModule.registerQueue({ name: ADMIN_OPERATIONS_QUEUE }),
+  ],
   controllers: [
     AdminController,
     AdminStatsController,
     AdminClientAgreementsController,
-    AdminBookingsController,
     AdminUsersController,
     AdminOtpController,
     AdminClientsController,
+    AdminBookingOperationsController,
+    AdminSettlementCasesController,
+    AdminCommissionCollectionsController,
   ],
   providers: [
     AdminService,
@@ -34,6 +52,9 @@ import { StorageModule } from '../storage/storage.module';
     AdminOtpRepository,
     AdminClientsService,
     AdminClientsRepository,
+    AdminOperationsService,
+    AdminOperationsRepository,
+    AdminOperationsProcessor,
   ],
 })
 export class AdminModule {}

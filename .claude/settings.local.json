@@ -23,7 +23,21 @@
       "Bash(xargs grep *)",
       "Bash(node_modules/.bin/tsc --noEmit)",
       "Bash(grep -E \"\\\\.\\(controller|service\\)\\\\.ts$\")",
-      "Bash(xargs sed *)"
+      "Bash(xargs sed *)",
+      "Bash(flutter gen-l10n)",
+      "Bash(flutter analyze *)",
+      "Bash(flutter test *)",
+      "Bash(python tool/audit_report.py)",
+      "Bash(python tool/translations_csv.py *)",
+      "Bash(git status *)",
+      "Bash(git diff *)"
+    ],
+    "deny": [
+      "Bash(git push *)",
+      "Bash(git commit *)",
+      "Bash(git reset *)",
+      "Bash(git clean *)",
+      "Bash(git checkout *)"
     ]
   }
 }

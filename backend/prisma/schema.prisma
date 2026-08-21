@@ -33,6 +33,8 @@ enum BookingStatus {
   REJECTED
   CANCELLED
   EXPIRED
+  AWAITING_CONFIRMATION
+  SETTLED
 }
 
 enum CancelledByRole {
@@ -163,6 +165,70 @@ enum CommissionStatus {
   PAID
 }
 
+/// Who supplied the received-cash figure used for an immutable settlement.
+/// OTP is reserved for a future flow and is deliberately unused in this phase.
+enum SettlementSource {
+  OTP
+  USTAAD
+  CLIENT
+  ADMIN
+}
+
+enum SettlementCaseType {
+  SHORT
+  UNPAID_LABOUR
+  UNPAID_FEE
+}
+
+enum SettlementCaseStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum SettlementCasePriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum SettlementCaseEventType {
+  CREATED
+  STATUS_CHANGED
+  ASSIGNED
+  NOTE_ADDED
+  CONTACT_ATTEMPTED
+  COLLECTION_CREATED
+  RESOLVED
+  REOPENED
+}
+
+enum ContactChannel {
+  PHONE
+  SMS
+  WHATSAPP
+  EMAIL
+  OTHER
+}
+
+enum ContactOutcome {
+  REACHED
+  NO_ANSWER
+  PROMISED_PAYMENT
+  DISPUTED
+  WRONG_NUMBER
+  OTHER
+}
+
+enum CommissionCollectionStatus {
+  PENDING
+  COLLECTED
+  FAILED
+  CANCELLED
+}
+
 enum AttachmentType {
   IMAGE
   VIDEO
@@ -245,9 +311,15 @@ model User {
   passwordResetOtps    PasswordResetOtp[]
   agreementAcceptances AgreementAcceptance[]
 
-  conversationsAsClient Conversation[] @relation("ClientConversations")
-  conversationsAsWorker Conversation[] @relation("WorkerConversations")
-  chatMessages          Message[]      @relation("ChatMessages")
+  conversationsAsClient        Conversation[]             @relation("ClientConversations")
+  conversationsAsWorker        Conversation[]             @relation("WorkerConversations")
+  chatMessages                 Message[]                  @relation("ChatMessages")
+  settlementsSettled           BookingSettlement[]        @relation("SettlementSettledBy")
+  settlementCasesAssigned      SettlementCase[]           @relation("SettlementCaseAssignee")
+  settlementCaseEvents         SettlementCaseEvent[]      @relation("SettlementCaseEventActor")
+  settlementCaseNotes          SettlementCaseNote[]       @relation("SettlementCaseNoteAuthor")
+  settlementContactAttempts    SettlementContactAttempt[] @relation("SettlementContactActor")
+  commissionCollectionsCreated CommissionCollection[]     @relation("CommissionCollectionCreator")
 
   @@map("users")
 }
@@ -375,8 +447,8 @@ model ClientProfile {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  bookings  Booking[]
-  addresses ClientAddress[]
+  bookings             Booking[]
+  addresses            ClientAddress[]
   agreementAcceptances AgreementAcceptance[]
 
   @@map("client_profiles")
@@ -400,20 +472,20 @@ model ClientAddress {
 }
 
 model WorkerProfile {
-  id                 String             @id @default(uuid())
-  userId             String             @unique
-  user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                 String                                 @id @default(uuid())
+  userId             String                                 @unique
+  user               User                                   @relation(fields: [userId], references: [id], onDelete: Cascade)
   firstName          String
   lastName           String
   avatarUrl          String?
   avatarStorageKey   String?
   bio                String?
-  status             WorkerStatus       @default(ACTIVE)
-  verificationStatus VerificationStatus @default(PENDING)
-  isOnline           Boolean            @default(false)
-  profileCompleted   Boolean            @default(false)
-  availabilityStatus AvailabilityStatus @default(OFFLINE)
-  onlineAt           DateTime?          @db.Timestamptz(3)
+  status             WorkerStatus                           @default(ACTIVE)
+  verificationStatus VerificationStatus                     @default(PENDING)
+  isOnline           Boolean                                @default(false)
+  profileCompleted   Boolean                                @default(false)
+  availabilityStatus AvailabilityStatus                     @default(OFFLINE)
+  onlineAt           DateTime?                              @db.Timestamptz(3)
   /// Server-observed "this Worker's app is genuinely active" timestamp —
   /// distinct from onlineAt (set once per Go-Online session) and from
   /// locationUpdatedAt (GPS freshness, used for nearby-radius matching).
@@ -422,8 +494,8 @@ model WorkerProfile {
   /// by Client/Admin actions or background jobs. Used to expire a stale
   /// ONLINE lease (see WORKER_ONLINE_STALE_HOURS) independently of GPS
   /// freshness, which remains a separate, stricter check.
-  lastSeenAt         DateTime?          @db.Timestamptz(3)
-  currentlyWorking   Boolean            @default(false)
+  lastSeenAt         DateTime?                              @db.Timestamptz(3)
+  currentlyWorking   Boolean                                @default(false)
   currentLat         Float?
   currentLng         Float?
   /// PostGIS mirror of (currentLng, currentLat), maintained by the database
@@ -437,11 +509,11 @@ model WorkerProfile {
   /// in BookingsRepository can run in the database. Only used when
   /// USE_POSTGIS=true; the Haversine + bounding-box path is unaffected.
   location           Unsupported("geography(Point, 4326)")?
-  locationUpdatedAt  DateTime?          @db.Timestamptz(3)
-  rating             Float              @default(0)
-  totalRatings       Int                @default(0)
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
+  locationUpdatedAt  DateTime?                              @db.Timestamptz(3)
+  rating             Float                                  @default(0)
+  totalRatings       Int                                    @default(0)
+  createdAt          DateTime                               @default(now())
+  updatedAt          DateTime                               @updatedAt
 
   // ── Ustaad onboarding / profile completion ────────────────────────────
   fullLegalName        String?
@@ -479,13 +551,16 @@ model WorkerProfile {
   changesRequiredReason String?
   rejectionReason       String?
 
-  skills               WorkerSkill[]
-  documents            WorkerDocument[]
-  bookings             Booking[]
-  bids                 Bid[]
-  bookingExclusions    BookingWorkerExclusion[]
-  inspectionReports    InspectionReport[]
-  agreementAcceptances AgreementAcceptance[]
+  skills                WorkerSkill[]
+  documents             WorkerDocument[]
+  bookings              Booking[]
+  bookingSettlements    BookingSettlement[]
+  settlementCases       SettlementCase[]
+  commissionCollections CommissionCollection[]
+  bids                  Bid[]
+  bookingExclusions     BookingWorkerExclusion[]
+  inspectionReports     InspectionReport[]
+  agreementAcceptances  AgreementAcceptance[]
 
   /// Supports the stale-ONLINE cleanup scan (WHERE availabilityStatus =
   /// ONLINE AND lastSeenAt < cutoff) and the matching-time freshness check.
@@ -556,14 +631,14 @@ model WorkerDocument {
 }
 
 model ServiceCategory {
-  id            String   @id @default(uuid())
-  name          String   @unique
-  description   String?
-  iconUrl       String?
-  isActive      Boolean  @default(true)
+  id             String   @id @default(uuid())
+  name           String   @unique
+  description    String?
+  iconUrl        String?
+  isActive       Boolean  @default(true)
   /// Fixed fee charged for an inspection-lane booking in this category.
   /// Null means inspection is not offered for this category.
-  inspectionFee Float?
+  inspectionFee  Float?
   /// When true this category offers the INSPECTION lane and nothing else —
   /// the client is never asked to pick a lane, and STANDARD/BIDDING bookings
   /// are rejected server-side (see BookingsService.createBooking).
@@ -573,9 +648,9 @@ model ServiceCategory {
   /// category with this set must therefore also carry an inspectionFee.
   /// Defaults false, so every pre-existing category keeps all three lanes
   /// exactly as before.
-  inspectionOnly Boolean @default(false)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  inspectionOnly Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   bookings           Booking[]
   workerSkills       WorkerSkill[]
@@ -669,8 +744,8 @@ model Booking {
   /// Whether HandyGo's 18% platform commission on this job has been
   /// settled/recorded by admin. Belongs to this individual completed job,
   /// never to the whole Worker account — three completed jobs for the same
-  /// worker can carry three independent statuses. Set only by the admin
-  /// commission-status endpoint; defaults PENDING for every booking
+  /// worker can carry three independent statuses. Set to PAID only when an
+  /// immutable CommissionCollection reaches COLLECTED; defaults PENDING
   /// (irrelevant until the booking actually completes).
   commissionStatus          CommissionStatus @default(PENDING)
   /// When commissionStatus was last changed by an admin. Null until the
@@ -727,6 +802,8 @@ model Booking {
   standardServiceItems BookingStandardServiceItem[]
   workerExclusions     BookingWorkerExclusion[]
   inspectionReport     InspectionReport?
+  settlements          BookingSettlement[]
+  settlementCases      SettlementCase[]
 
   @@index([clientProfileId])
   @@index([workerProfileId])
@@ -758,6 +835,167 @@ model Booking {
   /// status as the second key keeps those counts index-resident.
   @@index([workerProfileId, status], map: "bookings_worker_status_idx")
   @@map("bookings")
+}
+
+/// Append-only cash-settlement ledger. Rows have no updatedAt field and must
+/// never be corrected in place; a correction inserts a new row whose
+/// supersedesId points at the prior immutable record.
+model BookingSettlement {
+  id              String        @id @default(uuid())
+  bookingId       String
+  booking         Booking       @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+  workerProfileId String
+  workerProfile   WorkerProfile @relation(fields: [workerProfileId], references: [id], onDelete: Restrict)
+
+  supersedesId String?            @unique
+  supersedes   BookingSettlement? @relation("SettlementSupersession", fields: [supersedesId], references: [id], onDelete: Restrict)
+  supersededBy BookingSettlement? @relation("SettlementSupersession")
+  /// Lifecycle pointer used only to enforce one authoritative row per
+  /// booking. Monetary snapshot fields remain immutable.
+  isCurrent    Boolean            @default(true)
+
+  expectedParts   Int
+  expectedLabour  Int
+  expectedFee     Int
+  expectedTotal   Int
+  received        Int
+  source          SettlementSource
+  partsPaid       Int
+  labourPaid      Int
+  feePaid         Int
+  commission      Int
+  munafa          Int
+  shortfall       Int
+  handygoPays     Int
+  note            String?
+  settledByUserId String
+  settledBy       User                       @relation("SettlementSettledBy", fields: [settledByUserId], references: [id], onDelete: Restrict)
+  settledAt       DateTime                   @default(now()) @db.Timestamptz(3)
+  cases           SettlementCase[]
+  collectionItems CommissionCollectionItem[]
+
+  @@index([bookingId, settledAt])
+  @@index([workerProfileId, settledAt])
+  @@index([settledByUserId])
+  @@map("booking_settlements")
+}
+
+/// Operational exception tracking around an immutable settlement. Money is
+/// always read from settlementId; this row must never duplicate/recalculate it.
+model SettlementCase {
+  id               String                     @id @default(uuid())
+  bookingId        String
+  booking          Booking                    @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+  workerProfileId  String
+  workerProfile    WorkerProfile              @relation(fields: [workerProfileId], references: [id], onDelete: Restrict)
+  settlementId     String
+  settlement       BookingSettlement          @relation(fields: [settlementId], references: [id], onDelete: Restrict)
+  type             SettlementCaseType
+  status           SettlementCaseStatus       @default(OPEN)
+  priority         SettlementCasePriority     @default(NORMAL)
+  assignedToUserId String?
+  assignedTo       User?                      @relation("SettlementCaseAssignee", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+  resolvedAt       DateTime?                  @db.Timestamptz(3)
+  createdAt        DateTime                   @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime                   @updatedAt @db.Timestamptz(3)
+  events           SettlementCaseEvent[]
+  notes            SettlementCaseNote[]
+  contactAttempts  SettlementContactAttempt[]
+
+  @@unique([settlementId, type])
+  @@index([status, priority, createdAt])
+  @@index([bookingId])
+  @@index([workerProfileId])
+  @@index([assignedToUserId])
+  @@map("settlement_cases")
+}
+
+/// Append-only case lifecycle audit trail.
+model SettlementCaseEvent {
+  id          String                  @id @default(uuid())
+  caseId      String
+  case        SettlementCase          @relation(fields: [caseId], references: [id], onDelete: Restrict)
+  type        SettlementCaseEventType
+  actorUserId String
+  actor       User                    @relation("SettlementCaseEventActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+  metadata    Json?
+  createdAt   DateTime                @default(now()) @db.Timestamptz(3)
+
+  @@index([caseId, createdAt])
+  @@index([actorUserId])
+  @@map("settlement_case_events")
+}
+
+/// Append-only internal note; edits are intentionally unsupported.
+model SettlementCaseNote {
+  id           String         @id @default(uuid())
+  caseId       String
+  case         SettlementCase @relation(fields: [caseId], references: [id], onDelete: Restrict)
+  authorUserId String
+  author       User           @relation("SettlementCaseNoteAuthor", fields: [authorUserId], references: [id], onDelete: Restrict)
+  body         String
+  createdAt    DateTime       @default(now()) @db.Timestamptz(3)
+
+  @@index([caseId, createdAt])
+  @@index([authorUserId])
+  @@map("settlement_case_notes")
+}
+
+/// Append-only record of an admin's attempt to contact a settlement party.
+model SettlementContactAttempt {
+  id          String         @id @default(uuid())
+  caseId      String
+  case        SettlementCase @relation(fields: [caseId], references: [id], onDelete: Restrict)
+  actorUserId String
+  actor       User           @relation("SettlementContactActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+  channel     ContactChannel
+  outcome     ContactOutcome
+  note        String?
+  followUpAt  DateTime?      @db.Timestamptz(3)
+  contactedAt DateTime       @default(now()) @db.Timestamptz(3)
+
+  @@index([caseId, contactedAt])
+  @@index([actorUserId])
+  @@index([followUpAt])
+  @@map("settlement_contact_attempts")
+}
+
+/// One immutable snapshot of a nightly commission collection attempt.
+model CommissionCollection {
+  id              String                     @id @default(uuid())
+  workerProfileId String
+  workerProfile   WorkerProfile              @relation(fields: [workerProfileId], references: [id], onDelete: Restrict)
+  collectionDate  DateTime                   @db.Date
+  amount          Int
+  status          CommissionCollectionStatus @default(PENDING)
+  /// Null only for the Bull-scheduled nightly system run. Manual fallback
+  /// requests always retain the authenticated admin actor.
+  createdByUserId String?
+  createdBy       User?                      @relation("CommissionCollectionCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  automated       Boolean                    @default(false)
+  collectedAt     DateTime?                  @db.Timestamptz(3)
+  failureReason   String?
+  createdAt       DateTime                   @default(now()) @db.Timestamptz(3)
+  items           CommissionCollectionItem[]
+
+  @@unique([workerProfileId, collectionDate])
+  @@index([status, collectionDate])
+  @@index([createdByUserId])
+  @@map("commission_collections")
+}
+
+model CommissionCollectionItem {
+  id           String               @id @default(uuid())
+  collectionId String
+  collection   CommissionCollection @relation(fields: [collectionId], references: [id], onDelete: Restrict)
+  settlementId String
+  settlement   BookingSettlement    @relation(fields: [settlementId], references: [id], onDelete: Restrict)
+  amount       Int
+  createdAt    DateTime             @default(now()) @db.Timestamptz(3)
+
+  @@unique([collectionId, settlementId])
+  @@index([settlementId])
+  @@map("commission_collection_items")
 }
 
 /// Individual selected STANDARD-lane services for a booking. Supports
@@ -1077,12 +1315,12 @@ model AgreementTemplate {
 /// snapshotted here so the record remains meaningful even if the worker's
 /// profile or the template later changes.
 model AgreementAcceptance {
-  id                  String            @id @default(uuid())
+  id                  String             @id @default(uuid())
   /// Null for a CLIENT acceptance — exactly one of workerProfileId /
   /// clientProfileId is set, enforced in application code (Prisma has no
   /// declarative XOR constraint). Never both, never neither.
   workerProfileId     String?
-  workerProfile       WorkerProfile?    @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
+  workerProfile       WorkerProfile?     @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
   /// Null for a WORKER acceptance — see workerProfileId.
   ///
   /// SetNull, not Cascade: this row is permanent legal evidence of an
@@ -1091,14 +1329,14 @@ model AgreementAcceptance {
   /// identifying fact (name, mobile, account id, hashes, PDF reference,
   /// timestamps) survives on the immutable snapshot fields below.
   clientProfileId     String?
-  clientProfile       ClientProfile?    @relation(fields: [clientProfileId], references: [id], onDelete: SetNull)
+  clientProfile       ClientProfile?     @relation(fields: [clientProfileId], references: [id], onDelete: SetNull)
   /// Nullable and SetNull for the same legal-preservation reason as
   /// clientProfileId: a deleted User account must not delete the acceptance
   /// record it made. userId is still always populated at creation time by
   /// application code — this is a schema-level survival guarantee, not a
   /// relaxation of what gets written.
   userId              String?
-  user                User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user                User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
   /// Optional: acceptances created from the file-backed source registry have
   /// no AgreementTemplate row. Legacy rows keep theirs.
   agreementTemplateId String?
@@ -1115,13 +1353,13 @@ model AgreementAcceptance {
 
   // Snapshot of the worker's identity/profile at acceptance time. CNIC and
   // main skill are Worker-only concepts — null on a CLIENT row.
-  fullLegalNameSnapshot String
-  cnicNumberSnapshot    String?
-  mobileSnapshot        String
-  mainSkillSnapshot     String?
-  cnicFrontUrlSnapshot  String?
-  cnicBackUrlSnapshot   String?
-  liveSelfieUrlSnapshot String?
+  fullLegalNameSnapshot   String
+  cnicNumberSnapshot      String?
+  mobileSnapshot          String
+  mainSkillSnapshot       String?
+  cnicFrontUrlSnapshot    String?
+  cnicBackUrlSnapshot     String?
+  liveSelfieUrlSnapshot   String?
   /// CLIENT-only: the customer account id shown in the accepted document.
   /// Null on a WORKER row.
   clientAccountIdSnapshot String?

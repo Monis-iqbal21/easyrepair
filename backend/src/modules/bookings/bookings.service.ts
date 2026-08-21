@@ -1093,12 +1093,15 @@ export class BookingsService {
           : (booking.standardServicePriceSnapshot ?? undefined)
         : (booking.inspectionFeeSnapshot ?? undefined);
 
-    // Commission is computed on this same amount at assignment time â€” for
-    // STANDARD it's the final labour/service total; for INSPECTION it's the
-    // visit fee (only overwritten later if the customer accepts a repair
-    // quote, see setInspectionRepairPrice).
+    // STANDARD is labour/service and is commissioned immediately. An
+    // INSPECTION assignment is only a visit fee, which is never commissioned;
+    // accepting a repair quote later replaces this with labour-only commission.
     const platformFee =
-      finalPrice !== undefined ? calculatePlatformFee(finalPrice) : undefined;
+      finalPrice !== undefined
+        ? booking.lane === BookingLane.INSPECTION
+          ? 0
+          : calculatePlatformFee(finalPrice)
+        : undefined;
 
     let updated: BookingWithRelations;
     let changed: boolean;

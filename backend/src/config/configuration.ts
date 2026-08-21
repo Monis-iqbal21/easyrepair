@@ -32,6 +32,9 @@ export default () => ({
   platform: {
     feePercent: parseInt(process.env.PLATFORM_FEE_PERCENT || '10', 10),
   },
+  business: {
+    timezone: process.env.BUSINESS_TIMEZONE || 'Asia/Karachi',
+  },
   usePostgis: process.env.USE_POSTGIS === 'true',
   support: {
     /**

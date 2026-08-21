@@ -24,10 +24,8 @@ export interface CommissionBaseInput {
  * - INSPECTION with an ACCEPTED_REPAIR report: `labourCost` only — the
  *   report's `partsTotal` is deliberately excluded from this base.
  * - INSPECTION with a CLOSED_AFTER_INSPECTION report (or no report at all):
- *   the customer only ever paid the inspection fee. `finalPrice` at this
- *   point is still `inspectionFeeSnapshot` (untouched since assignment —
- *   only an accepted quote overwrites it), and that fee is itself the
- *   worker's earning base, matching existing business behavior.
+ *   zero. The inspection fee remains a worker earning, but it is not a
+ *   commissionable amount.
  *
  * Returns null when there is nothing to base a commission on (e.g. finalPrice
  * was never set) — callers should treat that booking as contributing 0.
@@ -35,14 +33,22 @@ export interface CommissionBaseInput {
 export function calculateCommissionBase(
   input: CommissionBaseInput,
 ): number | null {
-  if (input.lane === BookingLane.INSPECTION && input.inspectionReport) {
+  if (input.lane === BookingLane.INSPECTION) {
     if (
-      input.inspectionReport.decisionStatus ===
+      input.inspectionReport?.decisionStatus ===
       InspectionDecisionStatus.ACCEPTED_REPAIR
     ) {
       return input.inspectionReport.labourCost;
     }
-    return input.finalPrice;
+    if (
+      input.inspectionReport?.decisionStatus ===
+      InspectionDecisionStatus.FIND_OTHER_USTAAD
+    ) {
+      return input.finalPrice;
+    }
+    // A declined/no-repair inspection earns its fee, but the fee is never
+    // commissionable labour.
+    return 0;
   }
   return input.finalPrice;
 }
@@ -74,5 +80,115 @@ export function calculateWorkerEarning(
 export function calculateGrossWorkerEarning(
   input: CommissionBaseInput,
 ): number {
-  return calculateCommissionBase(input) ?? 0;
+  if (input.lane === BookingLane.INSPECTION) {
+    if (
+      input.inspectionReport?.decisionStatus ===
+      InspectionDecisionStatus.ACCEPTED_REPAIR
+    ) {
+      return input.inspectionReport.labourCost;
+    }
+    return input.finalPrice ?? 0;
+  }
+  return input.finalPrice ?? 0;
+}
+
+export type SettlementCaseType =
+  | 'SHORT'
+  | 'UNPAID_LABOUR'
+  | 'UNPAID_FEE'
+  | 'AUTO_SETTLE';
+
+export interface SettleBookingInput {
+  quoteParts: number;
+  quoteLabour: number;
+  inspectionFee: number;
+  received: number;
+  autoSettled?: boolean;
+}
+
+export interface BookingSettlementCalculation {
+  expectedTotal: number;
+  partsPaid: number;
+  labourPaid: number;
+  feePaid: number;
+  commission: number;
+  munafa: number;
+  shortfall: number;
+  handygoPays: number;
+  caseTypes: SettlementCaseType[];
+}
+
+/**
+ * Allocates cash and calculates a booking settlement in whole rupees.
+ * Parts are paid first, then labour, then inspection fee. Commission is
+ * always 18% of labour actually received; parts and fees are never included.
+ */
+export function settleBooking(
+  input: SettleBookingInput,
+): BookingSettlementCalculation {
+  const quoteParts = toWholeRupees(input.quoteParts);
+  const quoteLabour = toWholeRupees(input.quoteLabour);
+  const inspectionFee = toWholeRupees(input.inspectionFee);
+  const received = toWholeRupees(input.received);
+  const expectedTotal = quoteParts + quoteLabour + inspectionFee;
+
+  if (received > expectedTotal) {
+    throw new RangeError('Received cash cannot exceed the payable total');
+  }
+
+  let remaining = received;
+  const partsPaid = Math.min(quoteParts, remaining);
+  remaining -= partsPaid;
+  const labourPaid = Math.min(quoteLabour, remaining);
+  remaining -= labourPaid;
+  const feePaid = Math.min(inspectionFee, remaining);
+
+  const shortfall = Math.max(
+    0,
+    expectedTotal - partsPaid - labourPaid - feePaid,
+  );
+  const handygoPays = Math.max(0, inspectionFee - feePaid);
+  const commission = Math.round(calculatePlatformFee(labourPaid));
+  const munafa = labourPaid - commission + feePaid + handygoPays;
+  const caseTypes: SettlementCaseType[] = [];
+
+  if (shortfall > 0) {
+    // A settlement can owe more than one kind of money at once. Keep the
+    // specific fully-unpaid labour/fee cases, and use SHORT for an unpaid
+    // parts balance or a partially-paid labour balance.
+    if (
+      quoteParts > partsPaid ||
+      (labourPaid > 0 && labourPaid < quoteLabour)
+    ) {
+      caseTypes.push('SHORT');
+    }
+    if (quoteLabour > 0 && labourPaid === 0) {
+      caseTypes.push('UNPAID_LABOUR');
+    }
+    if (inspectionFee > feePaid) {
+      caseTypes.push('UNPAID_FEE');
+    }
+  }
+  if (input.autoSettled) caseTypes.push('AUTO_SETTLE');
+
+  return {
+    expectedTotal,
+    partsPaid,
+    labourPaid,
+    feePaid,
+    commission,
+    munafa,
+    shortfall,
+    handygoPays,
+    caseTypes,
+  };
+}
+
+function toWholeRupees(value: number): number {
+  if (!Number.isFinite(value) || value < 0) {
+    throw new RangeError(
+      'Settlement money values must be finite and non-negative',
+    );
+  }
+  return Math.round(value);
 }

@@ -86,6 +86,10 @@ class EnvironmentVariables {
 
   @IsString()
   @IsOptional()
+  BUSINESS_TIMEZONE: string = 'Asia/Karachi';
+
+  @IsString()
+  @IsOptional()
   USE_POSTGIS: string = 'false';
 
   @IsNumber()

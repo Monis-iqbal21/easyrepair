@@ -396,9 +396,35 @@ describe('WorkersRepository.getEarningsHistory — 18% commission breakdown', ()
     const job = history[0].jobs[0];
 
     expect(job.grossEarning).toBe(1000);
-    expect(job.commissionAmount).toBe(180);
-    expect(job.ustaadEarning).toBe(820);
+    expect(job.commissionAmount).toBe(0);
+    expect(job.ustaadEarning).toBe(1000);
     expect(job.commissionStatus).toBe('PAID');
+  });
+
+  it('an assigned declined inspection earns the full fee with zero commission', async () => {
+    prisma.booking.findMany.mockResolvedValue([
+      {
+        id: 'inspection-declined',
+        lane: 'INSPECTION',
+        finalPrice: 500,
+        completedAt: new Date('2026-08-02T09:00:00Z'),
+        commissionStatus: 'PENDING',
+        category: { name: 'Electrical' },
+        inspectionReport: {
+          labourCost: 0,
+          decisionStatus: 'CLOSED_AFTER_INSPECTION',
+          workerProfileId: 'inspector-1',
+        },
+        sourceInspectionBooking: null,
+      },
+    ]);
+
+    const history = await repo.getEarningsHistory('inspector-1');
+    const job = history[0].jobs[0];
+
+    expect(job.grossEarning).toBe(500);
+    expect(job.commissionAmount).toBe(0);
+    expect(job.ustaadEarning).toBe(500);
   });
 });
 
