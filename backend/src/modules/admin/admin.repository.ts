@@ -33,6 +33,47 @@ export type WorkerProfileAdminView = Prisma.WorkerProfileGetPayload<{
 export class AdminRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  async findVerificationDocumentStorage(workerProfileId: string): Promise<{
+    cnicFrontUrl: string | null;
+    cnicFrontStorageKey: string | null;
+    cnicBackUrl: string | null;
+    cnicBackStorageKey: string | null;
+    liveSelfieUrl: string | null;
+    liveSelfieStorageKey: string | null;
+  } | null> {
+    return this.prisma.workerProfile.findUnique({
+      where: { id: workerProfileId },
+      select: {
+        cnicFrontUrl: true,
+        cnicFrontStorageKey: true,
+        cnicBackUrl: true,
+        cnicBackStorageKey: true,
+        liveSelfieUrl: true,
+        liveSelfieStorageKey: true,
+      },
+    });
+  }
+
+  async findWorkerDocumentStorage(
+    workerProfileId: string,
+    documentId: string,
+  ): Promise<{
+    fileUrl: string;
+    storageKey: string | null;
+    fileName: string | null;
+    mimeType: string | null;
+  } | null> {
+    return this.prisma.workerDocument.findFirst({
+      where: { id: documentId, workerProfileId },
+      select: {
+        fileUrl: true,
+        storageKey: true,
+        fileName: true,
+        mimeType: true,
+      },
+    });
+  }
+
   /** Find all worker profiles currently awaiting an admin decision, oldest first. */
   async findPendingWorkers(): Promise<WorkerProfileAdminView[]> {
     return this.prisma.workerProfile.findMany({
@@ -75,7 +116,8 @@ export class AdminRepository {
 
     if (query.status) where.status = query.status;
     if (query.onboardingStatus) where.onboardingStatus = query.onboardingStatus;
-    if (query.verificationStatus) where.verificationStatus = query.verificationStatus;
+    if (query.verificationStatus)
+      where.verificationStatus = query.verificationStatus;
     if (query.categoryId) {
       where.skills = { some: { categoryId: query.categoryId } };
     }
@@ -101,7 +143,9 @@ export class AdminRepository {
         take: pageSize,
         include: {
           user: { select: { phone: true } },
-          skills: { include: { category: { select: { id: true, name: true } } } },
+          skills: {
+            include: { category: { select: { id: true, name: true } } },
+          },
         },
       }),
       this.prisma.workerProfile.count({ where }),
@@ -313,17 +357,30 @@ export class AdminRepository {
   async updateBookingCommissionStatus(
     bookingId: string,
     status: CommissionStatus,
-  ): Promise<{ id: string; commissionStatus: CommissionStatus; commissionStatusUpdatedAt: Date | null }> {
+  ): Promise<{
+    id: string;
+    commissionStatus: CommissionStatus;
+    commissionStatusUpdatedAt: Date | null;
+  }> {
     return this.prisma.booking.update({
       where: { id: bookingId },
       data: { commissionStatus: status, commissionStatusUpdatedAt: new Date() },
-      select: { id: true, commissionStatus: true, commissionStatusUpdatedAt: true },
+      select: {
+        id: true,
+        commissionStatus: true,
+        commissionStatusUpdatedAt: true,
+      },
     });
   }
 
   async findUserRoleAndStatusById(
     userId: string,
-  ): Promise<{ id: string; role: Role; accountStatus: AccountStatus; deletedAt: Date | null } | null> {
+  ): Promise<{
+    id: string;
+    role: Role;
+    accountStatus: AccountStatus;
+    deletedAt: Date | null;
+  } | null> {
     return this.prisma.user.findUnique({
       where: { id: userId },
       select: { id: true, role: true, accountStatus: true, deletedAt: true },

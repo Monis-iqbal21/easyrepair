@@ -14,9 +14,10 @@ import { AdminClientsService } from './admin-clients.service';
 import { AdminClientsRepository } from './admin-clients.repository';
 import { AgreementsModule } from '../agreements/agreements.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { StorageModule } from '../storage/storage.module';
 
 @Module({
-  imports: [AgreementsModule, NotificationsModule],
+  imports: [AgreementsModule, NotificationsModule, StorageModule],
   controllers: [
     AdminController,
     AdminStatsController,

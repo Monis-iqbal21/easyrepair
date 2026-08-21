@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import {
   BookingStatus,
   CommissionStatus,
@@ -18,6 +22,10 @@ import { UpdateWorkerProfileDto } from './dto/update-worker-profile.dto';
 import { UpdateWorkerSkillsDto } from './dto/update-worker-skills.dto';
 import { UstaadAgreementAccessService } from '../agreements/ustaad-agreement-access.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { StorageService } from '../storage/storage.service';
+import { PrivateFilePayload } from '../../common/utils/private-file-response.util';
+
+export type VerificationDocumentKind = 'cnic-front' | 'cnic-back' | 'selfie';
 
 @Injectable()
 export class AdminService {
@@ -25,7 +33,71 @@ export class AdminService {
     private readonly adminRepository: AdminRepository,
     private readonly ustaadAgreementAccess: UstaadAgreementAccessService,
     private readonly notificationsService: NotificationsService,
+    private readonly storage?: StorageService,
   ) {}
+
+  async downloadVerificationDocument(
+    workerProfileId: string,
+    kind: VerificationDocumentKind,
+  ): Promise<PrivateFilePayload> {
+    const row =
+      await this.adminRepository.findVerificationDocumentStorage(
+        workerProfileId,
+      );
+    if (!row) throw new NotFoundException('Worker profile not found');
+
+    const source = {
+      'cnic-front': {
+        key: row.cnicFrontStorageKey,
+        url: row.cnicFrontUrl,
+        fileName: 'cnic-front',
+      },
+      'cnic-back': {
+        key: row.cnicBackStorageKey,
+        url: row.cnicBackUrl,
+        fileName: 'cnic-back',
+      },
+      selfie: {
+        key: row.liveSelfieStorageKey,
+        url: row.liveSelfieUrl,
+        fileName: 'selfie',
+      },
+    }[kind];
+    const key =
+      source.key ??
+      (source.url && this.storage ? this.storage.keyFromUrl(source.url) : null);
+    if (!key) throw new NotFoundException('Worker document not found');
+
+    const object = await this.storage?.getObject(key);
+    if (!object) throw new NotFoundException('Worker document not found');
+    return {
+      ...object,
+      fileName: `${source.fileName}${this._extensionFor(object.contentType)}`,
+    };
+  }
+
+  async downloadWorkerDocument(
+    workerProfileId: string,
+    documentId: string,
+  ): Promise<PrivateFilePayload> {
+    const row = await this.adminRepository.findWorkerDocumentStorage(
+      workerProfileId,
+      documentId,
+    );
+    if (!row) throw new NotFoundException('Worker document not found');
+    const key =
+      row.storageKey ??
+      (this.storage ? this.storage.keyFromUrl(row.fileUrl) : null);
+    if (!key) throw new NotFoundException('Worker document not found');
+    const object = await this.storage?.getObject(key);
+    if (!object) throw new NotFoundException('Worker document not found');
+    return {
+      ...object,
+      fileName:
+        row.fileName ??
+        `worker-document${this._extensionFor(object.contentType)}`,
+    };
+  }
 
   /**
    * GET /admin/workers/:id/agreements
@@ -44,10 +116,7 @@ export class AdminService {
    * The accepted PDF bytes. Scoped to the worker in the path, so a mistyped or
    * guessed id belonging to a different Ustaad is rejected rather than served.
    */
-  async downloadWorkerAgreement(
-    workerProfileId: string,
-    acceptanceId: string,
-  ) {
+  async downloadWorkerAgreement(workerProfileId: string, acceptanceId: string) {
     await this._ensureExists(workerProfileId);
     return this.ustaadAgreementAccess.getPdf(acceptanceId, workerProfileId);
   }
@@ -80,7 +149,8 @@ export class AdminService {
   async getWorkers(query: ListWorkersQueryDto): Promise<PaginatedWorkersDto> {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 20;
-    const { items, total } = await this.adminRepository.findWorkersPaginated(query);
+    const { items, total } =
+      await this.adminRepository.findWorkersPaginated(query);
     return {
       items,
       meta: {
@@ -105,7 +175,10 @@ export class AdminService {
     status: WorkerStatus,
   ): Promise<PendingWorkerResponseDto> {
     await this._ensureExists(workerProfileId);
-    const updated = await this.adminRepository.updateStatus(workerProfileId, status);
+    const updated = await this.adminRepository.updateStatus(
+      workerProfileId,
+      status,
+    );
     return this._toDto(updated);
   }
 
@@ -134,7 +207,9 @@ export class AdminService {
     if (dto.dateOfBirth !== undefined) {
       const parsed = new Date(`${dto.dateOfBirth}T00:00:00.000Z`);
       if (Number.isNaN(parsed.getTime()) || parsed.getTime() > Date.now()) {
-        throw new BadRequestException('Date of birth must be a valid past date.');
+        throw new BadRequestException(
+          'Date of birth must be a valid past date.',
+        );
       }
       data.dateOfBirth = dto.dateOfBirth;
     }
@@ -176,7 +251,9 @@ export class AdminService {
       throw new BadRequestException('Only one main skill is allowed.');
     }
 
-    const found = await this.adminRepository.findCategoriesByIds(dto.categoryIds);
+    const found = await this.adminRepository.findCategoriesByIds(
+      dto.categoryIds,
+    );
     if (found.length !== dto.categoryIds.length) {
       throw new BadRequestException('One or more category IDs are invalid');
     }
@@ -320,14 +397,18 @@ export class AdminService {
     bookingId: string,
     status: CommissionStatus,
   ) {
-    const booking = await this.adminRepository.findCompletedBookingById(bookingId);
+    const booking =
+      await this.adminRepository.findCompletedBookingById(bookingId);
     if (!booking) throw new NotFoundException('Booking not found');
     if (booking.status !== BookingStatus.COMPLETED) {
       throw new BadRequestException(
         'Commission status can only be set on a completed booking',
       );
     }
-    return this.adminRepository.updateBookingCommissionStatus(bookingId, status);
+    return this.adminRepository.updateBookingCommissionStatus(
+      bookingId,
+      status,
+    );
   }
 
   /**
@@ -338,10 +419,7 @@ export class AdminService {
    * Worker or Admin account through the wrong endpoint; Worker suspension
    * has its own dedicated mechanism and is untouched by this one.
    */
-  async updateClientAccountStatus(
-    userId: string,
-    status: AccountStatus,
-  ) {
+  async updateClientAccountStatus(userId: string, status: AccountStatus) {
     const user = await this.adminRepository.findUserRoleAndStatusById(userId);
     if (!user || user.deletedAt !== null) {
       throw new NotFoundException('User not found');
@@ -378,7 +456,7 @@ export class AdminService {
       documents: w.documents.map((d) => ({
         id: d.id,
         type: d.type,
-        fileUrl: d.fileUrl,
+        fileUrl: `/api/v1/admin/workers/${w.id}/documents/${d.id}/download`,
         fileName: d.fileName,
         mimeType: d.mimeType,
         verifiedAt: d.verifiedAt,
@@ -389,9 +467,15 @@ export class AdminService {
       fullLegalName: w.fullLegalName,
       cnicNumber: w.cnicNumber,
       residentialAddress: w.residentialAddress,
-      cnicFrontUrl: w.cnicFrontUrl,
-      cnicBackUrl: w.cnicBackUrl,
-      liveSelfieUrl: w.liveSelfieUrl,
+      cnicFrontUrl: w.cnicFrontUrl
+        ? `/api/v1/admin/workers/${w.id}/verification-documents/cnic-front/download`
+        : null,
+      cnicBackUrl: w.cnicBackUrl
+        ? `/api/v1/admin/workers/${w.id}/verification-documents/cnic-back/download`
+        : null,
+      liveSelfieUrl: w.liveSelfieUrl
+        ? `/api/v1/admin/workers/${w.id}/verification-documents/selfie/download`
+        : null,
       faceMatchStatus: w.faceMatchStatus,
       trainingStatus: w.trainingStatus,
       onboardingStatus: w.onboardingStatus,
@@ -404,5 +488,17 @@ export class AdminService {
       changesRequiredReason: w.changesRequiredReason,
       rejectionReason: w.rejectionReason,
     };
+  }
+
+  private _extensionFor(contentType: string): string {
+    return (
+      {
+        'image/jpeg': '.jpg',
+        'image/png': '.png',
+        'image/webp': '.webp',
+        'image/heic': '.heic',
+        'application/pdf': '.pdf',
+      }[contentType] ?? ''
+    );
   }
 }

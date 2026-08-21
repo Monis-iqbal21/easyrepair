@@ -9,10 +9,12 @@ import {
   HttpCode,
   HttpStatus,
   Res,
+  BadRequestException,
 } from '@nestjs/common';
 import { Response } from 'express';
-import { AdminService } from './admin.service';
+import { AdminService, VerificationDocumentKind } from './admin.service';
 import { sendPrivatePdf } from '../../common/utils/private-pdf-response.util';
+import { sendPrivateFile } from '../../common/utils/private-file-response.util';
 import {
   RejectWorkerDto,
   RequestChangesDto,
@@ -60,6 +62,37 @@ export class AdminController {
   @Get(':workerProfileId')
   getWorkerById(@Param('workerProfileId') workerProfileId: string) {
     return this.adminService.getWorkerById(workerProfileId);
+  }
+
+  /** Admin-only proxy for CNIC front/back and the verification selfie. */
+  @Get(':workerProfileId/verification-documents/:kind/download')
+  async downloadVerificationDocument(
+    @Param('workerProfileId') workerProfileId: string,
+    @Param('kind') kind: string,
+    @Res() res: Response,
+  ) {
+    if (!['cnic-front', 'cnic-back', 'selfie'].includes(kind)) {
+      throw new BadRequestException('Invalid verification document kind');
+    }
+    const file = await this.adminService.downloadVerificationDocument(
+      workerProfileId,
+      kind as VerificationDocumentKind,
+    );
+    sendPrivateFile(res, file);
+  }
+
+  /** Admin-only proxy for legacy/general WorkerDocument records. */
+  @Get(':workerProfileId/documents/:documentId/download')
+  async downloadWorkerDocument(
+    @Param('workerProfileId') workerProfileId: string,
+    @Param('documentId') documentId: string,
+    @Res() res: Response,
+  ) {
+    const file = await this.adminService.downloadWorkerDocument(
+      workerProfileId,
+      documentId,
+    );
+    sendPrivateFile(res, file);
   }
 
   /**

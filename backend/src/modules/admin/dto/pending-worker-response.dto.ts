@@ -15,6 +15,7 @@ export class WorkerSkillDto {
 export class WorkerDocumentDto {
   id: string;
   type: string;
+  /** Authenticated admin download path; never an object-storage URL. */
   fileUrl: string;
   fileName: string | null;
   mimeType: string | null;
@@ -23,9 +24,8 @@ export class WorkerDocumentDto {
 }
 
 /**
- * Admin-only view of a worker's onboarding submission. This is the one place
- * CNIC/selfie URLs are legitimately exposed — never return these fields from
- * any client- or other-worker-facing endpoint (booking/job/bid DTOs).
+ * Admin-only view of a worker's onboarding submission. Document fields contain
+ * authenticated backend download paths, never public object-storage URLs.
  */
 export class PendingWorkerResponseDto {
   id: string;
