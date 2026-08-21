@@ -12,7 +12,7 @@ import '../providers/auth_otp_providers.dart';
 import '../providers/ustaad_registration_draft.dart';
 import '../widgets/client_auth_widgets.dart';
 import '../widgets/ustaad_register_widgets.dart';
-import 'client_login_page.dart' show kPkPhonePattern, validateClientPhone;
+import 'client_login_page.dart' show validateClientPhone;
 import 'ustaad_register_step2_page.dart';
 
 /// Ustaad registration, Step 1 of 4 — the account's own details.
@@ -41,6 +41,10 @@ class _UstaadRegisterStep1PageState
   final _phoneCtrl = TextEditingController();
   final _cnicCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
+  final _nameFocus = FocusNode();
+  final _phoneFocus = FocusNode();
+  final _cnicFocus = FocusNode();
+  final _passwordFocus = FocusNode();
   bool _sendInFlight = false;
 
   /// Set when a submit is attempted, so every invalid field reveals its error
@@ -48,7 +52,6 @@ class _UstaadRegisterStep1PageState
   /// CTA-enabled calculation: a disabled button and a visible error answer two
   /// different questions.
   bool _submitted = false;
-
 
   @override
   void initState() {
@@ -77,16 +80,12 @@ class _UstaadRegisterStep1PageState
     _phoneCtrl.dispose();
     _cnicCtrl.dispose();
     _passwordCtrl.dispose();
+    _nameFocus.dispose();
+    _phoneFocus.dispose();
+    _cnicFocus.dispose();
+    _passwordFocus.dispose();
     super.dispose();
   }
-
-  /// Drives the CTA's enabled treatment only — the validators below stay the
-  /// authority on submit.
-  bool get _canSubmit =>
-      _nameCtrl.text.trim().isNotEmpty &&
-      kPkPhonePattern.hasMatch(_phoneCtrl.text.trim()) &&
-      _cnicPattern.hasMatch(_cnicCtrl.text.trim()) &&
-      _passwordCtrl.text.length >= 8;
 
   Future<void> _sendOtp() async {
     if (_sendInFlight) return;
@@ -95,12 +94,13 @@ class _UstaadRegisterStep1PageState
     setState(() => _sendInFlight = true);
     final phone = _phoneCtrl.text.trim();
     try {
-      final sent = await ref.read(otpRequestNotifierProvider.notifier).request(
-            phone,
-            OtpPurpose.workerRegister,
-          );
+      final sent = await ref
+          .read(otpRequestNotifierProvider.notifier)
+          .request(phone, OtpPurpose.workerRegister);
       if (!mounted || !sent) return;
-      ref.read(ustaadRegistrationDraftProvider.notifier).update(
+      ref
+          .read(ustaadRegistrationDraftProvider.notifier)
+          .update(
             (d) => d.copyWith(
               fullName: _nameCtrl.text.trim(),
               phone: phone,
@@ -127,9 +127,11 @@ class _UstaadRegisterStep1PageState
 
     return UstaadStepScaffold(
       cta: ClientPrimaryButton(
-        label: l10n.ustaadSendOtpButton,
+        label: l10n.postJobNext,
         isLoading: _sendInFlight,
-        onPressed: _canSubmit ? _sendOtp : null,
+        // The visible CTA is the sole submit action. Keyboard actions only
+        // move/dismiss focus and can never send an OTP or navigate.
+        onPressed: _sendOtp,
       ),
       child: Form(
         key: _formKey,
@@ -156,6 +158,7 @@ class _UstaadRegisterStep1PageState
             ClientFieldLabel(l10n.ustaadFullNameLabel),
             ClientTextField(
               controller: _nameCtrl,
+              focusNode: _nameFocus,
               forceError: _submitted,
               hint: l10n.ustaadFullNameHint,
               autofillHints: const [AutofillHints.name],
@@ -163,19 +166,23 @@ class _UstaadRegisterStep1PageState
                   ? l10n.authValidationNameRequired
                   : null,
               onChanged: (_) => setState(() {}),
+              onFieldSubmitted: (_) => _phoneFocus.requestFocus(),
             ),
             const SizedBox(height: 18),
             ClientFieldLabel(l10n.authFieldMobileNumberTitle),
             ClientPhoneField(
               controller: _phoneCtrl,
+              focusNode: _phoneFocus,
               forceError: _submitted,
               validator: (v) => validateClientPhone(context, v),
               onChanged: (_) => setState(() {}),
+              onFieldSubmitted: (_) => _cnicFocus.requestFocus(),
             ),
             const SizedBox(height: 18),
             ClientFieldLabel(l10n.ustaadCnicLabel),
             ClientTextField(
               controller: _cnicCtrl,
+              focusNode: _cnicFocus,
               forceError: _submitted,
               hint: kCnicHint,
               keyboardType: TextInputType.number,
@@ -184,14 +191,17 @@ class _UstaadRegisterStep1PageState
                   ? null
                   : l10n.workerCnicInvalid,
               onChanged: (_) => setState(() {}),
+              onFieldSubmitted: (_) => _passwordFocus.requestFocus(),
             ),
             const SizedBox(height: 18),
             ClientFieldLabel(l10n.ustaadCreatePasswordLabel),
             ClientPasswordField(
               controller: _passwordCtrl,
+              focusNode: _passwordFocus,
               forceError: _submitted,
               hint: l10n.authClientPasswordHint,
               showLabel: l10n.authClientPasswordShow,
+              hideLabel: l10n.authClientPasswordHide,
               textInputAction: TextInputAction.done,
               validator: (v) {
                 if (v == null || v.isEmpty) {
@@ -201,7 +211,7 @@ class _UstaadRegisterStep1PageState
                 return null;
               },
               onChanged: (_) => setState(() {}),
-              onFieldSubmitted: (_) => _sendOtp(),
+              onFieldSubmitted: (_) => _passwordFocus.unfocus(),
             ),
             const SizedBox(height: 12),
           ],

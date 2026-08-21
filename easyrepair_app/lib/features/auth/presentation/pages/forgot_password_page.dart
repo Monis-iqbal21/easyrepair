@@ -23,8 +23,8 @@ import 'ustaad_login_page.dart';
 /// backed by `PasswordResetOtp`, not `AuthOtp`.
 final _forgotPasswordRequestProvider =
     AsyncNotifierProvider.autoDispose<_RequestNotifier, DateTime?>(
-  _RequestNotifier.new,
-);
+      _RequestNotifier.new,
+    );
 
 class _RequestNotifier extends AutoDisposeAsyncNotifier<DateTime?> {
   @override
@@ -39,8 +39,9 @@ class _RequestNotifier extends AutoDisposeAsyncNotifier<DateTime?> {
     // surface as an error (they silently return the still-valid expiresAt),
     // so this only matters for genuine send failures.
     state = const AsyncLoading<DateTime?>().copyWithPrevious(state);
-    final result =
-        await ref.read(authRepositoryProvider).forgotPasswordRequest(phone);
+    final result = await ref
+        .read(authRepositoryProvider)
+        .forgotPasswordRequest(phone);
     return result.fold(
       (f) {
         state = AsyncError(f, StackTrace.current);
@@ -55,9 +56,7 @@ class _RequestNotifier extends AutoDisposeAsyncNotifier<DateTime?> {
 }
 
 final _forgotPasswordResetProvider =
-    AsyncNotifierProvider.autoDispose<_ResetNotifier, void>(
-  _ResetNotifier.new,
-);
+    AsyncNotifierProvider.autoDispose<_ResetNotifier, void>(_ResetNotifier.new);
 
 class _ResetNotifier extends AutoDisposeAsyncNotifier<void> {
   @override
@@ -69,11 +68,9 @@ class _ResetNotifier extends AutoDisposeAsyncNotifier<void> {
     required String newPassword,
   }) async {
     state = const AsyncLoading();
-    final result = await ref.read(authRepositoryProvider).forgotPasswordReset(
-          phone: phone,
-          otp: otp,
-          newPassword: newPassword,
-        );
+    final result = await ref
+        .read(authRepositoryProvider)
+        .forgotPasswordReset(phone: phone, otp: otp, newPassword: newPassword);
     return result.fold(
       (f) {
         state = AsyncError(f, StackTrace.current);
@@ -113,8 +110,7 @@ class ForgotPasswordPage extends ConsumerStatefulWidget {
   static const route = '/forgot-password';
 
   @override
-  ConsumerState<ForgotPasswordPage> createState() =>
-      _ForgotPasswordPageState();
+  ConsumerState<ForgotPasswordPage> createState() => _ForgotPasswordPageState();
 }
 
 class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
@@ -249,7 +245,9 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
 
     setState(() => _resetInFlight = true);
     try {
-      final ok = await ref.read(_forgotPasswordResetProvider.notifier).reset(
+      final ok = await ref
+          .read(_forgotPasswordResetProvider.notifier)
+          .reset(
             phone: _phoneCtrl.text.trim(),
             otp: _otp,
             newPassword: _newPasswordCtrl.text,
@@ -452,7 +450,8 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
   }
 
   Widget _passwordStep(AppLocalizations l10n) {
-    final canSubmit = _newPasswordCtrl.text.length >= 8 &&
+    final canSubmit =
+        _newPasswordCtrl.text.length >= 8 &&
         _confirmCtrl.text == _newPasswordCtrl.text &&
         _otp.length == otpLength &&
         _codeLive;
@@ -480,6 +479,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
               forceError: _passwordSubmitted,
               hint: l10n.authClientPasswordHint,
               showLabel: l10n.authClientPasswordShow,
+              hideLabel: l10n.authClientPasswordHide,
               validator: (v) {
                 if (v == null || v.isEmpty) {
                   return l10n.authNewPasswordRequired;
@@ -496,6 +496,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
               forceError: _passwordSubmitted,
               hint: l10n.authClientConfirmPasswordHint,
               showLabel: l10n.authClientPasswordShow,
+              hideLabel: l10n.authClientPasswordHide,
               textInputAction: TextInputAction.done,
               validator: (v) {
                 if (v == null || v.isEmpty) {
@@ -536,11 +537,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
                 color: colors.softTeal,
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                Icons.check_rounded,
-                size: 48,
-                color: colors.success,
-              ),
+              child: Icon(Icons.check_rounded, size: 48, color: colors.success),
             ),
           ),
           const SizedBox(height: 24),
@@ -581,11 +578,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
 /// Back arrow, heading and supporting line — the same block every step opens
 /// with, so the header does not jump between stages.
 class _Heading extends StatelessWidget {
-  const _Heading({
-    required this.title,
-    required this.subtitle,
-    this.onBack,
-  });
+  const _Heading({required this.title, required this.subtitle, this.onBack});
 
   final String title;
   final String subtitle;

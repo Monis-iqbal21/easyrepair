@@ -28,8 +28,7 @@ class _FakeAuthRepository implements AuthRepository {
   Future<Either<Failure, DateTime>> requestOtp({
     required String phone,
     required OtpPurpose purpose,
-  }) async =>
-      Right(DateTime.now().add(const Duration(minutes: 5)));
+  }) async => Right(DateTime.now().add(const Duration(minutes: 5)));
 
   @override
   dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError();
@@ -41,7 +40,9 @@ Widget _app(Widget page) {
     routes: [GoRoute(path: '/', builder: (_, _) => page)],
   );
   return ProviderScope(
-    overrides: [authRepositoryProvider.overrideWithValue(_FakeAuthRepository())],
+    overrides: [
+      authRepositoryProvider.overrideWithValue(_FakeAuthRepository()),
+    ],
     child: localizedRouterApp(router, locale: AppLocale.romanUrdu),
   );
 }
@@ -79,9 +80,13 @@ void main() {
       expect(_visibleErrors(tester), isEmpty);
 
       await _tapField(tester, 1); // password — the field in the report
-      expect(_visibleErrors(tester), isEmpty,
-          reason: 'moving from an untouched phone to the password must not '
-              'flag the phone either');
+      expect(
+        _visibleErrors(tester),
+        isEmpty,
+        reason:
+            'moving from an untouched phone to the password must not '
+            'flag the phone either',
+      );
     });
 
     testWidgets('Client login — Phone, then Password', (tester) async {
@@ -95,20 +100,25 @@ void main() {
       expect(_visibleErrors(tester), isEmpty);
     });
 
-    testWidgets('Client register — Full name, Phone, Password, Confirm',
-        (tester) async {
+    testWidgets('Client register — Full name, Phone, Password, Confirm', (
+      tester,
+    ) async {
       await tester.pumpWidget(_app(const ClientRegisterPage()));
       await _settle(tester);
 
       for (var i = 0; i < 4; i++) {
         await _tapField(tester, i);
-        expect(_visibleErrors(tester), isEmpty,
-            reason: 'walking down the form must stay silent');
+        expect(
+          _visibleErrors(tester),
+          isEmpty,
+          reason: 'walking down the form must stay silent',
+        );
       }
     });
 
-    testWidgets('Ustaad register step 1 — Full name, Phone, CNIC, Password',
-        (tester) async {
+    testWidgets('Ustaad register step 1 — Full name, Phone, CNIC, Password', (
+      tester,
+    ) async {
       await tester.pumpWidget(_app(const UstaadRegisterStep1Page()));
       await _settle(tester);
 
@@ -128,25 +138,34 @@ void main() {
   });
 
   group('but a field the user actually filled in badly does speak up', () {
-    testWidgets('Ustaad register step 1 — a short password, then moving on',
-        (tester) async {
+    testWidgets('Ustaad register step 1 — a short password, then moving on', (
+      tester,
+    ) async {
       await tester.pumpWidget(_app(const UstaadRegisterStep1Page()));
       await _settle(tester);
 
       await _tapField(tester, 3); // password
       await tester.enterText(find.byType(EditableText).at(3), 'abc');
       await _settle(tester);
-      expect(_visibleErrors(tester), isEmpty,
-          reason: 'still typing — not finished yet');
+      expect(
+        _visibleErrors(tester),
+        isEmpty,
+        reason: 'still typing — not finished yet',
+      );
 
       await _tapField(tester, 0); // blur onto the name field
-      expect(_visibleErrors(tester), hasLength(1),
-          reason: 'exactly the password, and nothing the user has not filled '
-              'in yet');
+      expect(
+        _visibleErrors(tester),
+        hasLength(1),
+        reason:
+            'exactly the password, and nothing the user has not filled '
+            'in yet',
+      );
     });
 
-    testWidgets('Client register — a bad phone number, then moving on',
-        (tester) async {
+    testWidgets('Client register — a bad phone number, then moving on', (
+      tester,
+    ) async {
       await tester.pumpWidget(_app(const ClientRegisterPage()));
       await _settle(tester);
 
@@ -158,8 +177,9 @@ void main() {
       expect(_visibleErrors(tester), hasLength(1));
     });
 
-    testWidgets('and correcting it clears the message without another blur',
-        (tester) async {
+    testWidgets('and correcting it clears the message without another blur', (
+      tester,
+    ) async {
       await tester.pumpWidget(_app(const ClientRegisterPage()));
       await _settle(tester);
 
@@ -196,9 +216,13 @@ void main() {
       await tester.testTextInput.receiveAction(TextInputAction.done);
       await _settle(tester);
 
-      expect(_visibleErrors(tester), hasLength(1),
-          reason: 'the empty password, revealed by the submit rather than by '
-              'a blur');
+      expect(
+        _visibleErrors(tester),
+        hasLength(1),
+        reason:
+            'the empty password, revealed by the submit rather than by '
+            'a blur',
+      );
     });
 
     testWidgets('Ustaad register step 1 — submitting an empty form flags every '
@@ -207,17 +231,22 @@ void main() {
       await _settle(tester);
       expect(_visibleErrors(tester), isEmpty);
 
-      await _tapField(tester, 3); // password, last field
-      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.ensureVisible(find.text('Aage'));
+      await tester.tap(find.text('Aage'));
       await _settle(tester);
 
-      expect(_visibleErrors(tester), hasLength(4),
-          reason: 'name, phone, CNIC and password — including the three the '
-              'user never touched');
+      expect(
+        _visibleErrors(tester),
+        hasLength(4),
+        reason:
+            'name, phone, CNIC and password — including the three the '
+            'user never touched',
+      );
     });
 
-    testWidgets('Client login — submitting with an empty password flags it',
-        (tester) async {
+    testWidgets('Client login — submitting with an empty password flags it', (
+      tester,
+    ) async {
       await tester.pumpWidget(_app(const ClientLoginPage()));
       await _settle(tester);
 

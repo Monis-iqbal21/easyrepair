@@ -192,6 +192,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authClientPasswordShow => 'Show';
 
   @override
+  String get authClientPasswordHide => 'Hide';
+
+  @override
   String get authClientForgotPassword => 'Forgot Password?';
 
   @override

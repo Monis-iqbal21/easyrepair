@@ -123,6 +123,7 @@ class _UstaadLoginPageState extends ConsumerState<UstaadLoginPage> {
               forceError: _submitted,
               hint: l10n.authFieldPassword,
               showLabel: l10n.authClientPasswordShow,
+              hideLabel: l10n.authClientPasswordHide,
               textInputAction: TextInputAction.done,
               validator: (v) => (v == null || v.isEmpty)
                   ? l10n.authValidationPasswordRequired
@@ -141,8 +142,10 @@ class _UstaadLoginPageState extends ConsumerState<UstaadLoginPage> {
                   onTap: () => context.push('/forgot-password'),
                   borderRadius: BorderRadius.circular(8),
                   child: Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 8,
+                    ),
                     child: Text(
                       l10n.authClientForgotPassword,
                       style: TextStyle(

@@ -55,6 +55,7 @@
   "authClientLoginHeading": "خوش آمدید",
   "authClientLoginSubtitle": "موبائل نمبر اور پاس ورڈ سے لاگ ان کریں۔",
   "authClientPasswordShow": "دکھائیں",
+  "authClientPasswordHide": "چھپائیں",
   "authClientForgotPassword": "پاس ورڈ بھول گئے؟",
   "authClientLoginButton": "لاگ ان",
   "authClientLoginAction": "لاگ ان کریں",

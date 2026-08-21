@@ -55,6 +55,7 @@
   "authClientLoginHeading": "Welcome Back",
   "authClientLoginSubtitle": "Mobile number aur password se Login karein.",
   "authClientPasswordShow": "Show",
+  "authClientPasswordHide": "Hide",
   "authClientForgotPassword": "Forgot Password?",
   "authClientLoginButton": "Login",
   "authClientLoginAction": "Login karein",

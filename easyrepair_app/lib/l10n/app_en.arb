@@ -120,6 +120,10 @@
   "@authClientPasswordShow": {
     "description": "In-field action that reveals the typed password"
   },
+  "authClientPasswordHide": "Hide",
+  "@authClientPasswordHide": {
+    "description": "Action that obscures a currently visible password"
+  },
   "authClientForgotPassword": "Forgot Password?",
   "@authClientForgotPassword": {
     "description": "Client login link to the password-reset flow"

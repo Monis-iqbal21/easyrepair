@@ -1000,6 +1000,7 @@ serviceAppliancesRepair,Client home / Service categories,Appliances Repair,گھ�
 authClientLoginHeading,Client authentication,Welcome Back,خوش آمدید,Welcome Back,Client login heading
 authClientLoginSubtitle,Client authentication,Login with your mobile number and password.,موبائل نمبر اور پاس ورڈ سے لاگ ان کریں۔,Mobile number aur password se Login karein.,Client login supporting line
 authClientPasswordShow,Client authentication,Show,دکھائیں,Show,In-field action that reveals the typed password
+authClientPasswordHide,Client authentication,Hide,چھپائیں,Hide,Action that obscures a currently visible password
 authClientForgotPassword,Client authentication,Forgot Password?,پاس ورڈ بھول گئے؟,Forgot Password?,Client login link to password reset
 authClientLoginButton,Client authentication,Login,لاگ ان,Login,Client login primary button
 authClientLoginAction,Client authentication,Login,لاگ ان کریں,Login karein,Client registration footer action back to login

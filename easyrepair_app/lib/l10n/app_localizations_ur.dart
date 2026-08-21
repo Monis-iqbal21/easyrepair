@@ -188,6 +188,9 @@ class AppLocalizationsUr extends AppLocalizations {
   String get authClientPasswordShow => 'دکھائیں';
 
   @override
+  String get authClientPasswordHide => 'چھپائیں';
+
+  @override
   String get authClientForgotPassword => 'پاس ورڈ بھول گئے؟';
 
   @override
@@ -3732,6 +3735,9 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get authClientPasswordShow => 'Show';
+
+  @override
+  String get authClientPasswordHide => 'Hide';
 
   @override
   String get authClientForgotPassword => 'Forgot Password?';

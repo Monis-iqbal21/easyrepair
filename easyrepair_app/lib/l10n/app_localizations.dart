@@ -429,6 +429,12 @@ abstract class AppLocalizations {
   /// **'Show'**
   String get authClientPasswordShow;
 
+  /// Action that obscures a currently visible password.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide'**
+  String get authClientPasswordHide;
+
   /// Client login link to the password-reset flow
   ///
   /// In en, this message translates to:

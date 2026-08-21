@@ -177,10 +177,9 @@ class _ClientLoginPageState extends ConsumerState<ClientLoginPage> {
     final phoneOk = _phoneFormKey.currentState?.validate() ?? false;
     final passwordOk = _passwordFormKey.currentState?.validate() ?? false;
     if (!phoneOk || !passwordOk) return;
-    await ref.read(clientPasswordLoginNotifierProvider.notifier).login(
-          _phoneCtrl.text.trim(),
-          _passwordCtrl.text,
-        );
+    await ref
+        .read(clientPasswordLoginNotifierProvider.notifier)
+        .login(_phoneCtrl.text.trim(), _passwordCtrl.text);
   }
 
   /// Requests a code and, only on success, switches this page into OTP mode.
@@ -215,10 +214,9 @@ class _ClientLoginPageState extends ConsumerState<ClientLoginPage> {
         return;
       }
 
-      final sent = await ref.read(otpRequestNotifierProvider.notifier).request(
-            phone,
-            OtpPurpose.clientLoginRegister,
-          );
+      final sent = await ref
+          .read(otpRequestNotifierProvider.notifier)
+          .request(phone, OtpPurpose.clientLoginRegister);
       if (!mounted || !sent) return;
       setState(() {
         _mode = ClientLoginMode.otp;
@@ -232,8 +230,7 @@ class _ClientLoginPageState extends ConsumerState<ClientLoginPage> {
   }
 
   Future<void> _otpLogin() async {
-    if (!_canOtpLogin ||
-        ref.read(clientOtpAuthNotifierProvider).isLoading) {
+    if (!_canOtpLogin || ref.read(clientOtpAuthNotifierProvider).isLoading) {
       return;
     }
     // A phone and a code. Login carries no name — see ClientOtpLoginDto.
@@ -313,8 +310,9 @@ class _ClientLoginPageState extends ConsumerState<ClientLoginPage> {
               // Stays editable in OTP mode — a mistyped number is the
               // commonest reason to come back to this field.
               onChanged: _onPhoneChanged,
-              textInputAction:
-                  isOtpMode ? TextInputAction.done : TextInputAction.next,
+              textInputAction: isOtpMode
+                  ? TextInputAction.done
+                  : TextInputAction.next,
             ),
           ),
           if (isOtpMode) ..._otpMode(l10n) else ..._passwordMode(l10n),
@@ -338,6 +336,7 @@ class _ClientLoginPageState extends ConsumerState<ClientLoginPage> {
           forceError: _passwordSubmitted,
           hint: l10n.authFieldPassword,
           showLabel: l10n.authClientPasswordShow,
+          hideLabel: l10n.authClientPasswordHide,
           textInputAction: TextInputAction.done,
           validator: (v) => (v == null || v.isEmpty)
               ? l10n.authValidationPasswordRequired
@@ -386,7 +385,8 @@ class _ClientLoginPageState extends ConsumerState<ClientLoginPage> {
   List<Widget> _otpMode(AppLocalizations l10n) {
     final colors = context.semanticColors;
     final hasCode = _expiresAt != null;
-    final hasVerifyError = ref.watch(clientOtpAuthNotifierProvider) is AsyncError;
+    final hasVerifyError =
+        ref.watch(clientOtpAuthNotifierProvider) is AsyncError;
 
     return [
       if (hasCode) ...[

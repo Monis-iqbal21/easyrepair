@@ -315,9 +315,9 @@ class _ClientTextFieldState extends State<ClientTextField> {
     final showErrors = widget.forceError || _touched;
 
     OutlineInputBorder border(Color color, double width) => OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: color, width: width),
-        );
+      borderRadius: BorderRadius.circular(16),
+      borderSide: BorderSide(color: color, width: width),
+    );
 
     // The same borders in every state. Flutter swaps to errorBorder/
     // focusedErrorBorder the moment a validator returns a message; pointing
@@ -357,8 +357,10 @@ class _ClientTextFieldState extends State<ClientTextField> {
         filled: true,
         fillColor: widget.enabled ? colors.surface : colors.surfaceSubtle,
         isDense: false,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 18,
+          vertical: 18,
+        ),
         prefixIcon: widget.prefix,
         prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
         suffixIcon: widget.suffix,
@@ -386,6 +388,7 @@ class ClientPhoneField extends StatelessWidget {
     this.textInputAction = TextInputAction.next,
     this.enabled = true,
     this.forceError = false,
+    this.focusNode,
   });
 
   final TextEditingController controller;
@@ -394,6 +397,7 @@ class ClientPhoneField extends StatelessWidget {
   final ValueChanged<String>? onFieldSubmitted;
   final TextInputAction textInputAction;
   final bool enabled;
+  final FocusNode? focusNode;
 
   /// See [ClientTextField.forceError].
   final bool forceError;
@@ -412,6 +416,7 @@ class ClientPhoneField extends StatelessWidget {
       onFieldSubmitted: onFieldSubmitted,
       enabled: enabled,
       forceError: forceError,
+      focusNode: focusNode,
       autofillHints: const [AutofillHints.telephoneNumberNational],
       prefix: Padding(
         padding: const EdgeInsetsDirectional.only(start: 18, end: 14),
@@ -444,12 +449,14 @@ class ClientPasswordField extends StatefulWidget {
     super.key,
     required this.controller,
     required this.showLabel,
+    required this.hideLabel,
     this.hint,
     this.validator,
     this.onChanged,
     this.onFieldSubmitted,
     this.textInputAction = TextInputAction.next,
     this.forceError = false,
+    this.focusNode,
   });
 
   final TextEditingController controller;
@@ -460,11 +467,15 @@ class ClientPasswordField extends StatefulWidget {
   /// The localized in-field action label ("Show").
   final String showLabel;
 
+  /// The localized in-field action label ("Hide").
+  final String hideLabel;
+
   final String? hint;
   final String? Function(String?)? validator;
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onFieldSubmitted;
   final TextInputAction textInputAction;
+  final FocusNode? focusNode;
 
   @override
   State<ClientPasswordField> createState() => _ClientPasswordFieldState();
@@ -487,6 +498,7 @@ class _ClientPasswordFieldState extends State<ClientPasswordField> {
       onChanged: widget.onChanged,
       onFieldSubmitted: widget.onFieldSubmitted,
       forceError: widget.forceError,
+      focusNode: widget.focusNode,
       suffix: Padding(
         padding: const EdgeInsetsDirectional.only(start: 8, end: 16),
         child: Semantics(
@@ -498,7 +510,7 @@ class _ClientPasswordFieldState extends State<ClientPasswordField> {
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
               child: Text(
-                widget.showLabel,
+                _obscure ? widget.showLabel : widget.hideLabel,
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
@@ -539,27 +551,28 @@ class ClientPrimaryButton extends StatelessWidget {
       width: double.infinity,
       child: ElevatedButton(
         onPressed: enabled ? onPressed : null,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: colors.primary,
-          foregroundColor: colors.onPrimary,
-          // The muted "form not ready" treatment from the design — a real
-          // palette surface rather than a translucent brand colour, so it
-          // reads correctly in dark mode too.
-          disabledBackgroundColor: colors.surfaceSubtle,
-          disabledForegroundColor: colors.textSecondary,
-          elevation: 0,
-          minimumSize: const Size.fromHeight(58),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-        ).copyWith(
-          overlayColor: WidgetStateProperty.resolveWith(
-            (states) => states.contains(WidgetState.pressed)
-                ? colors.primaryPressed
-                : null,
-          ),
-        ),
+        style:
+            ElevatedButton.styleFrom(
+              backgroundColor: colors.primary,
+              foregroundColor: colors.onPrimary,
+              // The muted "form not ready" treatment from the design — a real
+              // palette surface rather than a translucent brand colour, so it
+              // reads correctly in dark mode too.
+              disabledBackgroundColor: colors.surfaceSubtle,
+              disabledForegroundColor: colors.textSecondary,
+              elevation: 0,
+              minimumSize: const Size.fromHeight(58),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ).copyWith(
+              overlayColor: WidgetStateProperty.resolveWith(
+                (states) => states.contains(WidgetState.pressed)
+                    ? colors.primaryPressed
+                    : null,
+              ),
+            ),
         child: isLoading
             ? SizedBox(
                 height: 22,
@@ -786,8 +799,10 @@ class _ClientOtpFieldState extends State<ClientOtpField> {
     // same answer without measuring.
     const gap = 10.0;
     final available = MediaQuery.sizeOf(context).width - 48;
-    final boxWidth =
-        ((available - gap * (otpLength - 1)) / otpLength).clamp(36.0, 62.0);
+    final boxWidth = ((available - gap * (otpLength - 1)) / otpLength).clamp(
+      36.0,
+      62.0,
+    );
 
     final base = PinTheme(
       width: boxWidth,
@@ -867,8 +882,7 @@ class ClientAuthScaffold extends StatelessWidget {
             final horizontal = constraints.maxWidth < 360 ? 20.0 : 24.0;
 
             return SingleChildScrollView(
-              keyboardDismissBehavior:
-                  ScrollViewKeyboardDismissBehavior.onDrag,
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               padding: EdgeInsets.only(bottom: keyboard),
               child: ConstrainedBox(
                 constraints: BoxConstraints(minHeight: constraints.maxHeight),

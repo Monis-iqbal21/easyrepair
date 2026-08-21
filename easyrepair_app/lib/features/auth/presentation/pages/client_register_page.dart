@@ -45,7 +45,6 @@ class _ClientRegisterPageState extends ConsumerState<ClientRegisterPage> {
   /// different questions.
   bool _submitted = false;
 
-
   @override
   void initState() {
     super.initState();
@@ -84,10 +83,9 @@ class _ClientRegisterPageState extends ConsumerState<ClientRegisterPage> {
     setState(() => _sendInFlight = true);
     final phone = _phoneCtrl.text.trim();
     try {
-      final sent = await ref.read(otpRequestNotifierProvider.notifier).request(
-            phone,
-            OtpPurpose.clientLoginRegister,
-          );
+      final sent = await ref
+          .read(otpRequestNotifierProvider.notifier)
+          .request(phone, OtpPurpose.clientLoginRegister);
       if (!mounted || !sent) return;
       context.push(
         ClientRegisterOtpPage.route,
@@ -172,6 +170,7 @@ class _ClientRegisterPageState extends ConsumerState<ClientRegisterPage> {
               forceError: _submitted,
               hint: l10n.authClientPasswordHint,
               showLabel: l10n.authClientPasswordShow,
+              hideLabel: l10n.authClientPasswordHide,
               validator: (v) {
                 if (v == null || v.isEmpty) {
                   return l10n.authValidationPasswordRequired;
@@ -188,6 +187,7 @@ class _ClientRegisterPageState extends ConsumerState<ClientRegisterPage> {
               forceError: _submitted,
               hint: l10n.authClientConfirmPasswordHint,
               showLabel: l10n.authClientPasswordShow,
+              hideLabel: l10n.authClientPasswordHide,
               textInputAction: TextInputAction.done,
               validator: (v) {
                 if (v == null || v.isEmpty) {
