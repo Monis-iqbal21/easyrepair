@@ -429,7 +429,7 @@ abstract class AppLocalizations {
   /// **'Show'**
   String get authClientPasswordShow;
 
-  /// Action that obscures a currently visible password.
+  /// Action that obscures a currently visible password
   ///
   /// In en, this message translates to:
   /// **'Hide'**
@@ -6464,6 +6464,108 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Website'**
   String get aboutWebsiteLabel;
+
+  /// No description provided for @cashPaymentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm cash payment'**
+  String get cashPaymentTitle;
+
+  /// No description provided for @cashPaymentQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'How much cash did you pay?'**
+  String get cashPaymentQuestion;
+
+  /// No description provided for @cashPaymentExpected.
+  ///
+  /// In en, this message translates to:
+  /// **'Expected booking amount: {amount}'**
+  String cashPaymentExpected(Object amount);
+
+  /// No description provided for @cashPaymentInputLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash paid (PKR)'**
+  String get cashPaymentInputLabel;
+
+  /// No description provided for @cashPaymentInputHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter whole rupees, including 0'**
+  String get cashPaymentInputHint;
+
+  /// No description provided for @cashPaymentRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the actual cash amount paid.'**
+  String get cashPaymentRequired;
+
+  /// No description provided for @cashPaymentWholeRupees.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a whole PKR amount without decimals.'**
+  String get cashPaymentWholeRupees;
+
+  /// No description provided for @cashPaymentConfirmAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm cash payment'**
+  String get cashPaymentConfirmAction;
+
+  /// No description provided for @cashPaymentConfirmedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash payment confirmed'**
+  String get cashPaymentConfirmedTitle;
+
+  /// No description provided for @cashPaymentPaid.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash paid: {amount}'**
+  String cashPaymentPaid(Object amount);
+
+  /// No description provided for @cashPaymentExpectedReceipt.
+  ///
+  /// In en, this message translates to:
+  /// **'Expected amount: {amount}'**
+  String cashPaymentExpectedReceipt(Object amount);
+
+  /// No description provided for @cashPaymentShortfall.
+  ///
+  /// In en, this message translates to:
+  /// **'Remaining amount: {amount}'**
+  String cashPaymentShortfall(Object amount);
+
+  /// No description provided for @cashPaymentReference.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirmation reference: {reference}'**
+  String cashPaymentReference(Object reference);
+
+  /// No description provided for @cashPaymentContinueReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue to review'**
+  String get cashPaymentContinueReview;
+
+  /// No description provided for @cashPaymentConflict.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment was already confirmed with a different amount. Please contact HandyGo support if it needs correction.'**
+  String get cashPaymentConflict;
+
+  /// No description provided for @cashPaymentFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash payment could not be confirmed. Please try again.'**
+  String get cashPaymentFailed;
+
+  /// No description provided for @cashPaymentReviewBlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm the cash payment before reviewing the Ustaad.'**
+  String get cashPaymentReviewBlocked;
 
   /// Runtime app version/build shown on the About page and Settings row
   ///

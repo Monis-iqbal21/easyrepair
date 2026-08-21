@@ -14,6 +14,7 @@ import '../../domain/entities/create_booking_request.dart';
 import '../../domain/entities/inspection_report_entity.dart';
 import '../../domain/entities/update_booking_request.dart';
 import '../models/booking_model.dart';
+import '../models/cash_payment_confirmation_model.dart';
 import '../models/inspection_report_model.dart';
 import '../models/nearby_worker_model.dart';
 
@@ -33,6 +34,10 @@ abstract class BookingRemoteDataSource {
   Future<BookingModel> updateBooking(UpdateBookingRequest request);
   Future<BookingModel> cancelBooking(String bookingId, String reason);
   Future<BookingModel> submitReview(ReviewRequest request);
+  Future<CashPaymentConfirmationModel> confirmCashPayment(
+    String bookingId,
+    int receivedCashTotal,
+  );
   Future<BookingAttachmentModel> uploadAttachment(
     String bookingId,
     File file,
@@ -243,6 +248,23 @@ class BookingRemoteDataSourceImpl implements BookingRemoteDataSource {
           await _dio.post('/bookings/${request.bookingId}/review', data: body);
       final data = response.data['data'] as Map<String, dynamic>;
       return BookingModel.fromJson(data);
+    } on DioException catch (e) {
+      throw dioExceptionToFailure(e);
+    }
+  }
+
+  @override
+  Future<CashPaymentConfirmationModel> confirmCashPayment(
+    String bookingId,
+    int receivedCashTotal,
+  ) async {
+    try {
+      final response = await _dio.post(
+        '/bookings/$bookingId/confirm-cash-payment',
+        data: {'receivedCashTotal': receivedCashTotal},
+      );
+      final data = response.data['data'] as Map<String, dynamic>;
+      return CashPaymentConfirmationModel.fromJson(data);
     } on DioException catch (e) {
       throw dioExceptionToFailure(e);
     }

@@ -6,6 +6,7 @@ import '../../domain/entities/booking_entity.dart';
 import '../../domain/entities/inspection_report_entity.dart';
 import '../providers/booking_providers.dart';
 import '../providers/review_prompt_controller.dart';
+import '../widgets/cash_payment_confirmation_card.dart';
 import '../widgets/media_attachment_widgets.dart';
 import 'worker_discovery_map_page.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
@@ -489,6 +490,17 @@ class _ReportBody extends ConsumerWidget {
     final inspectionBooking =
         await ref.read(bookingDetailProvider(bookingId).future);
     final repairBookingId = inspectionBooking.linkedRepairBookingId;
+    if (!context.mounted) return;
+
+    // This action completes the inspection work unit. Confirm the actual cash
+    // paid before collecting its review; the backend is the sole authority
+    // for settlement allocation and accepts full, partial, or zero cash.
+    final cashConfirmation = await showCashPaymentConfirmationDialog(
+      context,
+      bookingId: inspectionBooking.id,
+      expectedAmount: inspectionBooking.canonicalPrice,
+    );
+    if (cashConfirmation == null || !context.mounted) return;
 
     // The review ALWAYS belongs to the original completed inspection booking,
     // never to the child repair booking.

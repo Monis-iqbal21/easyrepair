@@ -2349,6 +2349,23 @@
   "@aboutWebsiteLabel": {
     "description": "Label above the official HandyGo website link on the About page"
   },
+  "cashPaymentTitle": "Confirm cash payment",
+  "cashPaymentQuestion": "How much cash did you pay?",
+  "cashPaymentExpected": "Expected booking amount: {amount}",
+  "cashPaymentInputLabel": "Cash paid (PKR)",
+  "cashPaymentInputHint": "Enter whole rupees, including 0",
+  "cashPaymentRequired": "Enter the actual cash amount paid.",
+  "cashPaymentWholeRupees": "Enter a whole PKR amount without decimals.",
+  "cashPaymentConfirmAction": "Confirm cash payment",
+  "cashPaymentConfirmedTitle": "Cash payment confirmed",
+  "cashPaymentPaid": "Cash paid: {amount}",
+  "cashPaymentExpectedReceipt": "Expected amount: {amount}",
+  "cashPaymentShortfall": "Remaining amount: {amount}",
+  "cashPaymentReference": "Confirmation reference: {reference}",
+  "cashPaymentContinueReview": "Continue to review",
+  "cashPaymentConflict": "Payment was already confirmed with a different amount. Please contact HandyGo support if it needs correction.",
+  "cashPaymentFailed": "Cash payment could not be confirmed. Please try again.",
+  "cashPaymentReviewBlocked": "Confirm the cash payment before reviewing the Ustaad.",
   "aboutVersionValue": "Version {version} ({build})",
   "@aboutVersionValue": {
     "description": "Runtime app version/build shown on the About page and Settings row",

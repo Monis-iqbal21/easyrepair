@@ -6,6 +6,7 @@ import '../../../../core/data/cached_result.dart';
 import '../../../../core/errors/failures.dart';
 import '../../domain/entities/attachable_inspection_entity.dart';
 import '../../domain/entities/booking_entity.dart';
+import '../../domain/entities/cash_payment_confirmation_entity.dart';
 import '../../domain/entities/create_booking_request.dart';
 import '../../domain/entities/inspection_report_entity.dart';
 import '../../domain/entities/update_booking_request.dart';
@@ -130,6 +131,23 @@ class BookingRepositoryImpl implements BookingRepository {
       return Left(f);
     } catch (e) {
       return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, CashPaymentConfirmationEntity>> confirmCashPayment(
+    String bookingId,
+    int receivedCashTotal,
+  ) async {
+    try {
+      final model =
+          await _dataSource.confirmCashPayment(bookingId, receivedCashTotal);
+      return Right(model.toEntity());
+    } on Failure catch (f) {
+      return Left(f);
+    } catch (e) {
+      return Left(ServerFailure('',
+          code: FailureCode.unknown, diagnostic: e.toString()));
     }
   }
 

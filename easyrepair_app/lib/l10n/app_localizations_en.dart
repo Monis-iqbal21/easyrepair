@@ -3618,6 +3618,71 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aboutWebsiteLabel => 'Website';
 
   @override
+  String get cashPaymentTitle => 'Confirm cash payment';
+
+  @override
+  String get cashPaymentQuestion => 'How much cash did you pay?';
+
+  @override
+  String cashPaymentExpected(Object amount) {
+    return 'Expected booking amount: $amount';
+  }
+
+  @override
+  String get cashPaymentInputLabel => 'Cash paid (PKR)';
+
+  @override
+  String get cashPaymentInputHint => 'Enter whole rupees, including 0';
+
+  @override
+  String get cashPaymentRequired => 'Enter the actual cash amount paid.';
+
+  @override
+  String get cashPaymentWholeRupees =>
+      'Enter a whole PKR amount without decimals.';
+
+  @override
+  String get cashPaymentConfirmAction => 'Confirm cash payment';
+
+  @override
+  String get cashPaymentConfirmedTitle => 'Cash payment confirmed';
+
+  @override
+  String cashPaymentPaid(Object amount) {
+    return 'Cash paid: $amount';
+  }
+
+  @override
+  String cashPaymentExpectedReceipt(Object amount) {
+    return 'Expected amount: $amount';
+  }
+
+  @override
+  String cashPaymentShortfall(Object amount) {
+    return 'Remaining amount: $amount';
+  }
+
+  @override
+  String cashPaymentReference(Object reference) {
+    return 'Confirmation reference: $reference';
+  }
+
+  @override
+  String get cashPaymentContinueReview => 'Continue to review';
+
+  @override
+  String get cashPaymentConflict =>
+      'Payment was already confirmed with a different amount. Please contact HandyGo support if it needs correction.';
+
+  @override
+  String get cashPaymentFailed =>
+      'Cash payment could not be confirmed. Please try again.';
+
+  @override
+  String get cashPaymentReviewBlocked =>
+      'Confirm the cash payment before reviewing the Ustaad.';
+
+  @override
   String aboutVersionValue(String version, String build) {
     return 'Version $version ($build)';
   }

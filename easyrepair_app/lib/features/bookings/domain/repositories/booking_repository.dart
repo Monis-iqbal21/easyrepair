@@ -6,6 +6,7 @@ import '../../../../core/data/cached_result.dart';
 import '../../../../core/errors/failures.dart';
 import '../entities/attachable_inspection_entity.dart';
 import '../entities/booking_entity.dart';
+import '../entities/cash_payment_confirmation_entity.dart';
 import '../entities/create_booking_request.dart';
 import '../entities/inspection_report_entity.dart';
 import '../entities/nearby_worker_entity.dart';
@@ -55,6 +56,11 @@ abstract class BookingRepository {
 
   /// Submit a review for a completed booking.
   Future<Either<Failure, BookingEntity>> submitReview(ReviewRequest request);
+
+  Future<Either<Failure, CashPaymentConfirmationEntity>> confirmCashPayment(
+    String bookingId,
+    int receivedCashTotal,
+  );
 
   /// Upload a file attachment to an existing PENDING booking.
   Future<Either<Failure, BookingAttachmentEntity>> uploadAttachment(

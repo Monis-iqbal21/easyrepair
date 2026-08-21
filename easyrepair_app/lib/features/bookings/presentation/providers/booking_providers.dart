@@ -13,6 +13,7 @@ import '../../data/datasources/booking_remote_datasource.dart';
 import '../../data/repositories/booking_repository_impl.dart';
 import '../../domain/entities/attachable_inspection_entity.dart';
 import '../../domain/entities/booking_entity.dart';
+import '../../domain/entities/cash_payment_confirmation_entity.dart';
 import '../../domain/entities/create_booking_request.dart';
 import '../../domain/entities/inspection_report_entity.dart';
 import '../../domain/entities/nearby_worker_entity.dart';
@@ -402,6 +403,40 @@ class ReviewNotifier extends AsyncNotifier<void> {
 final reviewNotifierProvider = AsyncNotifierProvider<ReviewNotifier, void>(
   ReviewNotifier.new,
 );
+
+class CashPaymentConfirmationNotifier
+    extends StateNotifier<AsyncValue<CashPaymentConfirmationEntity?>> {
+  CashPaymentConfirmationNotifier(this._repository, this.bookingId)
+      : super(const AsyncData(null));
+
+  final BookingRepository _repository;
+  final String bookingId;
+
+  Future<CashPaymentConfirmationEntity> confirm(int receivedCashTotal) async {
+    if (state.isLoading) throw const ValidationFailure('');
+    state = const AsyncLoading();
+    final result =
+        await _repository.confirmCashPayment(bookingId, receivedCashTotal);
+    return result.fold(
+      (failure) {
+        state = AsyncError(failure, StackTrace.current);
+        throw failure;
+      },
+      (confirmation) {
+        state = AsyncData(confirmation);
+        return confirmation;
+      },
+    );
+  }
+}
+
+final cashPaymentConfirmationProvider = StateNotifierProvider.autoDispose.family<
+    CashPaymentConfirmationNotifier,
+    AsyncValue<CashPaymentConfirmationEntity?>,
+    String>((ref, bookingId) => CashPaymentConfirmationNotifier(
+      ref.watch(bookingRepositoryProvider),
+      bookingId,
+    ));
 
 // ── Filtered + searched bookings ─────────────────────────────────────────────
 

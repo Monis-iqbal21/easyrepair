@@ -12,6 +12,7 @@ import '../../../../core/utils/distance_utils.dart';
 import '../../domain/entities/booking_entity.dart';
 import '../widgets/client_cancel_reason_sheet.dart';
 import '../widgets/client_chat_action.dart';
+import '../widgets/cash_payment_confirmation_card.dart';
 import '../widgets/media_attachment_widgets.dart';
 import '../providers/booking_providers.dart';
 import '../providers/review_prompt_controller.dart';
@@ -305,25 +306,16 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
   final _scrollCtrl = ScrollController();
   Timer? _pollTimer;
 
-  // Guards the auto-popup so it fires at most once per booking per time it
-  // becomes eligible (COMPLETED + no review yet, any lane) — reset whenever
-  // the booking id changes so navigating between bookings re-arms it, but
-  // never re-fires from an unrelated rebuild (polling, provider refresh...)
-  // of the *same* booking.
-  String? _reviewPromptedForBookingId;
-
   @override
   void initState() {
     super.initState();
     _syncPolling();
-    _maybePromptReview();
   }
 
   @override
   void didUpdateWidget(covariant _DetailBody oldWidget) {
     super.didUpdateWidget(oldWidget);
     _syncPolling();
-    _maybePromptReview();
   }
 
   void _syncPolling() {
@@ -345,25 +337,6 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
     super.dispose();
   }
 
-  /// Asks the shared [ReviewPromptController] to prompt for this booking when
-  /// it's COMPLETED and unreviewed — all lanes alike.
-  ///
-  /// Deliberately delegates rather than opening the modal itself: the
-  /// foreground completion event, the notification tap and this page all
-  /// funnel through one controller, so an app-level prompt and this
-  /// page-level prompt can never both open for the same booking.
-  void _maybePromptReview() {
-    final eligible =
-        booking.status == BookingStatus.completed && booking.review == null;
-    if (!eligible) return;
-    if (_reviewPromptedForBookingId == booking.id) return;
-    _reviewPromptedForBookingId = booking.id;
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _openReviewModal();
-    });
-  }
-
   void _openReviewModal() {
     ref.read(reviewPromptControllerProvider).enqueueFront(context, booking.id);
   }
@@ -379,6 +352,9 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
     final isStandard = booking.lane == BookingLane.standard;
     final canEdit = booking.status == BookingStatus.pending &&
         booking.assignedWorker == null;
+    final cashConfirmation = ref
+        .watch(cashPaymentConfirmationProvider(booking.id))
+        .valueOrNull;
 
     return CustomScrollView(
       controller: _scrollCtrl,
@@ -574,6 +550,16 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
                 if (booking.canonicalPrice != null)
                   _PricingCard(booking: booking),
 
+                if (isCompleted && booking.review == null) ...[
+                  if (booking.canonicalPrice != null)
+                    const SizedBox(height: 16),
+                  CashPaymentConfirmationCard(
+                    bookingId: booking.id,
+                    expectedAmount: booking.canonicalPrice,
+                    onConfirmed: (_) => _openReviewModal(),
+                  ),
+                ],
+
                 // Worker section
                 if (booking.assignedWorker != null) ...[
                   if (booking.canonicalPrice != null)
@@ -611,7 +597,9 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
                     const SizedBox(height: 16),
                     _TrackWorkerButton(bookingId: booking.id),
                   ],
-                  if (isCompleted && booking.review == null) ...[
+                  if (isCompleted &&
+                      booking.review == null &&
+                      cashConfirmation != null) ...[
                     const SizedBox(height: 16),
                     _ReviewWorkerButton(onTap: _openReviewModal),
                   ],

@@ -61,10 +61,8 @@ android {
 
     defaultConfig {
         applicationId = "ai.handygo.app"
-        // record v6 + flutter_secure_storage v9 both require API 23 minimum.
-        // Flutter's default (flutter.minSdkVersion) is 21; override to 23.
-        // Drops Android 5.0–5.1 (<1% market share) which had broken secure
-        // storage behaviour due to missing Keystore APIs anyway.
+        // Use the SDK floor supported by this Flutter toolchain and all plugins.
+        // The configured Flutter SDK currently supplies API 24.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
@@ -88,7 +86,9 @@ android {
                 "proguard-rules.pro",
             )
 
-            signingConfig = if (keyPropertiesFile.exists()) signingConfigs.getByName("release") else signingConfigs.getByName("debug")
+            // Never allow a production artifact to be signed with the debug key.
+            // A release build must fail until android/key.properties is configured.
+            signingConfig = signingConfigs.getByName("release")
         }
 
         debug {

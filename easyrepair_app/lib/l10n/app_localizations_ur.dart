@@ -3542,6 +3542,70 @@ class AppLocalizationsUr extends AppLocalizations {
   String get aboutWebsiteLabel => 'ویب سائٹ';
 
   @override
+  String get cashPaymentTitle => 'نقد ادائیگی کی تصدیق کریں';
+
+  @override
+  String get cashPaymentQuestion => 'آپ نے کتنی نقد ادائیگی کی؟';
+
+  @override
+  String cashPaymentExpected(Object amount) {
+    return 'بکنگ کی متوقع رقم: $amount';
+  }
+
+  @override
+  String get cashPaymentInputLabel => 'ادا کی گئی نقد رقم (PKR)';
+
+  @override
+  String get cashPaymentInputHint => 'پورے روپے لکھیں، 0 بھی لکھ سکتے ہیں';
+
+  @override
+  String get cashPaymentRequired => 'اصل ادا کی گئی نقد رقم لکھیں۔';
+
+  @override
+  String get cashPaymentWholeRupees => 'اعشاریہ کے بغیر پوری PKR رقم لکھیں۔';
+
+  @override
+  String get cashPaymentConfirmAction => 'نقد ادائیگی کی تصدیق کریں';
+
+  @override
+  String get cashPaymentConfirmedTitle => 'نقد ادائیگی کی تصدیق ہو گئی';
+
+  @override
+  String cashPaymentPaid(Object amount) {
+    return 'ادا کی گئی نقد رقم: $amount';
+  }
+
+  @override
+  String cashPaymentExpectedReceipt(Object amount) {
+    return 'متوقع رقم: $amount';
+  }
+
+  @override
+  String cashPaymentShortfall(Object amount) {
+    return 'باقی رقم: $amount';
+  }
+
+  @override
+  String cashPaymentReference(Object reference) {
+    return 'تصدیقی حوالہ: $reference';
+  }
+
+  @override
+  String get cashPaymentContinueReview => 'جائزہ دیں';
+
+  @override
+  String get cashPaymentConflict =>
+      'ادائیگی پہلے کسی دوسری رقم کے ساتھ تصدیق ہو چکی ہے۔ درستگی کے لیے HandyGo سپورٹ سے رابطہ کریں۔';
+
+  @override
+  String get cashPaymentFailed =>
+      'نقد ادائیگی کی تصدیق نہیں ہو سکی۔ دوبارہ کوشش کریں۔';
+
+  @override
+  String get cashPaymentReviewBlocked =>
+      'استاد کو جائزہ دینے سے پہلے نقد ادائیگی کی تصدیق کریں۔';
+
+  @override
   String aboutVersionValue(String version, String build) {
     return 'ورژن $version ($build)';
   }
@@ -7128,6 +7192,72 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get aboutWebsiteLabel => 'Website';
+
+  @override
+  String get cashPaymentTitle => 'Cash payment confirm karein';
+
+  @override
+  String get cashPaymentQuestion => 'Aap ne kitni cash payment ki?';
+
+  @override
+  String cashPaymentExpected(Object amount) {
+    return 'Booking ki expected amount: $amount';
+  }
+
+  @override
+  String get cashPaymentInputLabel => 'Ada ki gayi cash (PKR)';
+
+  @override
+  String get cashPaymentInputHint =>
+      'Poore rupay likhein, 0 bhi likh sakte hain';
+
+  @override
+  String get cashPaymentRequired => 'Asal ada ki gayi cash amount likhein.';
+
+  @override
+  String get cashPaymentWholeRupees =>
+      'Decimal ke baghair poori PKR amount likhein.';
+
+  @override
+  String get cashPaymentConfirmAction => 'Cash payment confirm karein';
+
+  @override
+  String get cashPaymentConfirmedTitle => 'Cash payment confirm ho gayi';
+
+  @override
+  String cashPaymentPaid(Object amount) {
+    return 'Ada ki gayi cash: $amount';
+  }
+
+  @override
+  String cashPaymentExpectedReceipt(Object amount) {
+    return 'Expected amount: $amount';
+  }
+
+  @override
+  String cashPaymentShortfall(Object amount) {
+    return 'Baqi amount: $amount';
+  }
+
+  @override
+  String cashPaymentReference(Object reference) {
+    return 'Confirmation reference: $reference';
+  }
+
+  @override
+  String get cashPaymentContinueReview => 'Review dein';
+
+  @override
+  String get cashPaymentConflict =>
+      'Payment pehle kisi doosri amount ke sath confirm ho chuki hai. Correction ke liye HandyGo Support se rabta karein.';
+
+  @override
+  String get cashPaymentFailed =>
+      'Cash payment confirm nahi ho saki. Dobara koshish karein.';
+
+  @override
+  String get cashPaymentReviewBlocked =>
+      'Ustaad ko review dene se pehle cash payment confirm karein.';
 
   @override
   String aboutVersionValue(String version, String build) {
