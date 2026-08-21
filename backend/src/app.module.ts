@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Logger, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { BullModule } from '@nestjs/bull';
 import { AppController } from './app.controller';
@@ -17,6 +17,13 @@ import { ChatModule } from './modules/chat/chat.module';
 import { BidsModule } from './modules/bids/bids.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { InspectionReportsModule } from './modules/inspection-reports/inspection-reports.module';
+import {
+  createRedisOptions,
+  describeRedisEndpoint,
+  formatRedisEndpoint,
+} from './redis/redis-connection.util';
+
+const bullRedisLogger = new Logger('BullRedisConfig');
 
 @Module({
   imports: [
@@ -28,9 +35,14 @@ import { InspectionReportsModule } from './modules/inspection-reports/inspection
     }),
     BullModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        url: config.get<string>('redis.url') ?? 'redis://localhost:6379',
-      }),
+      useFactory: (config: ConfigService) => {
+        const redisUrl =
+          config.get<string>('redis.url') ?? 'redis://localhost:6379';
+        bullRedisLogger.log(
+          `Configuring Bull Redis: ${formatRedisEndpoint(describeRedisEndpoint(redisUrl))}`,
+        );
+        return { redis: createRedisOptions(redisUrl) };
+      },
     }),
     PrismaModule,
     RedisModule,

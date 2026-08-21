@@ -6,6 +6,11 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
+import {
+  createRedisOptions,
+  describeRedisEndpoint,
+  formatRedisEndpoint,
+} from './redis-connection.util';
 
 @Injectable()
 export class RedisService implements OnModuleInit, OnModuleDestroy {
@@ -23,12 +28,22 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       return;
     }
     try {
-      this.client = new Redis(url, {
+      const endpoint = describeRedisEndpoint(url);
+      this.logger.log(`Redis endpoint: ${formatRedisEndpoint(endpoint)}`);
+      this.client = new Redis({
+        ...createRedisOptions(url),
         lazyConnect: false,
         enableOfflineQueue: false,
       });
+      this.client.on('ready', () =>
+        this.logger.log(
+          `Redis connection ready: ${formatRedisEndpoint(endpoint)}`,
+        ),
+      );
       this.client.on('error', (err) =>
-        this.logger.warn(`Redis error: ${err.message}`),
+        this.logger.warn(
+          `Redis connection failed: ${formatRedisEndpoint(endpoint)} error=${err.message}`,
+        ),
       );
       this.logger.log('Redis client created');
     } catch (err: any) {

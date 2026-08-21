@@ -1,7 +1,13 @@
 import { Inject, Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Queue, { Queue as BullQueue } from 'bull';
+import type { RedisOptions } from 'ioredis';
 import { AdminOperationsService } from './admin-operations.service';
+import {
+  createRedisOptions,
+  describeRedisEndpoint,
+  formatRedisEndpoint,
+} from '../../redis/redis-connection.util';
 
 export const ADMIN_OPERATIONS_QUEUE = 'admin-operations';
 export const NIGHTLY_COMMISSION_JOB = 'nightly-commission-generation';
@@ -14,13 +20,13 @@ export const ADMIN_OPERATIONS_QUEUE_FACTORY = Symbol(
 
 export type AdminOperationsQueueFactory = (
   name: string,
-  redisUrl: string,
+  redis: RedisOptions,
 ) => BullQueue;
 
 export const defaultAdminOperationsQueueFactory: AdminOperationsQueueFactory = (
   name,
-  redisUrl,
-) => new Queue(name, redisUrl);
+  redis,
+) => new Queue(name, { redis });
 
 /**
  * Deliberately not an @Processor or lifecycle-hook provider. main.ts starts it
@@ -54,7 +60,14 @@ export class AdminOperationsScheduler implements OnModuleDestroy {
     }
 
     try {
-      this.queue = this.createQueue(ADMIN_OPERATIONS_QUEUE, redisUrl);
+      const endpoint = describeRedisEndpoint(redisUrl);
+      this.logger.log(
+        `[nightly-commission] configuring Redis: ${formatRedisEndpoint(endpoint)}`,
+      );
+      this.queue = this.createQueue(
+        ADMIN_OPERATIONS_QUEUE,
+        createRedisOptions(redisUrl),
+      );
     } catch (error) {
       this.logger.warn(
         `[nightly-commission] failed to create Bull queue: ${(error as Error)?.message}`,
