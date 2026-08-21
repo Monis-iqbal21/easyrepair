@@ -25,6 +25,19 @@ describe('AdminOperationsProcessor', () => {
     );
   });
 
+  it('does not block module initialization while Redis registration is pending', () => {
+    const neverSettles = new Promise(() => undefined);
+    const queue = { add: jest.fn().mockReturnValue(neverSettles) };
+    const processor = new AdminOperationsProcessor(
+      { runNightly: jest.fn() } as any,
+      { get: jest.fn().mockReturnValue('Asia/Karachi') } as any,
+      queue as any,
+    );
+
+    expect(processor.onModuleInit()).toBeUndefined();
+    expect(queue.add).toHaveBeenCalledTimes(1);
+  });
+
   it('runs generation as an audited system action', async () => {
     const service = {
       runNightly: jest.fn().mockResolvedValue({

@@ -8,6 +8,7 @@ export const ADMIN_OPERATIONS_QUEUE = 'admin-operations';
 export const NIGHTLY_COMMISSION_JOB = 'nightly-commission-generation';
 export const NIGHTLY_COMMISSION_REPEAT_JOB_ID =
   'nightly-commission-generation-repeat';
+export const NIGHTLY_COMMISSION_REGISTRATION_WARN_AFTER_MS = 10_000;
 
 @Processor(ADMIN_OPERATIONS_QUEUE)
 export class AdminOperationsProcessor implements OnModuleInit {
@@ -19,10 +20,24 @@ export class AdminOperationsProcessor implements OnModuleInit {
     @InjectQueue(ADMIN_OPERATIONS_QUEUE) private readonly queue: Queue,
   ) {}
 
-  async onModuleInit(): Promise<void> {
+  onModuleInit(): void {
     const tz = this.config.get<string>('business.timezone') ?? 'Asia/Karachi';
-    try {
-      await this.queue.add(
+    let settled = false;
+
+    // Bull keeps retrying Redis commands while its connection is unavailable.
+    // Do not await that retry loop from a Nest lifecycle hook: app.listen()
+    // runs module initialization before binding the HTTP socket.
+    const pendingWarning = setTimeout(() => {
+      if (!settled) {
+        this.logger.warn(
+          `[nightly-commission] scheduler registration is still waiting for Redis after ${NIGHTLY_COMMISSION_REGISTRATION_WARN_AFTER_MS}ms; HTTP startup is not blocked and Bull will keep retrying`,
+        );
+      }
+    }, NIGHTLY_COMMISSION_REGISTRATION_WARN_AFTER_MS);
+    pendingWarning.unref?.();
+
+    void this.queue
+      .add(
         NIGHTLY_COMMISSION_JOB,
         {},
         {
@@ -31,12 +46,21 @@ export class AdminOperationsProcessor implements OnModuleInit {
           removeOnComplete: true,
           removeOnFail: 100,
         },
-      );
-    } catch (error) {
-      this.logger.warn(
-        `[nightly-commission] failed to schedule repeatable job: ${(error as Error)?.message}`,
-      );
-    }
+      )
+      .then(() => {
+        this.logger.log(
+          `[nightly-commission] repeatable job registered (timezone=${tz})`,
+        );
+      })
+      .catch((error: unknown) => {
+        this.logger.warn(
+          `[nightly-commission] failed to schedule repeatable job: ${(error as Error)?.message}`,
+        );
+      })
+      .finally(() => {
+        settled = true;
+        clearTimeout(pendingWarning);
+      });
   }
 
   @Process(NIGHTLY_COMMISSION_JOB)
