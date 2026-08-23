@@ -55,7 +55,8 @@ class EarningHistoryPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final historyAsync = ref.watch(workerEarningsHistoryProvider);
-    final isShowingCachedData = ref.watch(workerEarningsHistoryIsOfflineProvider) &&
+    final isShowingCachedData =
+        ref.watch(workerEarningsHistoryIsOfflineProvider) &&
         historyAsync.hasValue;
 
     return Scaffold(
@@ -65,8 +66,11 @@ class EarningHistoryPage extends ConsumerWidget {
         elevation: 0,
         surfaceTintColor: Colors.white,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded,
-              size: 18, color: _kDark),
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            size: 18,
+            color: _kDark,
+          ),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
@@ -88,31 +92,33 @@ class EarningHistoryPage extends ConsumerWidget {
           if (isShowingCachedData) const OfflineDataBanner(),
           Expanded(
             child: historyAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator(color: _kOrange)),
-        error: (err, _) => _ErrorState(
-          message: failureMessage(context.l10n, err),
-          onRetry: () => ref.invalidate(workerEarningsHistoryProvider),
-        ),
-        data: (days) => days.isEmpty
-            ? const _EmptyState()
-            : ListView.builder(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
-                // +1 for the totals header, rendered as the first item so it
-                // scrolls with the list rather than needing a separate Column.
-                itemCount: days.length + 1,
-                itemBuilder: (ctx, i) {
-                  if (i == 0) {
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 14),
-                      child: _TotalsHeader(days: days),
-                    );
-                  }
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 14),
-                    child: _DayCard(day: days[i - 1]),
-                  );
-                },
+              loading: () => const Center(
+                child: CircularProgressIndicator(color: _kOrange),
               ),
+              error: (err, _) => _ErrorState(
+                message: failureMessage(context.l10n, err),
+                onRetry: () => ref.invalidate(workerEarningsHistoryProvider),
+              ),
+              data: (days) => days.isEmpty
+                  ? const _EmptyState()
+                  : ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
+                      // +1 for the totals header, rendered as the first item so it
+                      // scrolls with the list rather than needing a separate Column.
+                      itemCount: days.length + 1,
+                      itemBuilder: (ctx, i) {
+                        if (i == 0) {
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 14),
+                            child: _TotalsHeader(days: days),
+                          );
+                        }
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 14),
+                          child: _DayCard(day: days[i - 1]),
+                        );
+                      },
+                    ),
             ),
           ),
         ],
@@ -137,8 +143,8 @@ class _TotalsHeader extends StatelessWidget {
     for (final day in days) {
       for (final job in day.jobs) {
         gross += job.grossEarning;
-        commission += job.commissionAmount;
-        ustaad += job.ustaadEarning;
+        if (job.commissionAmount != null) commission += job.commissionAmount!;
+        if (job.ustaadEarning != null) ustaad += job.ustaadEarning!;
       }
     }
 
@@ -156,7 +162,6 @@ class _TotalsHeader extends StatelessWidget {
             label: context.l10n.earningGrossEarnings,
             amount: gross,
             color: _kDark,
-            emphasize: true,
           ),
           const SizedBox(height: 10),
           _TotalRow(
@@ -345,6 +350,7 @@ class _JobCard extends StatelessWidget {
                   label: context.l10n.earningUstaadEarnings,
                   amount: job.ustaadEarning,
                   color: _kGreen,
+                  emphasize: true,
                 ),
               ),
             ],
@@ -357,12 +363,14 @@ class _JobCard extends StatelessWidget {
 
 class _AmountColumn extends StatelessWidget {
   final String label;
-  final double amount;
+  final double? amount;
   final Color color;
+  final bool emphasize;
   const _AmountColumn({
     required this.label,
     required this.amount,
     required this.color,
+    this.emphasize = false,
   });
 
   @override
@@ -378,10 +386,10 @@ class _AmountColumn extends StatelessWidget {
         ),
         const SizedBox(height: 2),
         Text(
-          formatPkr(amount),
+          amount == null ? '—' : formatPkr(amount!),
           style: TextStyle(
-            fontSize: 12.5,
-            fontWeight: FontWeight.w700,
+            fontSize: emphasize ? 13.5 : 12.5,
+            fontWeight: emphasize ? FontWeight.w800 : FontWeight.w700,
             color: color,
           ),
         ),
@@ -407,7 +415,10 @@ class _CommissionStatusChip extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(20),
+      ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [

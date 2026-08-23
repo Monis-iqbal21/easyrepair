@@ -3506,13 +3506,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workerSuspendedContactSupport => 'Contact Support';
 
   @override
-  String get earningGrossEarnings => 'Gross Earnings';
+  String get earningGrossEarnings => 'Labour Earnings';
 
   @override
   String get earningCommissionLabel => 'HandyGo Commission (18%)';
 
   @override
-  String get earningUstaadEarnings => 'Ustaad Earnings';
+  String get earningUstaadEarnings => 'Profit';
 
   @override
   String get earningCommissionStatusLabel => 'Commission Status';

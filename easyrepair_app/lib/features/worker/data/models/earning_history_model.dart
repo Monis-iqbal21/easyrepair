@@ -5,8 +5,12 @@ class EarningHistoryJobModel {
   final String lane;
   final String serviceCategory;
   final double grossEarning;
-  final double commissionAmount;
-  final double ustaadEarning;
+
+  /// Null means the server did not send this field; a real zero remains zero.
+  final double? commissionAmount;
+
+  /// Null means the server did not send this field; a real zero remains zero.
+  final double? ustaadEarning;
   final CommissionStatus commissionStatus;
   final DateTime completedAt;
   final bool isInspectionOnly;
@@ -25,42 +29,39 @@ class EarningHistoryJobModel {
 
   factory EarningHistoryJobModel.fromJson(Map<String, dynamic> json) {
     final grossEarning = (json['grossEarning'] as num?)?.toDouble() ?? 0.0;
-    // Defensive fallbacks for commissionAmount/ustaadEarning mirror the
-    // 18% platform rate only as a last resort (e.g. an older cached
-    // response) — the backend's own computed values are always preferred.
-    final commissionAmount =
-        (json['commissionAmount'] as num?)?.toDouble() ?? grossEarning * 0.18;
+    // Financial values come from the backend. Missing values remain unknown;
+    // never invent a commission rate or derive profit on-device.
+    final commissionAmount = (json['commissionAmount'] as num?)?.toDouble();
     return EarningHistoryJobModel(
       bookingId: json['bookingId'] as String,
       lane: json['lane'] as String? ?? 'STANDARD',
       serviceCategory: json['serviceCategory'] as String? ?? 'Service',
       grossEarning: grossEarning,
       commissionAmount: commissionAmount,
-      ustaadEarning: (json['ustaadEarning'] as num?)?.toDouble() ??
-          (grossEarning - commissionAmount),
+      ustaadEarning: (json['ustaadEarning'] as num?)?.toDouble(),
       commissionStatus:
           (json['commissionStatus'] as String? ?? 'PENDING').toUpperCase() ==
-                  'PAID'
-              ? CommissionStatus.paid
-              : CommissionStatus.pending,
+              'PAID'
+          ? CommissionStatus.paid
+          : CommissionStatus.pending,
       completedAt:
           DateTime.tryParse(json['completedAt'] as String? ?? '') ??
-              DateTime.now(),
+          DateTime.now(),
       isInspectionOnly: json['isInspectionOnly'] as bool? ?? false,
     );
   }
 
   EarningHistoryJobEntity toEntity() => EarningHistoryJobEntity(
-        bookingId: bookingId,
-        lane: lane,
-        serviceCategory: serviceCategory,
-        grossEarning: grossEarning,
-        commissionAmount: commissionAmount,
-        ustaadEarning: ustaadEarning,
-        commissionStatus: commissionStatus,
-        completedAt: completedAt,
-        isInspectionOnly: isInspectionOnly,
-      );
+    bookingId: bookingId,
+    lane: lane,
+    serviceCategory: serviceCategory,
+    grossEarning: grossEarning,
+    commissionAmount: commissionAmount,
+    ustaadEarning: ustaadEarning,
+    commissionStatus: commissionStatus,
+    completedAt: completedAt,
+    isInspectionOnly: isInspectionOnly,
+  );
 }
 
 class EarningHistoryDayModel {
@@ -83,16 +84,17 @@ class EarningHistoryDayModel {
       grossTotal: (json['grossTotal'] as num?)?.toDouble() ?? 0.0,
       jobsCount: json['jobsCount'] as int? ?? 0,
       jobs: rawJobs
-          .map((e) =>
-              EarningHistoryJobModel.fromJson(e as Map<String, dynamic>))
+          .map(
+            (e) => EarningHistoryJobModel.fromJson(e as Map<String, dynamic>),
+          )
           .toList(),
     );
   }
 
   EarningHistoryDayEntity toEntity() => EarningHistoryDayEntity(
-        date: DateTime.tryParse(date) ?? DateTime.now(),
-        grossTotal: grossTotal,
-        jobsCount: jobsCount,
-        jobs: jobs.map((j) => j.toEntity()).toList(),
-      );
+    date: DateTime.tryParse(date) ?? DateTime.now(),
+    grossTotal: grossTotal,
+    jobsCount: jobsCount,
+    jobs: jobs.map((j) => j.toEntity()).toList(),
+  );
 }

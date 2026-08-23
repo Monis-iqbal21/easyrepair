@@ -7,11 +7,12 @@ class EarningHistoryJobEntity {
   final String lane;
   final String serviceCategory;
   final double grossEarning;
-  /// HandyGo's 18% commission on [grossEarning] — computed backend-side by
-  /// the one shared commission.util.ts source, never recomputed here.
-  final double commissionAmount;
-  /// grossEarning - commissionAmount, irrespective of commissionStatus.
-  final double ustaadEarning;
+
+  /// HandyGo commission computed backend-side. Null means it was not sent.
+  final double? commissionAmount;
+
+  /// What the Ustaad keeps, computed backend-side. Null means it was not sent.
+  final double? ustaadEarning;
   final CommissionStatus commissionStatus;
   final DateTime completedAt;
   final bool isInspectionOnly;

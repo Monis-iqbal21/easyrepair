@@ -3433,13 +3433,13 @@ class AppLocalizationsUr extends AppLocalizations {
   String get workerSuspendedContactSupport => 'سپورٹ سے رابطہ کریں';
 
   @override
-  String get earningGrossEarnings => 'کل کمائی';
+  String get earningGrossEarnings => 'مزدوری';
 
   @override
   String get earningCommissionLabel => 'HandyGo کمیشن (18%)';
 
   @override
-  String get earningUstaadEarnings => 'اُستاد کی کمائی';
+  String get earningUstaadEarnings => 'منافع';
 
   @override
   String get earningCommissionStatusLabel => 'کمیشن اسٹیٹس';
@@ -7083,13 +7083,13 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get workerSuspendedContactSupport => 'Support se Rabta Karein';
 
   @override
-  String get earningGrossEarnings => 'Total Kamai';
+  String get earningGrossEarnings => 'Mazdoori';
 
   @override
   String get earningCommissionLabel => 'HandyGo Commission (18%)';
 
   @override
-  String get earningUstaadEarnings => 'Ustaad Ki Kamai';
+  String get earningUstaadEarnings => 'Munafa';
 
   @override
   String get earningCommissionStatusLabel => 'Commission Status';

@@ -2212,7 +2212,7 @@
   "@workerSuspendedContactSupport": {
     "description": "Button on the suspended-account screen that dials HandyGo Support"
   },
-  "earningGrossEarnings": "Gross Earnings",
+  "earningGrossEarnings": "Labour Earnings",
   "@earningGrossEarnings": {
     "description": "Label for the pre-commission total on Worker Earning History"
   },
@@ -2220,7 +2220,7 @@
   "@earningCommissionLabel": {
     "description": "Label for HandyGo's 18% platform commission line"
   },
-  "earningUstaadEarnings": "Ustaad Earnings",
+  "earningUstaadEarnings": "Profit",
   "@earningUstaadEarnings": {
     "description": "Label for Gross - Commission, the amount the Ustaad actually keeps"
   },

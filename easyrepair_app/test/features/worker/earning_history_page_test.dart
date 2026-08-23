@@ -48,6 +48,25 @@ final _dayTwo = EarningHistoryDayEntity(
 
 final _days = [_dayTwo, _dayOne];
 
+final _dayWithMissingAmounts = EarningHistoryDayEntity(
+  date: DateTime(2026, 8, 3),
+  grossTotal: 3000,
+  jobsCount: 1,
+  jobs: [
+    EarningHistoryJobEntity(
+      bookingId: 'job-C',
+      lane: 'STANDARD',
+      serviceCategory: 'Wiring',
+      grossEarning: 3000,
+      commissionAmount: null,
+      ustaadEarning: null,
+      commissionStatus: CommissionStatus.pending,
+      completedAt: DateTime(2026, 8, 3, 10),
+      isInspectionOnly: false,
+    ),
+  ],
+);
+
 Future<void> _pump(
   WidgetTester tester, {
   AppLocale locale = AppLocale.romanUrdu,
@@ -56,7 +75,9 @@ Future<void> _pump(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
-        workerEarningsHistoryProvider.overrideWith((ref) async => days ?? _days),
+        workerEarningsHistoryProvider.overrideWith(
+          (ref) async => days ?? _days,
+        ),
       ],
       child: localizedApp(const EarningHistoryPage(), locale: locale),
     ),
@@ -74,13 +95,15 @@ void main() {
     expect(find.text('Rs 5,000'), findsWidgets);
   });
 
-  testWidgets('displays the 18% HandyGo commission for each job', (tester) async {
+  testWidgets('displays the 18% HandyGo commission for each job', (
+    tester,
+  ) async {
     await _pump(tester);
     expect(find.text('Rs 1,800'), findsOneWidget);
     expect(find.text('Rs 900'), findsOneWidget);
   });
 
-  testWidgets('displays the Ustaad earning (Gross - Commission) for each job', (
+  testWidgets('displays backend-computed Ustaad profit for each job', (
     tester,
   ) async {
     await _pump(tester);
@@ -88,13 +111,14 @@ void main() {
     expect(find.text('Rs 4,100'), findsOneWidget);
   });
 
-  testWidgets('displays Paid/Pending commission status per job, independently', (
-    tester,
-  ) async {
-    await _pump(tester);
-    expect(find.text('Paid'), findsOneWidget);
-    expect(find.text('Pending'), findsOneWidget);
-  });
+  testWidgets(
+    'displays Paid/Pending commission status per job, independently',
+    (tester) async {
+      await _pump(tester);
+      expect(find.text('Paid'), findsOneWidget);
+      expect(find.text('Pending'), findsOneWidget);
+    },
+  );
 
   testWidgets(
     'totals section sums Gross / Commission / Ustaad correctly across all jobs',
@@ -109,22 +133,32 @@ void main() {
 
   testWidgets('multilingual labels resolve in English', (tester) async {
     await _pump(tester, locale: AppLocale.english);
-    expect(find.text('Gross Earnings'), findsWidgets);
+    expect(find.text('Labour Earnings'), findsWidgets);
     expect(find.text('HandyGo Commission (18%)'), findsWidgets);
-    expect(find.text('Ustaad Earnings'), findsWidgets);
+    expect(find.text('Profit'), findsWidgets);
   });
 
-  testWidgets('multilingual labels resolve in Roman Urdu (default)', (tester) async {
+  testWidgets('multilingual labels resolve in Roman Urdu (default)', (
+    tester,
+  ) async {
     await _pump(tester, locale: AppLocale.romanUrdu);
-    expect(find.text('Total Kamai'), findsWidgets);
+    expect(find.text('Mazdoori'), findsWidgets);
     expect(find.text('HandyGo Commission (18%)'), findsWidgets);
-    expect(find.text('Ustaad Ki Kamai'), findsWidgets);
+    expect(find.text('Munafa'), findsWidgets);
   });
 
   testWidgets('multilingual labels resolve in Urdu', (tester) async {
     await _pump(tester, locale: AppLocale.urdu);
-    expect(find.text('کل کمائی'), findsWidgets);
-    expect(find.text('اُستاد کی کمائی'), findsWidgets);
+    expect(find.text('مزدوری'), findsWidgets);
+    expect(find.text('منافع'), findsWidgets);
+  });
+
+  testWidgets('missing financial values show an em dash', (tester) async {
+    await _pump(tester, days: [_dayWithMissingAmounts]);
+    expect(find.text('—'), findsNWidgets(2));
+    expect(find.text('Rs 540'), findsNothing);
+    expect(find.text('Rs 3,000'), findsWidgets);
+    expect(find.text('Rs 0'), findsNWidgets(2));
   });
 
   testWidgets('the empty state still renders when there are no earnings yet', (

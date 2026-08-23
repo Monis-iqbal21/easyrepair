@@ -6270,7 +6270,7 @@ abstract class AppLocalizations {
   /// Label for the pre-commission total on Worker Earning History
   ///
   /// In en, this message translates to:
-  /// **'Gross Earnings'**
+  /// **'Labour Earnings'**
   String get earningGrossEarnings;
 
   /// Label for HandyGo's 18% platform commission line
@@ -6282,7 +6282,7 @@ abstract class AppLocalizations {
   /// Label for Gross - Commission, the amount the Ustaad actually keeps
   ///
   /// In en, this message translates to:
-  /// **'Ustaad Earnings'**
+  /// **'Profit'**
   String get earningUstaadEarnings;
 
   /// Label above the Pending/Paid chip on each earning history job
