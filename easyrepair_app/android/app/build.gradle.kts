@@ -99,6 +99,24 @@ android {
     }
 }
 
+// Fail release builds early with an actionable error. Release signing remains
+// unconditional above, so this never falls back to the debug signing key.
+gradle.taskGraph.whenReady {
+    val thisModule = "${project.path}:"
+    val buildingRelease = allTasks.any { task ->
+        task.path.startsWith(thisModule) && task.name.contains("Release")
+    }
+    if (buildingRelease && !keyPropertiesFile.exists()) {
+        throw GradleException(
+            "key.properties missing — release builds require the configured release key.\n" +
+                "  expected at: ${keyPropertiesFile.absolutePath}\n" +
+                "  fix: copy android/key.properties.example -> android/key.properties " +
+                "and fill in storeFile / storePassword / keyAlias / keyPassword.\n" +
+                "  (debug builds and `flutter run` are unaffected.)",
+        )
+    }
+}
+
 flutter {
     source = "../.."
 }
