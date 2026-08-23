@@ -41,7 +41,15 @@ const bullRedisLogger = new Logger('BullRedisConfig');
         bullRedisLogger.log(
           `Configuring Bull Redis: ${formatRedisEndpoint(describeRedisEndpoint(redisUrl))}`,
         );
-        return { redis: createRedisOptions(redisUrl) };
+        return {
+          redis: {
+            ...createRedisOptions(redisUrl),
+            // Keep Bull commands from retrying for minutes when Redis is down.
+            // Do not disable the offline queue: startup scheduling can run
+            // before a healthy Redis connection has finished establishing.
+            maxRetriesPerRequest: 3,
+          },
+        };
       },
     }),
     PrismaModule,
