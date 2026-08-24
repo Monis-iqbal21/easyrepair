@@ -1,28 +1,67 @@
 # EasyRepair — Claude Code Context
 
-🎨 Design System (NEW)
-Primary: #DB6234
-Primary Dark: #C2541D
-Primary Light: #F5E8E0
-Secondary: #FFFFFF
-Text Dark: #1A1A1A
-Text Light: #6B7280
-Background: #F9FAFB
-Card Background: #FFFFFF
-Success: #22C55E
-Error: #EF4444R
-Warning: #F59E0B
-UI Guidelines
-Use orange (#FF5F15) for:
-Buttons
-Active states
-Highlights
-Use white backgrounds for:
-Cards
-Forms
-Use rounded corners (12–16px)
-Use soft shadows
-Maintain clean, modern UI (Uber-like feel)
+## 🎨 Design System
+
+**Never write a colour into a widget. There is exactly one place colours are
+decided:** `easyrepair_app/lib/core/theme/app_semantic_colors.dart`.
+
+```dart
+final c = context.semanticColors;
+Container(
+  color: c.surface,
+  child: Text('…', style: TextStyle(color: c.textPrimary)),
+)
+```
+
+`Color(0xFF…)`, `Colors.white`, `Colors.black`, `const _kAccent = …` at the top
+of a page — none of these belong in a widget. `AppTheme` builds its
+`ColorScheme` *from* the same palette, so Material's own defaults (buttons,
+inputs, switches, dividers, snackbars, progress indicators) land on the same
+values. If a theme already decides a colour, do not restate it on the widget.
+
+### The tokens
+
+`background` · `surface` · `surfaceSubtle` · `textPrimary` · `textSecondary` ·
+`onPrimary` · `onPrimaryMuted` · `border` · `controlBorder` · `primary` ·
+`primaryPressed` · `softTeal` · `urgent` · `urgentSoft` · `success` ·
+`successSoft` · `warning` · `warningSurface` · `error`
+
+Each has a light and a dark value under one name, so a widget never branches on
+brightness. `urgent` is the attention accent and is deliberately **not** `error`
+— urgent is not a failure.
+
+**Need a colour that has no token?** Stop. Add it to `app_semantic_colors.dart`
+in *both* palettes under one name, then use the name. Never derive one with
+`withValues(alpha: …)` — a colour comes from the palette or it does not exist.
+
+### Brand
+
+HandyGo's brand colour is **teal `#11645D`**. The orange `#DB6234` that used to
+be documented here was EasyRepair's, is not in the Ustaad prototype at all, and
+is being removed screen by screen — do not reintroduce it.
+
+### Shape
+
+The design source of truth is the Ustaad prototype at
+`06 Handover to Monis/05 Design & UI/prototype/` (outside this repo).
+
+- **No shadows inside a screen.** A card is `surface` + `radius 16` + a 1px
+  `c.border` hairline. Nothing else.
+- Radius: card **16** · button **14** · chip, pill and avatar **999**.
+- Type: nothing heavier than **w700**. Smallest meaningful text **12.5px**, body
+  **14px**, card titles **16–18px**. These users read outdoors, often in
+  sunlight — 10px labels are not acceptable.
+- Minimum heights: primary button **52** · tappable row **56** · nav item and
+  filter chip **44**.
+- Uppercase labels are for `en` only. Urdu has no letter case, and `ur_Latn` in
+  caps reads as shouting.
+
+### Fonts
+
+The prototype is drawn in **Figtree**; the app currently ships no custom font at
+all (`fontFamily` appears zero times in `lib/`, and `pubspec.yaml` has no
+`fonts:`). Until that is decided, **no screen can fully match the prototype**,
+however correct its colour and spacing are. Say so when reporting a screen done.
 
 
 ## Project Overview
