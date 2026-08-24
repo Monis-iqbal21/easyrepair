@@ -28,13 +28,73 @@ import '../../../../core/l10n/l10n_extensions.dart';
 import '../../../../l10n/app_localizations.dart';
 
 // ── Palette ───────────────────────────────────────────────────────────────────
-const _kOrange     = Color(0xFFDB6234);
-const _kDark       = Color(0xFF1A1A1A);
-const _kGray       = Color(0xFF6B7280);
-const _kLight      = Color(0xFF94A3B8);
-const _kBorder     = Color(0xFFE2E8F0);
-const _kBg         = Color(0xFFF7F8FA);
-const _kHero       = Color(0xFF121826);
+//
+// There isn't one. Every colour on this screen comes from
+// `context.semanticColors` — see `core/theme/app_semantic_colors.dart`, the one
+// place HandyGo's colours are decided, and the only file that has to change
+// when light/dark is retuned.
+//
+// What used to live here: `_kOrange` (`#DB6234`, the old EasyRepair orange —
+// absent from the Ustaad prototype entirely), `_kDark`, `_kGray`, `_kLight`,
+// `_kBorder`, `_kBg`, `_kHero`. All seven are gone, `_LocationLabel` included.
+//
+// ── Prototype geometry ────────────────────────────────────────────────────────
+//
+// Taken from the Ustaad prototype's stylesheet
+// (`06 Handover to Monis/05 Design & UI/prototype/source/Handygo Ustaad V1.0 -
+// Prototype.dc.html`, CSS lines 15–119).
+//
+// The prototype uses NO shadow anywhere inside a screen: `.crd` (CSS line 54)
+// is `background + border-radius 16 + 1px solid var(--line)` and nothing else.
+// Its only two `box-shadow` rules are on the phone frame and the toast, which
+// are not app surfaces. Every box-shadow this screen used to carry has been
+// replaced by a hairline `c.border`.
+const double _rCard = 16;      // .crd / .tile
+const double _rButton = 14;    // .btnp
+const double _rPill = 999;     // .tg / .icb / .av
+const double _hButton = 52;    // .btnp min-height
+const double _gap = 14;        // .bd { gap: 14px }
+
+/// Uppercases only where uppercasing means something.
+///
+/// Urdu script has no letter case, so `toUpperCase()` is a no-op in `ur`, and
+/// in `ur_Latn` it reads as shouting rather than as a label. Those locales keep
+/// the size, spacing and colour of a label without the transform.
+String _labelCase(BuildContext context, String text) =>
+    Localizations.localeOf(context).languageCode == 'en'
+        ? text.toUpperCase()
+        : text;
+
+/// A section label in the prototype's `.sec` treatment (CSS line 81):
+/// 12.5px / 700 / uppercase / letter-spacing .06em / `--ink2`.
+class _SectionHeading extends StatelessWidget {
+  final String text;
+  const _SectionHeading(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.semanticColors;
+    return Text(
+      _labelCase(context, text),
+      style: TextStyle(
+        fontSize: 12.5,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0.75, // .06em at 12.5px
+        color: c.textSecondary,
+      ),
+    );
+  }
+}
+
+/// The worker's own initials for the availability card's avatar — the
+/// prototype opens Home on one (`RA`, lines 301–308).
+String _initialsOf(String first, String last) {
+  final a = first.trim();
+  final b = last.trim();
+  final initials =
+      '${a.isNotEmpty ? a[0] : ''}${b.isNotEmpty ? b[0] : ''}'.toUpperCase();
+  return initials.isEmpty ? '—' : initials;
+}
 
 class WorkerHomePage extends ConsumerStatefulWidget {
   const WorkerHomePage({super.key});
@@ -94,15 +154,17 @@ class _WorkerHomePageState extends ConsumerState<WorkerHomePage>
       });
     });
 
+    final c = context.semanticColors;
+
     return Scaffold(
-      backgroundColor: _kBg,
+      backgroundColor: c.background,
       extendBody: true,
       body: SafeArea(
         bottom: false,
         child: profileAsync.when(
           skipError: true,
-          loading: () => const Center(
-            child: CircularProgressIndicator(color: _kOrange),
+          loading: () => Center(
+            child: CircularProgressIndicator(color: c.primary),
           ),
           error: (err, _) => _ErrorView(
             message: failureMessage(context.l10n, err),
@@ -130,7 +192,7 @@ class _HomeBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return RefreshIndicator(
-      color: _kOrange,
+      color: context.semanticColors.primary,
       onRefresh: () => ref.read(workerProfileProvider.notifier).refresh(),
       child: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -151,10 +213,12 @@ class _HomeBody extends ConsumerWidget {
             SliverToBoxAdapter(
               child: _ProfileActionBanner(profile: profile),
             ),
-          // Hero card (online status + stats)
-          SliverToBoxAdapter(child: _HeroCard(profile: profile)),
-          // View New Jobs CTA
-          SliverToBoxAdapter(child: _NewJobsCta()),
+          // Availability — the prototype's first card: avatar, status, switch.
+          SliverToBoxAdapter(child: _AvailabilityCard(profile: profile)),
+          // The prototype's two-up tile grid. "New Complaints" carries the
+          // route the full-width CTA button used to carry — same destination,
+          // same call, different shape.
+          SliverToBoxAdapter(child: _QuickTiles(profile: profile)),
           // Today section
           SliverToBoxAdapter(child: _TodaySection(profile: profile)),
           // Performance section
@@ -210,14 +274,14 @@ class _ProfileActionBanner extends StatelessWidget {
     final colors = context.semanticColors;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+      padding: const EdgeInsets.fromLTRB(20, _gap, 20, 0),
       child: GestureDetector(
         onTap: () => context.push(resumeOnboardingRoute(profile)),
         child: Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             color: colors.urgentSoft,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(_rCard),
             border: Border.all(color: colors.urgent),
           ),
           child: Row(
@@ -232,7 +296,7 @@ class _ProfileActionBanner extends StatelessWidget {
                     Text(
                       title,
                       style: TextStyle(
-                        fontSize: 13.5,
+                        fontSize: 16,
                         fontWeight: FontWeight.w700,
                         color: colors.urgent,
                       ),
@@ -241,7 +305,7 @@ class _ProfileActionBanner extends StatelessWidget {
                     Text(
                       subtitle,
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 14,
                         color: colors.textSecondary,
                       ),
                     ),
@@ -272,12 +336,12 @@ class _PendingReviewCard extends StatelessWidget {
     final colors = context.semanticColors;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+      padding: const EdgeInsets.fromLTRB(20, _gap, 20, 0),
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: colors.softTeal,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(_rCard),
           border: Border.all(color: colors.border),
         ),
         child: Row(
@@ -292,7 +356,7 @@ class _PendingReviewCard extends StatelessWidget {
                   Text(
                     l10n.workerPendingReviewTitle,
                     style: TextStyle(
-                      fontSize: 13.5,
+                      fontSize: 16,
                       fontWeight: FontWeight.w700,
                       color: colors.textPrimary,
                     ),
@@ -301,7 +365,7 @@ class _PendingReviewCard extends StatelessWidget {
                   Text(
                     l10n.workerPendingReviewBody,
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 14,
                       height: 1.45,
                       color: colors.textSecondary,
                     ),
@@ -327,24 +391,46 @@ class _Header extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final skills = ref.watch(workerProfileProvider).valueOrNull?.skills;
+    final profile = ref.watch(workerProfileProvider).valueOrNull;
+    final skills = profile?.skills;
     final skillName = (skills != null && skills.isNotEmpty) ? skills.first.categoryName : null;
+    final c = context.semanticColors;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
       child: Row(
         children: [
+          // The greeting is the heading now; the main skill became its
+          // supporting line rather than being dropped — it is the one thing on
+          // Home that says what kind of work this Ustaad is here for.
           Expanded(
-            child: Text(
-              skillName ?? context.l10n.workerSkillNotSelected,
-              style: TextStyle(
-                fontSize: 19,
-                fontWeight: FontWeight.w800,
-                color: skillName != null ? _kDark : _kGray,
-                letterSpacing: -0.2,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  context.l10n
+                      .workerHelloName(profile?.firstName.trim() ?? ''),
+                  // Prototype `.h1` (CSS line 42): 18px / 700 / -.01em. The
+                  // prototype tops out at weight 700 — no w800 exists in it.
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    height: 1.2,
+                    color: c.textPrimary,
+                    letterSpacing: -0.18,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  skillName ?? context.l10n.workerSkillNotSelected,
+                  style: TextStyle(fontSize: 14, color: c.textSecondary),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
           ),
           const _LocationLabel(),
@@ -359,19 +445,14 @@ class _Header extends ConsumerWidget {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: c.surface,
                     shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.06),
-                        blurRadius: 8,
-                      ),
-                    ],
+                    border: Border.all(color: c.border),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.notifications_outlined,
                     size: 20,
-                    color: _kDark,
+                    color: c.textPrimary,
                   ),
                 ),
                 Consumer(builder: (context, ref, child) {
@@ -382,19 +463,20 @@ class _Header extends ConsumerWidget {
                     top: 2,
                     right: 2,
                     child: Container(
-                      width: 15,
-                      height: 15,
+                      width: 17,
+                      height: 17,
                       decoration: BoxDecoration(
-                        color: _kOrange,
+                        color: c.urgent,
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 1.5),
+                        border: Border.all(color: c.surface, width: 1.5),
                       ),
                       child: Center(
                         child: Text(
                           count > 9 ? '9+' : '$count',
-                          style: const TextStyle(
-                            fontSize: 7,
-                            color: Colors.white,
+                          style: TextStyle(
+                            fontSize: 10,
+                            height: 1,
+                            color: c.onPrimary,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -520,31 +602,30 @@ class _LocationLabelState extends ConsumerState<_LocationLabel> {
             ? context.l10n.workerTapToRetry
             : (_label ?? context.l10n.workerTapForLocation);
 
+    final c = context.semanticColors;
+
+    // Only the paint changed here. The tap, the permission/GPS handling, the
+    // reverse-geocode and the /workers/location push are untouched.
     return GestureDetector(
       onTap: _refresh,
       child: Container(
         constraints: const BoxConstraints(maxWidth: 110),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 8,
-            ),
-          ],
+          color: c.surface,
+          borderRadius: BorderRadius.circular(_rPill),
+          border: Border.all(color: c.border),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             if (_loading)
-              const SizedBox(
-                width: 12,
-                height: 12,
+              SizedBox(
+                width: 13,
+                height: 13,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: _kOrange,
+                  color: c.primary,
                 ),
               )
             else
@@ -552,8 +633,8 @@ class _LocationLabelState extends ConsumerState<_LocationLabel> {
                 _error
                     ? Icons.location_off_outlined
                     : Icons.location_on_rounded,
-                size: 14,
-                color: _error ? _kGray : _kOrange,
+                size: 15,
+                color: _error ? c.textSecondary : c.primary,
               ),
             const SizedBox(width: 5),
             Flexible(
@@ -562,9 +643,9 @@ class _LocationLabelState extends ConsumerState<_LocationLabel> {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize: 11,
+                  fontSize: 12.5,
                   fontWeight: FontWeight.w600,
-                  color: _error ? _kGray : _kDark,
+                  color: _error ? c.textSecondary : c.textPrimary,
                 ),
               ),
             ),
@@ -575,11 +656,15 @@ class _LocationLabelState extends ConsumerState<_LocationLabel> {
   }
 }
 
-// ── Hero Card ─────────────────────────────────────────────────────────────────
+// ── Availability card ─────────────────────────────────────────────────────────
+//
+// The prototype opens Home on this: avatar, one line of status, a switch
+// (lines 301–308). It replaces the navy hero — same data, same two calls, and
+// the same `isBusy` rule that hides the control while a job is running.
 
-class _HeroCard extends ConsumerWidget {
+class _AvailabilityCard extends ConsumerWidget {
   final WorkerProfileEntity profile;
-  const _HeroCard({required this.profile});
+  const _AvailabilityCard({required this.profile});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -587,157 +672,101 @@ class _HeroCard extends ConsumerWidget {
     final isLoading = ref.watch(availabilityNotifierProvider).isLoading;
     final isOnline = status == AvailabilityStatus.online;
     final isBusy = status == AvailabilityStatus.busy;
+    final locked = !isOnline && !profile.isOnboardingApproved;
+    final c = context.semanticColors;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+      padding: const EdgeInsets.fromLTRB(20, _gap, 20, 0),
       child: Container(
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: _kHero,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: _kHero.withValues(alpha: 0.35),
-              blurRadius: 24,
-              offset: const Offset(0, 8),
-            ),
-          ],
+          color: c.surface,
+          borderRadius: BorderRadius.circular(_rCard),
+          border: Border.all(color: c.border),
         ),
-        child: Stack(
+        child: Row(
           children: [
-            // Decorative orange glow circle
-            Positioned(
-              right: -30,
-              top: -30,
-              child: Container(
-                width: 140,
-                height: 140,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      _kOrange.withValues(alpha: 0.25),
-                      Colors.transparent,
-                    ],
-                  ),
+            Container(
+              width: 52,
+              height: 52,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: c.softTeal,
+                shape: BoxShape.circle,
+              ),
+              child: Text(
+                _initialsOf(profile.firstName, profile.lastName),
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: c.primary,
                 ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(22),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Status row + toggle
-                  Row(
-                    children: [
-                      Container(
-                        width: 9,
-                        height: 9,
-                        decoration: BoxDecoration(
-                          color: isBusy
-                              ? const Color(0xFFF59E0B)
-                              : isOnline
-                                  ? const Color(0xFF22C55E)
-                                  : const Color(0xFF64748B),
-                          shape: BoxShape.circle,
-                          boxShadow: (isOnline || isBusy)
-                              ? [
-                                  BoxShadow(
-                                    color: (isOnline
-                                            ? const Color(0xFF22C55E)
-                                            : const Color(0xFFF59E0B))
-                                        .withValues(alpha: 0.6),
-                                    blurRadius: 6,
-                                  ),
-                                ]
-                              : null,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        isBusy
-                            ? context.l10n.workerOnActiveJob
-                            : isOnline
-                                ? context.l10n.workerOnline
-                                : context.l10n.workerOffline,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: isBusy
-                              ? const Color(0xFFF59E0B)
-                              : isOnline
-                                  ? const Color(0xFF4ADE80)
-                                  : const Color(0xFF94A3B8),
-                        ),
-                      ),
-                      const Spacer(),
-                      if (!isBusy)
-                        _HeroToggleBtn(
-                          label: isLoading
-                              ? (isOnline
-                                  ? context.l10n.workerGoingOffline
-                                  : context.l10n.workerConnecting)
-                              : (isOnline
-                                  ? context.l10n.workerGoOffline
-                                  : context.l10n.workerGoOnline),
-                          isOnline: isOnline,
-                          loading: isLoading,
-                          locked: !isOnline && !profile.isOnboardingApproved,
-                          onTap: () => isOnline
-                              ? _handleGoOffline(context, ref)
-                              : _handleGoOnline(context, ref),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  // Earnings. This used to be a Roman-Urdu headline with a
-                  // small English gloss underneath — the app now speaks one
-                  // language at a time, so the gloss line is gone.
-                  Text(
-                    context.l10n.workerTodaysEarnings,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    formatPkr(profile.stats.todayEarnings),
-                    style: const TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  // Stats row
-                  Row(
-                    children: [
-                      _HeroStat(
-                        label: context.l10n.bookingStatusCompleted,
-                        value: '${profile.stats.completedJobs}',
-                        icon: Icons.check_circle_outline_rounded,
-                      ),
-                      const SizedBox(width: 10),
-                      _HeroStat(
-                        label: context.l10n.workerRating,
-                        value: profile.rating > 0
-                            ? profile.rating.toStringAsFixed(1)
-                            : '—',
-                        icon: Icons.star_outline_rounded,
-                      ),
-                      const SizedBox(width: 10),
-                      _HeroStat(
-                        label: context.l10n.workerActive,
-                        value: '${profile.stats.activeJobs}',
-                        icon: Icons.bolt_rounded,
-                      ),
-                    ],
-                  ),
-                ],
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                isBusy
+                    ? context.l10n.workerOnActiveJob
+                    : isOnline
+                        ? context.l10n.workerOnline
+                        : context.l10n.workerOffline,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  height: 1.2,
+                  color: c.textPrimary,
+                ),
               ),
             ),
+            // Unchanged rule: while a job is running there is nothing to
+            // toggle, so no control is offered.
+            if (!isBusy)
+              Opacity(
+                opacity: locked ? 0.5 : 1,
+                child: isLoading
+                    // Same as before: no tap target at all while the call is
+                    // in flight.
+                    ? SizedBox(
+                        width: 62,
+                        height: 34,
+                        child: Center(
+                          child: SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: c.primary,
+                            ),
+                          ),
+                        ),
+                      )
+                    : Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (locked) ...[
+                            Icon(Icons.lock_outline_rounded,
+                                size: 16, color: c.textSecondary),
+                            const SizedBox(width: 6),
+                          ],
+                          // No colours passed. `AppTheme`'s `switchTheme`
+                          // (app_theme.dart:181–191) already resolves thumb
+                          // and track from the same palette, so stating them
+                          // again here would be a second place that decides
+                          // one colour.
+                          Switch(
+                            value: isOnline,
+                            // Still routed through the same two handlers, so
+                            // the location pre-flight, the skills sheet and
+                            // the go-offline confirmation all behave exactly
+                            // as they did behind the old text button.
+                            onChanged: (_) => isOnline
+                                ? _handleGoOffline(context, ref)
+                                : _handleGoOnline(context, ref),
+                          ),
+                        ],
+                      ),
+              ),
           ],
         ),
       ),
@@ -787,27 +816,31 @@ class _HeroCard extends ConsumerWidget {
   }
 
   Future<void> _handleGoOffline(BuildContext context, WidgetRef ref) async {
+    final c = context.semanticColors;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(context.l10n.workerGoOfflineConfirmTitle,
-            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18)),
+            style: TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 18,
+                color: c.textPrimary)),
         content: Text(context.l10n.workerGoOfflineConfirmBody,
-            style: const TextStyle(color: _kGray)),
+            style: TextStyle(fontSize: 14, color: c.textSecondary)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
             child: Text(context.l10n.commonCancel,
-                style: const TextStyle(color: _kGray)),
+                style: TextStyle(color: c.textSecondary)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: _kOrange,
-              foregroundColor: Colors.white,
+              backgroundColor: c.primary,
+              foregroundColor: c.onPrimary,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
+                  borderRadius: BorderRadius.circular(_rButton)),
               elevation: 0,
             ),
             child: Text(context.l10n.workerGoOfflineConfirmYes),
@@ -831,154 +864,122 @@ class _HeroCard extends ConsumerWidget {
   }
 }
 
-class _HeroToggleBtn extends StatelessWidget {
-  final String label;
-  final bool isOnline;
-  final bool loading;
-  final bool locked;
-  final VoidCallback onTap;
-  const _HeroToggleBtn({
-    required this.label,
-    required this.isOnline,
-    required this.loading,
-    this.locked = false,
-    required this.onTap,
+// ── Quick tiles ───────────────────────────────────────────────────────────────
+//
+// The prototype's two-up tile grid (lines 316–323): a 46px circle on
+// `--accT`, a 16/700 title, a 14px supporting line, `min-height: 96`.
+//
+// "New Complaints" inherits the destination the full-width CTA button used to
+// own — `context.go('/worker/new-jobs')`, unchanged. "Kamai" is deliberately
+// NOT tappable: the earnings screen has no named route (it is pushed from
+// `worker_profile_page.dart:402`), so giving this tile a tap would be adding a
+// navigation target, which is not this pass's job. One line turns it on when
+// Anzal says so.
+
+class _QuickTiles extends StatelessWidget {
+  final WorkerProfileEntity profile;
+  const _QuickTiles({required this.profile});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, _gap, 20, 0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: _TileCard(
+              icon: Icons.work_outline_rounded,
+              title: l10n.workerFindNewWork,
+              subtitle: l10n.workerViewNewJobs,
+              onTap: () => context.go('/worker/new-jobs'),
+            ),
+          ),
+          const SizedBox(width: 11),
+          Expanded(
+            child: _TileCard(
+              icon: Icons.payments_outlined,
+              title: l10n.workerTodaysEarnings,
+              subtitle: formatPkr(profile.stats.todayEarnings),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TileCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  /// Null means the tile only reports; it does not navigate.
+  final VoidCallback? onTap;
+
+  const _TileCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
+    final card = Container(
+      constraints: const BoxConstraints(minHeight: 96),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: c.surface,
+        borderRadius: BorderRadius.circular(_rCard),
+        border: Border.all(color: c.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: c.softTeal,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, size: 23, color: c.primary),
+          ),
+          const SizedBox(height: 9),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: c.textPrimary,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          Text(
+            subtitle,
+            style: TextStyle(fontSize: 14, color: c.textSecondary),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+
+    if (onTap == null) return card;
     return GestureDetector(
-      onTap: loading ? null : onTap,
-      child: Opacity(
-        opacity: locked ? 0.5 : 1,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: BoxDecoration(
-            color: isOnline
-                ? Colors.white.withValues(alpha: 0.1)
-                : _kOrange,
-            borderRadius: BorderRadius.circular(20),
-            border: isOnline
-                ? Border.all(color: Colors.white.withValues(alpha: 0.2))
-                : null,
-          ),
-          child: loading
-              ? const SizedBox(
-                  width: 14,
-                  height: 14,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
-              : Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (locked) ...[
-                      const Icon(Icons.lock_outline_rounded, size: 12, color: Colors.white),
-                      const SizedBox(width: 4),
-                    ],
-                    Text(
-                      label,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-        ),
-      ),
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: card,
     );
   }
 }
 
-class _HeroStat extends StatelessWidget {
-  final String label;
-  final String value;
-  final IconData icon;
-  const _HeroStat({required this.label, required this.value, required this.icon});
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.07),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, size: 16, color: _kOrange),
-            const SizedBox(height: 5),
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 10,
-                color: Color(0xFF94A3B8),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── View New Jobs CTA ─────────────────────────────────────────────────────────
-
-class _NewJobsCta extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-      child: SizedBox(
-        width: double.infinity,
-        child: ElevatedButton.icon(
-          onPressed: () => context.go('/worker/new-jobs'),
-          icon: const Icon(Icons.work_outline_rounded, size: 18),
-          label: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                context.l10n.workerFindNewWork,
-                style:
-                    const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-              ),
-              Text(
-                context.l10n.workerViewNewJobs,
-                style:
-                    const TextStyle(fontSize: 10, fontWeight: FontWeight.w400),
-              ),
-            ],
-          ),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: _kOrange,
-            foregroundColor: Colors.white,
-            elevation: 0,
-            padding: const EdgeInsets.symmetric(vertical: 15),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            shadowColor: _kOrange.withValues(alpha: 0.3),
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 // ── Today Section ─────────────────────────────────────────────────────────────
 
@@ -989,21 +990,15 @@ class _TodaySection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final job = profile.ongoingJob;
+    final c = context.semanticColors;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+      padding: const EdgeInsets.fromLTRB(20, _gap, 20, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Text(
-                context.l10n.commonToday,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: _kDark,
-                ),
-              ),
+              _SectionHeading(context.l10n.commonToday),
               const Spacer(),
               GestureDetector(
                 onTap: () => context.go('/worker/jobs'),
@@ -1011,16 +1006,16 @@ class _TodaySection extends StatelessWidget {
                 // bottom-nav tab of the same name stays hard-coded English.
                 child: Text(
                   context.l10n.clientJobsTitle,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: _kOrange,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: c.primary,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 9),
           job != null
               ? _ActiveJobCard(job: job)
               : _NoJobCard(),
@@ -1038,247 +1033,202 @@ class _ActiveJobCard extends StatelessWidget {
   Widget build(BuildContext context) {
     // A booking whose status is ACCEPTED has been *assigned* to this Ustaad,
     // whichever lane it came from — direct standard hire, inspection, or an
-    // accepted bid. "Accepted" used to be shown here for the non-inspection
-    // lanes only because this card carried its own copy of the mapping; the
-    // shared helper is the same one My Jobs and the client app already use,
-    // so the wording can no longer differ between screens.
+    // accepted bid. The shared helper is the same one My Jobs and the client
+    // app already use, so the wording can no longer differ between screens.
+    final c = context.semanticColors;
     final statusLabel = ongoingJobStatusLabel(context.l10n, job.status);
-    final statusColor = _statusColor(job.status);
+
+    // Area and price on one line — the price half only when there is a price,
+    // which is the same condition the two-row version used.
+    final meta = job.displayPrice != null
+        ? '${job.clientArea} · ${formatPkr(job.displayPrice)}'
+        : job.clientArea;
 
     return GestureDetector(
       onTap: () => context.push('/worker/job/${job.id}'),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(16),
+        // The prototype's live-job card (lines 329–338): a `--deep` fill, a
+        // 46px circle, an uppercase stage label, a chevron. Its circle carries
+        // the customer's initials; `OngoingJobEntity` has no customer name —
+        // `/workers/profile` does not send one — so this carries the job's own
+        // mark rather than inventing a person.
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
+          color: c.primary,
+          borderRadius: BorderRadius.circular(_rCard),
         ),
-        child: Column(
+        child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Container(
-                  width: 6,
-                  height: 6,
-                  decoration: const BoxDecoration(
-                    color: _kOrange,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  context.l10n.workerActiveJobCaps,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    color: _kOrange,
-                    letterSpacing: 0.8,
-                  ),
-                ),
-                const Spacer(),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    statusLabel,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: statusColor,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Text(
-              job.title ?? job.categoryName,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                color: _kDark,
+            Container(
+              width: 46,
+              height: 46,
+              margin: const EdgeInsets.only(top: 2),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: c.onPrimaryMuted,
+                shape: BoxShape.circle,
               ),
+              child: Icon(Icons.handyman_outlined, size: 23, color: c.primary),
             ),
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                const Icon(Icons.location_on_rounded,
-                    size: 12, color: _kLight),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: Text(
-                    job.clientArea,
-                    style: const TextStyle(fontSize: 12, color: _kGray),
+            const SizedBox(width: 13),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          _labelCase(context, statusLabel),
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1, // .08em at 12.5px
+                            color: c.onPrimaryMuted,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Icon(Icons.chevron_right_rounded,
+                          size: 20, color: c.onPrimaryMuted),
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    job.title ?? job.categoryName,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: c.onPrimary,
+                    ),
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                ),
-              ],
-            ),
-            // Price this Ustaad was hired for — OngoingJobEntity.displayPrice
-            // is the same canonicalWorkPrice rule as My Jobs and Track
-            // Worker, so this card can never disagree with them. Never an
-            // "estimate": HandyGo has no estimated-price concept.
-            if (job.displayPrice != null) ...[
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  const Icon(Icons.payments_outlined,
-                      size: 12, color: _kLight),
-                  const SizedBox(width: 4),
-                  Text(
-                    formatPkr(job.displayPrice),
-                    style: const TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w700,
-                      color: _kDark,
-                    ),
+                  const SizedBox(height: 5),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          meta,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: c.onPrimaryMuted,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      // Its own tap target — the only thing on this card that
+                      // does not go where the card itself goes. "View details"
+                      // used to sit beside it as plain text with no handler of
+                      // its own; the chevron says the same thing in less room.
+                      GestureDetector(
+                        onTap: () =>
+                            context.push('/worker/job/${job.id}?openMap=true'),
+                        behavior: HitTestBehavior.opaque,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 5),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(_rPill),
+                            border: Border.all(color: c.onPrimaryMuted),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.map_outlined,
+                                  size: 14, color: c.onPrimaryMuted),
+                              const SizedBox(width: 5),
+                              Text(
+                                context.l10n.workerMap,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: c.onPrimaryMuted,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ],
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                GestureDetector(
-                  onTap: () =>
-                      context.push('/worker/job/${job.id}?openMap=true'),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 7,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _kOrange.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: _kOrange.withValues(alpha: 0.3),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.map_outlined,
-                            size: 14, color: _kOrange),
-                        const SizedBox(width: 5),
-                        Text(
-                          context.l10n.workerMap,
-                          style: const TextStyle(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w600,
-                            color: _kOrange,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                Text(
-                  context.l10n.workerViewDetails,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: _kOrange,
-                  ),
-                ),
-              ],
             ),
           ],
         ),
       ),
     );
   }
-
-  Color _statusColor(String status) {
-    switch (status.toUpperCase()) {
-      case 'ACCEPTED':
-        return const Color(0xFF3B82F6);
-      case 'EN_ROUTE':
-        return const Color(0xFFF59E0B);
-      case 'IN_PROGRESS':
-        return _kOrange;
-      default:
-        return _kGray;
-    }
-  }
 }
 
 class _NoJobCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        color: c.surface,
+        borderRadius: BorderRadius.circular(_rCard),
+        border: Border.all(color: c.border),
       ),
       child: Row(
         children: [
+          // Prototype `.icb` (CSS line 89): a 46px circle, not a rounded box.
           Container(
-            width: 44,
-            height: 44,
+            width: 46,
+            height: 46,
             decoration: BoxDecoration(
-              color: _kBg,
-              borderRadius: BorderRadius.circular(12),
+              color: c.surfaceSubtle,
+              shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.inbox_outlined, color: _kLight, size: 22),
+            child: Icon(Icons.inbox_outlined, color: c.textSecondary, size: 22),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 13),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   context.l10n.workerNoActiveJob,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: _kDark,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: c.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 3),
                 Text(
                   context.l10n.workerStayOnlineHint,
-                  style: const TextStyle(fontSize: 12, color: _kGray),
+                  style: TextStyle(fontSize: 14, color: c.textSecondary),
                 ),
               ],
             ),
           ),
           const SizedBox(width: 10),
+          // Prototype `.tg.g` (CSS line 75): sage tint behind sage text.
           Container(
             padding:
                 const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
-              color: const Color(0xFF22C55E).withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(10),
+              color: c.successSoft,
+              borderRadius: BorderRadius.circular(_rPill),
             ),
             child: Text(
               context.l10n.workerReady,
-              style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF16A34A),
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+                color: c.success,
               ),
             ),
           ),
@@ -1296,42 +1246,46 @@ class _PerformanceSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+      padding: const EdgeInsets.fromLTRB(20, _gap, 20, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            context.l10n.workerPerformance,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: _kDark,
-            ),
-          ),
-          const SizedBox(height: 12),
+          _SectionHeading(context.l10n.workerPerformance),
+          const SizedBox(height: 9),
           Row(
             children: [
               _PerfCard(
                 label: context.l10n.workerJobsDone,
                 value: '${profile.stats.completedJobs}',
                 icon: Icons.check_circle_outline_rounded,
-                iconColor: const Color(0xFF22C55E),
+                iconColor: c.success,
+                iconSurface: c.successSoft,
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 11),
               _PerfCard(
                 label: context.l10n.workerCancelRate,
                 value: context.l10n
                     .workerPercentValue('${profile.stats.cancellationRate}'),
                 icon: Icons.cancel_outlined,
-                iconColor: const Color(0xFFEF4444),
+                // `urgent`, not `error`: the token file draws that line
+                // explicitly ("urgent is not a failure"), and a cancellation
+                // rate is a number that wants attention, not a failed
+                // operation. Using `error` here would also need an
+                // `errorSoft` tint that does not exist — and inventing one
+                // for a metric that is not an error would be the wrong
+                // reason to add a token.
+                iconColor: c.urgent,
+                iconSurface: c.urgentSoft,
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 11),
               _PerfCard(
                 label: context.l10n.workerResponse,
                 value: profile.stats.responseLabel ?? '—',
                 icon: Icons.bolt_rounded,
-                iconColor: const Color(0xFFF59E0B),
+                iconColor: c.warning,
+                iconSurface: c.warningSurface,
               ),
             ],
           ),
@@ -1346,53 +1300,54 @@ class _PerfCard extends StatelessWidget {
   final String value;
   final IconData icon;
   final Color iconColor;
+
+  /// The tint the icon sits on. Passed in as a token rather than derived with
+  /// `iconColor.withValues(alpha: …)`: a colour is taken from the palette, not
+  /// computed.
+  final Color iconSurface;
   const _PerfCard({
     required this.label,
     required this.value,
     required this.icon,
     required this.iconColor,
+    required this.iconSurface,
   });
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 10,
-              offset: const Offset(0, 3),
-            ),
-          ],
+          color: c.surface,
+          borderRadius: BorderRadius.circular(_rCard),
+          border: Border.all(color: c.border),
         ),
         child: Column(
           children: [
             Container(
-              width: 34,
-              height: 34,
+              width: 36,
+              height: 36,
               decoration: BoxDecoration(
-                color: iconColor.withValues(alpha: 0.1),
+                color: iconSurface,
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, size: 17, color: iconColor),
+              child: Icon(icon, size: 18, color: iconColor),
             ),
             const SizedBox(height: 8),
             Text(
               value,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w800,
-                color: _kDark,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: c.textPrimary,
               ),
             ),
             const SizedBox(height: 3),
             Text(
               label,
-              style: const TextStyle(fontSize: 10, color: _kGray),
+              style: TextStyle(fontSize: 12.5, color: c.textSecondary),
               textAlign: TextAlign.center,
             ),
           ],
@@ -1411,30 +1366,23 @@ class _ReviewsSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final reviewsAsync = ref.watch(workerRecentReviewsProvider);
+    final c = context.semanticColors;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+      padding: const EdgeInsets.fromLTRB(20, _gap, 20, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Text(
-                context.l10n.workerReviews,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: _kDark,
-                ),
-              ),
+              _SectionHeading(context.l10n.workerReviews),
               if (profile.totalRatings > 0) ...[
                 const SizedBox(width: 8),
-                const Icon(Icons.star_rounded,
-                    size: 14, color: Color(0xFFF59E0B)),
+                Icon(Icons.star_rounded, size: 15, color: c.warning),
                 const SizedBox(width: 3),
                 Text(
                   '${profile.rating.toStringAsFixed(1)} · ${profile.totalRatings}',
-                  style: const TextStyle(fontSize: 12, color: _kGray),
+                  style: TextStyle(fontSize: 12.5, color: c.textSecondary),
                 ),
               ],
               const Spacer(),
@@ -1443,36 +1391,31 @@ class _ReviewsSection extends ConsumerWidget {
                   onTap: () => context.push('/worker/reviews'),
                   child: Text(
                     context.l10n.workerSeeAll,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: _kOrange,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: c.primary,
                     ),
                   ),
                 ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 9),
           reviewsAsync.when(
-            loading: () => const SizedBox(
+            loading: () => SizedBox(
               height: 20,
               width: 20,
-              child: CircularProgressIndicator(strokeWidth: 2, color: _kOrange),
+              child:
+                  CircularProgressIndicator(strokeWidth: 2, color: c.primary),
             ),
             error: (e, s) => const SizedBox.shrink(),
             data: (reviews) => reviews.isEmpty
                 ? _EmptyReviews()
                 : Container(
                     decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(18),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.04),
-                          blurRadius: 10,
-                          offset: const Offset(0, 3),
-                        ),
-                      ],
+                      color: c.surface,
+                      borderRadius: BorderRadius.circular(_rCard),
+                      border: Border.all(color: c.border),
                     ),
                     child: Column(
                       children: reviews
@@ -1495,19 +1438,14 @@ class _ReviewsSection extends ConsumerWidget {
 class _EmptyReviews extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
+        color: c.surface,
+        borderRadius: BorderRadius.circular(_rCard),
+        border: Border.all(color: c.border),
       ),
       child: Column(
         children: [
@@ -1515,29 +1453,29 @@ class _EmptyReviews extends StatelessWidget {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: const Color(0xFFF59E0B).withValues(alpha: 0.1),
+              color: c.warningSurface,
               shape: BoxShape.circle,
             ),
-            child: const Icon(
+            child: Icon(
               Icons.star_outline_rounded,
-              color: Color(0xFFF59E0B),
+              color: c.warning,
               size: 24,
             ),
           ),
           const SizedBox(height: 12),
           Text(
             context.l10n.workerNoReviewsYet,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: _kDark,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: c.textPrimary,
             ),
           ),
           const SizedBox(height: 6),
           Text(
             context.l10n.workerReviewsAppearHint,
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 12, color: _kGray, height: 1.5),
+            style: TextStyle(fontSize: 14, color: c.textSecondary, height: 1.5),
           ),
         ],
       ),
@@ -1552,6 +1490,7 @@ class _ReviewItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Column(
       children: [
         Padding(
@@ -1568,17 +1507,15 @@ class _ReviewItem extends StatelessWidget {
                         i < review.rating
                             ? Icons.star_rounded
                             : Icons.star_outline_rounded,
-                        size: 13,
-                        color: i < review.rating
-                            ? const Color(0xFFF59E0B)
-                            : const Color(0xFFD1D5DB),
+                        size: 15,
+                        color: i < review.rating ? c.warning : c.border,
                       );
                     }),
                   ),
                   const Spacer(),
                   Text(
                     DateFormat('MMM d, yyyy').format(review.createdAt),
-                    style: const TextStyle(fontSize: 10, color: _kLight),
+                    style: TextStyle(fontSize: 12.5, color: c.textSecondary),
                   ),
                 ],
               ),
@@ -1586,10 +1523,8 @@ class _ReviewItem extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   review.comment!,
-                  style: const TextStyle(
-                      fontSize: 13,
-                      color: Color(0xFF374151),
-                      height: 1.4),
+                  style: TextStyle(
+                      fontSize: 14, color: c.textPrimary, height: 1.45),
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -1599,19 +1534,20 @@ class _ReviewItem extends StatelessWidget {
                 children: [
                   Text(
                     review.serviceCategory,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                      color: _kOrange,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: c.primary,
                     ),
                   ),
                   if (review.clientName != null &&
                       review.clientName!.isNotEmpty) ...[
-                    const Text('  ·  ',
-                        style: TextStyle(fontSize: 11, color: _kLight)),
+                    Text('  ·  ',
+                        style:
+                            TextStyle(fontSize: 13, color: c.textSecondary)),
                     Text(
                       review.clientName!,
-                      style: const TextStyle(fontSize: 11, color: _kGray),
+                      style: TextStyle(fontSize: 13, color: c.textSecondary),
                     ),
                   ],
                 ],
@@ -1619,7 +1555,7 @@ class _ReviewItem extends StatelessWidget {
             ],
           ),
         ),
-        if (!isLast) const Divider(height: 1, color: _kBorder),
+        if (!isLast) Divider(height: 1, color: c.divider),
       ],
     );
   }
@@ -1657,11 +1593,12 @@ class _SkillsSheet extends ConsumerWidget {
     final categoriesAsync = ref.watch(categoriesProvider);
     final selected = ref.watch(selectedCategoryIdsProvider);
     final isSaving = ref.watch(skillsNotifierProvider).isLoading;
+    final c = context.semanticColors;
 
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      decoration: BoxDecoration(
+        color: c.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
       ),
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom + 24,
@@ -1674,7 +1611,7 @@ class _SkillsSheet extends ConsumerWidget {
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-              color: Colors.grey.shade300,
+              color: c.border,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -1686,26 +1623,26 @@ class _SkillsSheet extends ConsumerWidget {
               children: [
                 Text(
                   context.l10n.workerSelectMainSkill,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w700,
-                    color: _kDark,
+                    color: c.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   context.l10n.workerSelectMainSkillHint,
-                  style: const TextStyle(fontSize: 13, color: _kGray),
+                  style: TextStyle(fontSize: 14, color: c.textSecondary),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 20),
           categoriesAsync.when(
-            loading: () => const Padding(
-              padding: EdgeInsets.all(32),
+            loading: () => Padding(
+              padding: const EdgeInsets.all(32),
               child: Center(
-                  child: CircularProgressIndicator(color: _kOrange)),
+                  child: CircularProgressIndicator(color: c.primary)),
             ),
             error: (e, _) => Padding(
               padding: const EdgeInsets.all(24),
@@ -1750,28 +1687,30 @@ class _SkillsSheet extends ConsumerWidget {
                                   : failureMessage(context.l10n, err,
                                       fallback: context.l10n.workerSkillsSaveFailed)),
                               behavior: SnackBarBehavior.floating,
-                              backgroundColor: Colors.red.shade700,
+                              backgroundColor: c.error,
                             ),
                           );
                         }
                       },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: _kOrange,
-                  foregroundColor: Colors.white,
-                  disabledBackgroundColor: Colors.grey.shade200,
+                  backgroundColor: c.primary,
+                  foregroundColor: c.onPrimary,
+                  disabledBackgroundColor: c.surfaceSubtle,
+                  disabledForegroundColor: c.textSecondary,
                   elevation: 0,
-                  padding: const EdgeInsets.symmetric(vertical: 15),
+                  minimumSize: const Size.fromHeight(_hButton),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(_rButton),
                   ),
                 ),
                 child: isSaving
-                    ? const SizedBox(
+                    ? SizedBox(
                         height: 20,
                         width: 20,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: Colors.white,
+                          color: c.onPrimary,
                         ),
                       )
                     : Text(
@@ -1779,8 +1718,8 @@ class _SkillsSheet extends ConsumerWidget {
                             ? context.l10n.workerSelectMainSkill
                             : context.l10n.workerSaveAndGoOnline,
                         style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
               ),
@@ -1805,32 +1744,35 @@ class _CategoryChips extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Wrap(
-        spacing: 10,
-        runSpacing: 10,
+        spacing: 11,
+        runSpacing: 11,
         children: categories.map((cat) {
           final isSelected = selected.contains(cat.id);
           return GestureDetector(
             onTap: () => onToggle(cat.id),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 180),
+              constraints: const BoxConstraints(minHeight: 44),
+              alignment: Alignment.center,
               padding:
                   const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: BoxDecoration(
-                color: isSelected ? _kOrange : const Color(0xFFF1F5F9),
-                borderRadius: BorderRadius.circular(50),
+                color: isSelected ? c.primary : c.surfaceSubtle,
+                borderRadius: BorderRadius.circular(_rPill),
                 border: Border.all(
-                  color: isSelected ? _kOrange : _kBorder,
+                  color: isSelected ? c.primary : c.border,
                 ),
               ),
               child: Text(
                 cat.name,
                 style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: isSelected ? Colors.white : _kGray,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: isSelected ? c.onPrimary : c.textSecondary,
                 ),
               ),
             ),
@@ -1850,39 +1792,44 @@ class _ErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.wifi_off_rounded, size: 48, color: _kLight),
+            Icon(Icons.wifi_off_rounded, size: 48, color: c.textSecondary),
             const SizedBox(height: 12),
             Text(
               context.l10n.workerDashboardLoadFailed,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: _kDark,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: c.textPrimary,
               ),
             ),
             const SizedBox(height: 6),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 13, color: _kGray),
+              style: TextStyle(fontSize: 14, color: c.textSecondary),
             ),
             const SizedBox(height: 20),
             ElevatedButton.icon(
               onPressed: onRetry,
-              icon: const Icon(Icons.refresh_rounded, size: 18),
-              label: Text(context.l10n.commonRetry),
+              icon: const Icon(Icons.refresh_rounded, size: 19),
+              label: Text(context.l10n.commonRetry,
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.w700)),
               style: ElevatedButton.styleFrom(
-                backgroundColor: _kOrange,
-                foregroundColor: Colors.white,
+                backgroundColor: c.primary,
+                foregroundColor: c.onPrimary,
                 elevation: 0,
+                minimumSize: const Size(0, _hButton),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(_rButton),
                 ),
               ),
             ),

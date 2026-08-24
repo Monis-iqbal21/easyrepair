@@ -1353,14 +1353,22 @@
   "workerGoingOffline": "Going offline...",
   "workerGoOffline": "Go Offline",
   "workerGoOnline": "Go Online",
-  "workerTodaysEarnings": "Today's Earnings",
+  "workerHelloName": "Hello {name}",
+  "@workerHelloName": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "workerTodaysEarnings": "Kamai",
   "workerRating": "Rating",
   "workerActive": "Active",
   "workerGoOfflineConfirmTitle": "Go Offline?",
   "workerGoOfflineConfirmBody": "You will stop appearing to nearby clients.",
   "workerGoOfflineConfirmYes": "Yes, Go Offline",
-  "workerFindNewWork": "Find New Work",
-  "workerViewNewJobs": "View New Jobs",
+  "workerFindNewWork": "New Complaints",
+  "workerViewNewJobs": "Dekhein",
   "workerActiveJobCaps": "ACTIVE JOB",
   "workerMap": "Map",
   "workerViewDetails": "View details →",

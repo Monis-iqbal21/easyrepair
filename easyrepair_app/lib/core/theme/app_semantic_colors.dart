@@ -55,6 +55,20 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
   /// sits on a full-bleed [primary] background.
   final Color onPrimary;
 
+  /// The quieter voice on a [primary] fill — supporting lines, outlines and
+  /// icons that must sit under [onPrimary] without dropping out of contrast.
+  ///
+  /// Both values are measured, not guessed: `#CFE6E2` on light `primary`
+  /// (`#11645D`) is 5.35:1, and `#0F3630` on dark `primary` (`#3FA79B`) is
+  /// 4.54:1 — both clear AA, both a step below what [onPrimary] scores, which
+  /// is exactly what "muted" has to mean.
+  ///
+  /// The dark value is NOT the prototype's: the prototype keeps its teal card
+  /// at `#11645D` in both themes, while this palette lifts `primary` to
+  /// `#3FA79B` in the dark. A pale muted tone would vanish on that lift, so
+  /// the dark pairing inverts to a deep ink.
+  final Color onPrimaryMuted;
+
   // ── Lines ─────────────────────────────────────────────────────────────────
   /// Hairline outlines around cards, and separators inside a surface.
   final Color border;
@@ -84,6 +98,14 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
 
   final Color success;
 
+  /// Background pairing for [success] content — e.g. a "Ready" status chip.
+  ///
+  /// Named to match [urgentSoft] rather than [warningSurface]: the two
+  /// existing names disagree with each other, and `urgentSoft` is the one a
+  /// state colour's tint is called. Renaming `warningSurface` to match is a
+  /// separate job, deliberately not done here.
+  final Color successSoft;
+
   /// Foreground for warning content (icon + text) — e.g. the offline banner.
   final Color warning;
 
@@ -99,6 +121,7 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
     required this.textPrimary,
     required this.textSecondary,
     required this.onPrimary,
+    required this.onPrimaryMuted,
     required this.border,
     required this.controlBorder,
     required this.primary,
@@ -107,6 +130,7 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
     required this.urgent,
     required this.urgentSoft,
     required this.success,
+    required this.successSoft,
     required this.warning,
     required this.warningSurface,
     required this.error,
@@ -135,6 +159,7 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
     // The warm off-white the brand mark itself is drawn in, so text on a
     // primary fill matches the wrench beside it instead of glaring pure white.
     onPrimary: Color(0xFFF7F3EA),
+    onPrimaryMuted: Color(0xFFCFE6E2),
     border: Color(0xFFD7E0DC),
     controlBorder: Color(0xFF7D8B87),
     primary: Color(0xFF11645D),
@@ -143,6 +168,9 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
     urgent: Color(0xFFA9431D),
     urgentSoft: Color(0xFFFCE8DF),
     success: Color(0xFF2E6E4F),
+    // The prototype's `--sageT` — the tint relationship urgentSoft has to
+    // urgent, expressed in the success hue.
+    successSoft: Color(0xFFE6F4EA),
     warning: Color(0xFF8A5B10),
     // No brand value was specified for the warning surface; this is the tint
     // relationship urgentSoft has to urgent, expressed in the warning hue.
@@ -166,6 +194,7 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
     textSecondary: Color(0xFF9BAAA6),
     // Dark ink on the lifted teal — the readable pairing at that lightness.
     onPrimary: Color(0xFF06201D),
+    onPrimaryMuted: Color(0xFF0F3630),
     border: Color(0xFF2C3E3B),
     controlBorder: Color(0xFF61736F),
     primary: Color(0xFF3FA79B),
@@ -174,6 +203,8 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
     urgent: Color(0xFFE0834F),
     urgentSoft: Color(0xFF3A2317),
     success: Color(0xFF56B183),
+    // The prototype's dark `--sageT`.
+    successSoft: Color(0xFF173B2C),
     warning: Color(0xFFD9A441),
     warningSurface: Color(0xFF35290F),
     error: Color(0xFFE57A6E),
@@ -201,6 +232,7 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
     Color? textPrimary,
     Color? textSecondary,
     Color? onPrimary,
+    Color? onPrimaryMuted,
     Color? border,
     Color? controlBorder,
     Color? primary,
@@ -209,6 +241,7 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
     Color? urgent,
     Color? urgentSoft,
     Color? success,
+    Color? successSoft,
     Color? warning,
     Color? warningSurface,
     Color? error,
@@ -220,6 +253,7 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
       textPrimary: textPrimary ?? this.textPrimary,
       textSecondary: textSecondary ?? this.textSecondary,
       onPrimary: onPrimary ?? this.onPrimary,
+      onPrimaryMuted: onPrimaryMuted ?? this.onPrimaryMuted,
       border: border ?? this.border,
       controlBorder: controlBorder ?? this.controlBorder,
       primary: primary ?? this.primary,
@@ -228,6 +262,7 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
       urgent: urgent ?? this.urgent,
       urgentSoft: urgentSoft ?? this.urgentSoft,
       success: success ?? this.success,
+      successSoft: successSoft ?? this.successSoft,
       warning: warning ?? this.warning,
       warningSurface: warningSurface ?? this.warningSurface,
       error: error ?? this.error,
@@ -244,6 +279,7 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
       textPrimary: Color.lerp(textPrimary, other.textPrimary, t)!,
       textSecondary: Color.lerp(textSecondary, other.textSecondary, t)!,
       onPrimary: Color.lerp(onPrimary, other.onPrimary, t)!,
+      onPrimaryMuted: Color.lerp(onPrimaryMuted, other.onPrimaryMuted, t)!,
       border: Color.lerp(border, other.border, t)!,
       controlBorder: Color.lerp(controlBorder, other.controlBorder, t)!,
       primary: Color.lerp(primary, other.primary, t)!,
@@ -252,6 +288,7 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
       urgent: Color.lerp(urgent, other.urgent, t)!,
       urgentSoft: Color.lerp(urgentSoft, other.urgentSoft, t)!,
       success: Color.lerp(success, other.success, t)!,
+      successSoft: Color.lerp(successSoft, other.successSoft, t)!,
       warning: Color.lerp(warning, other.warning, t)!,
       warningSurface: Color.lerp(warningSurface, other.warningSurface, t)!,
       error: Color.lerp(error, other.error, t)!,

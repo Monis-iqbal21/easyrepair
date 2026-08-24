@@ -3999,10 +3999,16 @@ abstract class AppLocalizations {
   /// **'Go Online'**
   String get workerGoOnline;
 
+  /// No description provided for @workerHelloName.
+  ///
+  /// In en, this message translates to:
+  /// **'Hello {name}'**
+  String workerHelloName(String name);
+
   /// No description provided for @workerTodaysEarnings.
   ///
   /// In en, this message translates to:
-  /// **'Today\'s Earnings'**
+  /// **'Kamai'**
   String get workerTodaysEarnings;
 
   /// No description provided for @workerRating.
@@ -4038,13 +4044,13 @@ abstract class AppLocalizations {
   /// No description provided for @workerFindNewWork.
   ///
   /// In en, this message translates to:
-  /// **'Find New Work'**
+  /// **'New Complaints'**
   String get workerFindNewWork;
 
   /// No description provided for @workerViewNewJobs.
   ///
   /// In en, this message translates to:
-  /// **'View New Jobs'**
+  /// **'Dekhein'**
   String get workerViewNewJobs;
 
   /// No description provided for @workerActiveJobCaps.

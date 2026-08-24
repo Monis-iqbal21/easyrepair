@@ -3,9 +3,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/l10n/l10n_extensions.dart';
 import '../../../../core/presentation/responsive_utils.dart';
+import '../../../../core/theme/app_semantic_colors.dart';
 import '../../../../l10n/app_localizations.dart';
-
-const _kAccent = Color(0xFFDB6234);
 
 class WorkerBottomNavBar extends StatelessWidget {
   final int currentIndex;
@@ -28,21 +27,18 @@ class WorkerBottomNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).padding.bottom;
     final l10n = context.l10n;
+    final c = context.semanticColors;
     // Labels are translated, but the bar itself stays pinned LTR: Urdu RTL
     // must never reverse tab order or move Home away from the left edge.
     // Verified by test/core/l10n/bottom_nav_protection_test.dart.
     return Directionality(
       textDirection: TextDirection.ltr,
       child: Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x18000000),
-            blurRadius: 16,
-            offset: Offset(0, -2),
-          ),
-        ],
+      // Prototype `.nav` (CSS line 45): `background: var(--card)` with a
+      // single `border-top: 1px solid var(--line)` — no shadow.
+      decoration: BoxDecoration(
+        color: c.surface,
+        border: Border(top: BorderSide(color: c.border)),
       ),
       child: Padding(
         padding: EdgeInsets.fromLTRB(16, 10, 16, 10 + bottomInset),
@@ -52,7 +48,10 @@ class WorkerBottomNavBar extends StatelessWidget {
             final tabW = constraints.maxWidth / _tabs.length;
             // Scale icon and label relative to tabW at 390px screen (tabW≈90).
             final iconSize = rFont(tabW, 24, min: 20, max: 28, baseWidth: 90);
-            final labelSize = rFont(tabW, 12, min: 10, max: 14, baseWidth: 90);
+            // Prototype `.nv` (CSS line 46) is 12.5px; the floor comes up with
+            // it so a narrow phone never drops the label below what an Ustaad
+            // can read outdoors.
+            final labelSize = rFont(tabW, 12.5, min: 12, max: 14, baseWidth: 90);
             final gap = (4.0 * tabW / 90.0).clamp(2.0, 6.0);
 
             return Row(
@@ -72,12 +71,14 @@ class WorkerBottomNavBar extends StatelessWidget {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          // In the prototype the icon and the label of an
+                          // inactive tab are the same colour (`.nv` inherits
+                          // `--ink2` and the SVG uses `currentColor`). The app
+                          // had them on two different greys.
                           Icon(
                             tab.icon,
                             size: iconSize,
-                            color: isActive
-                                ? _kAccent
-                                : const Color(0xFF1A1A1A),
+                            color: isActive ? c.primary : c.textSecondary,
                           ),
                           SizedBox(height: gap),
                           Text(
@@ -85,11 +86,9 @@ class WorkerBottomNavBar extends StatelessWidget {
                             style: TextStyle(
                               fontSize: labelSize,
                               fontWeight: isActive
-                                  ? FontWeight.w600
-                                  : FontWeight.w500,
-                              color: isActive
-                                  ? _kAccent
-                                  : const Color(0xFF6B7280),
+                                  ? FontWeight.w700
+                                  : FontWeight.w600,
+                              color: isActive ? c.primary : c.textSecondary,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
