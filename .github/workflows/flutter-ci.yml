@@ -1,0 +1,130 @@
+# Flutter CI — verification without a local toolchain.
+#
+# Why this exists: nobody on the team could run `flutter analyze` or
+# `flutter test` without borrowing a machine that had Flutter installed, so
+# design work was reaching `main` unverified. A GitHub runner has open network
+# access to pub.dev and Google's SDK hosts, which no other environment we work
+# in does, so it can do the whole check on every push — for free, because this
+# repository is public.
+#
+# What it CANNOT do: build a signed release APK. `android/key.properties` is
+# deliberately not in version control, and `app/build.gradle.kts` throws rather
+# than fall back to the debug key — that guard is correct and stays. The APK
+# below is therefore a DEBUG build: fine for installing on a phone to look at,
+# never something to ship. To produce a release APK here, the keystore and its
+# passwords would have to be added as repository secrets — a separate decision.
+
+name: Flutter CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: easyrepair_app
+
+jobs:
+  verify:
+    name: analyze · test · build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+        # pubspec.yaml asks for Dart ^3.10.4. If a future stable ever drops
+        # below that this step fails loudly, and the fix is to pin
+        # `flutter-version:` here rather than to loosen the constraint.
+
+      - name: Flutter version
+        run: flutter --version
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      # ── The check that matters most ──────────────────────────────────────
+      #
+      # `lib/l10n/app_localizations*.dart` are generated files that live in the
+      # repository. When a new ARB key is added by someone without a Flutter
+      # SDK, they have to be written by hand — and a hand-written generated
+      # file is a guess until something regenerates it. This step regenerates
+      # them and fails if the result differs by so much as a space.
+      - name: Regenerate localizations and check they match
+        run: |
+          flutter gen-l10n
+          if ! git diff --exit-code -- lib/l10n; then
+            echo "::error::flutter gen-l10n produced a different result than the committed files. The committed localizations are wrong — fix them at the source rather than committing this output."
+            exit 1
+          fi
+          echo "Generated localizations match the committed files."
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test
+
+      # ── Debug APK ────────────────────────────────────────────────────────
+      #
+      # Runs even when analyze or test failed, so there is always something to
+      # install and look at. The job still reports red in that case.
+      - name: Build debug APK
+        if: always()
+        run: flutter build apk --debug
+
+      - name: Upload debug APK
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: handygo-debug-apk
+          path: easyrepair_app/build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: warn
+          retention-days: 30
+
+      # ── Hardcoded-colour count ───────────────────────────────────────────
+      #
+      # The Ustaad screens are being moved onto `core/theme/app_semantic_colors.dart`
+      # one at a time. This prints the count for the screens already converted
+      # so the claim is machine-checked on every run instead of taken on trust.
+      # It reports; it does not gate — the remaining screens have not been
+      # converted yet, and failing on them would just be noise.
+      - name: Hardcoded-colour report
+        if: always()
+        run: |
+          {
+            echo "### Hardcoded colours in the converted Ustaad screens"
+            echo ""
+            echo "| File | \`0xFF\` | \`Colors.\` |"
+            echo "|---|---|---|"
+            for f in \
+              lib/features/worker/presentation/pages/worker_home_page.dart \
+              lib/features/worker/presentation/pages/worker_new_jobs_page.dart \
+              lib/features/worker/presentation/widgets/worker_bottom_nav_bar.dart
+            do
+              hex=$(grep -c "0xFF" "$f" || true)
+              col=$(grep -cE '(^|[^a-zA-Z])Colors\.' "$f" || true)
+              echo "| \`$(basename "$f")\` | $hex | $col |"
+            done
+            echo ""
+            echo "Expected: 0 everywhere, except one \`Colors.transparent\` in"
+            echo "\`worker_home_page.dart\` — the bottom sheet's background, which"
+            echo "is the absence of a colour rather than a choice of one."
+          } >> "$GITHUB_STEP_SUMMARY"
