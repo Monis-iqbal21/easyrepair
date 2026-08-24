@@ -885,8 +885,13 @@ class _QuickTiles extends StatelessWidget {
     final l10n = context.l10n;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, _gap, 20, 0),
+      // NOT CrossAxisAlignment.stretch. This Row sits in a sliver, where the
+      // vertical constraint is unbounded, and stretch would ask each tile to
+      // fill an infinite height — which collapsed the tiles' own background
+      // and pushed every section below them off the screen. The two tiles are
+      // the same height anyway: identical structure, both titles and
+      // subtitles capped at one line, and a shared 96 minimum.
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Expanded(
             child: _TileCard(

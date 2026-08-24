@@ -464,8 +464,12 @@ class _NewJobCard extends ConsumerWidget {
             // to send — it becomes the one big button instead, so that route
             // still has a control of its own. Chat keeps its own tap target.
             const SizedBox(height: 13),
+            // NOT CrossAxisAlignment.stretch: a Row inside a Column has an
+            // unbounded vertical constraint, and stretch would ask its
+            // children to fill an infinite height. Both children are already
+            // exactly _hButton tall — the chat square by its SizedBox, the
+            // button by its minimumSize — so they line up without it.
             Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 SizedBox(
                   width: _hButton,
