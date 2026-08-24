@@ -95,36 +95,69 @@ jobs:
           set -o pipefail
           flutter test 2>&1 | tee /tmp/test.txt
 
+      # Values come in as environment variables and the markdown is written
+      # with printf, never with a double-quoted echo. Actions runs `bash -e`,
+      # so a backtick inside double quotes is command substitution: writing
+      # "### Analyze — \`success\`" made bash try to *run* `success`, which
+      # exited 127 and failed this step even when analyze and test had both
+      # passed. Single-quoted printf formats keep backticks literal.
       - name: Report analyze and test
         if: always()
+        env:
+          ANALYZE_OUTCOME: ${{ steps.analyze.outcome }}
+          TEST_OUTCOME: ${{ steps.test.outcome }}
         run: |
           {
-            echo "### Analyze — \`${{ steps.analyze.outcome }}\`"
-            echo ''; echo '```'
-            tail -80 /tmp/analyze.txt 2>/dev/null || echo '(no output)'
-            echo '```'
-            echo "### Test — \`${{ steps.test.outcome }}\`"
-            echo ''; echo '```'
-            tail -80 /tmp/test.txt 2>/dev/null || echo '(no output)'
-            echo '```'
+            printf '### Analyze — `%s`\n\n' "$ANALYZE_OUTCOME"
+            printf '```\n'
+            tail -80 /tmp/analyze.txt 2>/dev/null || printf '(no output)\n'
+            printf '```\n\n'
+            printf '### Test — `%s`\n\n' "$TEST_OUTCOME"
+            printf '```\n'
+            tail -80 /tmp/test.txt 2>/dev/null || printf '(no output)\n'
+            printf '```\n'
           } >> "$GITHUB_STEP_SUMMARY"
           # The job still fails if either did. `continue-on-error` above only
           # defers that, so the summary and the APK are produced first.
           failed=
-          [ "${{ steps.analyze.outcome }}" = "success" ] || failed=1
-          [ "${{ steps.test.outcome }}" = "success" ] || failed=1
+          [ "$ANALYZE_OUTCOME" = "success" ] || failed=1
+          [ "$TEST_OUTCOME" = "success" ] || failed=1
           if [ -n "$failed" ]; then
-            echo "::error::analyze=${{ steps.analyze.outcome }} test=${{ steps.test.outcome }} — see the job summary"
+            echo "::error::analyze=$ANALYZE_OUTCOME test=$TEST_OUTCOME — see the job summary"
             exit 1
           fi
+          echo "analyze and test both passed"
 
       # ── Debug APK ────────────────────────────────────────────────────────
       #
       # Runs even when analyze or test failed, so there is always something to
       # install and look at. The job still reports red in that case.
+      #
+      # The dart-defines matter: without them the app builds fine and then
+      # cannot reach the backend at all, which made the first APK produced here
+      # useless on a real phone. The two URLs are not secrets — they are the
+      # public production endpoint and are baked into every shipped APK anyway.
+      #
+      # GOOGLE_MAPS_API_KEY is passed as an *environment variable*, not only as
+      # a dart-define, because `android/app/build.gradle.kts` reads it via
+      # findProperty -> System.getenv -> local.properties to fill the
+      # `${MAPS_API_KEY}` manifest placeholder. A dart-define alone never
+      # reaches the manifest. It is optional: without the secret the build
+      # still succeeds and only the map fails to render.
+      #
+      # NOTE FOR WHOEVER INSTALLS THIS: applicationId is `ai.handygo.app` and
+      # the debug build carries no suffix, so this APK has the same package
+      # name as a release install but a different signature. Android refuses
+      # that with "App not installed" — uninstall the existing app first.
       - name: Build debug APK
         if: always()
-        run: flutter build apk --debug
+        env:
+          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+        run: |
+          flutter build apk --debug \
+            --dart-define=API_BASE_URL=https://handygo-production-jqi9i.ondigitalocean.app/api/v1 \
+            --dart-define=WS_URL=https://handygo-production-jqi9i.ondigitalocean.app \
+            --dart-define=GOOGLE_MAPS_API_KEY="$GOOGLE_MAPS_API_KEY"
 
       - name: Upload debug APK
         if: always()
