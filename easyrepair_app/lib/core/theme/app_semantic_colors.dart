@@ -55,6 +55,20 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
   /// sits on a full-bleed [primary] background.
   final Color onPrimary;
 
+  /// The quieter voice on a [primary] fill — supporting lines, outlines and
+  /// icons that must sit under [onPrimary] without dropping out of contrast.
+  ///
+  /// Both values are measured, not guessed: `#CFE6E2` on light `primary`
+  /// (`#11645D`) is 5.35:1, and `#0F3630` on dark `primary` (`#3FA79B`) is
+  /// 4.54:1 — both clear AA, both a step below what [onPrimary] scores, which
+  /// is exactly what "muted" has to mean.
+  ///
+  /// The dark value is NOT the prototype's: the prototype keeps its teal card
+  /// at `#11645D` in both themes, while this palette lifts `primary` to
+  /// `#3FA79B` in the dark. A pale muted tone would vanish on that lift, so
+  /// the dark pairing inverts to a deep ink.
+  final Color onPrimaryMuted;
+
   // ── Lines ─────────────────────────────────────────────────────────────────
   /// Hairline outlines around cards, and separators inside a surface.
   final Color border;
@@ -107,6 +121,7 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
     required this.textPrimary,
     required this.textSecondary,
     required this.onPrimary,
+    required this.onPrimaryMuted,
     required this.border,
     required this.controlBorder,
     required this.primary,
@@ -144,6 +159,7 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
     // The warm off-white the brand mark itself is drawn in, so text on a
     // primary fill matches the wrench beside it instead of glaring pure white.
     onPrimary: Color(0xFFF7F3EA),
+    onPrimaryMuted: Color(0xFFCFE6E2),
     border: Color(0xFFD7E0DC),
     controlBorder: Color(0xFF7D8B87),
     primary: Color(0xFF11645D),
@@ -178,6 +194,7 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
     textSecondary: Color(0xFF9BAAA6),
     // Dark ink on the lifted teal — the readable pairing at that lightness.
     onPrimary: Color(0xFF06201D),
+    onPrimaryMuted: Color(0xFF0F3630),
     border: Color(0xFF2C3E3B),
     controlBorder: Color(0xFF61736F),
     primary: Color(0xFF3FA79B),
@@ -215,6 +232,7 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
     Color? textPrimary,
     Color? textSecondary,
     Color? onPrimary,
+    Color? onPrimaryMuted,
     Color? border,
     Color? controlBorder,
     Color? primary,
@@ -235,6 +253,7 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
       textPrimary: textPrimary ?? this.textPrimary,
       textSecondary: textSecondary ?? this.textSecondary,
       onPrimary: onPrimary ?? this.onPrimary,
+      onPrimaryMuted: onPrimaryMuted ?? this.onPrimaryMuted,
       border: border ?? this.border,
       controlBorder: controlBorder ?? this.controlBorder,
       primary: primary ?? this.primary,
@@ -260,6 +279,7 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
       textPrimary: Color.lerp(textPrimary, other.textPrimary, t)!,
       textSecondary: Color.lerp(textSecondary, other.textSecondary, t)!,
       onPrimary: Color.lerp(onPrimary, other.onPrimary, t)!,
+      onPrimaryMuted: Color.lerp(onPrimaryMuted, other.onPrimaryMuted, t)!,
       border: Color.lerp(border, other.border, t)!,
       controlBorder: Color.lerp(controlBorder, other.controlBorder, t)!,
       primary: Color.lerp(primary, other.primary, t)!,

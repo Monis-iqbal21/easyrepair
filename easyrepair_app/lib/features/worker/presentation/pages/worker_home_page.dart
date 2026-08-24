@@ -29,19 +29,15 @@ import '../../../../l10n/app_localizations.dart';
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 //
-// Every colour on this screen comes from `context.semanticColors` — see
-// `core/theme/app_semantic_colors.dart`, the one place HandyGo's colours are
-// decided. `_kLight`, `_kBorder`, `_kBg` and `_kHero` are gone; so is every
-// use of `_kOrange` (`#DB6234`, the old EasyRepair orange, which the Ustaad
-// prototype does not contain at all).
+// There isn't one. Every colour on this screen comes from
+// `context.semanticColors` — see `core/theme/app_semantic_colors.dart`, the one
+// place HandyGo's colours are decided, and the only file that has to change
+// when light/dark is retuned.
 //
-// The three below survive for exactly ONE widget: `_LocationLabel`, which
-// Anzal asked to leave untouched in this pass. Nothing else may read them —
-// if a new widget needs a colour, it takes a token.
-const _kOrange     = Color(0xFFDB6234);
-const _kDark       = Color(0xFF1A1A1A);
-const _kGray       = Color(0xFF6B7280);
-
+// What used to live here: `_kOrange` (`#DB6234`, the old EasyRepair orange —
+// absent from the Ustaad prototype entirely), `_kDark`, `_kGray`, `_kLight`,
+// `_kBorder`, `_kBg`, `_kHero`. All seven are gone, `_LocationLabel` included.
+//
 // ── Prototype geometry ────────────────────────────────────────────────────────
 //
 // Taken from the Ustaad prototype's stylesheet
@@ -59,12 +55,18 @@ const double _rPill = 999;     // .tg / .icb / .av
 const double _hButton = 52;    // .btnp min-height
 const double _gap = 14;        // .bd { gap: 14px }
 
+/// Uppercases only where uppercasing means something.
+///
+/// Urdu script has no letter case, so `toUpperCase()` is a no-op in `ur`, and
+/// in `ur_Latn` it reads as shouting rather than as a label. Those locales keep
+/// the size, spacing and colour of a label without the transform.
+String _labelCase(BuildContext context, String text) =>
+    Localizations.localeOf(context).languageCode == 'en'
+        ? text.toUpperCase()
+        : text;
+
 /// A section label in the prototype's `.sec` treatment (CSS line 81):
 /// 12.5px / 700 / uppercase / letter-spacing .06em / `--ink2`.
-///
-/// The uppercasing is Latin-only. Urdu script has no letter case, so
-/// `toUpperCase()` is a no-op in `ur` and merely looks like shouting in
-/// `ur_Latn`; both keep the size, spacing and colour but not the transform.
 class _SectionHeading extends StatelessWidget {
   final String text;
   const _SectionHeading(this.text);
@@ -72,9 +74,8 @@ class _SectionHeading extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.semanticColors;
-    final isLatinCased = Localizations.localeOf(context).languageCode == 'en';
     return Text(
-      isLatinCased ? text.toUpperCase() : text,
+      _labelCase(context, text),
       style: TextStyle(
         fontSize: 12.5,
         fontWeight: FontWeight.w700,
@@ -83,6 +84,16 @@ class _SectionHeading extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The worker's own initials for the availability card's avatar — the
+/// prototype opens Home on one (`RA`, lines 301–308).
+String _initialsOf(String first, String last) {
+  final a = first.trim();
+  final b = last.trim();
+  final initials =
+      '${a.isNotEmpty ? a[0] : ''}${b.isNotEmpty ? b[0] : ''}'.toUpperCase();
+  return initials.isEmpty ? '—' : initials;
 }
 
 class WorkerHomePage extends ConsumerStatefulWidget {
@@ -202,10 +213,12 @@ class _HomeBody extends ConsumerWidget {
             SliverToBoxAdapter(
               child: _ProfileActionBanner(profile: profile),
             ),
-          // Hero card (online status + stats)
-          SliverToBoxAdapter(child: _HeroCard(profile: profile)),
-          // View New Jobs CTA
-          SliverToBoxAdapter(child: _NewJobsCta()),
+          // Availability — the prototype's first card: avatar, status, switch.
+          SliverToBoxAdapter(child: _AvailabilityCard(profile: profile)),
+          // The prototype's two-up tile grid. "New Complaints" carries the
+          // route the full-width CTA button used to carry — same destination,
+          // same call, different shape.
+          SliverToBoxAdapter(child: _QuickTiles(profile: profile)),
           // Today section
           SliverToBoxAdapter(child: _TodaySection(profile: profile)),
           // Performance section
@@ -378,7 +391,8 @@ class _Header extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final skills = ref.watch(workerProfileProvider).valueOrNull?.skills;
+    final profile = ref.watch(workerProfileProvider).valueOrNull;
+    final skills = profile?.skills;
     final skillName = (skills != null && skills.isNotEmpty) ? skills.first.categoryName : null;
     final c = context.semanticColors;
 
@@ -386,19 +400,37 @@ class _Header extends ConsumerWidget {
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
       child: Row(
         children: [
+          // The greeting is the heading now; the main skill became its
+          // supporting line rather than being dropped — it is the one thing on
+          // Home that says what kind of work this Ustaad is here for.
           Expanded(
-            child: Text(
-              skillName ?? context.l10n.workerSkillNotSelected,
-              // Prototype `.h1` (CSS line 42): 18px / 700 / -.01em. The
-              // prototype tops out at weight 700 — there is no w800 in it.
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: skillName != null ? c.textPrimary : c.textSecondary,
-                letterSpacing: -0.18,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  context.l10n
+                      .workerHelloName(profile?.firstName.trim() ?? ''),
+                  // Prototype `.h1` (CSS line 42): 18px / 700 / -.01em. The
+                  // prototype tops out at weight 700 — no w800 exists in it.
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    height: 1.2,
+                    color: c.textPrimary,
+                    letterSpacing: -0.18,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  skillName ?? context.l10n.workerSkillNotSelected,
+                  style: TextStyle(fontSize: 14, color: c.textSecondary),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
           ),
           const _LocationLabel(),
@@ -570,31 +602,30 @@ class _LocationLabelState extends ConsumerState<_LocationLabel> {
             ? context.l10n.workerTapToRetry
             : (_label ?? context.l10n.workerTapForLocation);
 
+    final c = context.semanticColors;
+
+    // Only the paint changed here. The tap, the permission/GPS handling, the
+    // reverse-geocode and the /workers/location push are untouched.
     return GestureDetector(
       onTap: _refresh,
       child: Container(
         constraints: const BoxConstraints(maxWidth: 110),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 8,
-            ),
-          ],
+          color: c.surface,
+          borderRadius: BorderRadius.circular(_rPill),
+          border: Border.all(color: c.border),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             if (_loading)
-              const SizedBox(
-                width: 12,
-                height: 12,
+              SizedBox(
+                width: 13,
+                height: 13,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: _kOrange,
+                  color: c.primary,
                 ),
               )
             else
@@ -602,8 +633,8 @@ class _LocationLabelState extends ConsumerState<_LocationLabel> {
                 _error
                     ? Icons.location_off_outlined
                     : Icons.location_on_rounded,
-                size: 14,
-                color: _error ? _kGray : _kOrange,
+                size: 15,
+                color: _error ? c.textSecondary : c.primary,
               ),
             const SizedBox(width: 5),
             Flexible(
@@ -612,9 +643,9 @@ class _LocationLabelState extends ConsumerState<_LocationLabel> {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize: 11,
+                  fontSize: 12.5,
                   fontWeight: FontWeight.w600,
-                  color: _error ? _kGray : _kDark,
+                  color: _error ? c.textSecondary : c.textPrimary,
                 ),
               ),
             ),
@@ -625,11 +656,15 @@ class _LocationLabelState extends ConsumerState<_LocationLabel> {
   }
 }
 
-// ── Hero Card ─────────────────────────────────────────────────────────────────
+// ── Availability card ─────────────────────────────────────────────────────────
+//
+// The prototype opens Home on this: avatar, one line of status, a switch
+// (lines 301–308). It replaces the navy hero — same data, same two calls, and
+// the same `isBusy` rule that hides the control while a job is running.
 
-class _HeroCard extends ConsumerWidget {
+class _AvailabilityCard extends ConsumerWidget {
   final WorkerProfileEntity profile;
-  const _HeroCard({required this.profile});
+  const _AvailabilityCard({required this.profile});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -637,128 +672,103 @@ class _HeroCard extends ConsumerWidget {
     final isLoading = ref.watch(availabilityNotifierProvider).isLoading;
     final isOnline = status == AvailabilityStatus.online;
     final isBusy = status == AvailabilityStatus.busy;
+    final locked = !isOnline && !profile.isOnboardingApproved;
     final c = context.semanticColors;
 
-    // The prototype has no navy card and no glow. Its Home opens on a plain
-    // white card carrying exactly what this one carries — availability status
-    // plus the toggle (prototype lines 301–308) — so that is what this card
-    // now is. Its one dark card (`--deep`, lines 329–338) belongs to a *live
-    // job*, which this card never shows.
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, _gap, 20, 0),
       child: Container(
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: c.surface,
           borderRadius: BorderRadius.circular(_rCard),
           border: Border.all(color: c.border),
         ),
-        child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Status row + toggle
-                  Row(
-                    children: [
-                      Container(
-                        width: 9,
-                        height: 9,
-                        decoration: BoxDecoration(
-                          color: isBusy
-                              ? c.warning
-                              : isOnline
-                                  ? c.success
-                                  : c.textSecondary,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        isBusy
-                            ? context.l10n.workerOnActiveJob
-                            : isOnline
-                                ? context.l10n.workerOnline
-                                : context.l10n.workerOffline,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: isBusy
-                              ? c.warning
-                              : isOnline
-                                  ? c.success
-                                  : c.textSecondary,
-                        ),
-                      ),
-                      const Spacer(),
-                      if (!isBusy)
-                        _HeroToggleBtn(
-                          label: isLoading
-                              ? (isOnline
-                                  ? context.l10n.workerGoingOffline
-                                  : context.l10n.workerConnecting)
-                              : (isOnline
-                                  ? context.l10n.workerGoOffline
-                                  : context.l10n.workerGoOnline),
-                          isOnline: isOnline,
-                          loading: isLoading,
-                          locked: !isOnline && !profile.isOnboardingApproved,
-                          onTap: () => isOnline
-                              ? _handleGoOffline(context, ref)
-                              : _handleGoOnline(context, ref),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  // Earnings. This used to be a Roman-Urdu headline with a
-                  // small English gloss underneath — the app now speaks one
-                  // language at a time, so the gloss line is gone.
-                  Text(
-                    context.l10n.workerTodaysEarnings,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: c.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  // Prototype `.big` (CSS line 44) — 23px / 700. The money
-                  // figure on its Home card is the same size.
-                  Text(
-                    formatPkr(profile.stats.todayEarnings),
-                    style: TextStyle(
-                      fontSize: 23,
-                      fontWeight: FontWeight.w700,
-                      color: c.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  // Stats row
-                  Row(
-                    children: [
-                      _HeroStat(
-                        label: context.l10n.bookingStatusCompleted,
-                        value: '${profile.stats.completedJobs}',
-                        icon: Icons.check_circle_outline_rounded,
-                      ),
-                      const SizedBox(width: 11),
-                      _HeroStat(
-                        label: context.l10n.workerRating,
-                        value: profile.rating > 0
-                            ? profile.rating.toStringAsFixed(1)
-                            : '—',
-                        icon: Icons.star_outline_rounded,
-                      ),
-                      const SizedBox(width: 11),
-                      _HeroStat(
-                        label: context.l10n.workerActive,
-                        value: '${profile.stats.activeJobs}',
-                        icon: Icons.bolt_rounded,
-                      ),
-                    ],
-                  ),
-                ],
+        child: Row(
+          children: [
+            Container(
+              width: 52,
+              height: 52,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: c.softTeal,
+                shape: BoxShape.circle,
+              ),
+              child: Text(
+                _initialsOf(profile.firstName, profile.lastName),
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: c.primary,
+                ),
               ),
             ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                isBusy
+                    ? context.l10n.workerOnActiveJob
+                    : isOnline
+                        ? context.l10n.workerOnline
+                        : context.l10n.workerOffline,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  height: 1.2,
+                  color: c.textPrimary,
+                ),
+              ),
+            ),
+            // Unchanged rule: while a job is running there is nothing to
+            // toggle, so no control is offered.
+            if (!isBusy)
+              Opacity(
+                opacity: locked ? 0.5 : 1,
+                child: isLoading
+                    // Same as before: no tap target at all while the call is
+                    // in flight.
+                    ? SizedBox(
+                        width: 62,
+                        height: 34,
+                        child: Center(
+                          child: SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: c.primary,
+                            ),
+                          ),
+                        ),
+                      )
+                    : Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (locked) ...[
+                            Icon(Icons.lock_outline_rounded,
+                                size: 16, color: c.textSecondary),
+                            const SizedBox(width: 6),
+                          ],
+                          // No colours passed. `AppTheme`'s `switchTheme`
+                          // (app_theme.dart:181–191) already resolves thumb
+                          // and track from the same palette, so stating them
+                          // again here would be a second place that decides
+                          // one colour.
+                          Switch(
+                            value: isOnline,
+                            // Still routed through the same two handlers, so
+                            // the location pre-flight, the skills sheet and
+                            // the go-offline confirmation all behave exactly
+                            // as they did behind the old text button.
+                            onChanged: (_) => isOnline
+                                ? _handleGoOffline(context, ref)
+                                : _handleGoOnline(context, ref),
+                          ),
+                        ],
+                      ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -854,164 +864,122 @@ class _HeroCard extends ConsumerWidget {
   }
 }
 
-class _HeroToggleBtn extends StatelessWidget {
-  final String label;
-  final bool isOnline;
-  final bool loading;
-  final bool locked;
-  final VoidCallback onTap;
-  const _HeroToggleBtn({
-    required this.label,
-    required this.isOnline,
-    required this.loading,
-    this.locked = false,
-    required this.onTap,
+// ── Quick tiles ───────────────────────────────────────────────────────────────
+//
+// The prototype's two-up tile grid (lines 316–323): a 46px circle on
+// `--accT`, a 16/700 title, a 14px supporting line, `min-height: 96`.
+//
+// "New Complaints" inherits the destination the full-width CTA button used to
+// own — `context.go('/worker/new-jobs')`, unchanged. "Kamai" is deliberately
+// NOT tappable: the earnings screen has no named route (it is pushed from
+// `worker_profile_page.dart:402`), so giving this tile a tap would be adding a
+// navigation target, which is not this pass's job. One line turns it on when
+// Anzal says so.
+
+class _QuickTiles extends StatelessWidget {
+  final WorkerProfileEntity profile;
+  const _QuickTiles({required this.profile});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, _gap, 20, 0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: _TileCard(
+              icon: Icons.work_outline_rounded,
+              title: l10n.workerFindNewWork,
+              subtitle: l10n.workerViewNewJobs,
+              onTap: () => context.go('/worker/new-jobs'),
+            ),
+          ),
+          const SizedBox(width: 11),
+          Expanded(
+            child: _TileCard(
+              icon: Icons.payments_outlined,
+              title: l10n.workerTodaysEarnings,
+              subtitle: formatPkr(profile.stats.todayEarnings),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TileCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  /// Null means the tile only reports; it does not navigate.
+  final VoidCallback? onTap;
+
+  const _TileCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final c = context.semanticColors;
-    // Online = the quiet state (nothing to do), so it reads as an outlined
-    // control; offline = the filled brand button that invites the tap. Both
-    // sit on `c.surface` now that the card is white.
-    final fg = isOnline ? c.textPrimary : c.onPrimary;
+    final card = Container(
+      constraints: const BoxConstraints(minHeight: 96),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: c.surface,
+        borderRadius: BorderRadius.circular(_rCard),
+        border: Border.all(color: c.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: c.softTeal,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, size: 23, color: c.primary),
+          ),
+          const SizedBox(height: 9),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: c.textPrimary,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          Text(
+            subtitle,
+            style: TextStyle(fontSize: 14, color: c.textSecondary),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
 
+    if (onTap == null) return card;
     return GestureDetector(
-      onTap: loading ? null : onTap,
-      child: Opacity(
-        opacity: locked ? 0.5 : 1,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          constraints: const BoxConstraints(minHeight: 44),
-          decoration: BoxDecoration(
-            color: isOnline ? c.surfaceSubtle : c.primary,
-            borderRadius: BorderRadius.circular(_rPill),
-            border: isOnline ? Border.all(color: c.controlBorder) : null,
-          ),
-          child: loading
-              ? SizedBox(
-                  width: 14,
-                  height: 14,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: fg,
-                  ),
-                )
-              : Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (locked) ...[
-                      Icon(Icons.lock_outline_rounded, size: 13, color: fg),
-                      const SizedBox(width: 4),
-                    ],
-                    Text(
-                      label,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: fg,
-                      ),
-                    ),
-                  ],
-                ),
-        ),
-      ),
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: card,
     );
   }
 }
 
-class _HeroStat extends StatelessWidget {
-  final String label;
-  final String value;
-  final IconData icon;
-  const _HeroStat({required this.label, required this.value, required this.icon});
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.semanticColors;
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
-        decoration: BoxDecoration(
-          color: c.surfaceSubtle,
-          // No prototype equivalent for a tile nested inside a card; taking
-          // the button radius rather than inventing a third value.
-          borderRadius: BorderRadius.circular(_rButton),
-          border: Border.all(color: c.border),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, size: 17, color: c.primary),
-            const SizedBox(height: 5),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: c.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12.5,
-                color: c.textSecondary,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── View New Jobs CTA ─────────────────────────────────────────────────────────
-
-class _NewJobsCta extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final c = context.semanticColors;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, _gap, 20, 0),
-      child: SizedBox(
-        width: double.infinity,
-        child: ElevatedButton.icon(
-          onPressed: () => context.go('/worker/new-jobs'),
-          icon: const Icon(Icons.work_outline_rounded, size: 19),
-          label: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                context.l10n.workerFindNewWork,
-                style:
-                    const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-              ),
-              Text(
-                context.l10n.workerViewNewJobs,
-                style:
-                    const TextStyle(fontSize: 13, fontWeight: FontWeight.w400),
-              ),
-            ],
-          ),
-          // Prototype `.btnp` (CSS line 48): radius 14, min-height 52,
-          // 16px/700, no shadow.
-          style: ElevatedButton.styleFrom(
-            backgroundColor: c.primary,
-            foregroundColor: c.onPrimary,
-            elevation: 0,
-            minimumSize: const Size.fromHeight(_hButton),
-            padding: const EdgeInsets.symmetric(vertical: 10),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(_rButton),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 // ── Today Section ─────────────────────────────────────────────────────────────
 
@@ -1065,194 +1033,139 @@ class _ActiveJobCard extends StatelessWidget {
   Widget build(BuildContext context) {
     // A booking whose status is ACCEPTED has been *assigned* to this Ustaad,
     // whichever lane it came from — direct standard hire, inspection, or an
-    // accepted bid. "Accepted" used to be shown here for the non-inspection
-    // lanes only because this card carried its own copy of the mapping; the
-    // shared helper is the same one My Jobs and the client app already use,
-    // so the wording can no longer differ between screens.
+    // accepted bid. The shared helper is the same one My Jobs and the client
+    // app already use, so the wording can no longer differ between screens.
     final c = context.semanticColors;
     final statusLabel = ongoingJobStatusLabel(context.l10n, job.status);
-    final statusColor = _statusColor(c, job.status);
+
+    // Area and price on one line — the price half only when there is a price,
+    // which is the same condition the two-row version used.
+    final meta = job.displayPrice != null
+        ? '${job.clientArea} · ${formatPkr(job.displayPrice)}'
+        : job.clientArea;
 
     return GestureDetector(
       onTap: () => context.push('/worker/job/${job.id}'),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(16),
+        // The prototype's live-job card (lines 329–338): a `--deep` fill, a
+        // 46px circle, an uppercase stage label, a chevron. Its circle carries
+        // the customer's initials; `OngoingJobEntity` has no customer name —
+        // `/workers/profile` does not send one — so this carries the job's own
+        // mark rather than inventing a person.
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: c.surface,
+          color: c.primary,
           borderRadius: BorderRadius.circular(_rCard),
-          border: Border.all(color: c.border),
         ),
-        child: Column(
+        child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Container(
-                  width: 6,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: c.textSecondary,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                // Prototype `.sec` treatment: this is a section label, and
-                // there it is `--ink2`, not an accent colour.
-                Text(
-                  context.l10n.workerActiveJobCaps,
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w700,
-                    color: c.textSecondary,
-                    letterSpacing: 0.75,
-                  ),
-                ),
-                const Spacer(),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: _statusSurface(c, job.status),
-                    borderRadius: BorderRadius.circular(_rPill),
-                  ),
-                  child: Text(
-                    statusLabel,
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w700,
-                      color: statusColor,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Text(
-              job.title ?? job.categoryName,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: c.textPrimary,
+            Container(
+              width: 46,
+              height: 46,
+              margin: const EdgeInsets.only(top: 2),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: c.onPrimaryMuted,
+                shape: BoxShape.circle,
               ),
+              child: Icon(Icons.handyman_outlined, size: 23, color: c.primary),
             ),
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                Icon(Icons.location_on_rounded,
-                    size: 14, color: c.textSecondary),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: Text(
-                    job.clientArea,
-                    style: TextStyle(fontSize: 14, color: c.textSecondary),
+            const SizedBox(width: 13),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          _labelCase(context, statusLabel),
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1, // .08em at 12.5px
+                            color: c.onPrimaryMuted,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Icon(Icons.chevron_right_rounded,
+                          size: 20, color: c.onPrimaryMuted),
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    job.title ?? job.categoryName,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: c.onPrimary,
+                    ),
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                ),
-              ],
-            ),
-            // Price this Ustaad was hired for — OngoingJobEntity.displayPrice
-            // is the same canonicalWorkPrice rule as My Jobs and Track
-            // Worker, so this card can never disagree with them. Never an
-            // "estimate": HandyGo has no estimated-price concept.
-            if (job.displayPrice != null) ...[
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  Icon(Icons.payments_outlined,
-                      size: 14, color: c.textSecondary),
-                  const SizedBox(width: 4),
-                  Text(
-                    formatPkr(job.displayPrice),
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: c.textPrimary,
-                    ),
+                  const SizedBox(height: 5),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          meta,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: c.onPrimaryMuted,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      // Its own tap target — the only thing on this card that
+                      // does not go where the card itself goes. "View details"
+                      // used to sit beside it as plain text with no handler of
+                      // its own; the chevron says the same thing in less room.
+                      GestureDetector(
+                        onTap: () =>
+                            context.push('/worker/job/${job.id}?openMap=true'),
+                        behavior: HitTestBehavior.opaque,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 5),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(_rPill),
+                            border: Border.all(color: c.onPrimaryMuted),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.map_outlined,
+                                  size: 14, color: c.onPrimaryMuted),
+                              const SizedBox(width: 5),
+                              Text(
+                                context.l10n.workerMap,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: c.onPrimaryMuted,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ],
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                GestureDetector(
-                  onTap: () =>
-                      context.push('/worker/job/${job.id}?openMap=true'),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 7,
-                    ),
-                    decoration: BoxDecoration(
-                      color: c.softTeal,
-                      borderRadius: BorderRadius.circular(_rPill),
-                      border: Border.all(color: c.primary),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.map_outlined, size: 15, color: c.primary),
-                        const SizedBox(width: 5),
-                        Text(
-                          context.l10n.workerMap,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: c.primary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                Text(
-                  context.l10n.workerViewDetails,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: c.primary,
-                  ),
-                ),
-              ],
             ),
           ],
         ),
       ),
     );
-  }
-
-  /// Status → token. The branches are untouched; only the colour each one
-  /// returns has moved onto the palette. The pairings mirror the prototype's
-  /// `.tg` variants (CSS lines 74–78), which always pair a foreground with
-  /// its own tint: `.tg.a` teal, `.tg.w` urgent, `.tg.g` sage, plain `.tg`
-  /// muted.
-  Color _statusColor(AppSemanticColors c, String status) {
-    switch (status.toUpperCase()) {
-      case 'ACCEPTED':
-        return c.primary;
-      case 'EN_ROUTE':
-        return c.warning;
-      case 'IN_PROGRESS':
-        return c.success;
-      default:
-        return c.textSecondary;
-    }
-  }
-
-  /// The tint that pairs with [_statusColor] — same branches, background side.
-  Color _statusSurface(AppSemanticColors c, String status) {
-    switch (status.toUpperCase()) {
-      case 'ACCEPTED':
-        return c.softTeal;
-      case 'EN_ROUTE':
-        return c.warningSurface;
-      case 'IN_PROGRESS':
-        return c.successSoft;
-      default:
-        return c.surfaceSubtle;
-    }
   }
 }
 

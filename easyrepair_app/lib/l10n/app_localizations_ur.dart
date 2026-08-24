@@ -2158,7 +2158,12 @@ class AppLocalizationsUr extends AppLocalizations {
   String get workerGoOnline => 'آن لائن ہو جائیں';
 
   @override
-  String get workerTodaysEarnings => 'آج کی کمائی';
+  String workerHelloName(String name) {
+    return 'ہیلو $name';
+  }
+
+  @override
+  String get workerTodaysEarnings => 'کمائی';
 
   @override
   String get workerRating => 'ریٹنگ';
@@ -2177,10 +2182,10 @@ class AppLocalizationsUr extends AppLocalizations {
   String get workerGoOfflineConfirmYes => 'ہاں، آف لائن کریں';
 
   @override
-  String get workerFindNewWork => 'نیا کام ڈھونڈیں';
+  String get workerFindNewWork => 'نئی شکایات';
 
   @override
-  String get workerViewNewJobs => 'نئے کام دیکھیں';
+  String get workerViewNewJobs => 'دیکھیں';
 
   @override
   String get workerActiveJobCaps => 'جاری کام';
@@ -5788,7 +5793,12 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get workerGoOnline => 'Online ho jayein';
 
   @override
-  String get workerTodaysEarnings => 'Aaj ki Kamai';
+  String workerHelloName(String name) {
+    return 'Hello $name';
+  }
+
+  @override
+  String get workerTodaysEarnings => 'Kamai';
 
   @override
   String get workerRating => 'Rating';
@@ -5807,10 +5817,10 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get workerGoOfflineConfirmYes => 'Haan, offline karein';
 
   @override
-  String get workerFindNewWork => 'Naya Kaam Dhondain';
+  String get workerFindNewWork => 'Nayi Shikayat';
 
   @override
-  String get workerViewNewJobs => 'Naye kaam dekhein';
+  String get workerViewNewJobs => 'Dekhein';
 
   @override
   String get workerActiveJobCaps => 'JARI KAAM';

@@ -2192,7 +2192,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workerGoOnline => 'Go Online';
 
   @override
-  String get workerTodaysEarnings => 'Today\'s Earnings';
+  String workerHelloName(String name) {
+    return 'Hello $name';
+  }
+
+  @override
+  String get workerTodaysEarnings => 'Kamai';
 
   @override
   String get workerRating => 'Rating';
@@ -2211,10 +2216,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workerGoOfflineConfirmYes => 'Yes, Go Offline';
 
   @override
-  String get workerFindNewWork => 'Find New Work';
+  String get workerFindNewWork => 'New Complaints';
 
   @override
-  String get workerViewNewJobs => 'View New Jobs';
+  String get workerViewNewJobs => 'Dekhein';
 
   @override
   String get workerActiveJobCaps => 'ACTIVE JOB';
