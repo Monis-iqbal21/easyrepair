@@ -84,6 +84,14 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
 
   final Color success;
 
+  /// Background pairing for [success] content — e.g. a "Ready" status chip.
+  ///
+  /// Named to match [urgentSoft] rather than [warningSurface]: the two
+  /// existing names disagree with each other, and `urgentSoft` is the one a
+  /// state colour's tint is called. Renaming `warningSurface` to match is a
+  /// separate job, deliberately not done here.
+  final Color successSoft;
+
   /// Foreground for warning content (icon + text) — e.g. the offline banner.
   final Color warning;
 
@@ -107,6 +115,7 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
     required this.urgent,
     required this.urgentSoft,
     required this.success,
+    required this.successSoft,
     required this.warning,
     required this.warningSurface,
     required this.error,
@@ -143,6 +152,9 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
     urgent: Color(0xFFA9431D),
     urgentSoft: Color(0xFFFCE8DF),
     success: Color(0xFF2E6E4F),
+    // The prototype's `--sageT` — the tint relationship urgentSoft has to
+    // urgent, expressed in the success hue.
+    successSoft: Color(0xFFE6F4EA),
     warning: Color(0xFF8A5B10),
     // No brand value was specified for the warning surface; this is the tint
     // relationship urgentSoft has to urgent, expressed in the warning hue.
@@ -174,6 +186,8 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
     urgent: Color(0xFFE0834F),
     urgentSoft: Color(0xFF3A2317),
     success: Color(0xFF56B183),
+    // The prototype's dark `--sageT`.
+    successSoft: Color(0xFF173B2C),
     warning: Color(0xFFD9A441),
     warningSurface: Color(0xFF35290F),
     error: Color(0xFFE57A6E),
@@ -209,6 +223,7 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
     Color? urgent,
     Color? urgentSoft,
     Color? success,
+    Color? successSoft,
     Color? warning,
     Color? warningSurface,
     Color? error,
@@ -228,6 +243,7 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
       urgent: urgent ?? this.urgent,
       urgentSoft: urgentSoft ?? this.urgentSoft,
       success: success ?? this.success,
+      successSoft: successSoft ?? this.successSoft,
       warning: warning ?? this.warning,
       warningSurface: warningSurface ?? this.warningSurface,
       error: error ?? this.error,
@@ -252,6 +268,7 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
       urgent: Color.lerp(urgent, other.urgent, t)!,
       urgentSoft: Color.lerp(urgentSoft, other.urgentSoft, t)!,
       success: Color.lerp(success, other.success, t)!,
+      successSoft: Color.lerp(successSoft, other.successSoft, t)!,
       warning: Color.lerp(warning, other.warning, t)!,
       warningSurface: Color.lerp(warningSurface, other.warningSurface, t)!,
       error: Color.lerp(error, other.error, t)!,
