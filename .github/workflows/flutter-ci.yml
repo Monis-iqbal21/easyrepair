@@ -76,11 +76,47 @@ jobs:
           fi
           echo "Generated localizations match the committed files."
 
+      # Both of these copy their output into the job summary as well as the
+      # log. Raw run logs need credentials the API does not hand out, so
+      # without this the reason for a red run can only be read by a human
+      # opening the web page — which defeats the point of CI reporting to
+      # whoever is actually doing the work.
       - name: Analyze
-        run: flutter analyze
+        id: analyze
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          flutter analyze 2>&1 | tee /tmp/analyze.txt
 
       - name: Test
-        run: flutter test
+        id: test
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          flutter test 2>&1 | tee /tmp/test.txt
+
+      - name: Report analyze and test
+        if: always()
+        run: |
+          {
+            echo "### Analyze — \`${{ steps.analyze.outcome }}\`"
+            echo ''; echo '```'
+            tail -80 /tmp/analyze.txt 2>/dev/null || echo '(no output)'
+            echo '```'
+            echo "### Test — \`${{ steps.test.outcome }}\`"
+            echo ''; echo '```'
+            tail -80 /tmp/test.txt 2>/dev/null || echo '(no output)'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          # The job still fails if either did. `continue-on-error` above only
+          # defers that, so the summary and the APK are produced first.
+          failed=
+          [ "${{ steps.analyze.outcome }}" = "success" ] || failed=1
+          [ "${{ steps.test.outcome }}" = "success" ] || failed=1
+          if [ -n "$failed" ]; then
+            echo "::error::analyze=${{ steps.analyze.outcome }} test=${{ steps.test.outcome }} — see the job summary"
+            exit 1
+          fi
 
       # ── Debug APK ────────────────────────────────────────────────────────
       #
