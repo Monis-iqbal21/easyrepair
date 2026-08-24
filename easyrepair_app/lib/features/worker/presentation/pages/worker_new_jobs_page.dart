@@ -18,15 +18,35 @@ import '../widgets/worker_bottom_nav_bar.dart';
 import '../widgets/worker_chat_action.dart';
 import '../../../bookings/presentation/utils/worker_labels.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
+import '../../../../core/theme/app_semantic_colors.dart';
 import '../utils/worker_status_labels.dart';
 
 // ── Palette ───────────────────────────────────────────────────────────────────
-const _kAccent = Color(0xFFDB6234);
-const _kDark   = Color(0xFF1A1A1A);
-const _kGray   = Color(0xFF6B7280);
-const _kLight  = Color(0xFF94A3B8);
-const _kBorder = Color(0xFFE2E8F0);
-const _kBg     = Color(0xFFF9FAFB);
+//
+// There isn't one. Every colour comes from `context.semanticColors` — see
+// `core/theme/app_semantic_colors.dart`, the one place HandyGo's colours are
+// decided, and the only file that changes when light/dark is retuned.
+//
+// What used to live here: `_kAccent` (`#DB6234`, the old EasyRepair orange —
+// absent from the Ustaad prototype entirely), `_kDark`, `_kGray`, `_kLight`,
+// `_kBorder`, `_kBg`. All six are gone, along with the loose `#EA580C`,
+// `#FFF7ED`, `#F1F5F9`, `#FEF3C7`, `#92400E`, `#FFF1F2` and `#E6F5F0` that
+// were scattered through the widgets below.
+//
+// ── Prototype geometry ────────────────────────────────────────────────────────
+//
+// From the Ustaad prototype's stylesheet (`06 Handover to Monis/05 Design &
+// UI/prototype/source/Handygo Ustaad V1.0 - Prototype.dc.html`, CSS 15–119;
+// the leads list is `is_uleads`, lines 347–390).
+//
+// The prototype uses NO shadow inside a screen: `.crd` is `background +
+// radius 16 + 1px solid var(--line)` and nothing more.
+const double _rCard = 16;    // .crd
+const double _rButton = 14;  // .btnp
+const double _rPill = 999;   // .tg / filter chips
+const double _hButton = 52;  // .btnp min-height
+const double _hChip = 44;    // the prototype's filter chips are 44 tall
+const double _gap = 11;      // the leads list's own gap, not the 14 Home uses
 
 class WorkerNewJobsPage extends ConsumerStatefulWidget {
   const WorkerNewJobsPage({super.key});
@@ -74,9 +94,10 @@ class _WorkerNewJobsPageState extends ConsumerState<WorkerNewJobsPage>
     // Unknown-yet counts as approved so the page doesn't flash the
     // incomplete-profile panel before the profile has even loaded once.
     final isApproved = workerProfile?.isOnboardingApproved ?? true;
+    final c = context.semanticColors;
 
     return Scaffold(
-      backgroundColor: _kBg,
+      backgroundColor: c.background,
       extendBody: true,
       body: SafeArea(
         bottom: false,
@@ -92,19 +113,22 @@ class _WorkerNewJobsPageState extends ConsumerState<WorkerNewJobsPage>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // Prototype `.h1` (CSS line 42): 18px / 700 / -.01em.
+                        // Nothing in the prototype is heavier than w700.
                         Text(
                           context.l10n.workerNewJobsTitle,
-                          style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w800,
-                            color: _kDark,
-                            letterSpacing: -0.3,
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            height: 1.2,
+                            color: c.textPrimary,
+                            letterSpacing: -0.18,
                           ),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           context.l10n.workerNewJobsSubtitle,
-                          style: const TextStyle(fontSize: 13, color: _kGray),
+                          style: TextStyle(fontSize: 14, color: c.textSecondary),
                         ),
                       ],
                     ),
@@ -113,17 +137,17 @@ class _WorkerNewJobsPageState extends ConsumerState<WorkerNewJobsPage>
                   GestureDetector(
                     onTap: notifier.refresh,
                     child: Container(
-                      width: 38,
-                      height: 38,
+                      width: 40,
+                      height: 40,
                       decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: _kBorder),
+                        color: c.surface,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: c.border),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.refresh_rounded,
-                        size: 18,
-                        color: _kAccent,
+                        size: 19,
+                        color: c.primary,
                       ),
                     ),
                   ),
@@ -156,7 +180,7 @@ class _WorkerNewJobsPageState extends ConsumerState<WorkerNewJobsPage>
                 child: jobsAsync.when(
                   skipError: true,
                   loading: () => const Padding(
-                    padding: EdgeInsets.fromLTRB(16, 4, 16, 0),
+                    padding: EdgeInsets.fromLTRB(20, 4, 20, 0),
                     child: BookingSkeleton(),
                   ),
                   error: (err, _) => _ErrorState(
@@ -167,11 +191,11 @@ class _WorkerNewJobsPageState extends ConsumerState<WorkerNewJobsPage>
                   data: (jobs) => jobs.isEmpty
                       ? const _EmptyState()
                       : RefreshIndicator(
-                          color: _kAccent,
-                          backgroundColor: Colors.white,
+                          color: c.primary,
+                          backgroundColor: c.surface,
                           onRefresh: notifier.refresh,
                           child: ListView.builder(
-                            padding: const EdgeInsets.fromLTRB(16, 4, 16, 110),
+                            padding: const EdgeInsets.fromLTRB(20, 4, 20, 110),
                             itemCount: jobs.length,
                             itemBuilder: (ctx, i) => _NewJobCard(
                               key: ValueKey(jobs[i].id),
@@ -201,34 +225,39 @@ class _FilterBar extends ConsumerWidget {
     // Watch the provider to rebuild when filter changes.
     ref.watch(newJobsProvider);
     final current = notifier.currentFilter;
+    final c = context.semanticColors;
 
+    // Prototype filter chips (lines 348–352): 44 tall, 13.5px, fully round.
+    // The taller target matters here — this row is the first thing an Ustaad
+    // touches on the screen, often one-handed.
     return SizedBox(
-      height: 36,
+      height: _hChip,
       child: ListView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 20),
         children: NewJobFilter.values.map((f) {
           final selected = f == current;
           return Padding(
-            padding: const EdgeInsetsDirectional.only(end: 8),
+            padding: const EdgeInsetsDirectional.only(end: 6),
             child: GestureDetector(
               onTap: () => notifier.setFilter(f),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 180),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                alignment: Alignment.center,
+                padding: const EdgeInsets.symmetric(horizontal: 15),
                 decoration: BoxDecoration(
-                  color: selected ? _kAccent : Colors.white,
-                  borderRadius: BorderRadius.circular(20),
+                  color: selected ? c.primary : c.surface,
+                  borderRadius: BorderRadius.circular(_rPill),
                   border: Border.all(
-                    color: selected ? _kAccent : _kBorder,
+                    color: selected ? c.primary : c.border,
                   ),
                 ),
                 child: Text(
                   newJobFilterLabel(context.l10n, f),
                   style: TextStyle(
-                    fontSize: 12.5,
+                    fontSize: 13.5,
                     fontWeight: FontWeight.w600,
-                    color: selected ? Colors.white : _kGray,
+                    color: selected ? c.onPrimary : c.textSecondary,
                   ),
                 ),
               ),
@@ -255,6 +284,23 @@ class _NewJobCard extends ConsumerWidget {
     // either (previously only STANDARD was excluded, which incorrectly left
     // a "Bid Now" button on pending INSPECTION jobs).
     final isDirectAssign = job.isDirectAssignLane;
+    final c = context.semanticColors;
+
+    // The customer's name — the prototype puts it directly under the job
+    // title, and unlike Home's ongoing job this payload actually carries it.
+    final clientName =
+        '${job.client.firstName} ${job.client.lastName}'.trim();
+
+    // Everything the old card said in four separate 11.5px chips, on one
+    // 15.5px line the way the prototype writes it. The pieces and their
+    // conditions are unchanged — only the joining is new.
+    final metaParts = <String>[
+      if (job.city.isNotEmpty) job.city,
+      if (job.distanceKm != null)
+        workerDistanceLabel(context.l10n, job.distanceKm),
+      if (!isDirectAssign) context.l10n.workerOfferCount(job.bidCount),
+      _relativeTime(context, job.createdAt),
+    ];
 
     return GestureDetector(
       onTap: () {
@@ -262,307 +308,265 @@ class _NewJobCard extends ConsumerWidget {
         context.push('/worker/job/${job.id}');
       },
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
+        margin: const EdgeInsets.only(bottom: _gap),
+        padding: const EdgeInsets.all(15),
+        // Prototype `.crd`: surface, radius 16, one hairline. No shadow, and
+        // no coloured strip — urgency is a tag now, which is how the
+        // prototype says the same thing.
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: _kBorder),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 10,
-              offset: const Offset(0, 3),
-            ),
-          ],
+          color: c.surface,
+          borderRadius: BorderRadius.circular(_rCard),
+          border: Border.all(color: c.border),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Urgent accent strip
-            if (isUrgent)
-              Container(
-                height: 3,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFEA580C),
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+            // ── Tags + money ──────────────────────────────────────────────
+            //
+            // Same three badge conditions as before, moved from a right-hand
+            // column into the prototype's tag row.
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      if (isDirectAssign)
+                        const _StandardJobBadge()
+                      else
+                        _UrgencyChip(isUrgent: isUrgent),
+                      if (!isDirectAssign && job.hasMyBid)
+                        const _BidPlacedBadge(),
+                      if (job.inspection) const InspectionBadge(small: true),
+                    ],
+                  ),
+                ),
+                // A price only exists on the STANDARD lane before hire. A
+                // BIDDING job has none by definition — the Ustaad sets it —
+                // and INSPECTION keeps its own labelled line below, because a
+                // bare figure up here would read as the job price rather than
+                // the inspection fee.
+                //
+                // Guarded on the items, not on the total: `standardServicesTotal`
+                // is a non-nullable fold over them, so an empty list would
+                // print "Rs 0" rather than nothing. Same guard the services
+                // line below has always used.
+                if (isStandard && job.standardServiceItems.isNotEmpty) ...[
+                  const SizedBox(width: 10),
+                  Text(
+                    formatPkr(job.standardServicesTotal),
+                    style: TextStyle(
+                      fontSize: 21,
+                      fontWeight: FontWeight.w700,
+                      color: c.textPrimary,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            // ── Title ─────────────────────────────────────────────────────
+            Text(
+              job.displayTitle,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                height: 1.25,
+                color: c.textPrimary,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+
+            // ── Customer ──────────────────────────────────────────────────
+            if (clientName.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                clientName,
+                style: TextStyle(fontSize: 15.5, color: c.textSecondary),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+
+            // ── Meta ──────────────────────────────────────────────────────
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Icon(Icons.access_time_rounded,
+                    size: 16, color: c.textSecondary),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    metaParts.join(' · '),
+                    style: TextStyle(fontSize: 15.5, color: c.textSecondary),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+
+            // ── STANDARD lane: what the customer actually listed ──────────
+            // The total that used to sit under this line has moved to the
+            // top-right; the services themselves stay.
+            if (isStandard && job.standardServiceItems.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                job.standardServiceItems.map((i) => i.nameSnapshot).join(' + '),
+                style: TextStyle(fontSize: 14, color: c.textSecondary, height: 1.4),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+
+            // ── INSPECTION lane: the fixed fee, known before hire ──────────
+            // BIDDING never gets a price here — job.displayPrice is null
+            // before a bid is accepted, and this card is always for a
+            // not-yet-hired job.
+            if (job.isInspectionLane && job.displayPrice != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                context.l10n.chooseInspectionFeeAmount(
+                  formatPkr(job.displayPrice),
+                ),
+                style: TextStyle(
+                  fontSize: 15.5,
+                  fontWeight: FontWeight.w700,
+                  color: c.primary,
                 ),
               ),
+            ],
 
-            Padding(
-              padding: const EdgeInsets.all(14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // ── Top row: category icon + title + urgency + bid badge ──
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Category icon box
-                      Container(
-                        width: 46,
-                        height: 46,
-                        decoration: BoxDecoration(
-                          color: _kAccent.withValues(alpha: 0.10),
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: const Center(
-                          child: Icon(
-                            Icons.build_circle_outlined,
-                            color: _kAccent,
-                            size: 22,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-
-                      // Title + category
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              job.displayTitle,
-                              style: const TextStyle(
-                                fontSize: 14.5,
-                                fontWeight: FontWeight.w700,
-                                color: _kDark,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 3),
-                            Text(
-                              job.category.name,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: _kGray,
-                                fontWeight: FontWeight.w500,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(width: 8),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          if (isDirectAssign)
-                            const _StandardJobBadge()
-                          else
-                            _UrgencyChip(isUrgent: isUrgent),
-                          if (!isDirectAssign && job.hasMyBid) ...[
-                            const SizedBox(height: 4),
-                            const _BidPlacedBadge(),
-                          ],
-                          if (job.inspection) ...[
-                            const SizedBox(height: 4),
-                            const InspectionBadge(small: true),
-                          ],
-                        ],
-                      ),
-                    ],
-                  ),
-
-                  // ── STANDARD lane: services + total instead of description ──
-                  if (isStandard && job.standardServiceItems.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      job.standardServiceItems.map((i) => i.nameSnapshot).join(' + '),
-                      style: const TextStyle(fontSize: 12.5, color: _kGray, height: 1.4),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      formatPkr(job.standardServicesTotal),
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: _kAccent,
-                      ),
-                    ),
-                  ],
-
-                  // ── INSPECTION lane: the fixed fee, known before hire ────
-                  // BIDDING never gets a price here — job.displayPrice is
-                  // null before a bid is accepted, and this card is always
-                  // for a not-yet-hired job.
-                  if (job.isInspectionLane && job.displayPrice != null) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      context.l10n.chooseInspectionFeeAmount(
-                        formatPkr(job.displayPrice),
-                      ),
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: _kAccent,
-                      ),
-                    ),
-                  ],
-
-                  // ── Description snippet ───────────────────────────────
-                  if (job.description != null && job.description!.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      job.description!,
-                      style: const TextStyle(
-                        fontSize: 12.5,
-                        color: _kGray,
-                        height: 1.4,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-
-                  const SizedBox(height: 10),
-                  const Divider(height: 1, color: Color(0xFFF1F5F9)),
-                  const SizedBox(height: 10),
-
-                  // ── Meta row: city, distance, bids, date ──────────────
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 4,
-                    children: [
-                      // City
-                      if (job.city.isNotEmpty)
-                        _MetaChip(
-                          icon: Icons.location_on_outlined,
-                          label: job.city,
-                        ),
-                      // Distance
-                      if (job.distanceKm != null)
-                        _MetaChip(
-                          icon: Icons.near_me_outlined,
-                          label: workerDistanceLabel(context.l10n, job.distanceKm),
-                        ),
-                      // Bid count (BIDDING lane only)
-                      if (!isDirectAssign)
-                        _MetaChip(
-                          icon: Icons.gavel_rounded,
-                          label: context.l10n.workerOfferCount(job.bidCount),
-                        ),
-                      // Posted time
-                      _MetaChip(
-                        icon: Icons.access_time_rounded,
-                        label: _relativeTime(context, job.createdAt),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  // ── Action buttons ────────────────────────────────────
-                  Row(
-                    children: [
-                      // Chat with client (before bid)
-                      GestureDetector(
-                        onTap: () =>
-                            openWorkerChatForBooking(context, ref, job.id),
-                        child: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: _kAccent.withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: _kAccent.withValues(alpha: 0.3),
-                            ),
-                          ),
-                          child: const Icon(
-                            Icons.chat_bubble_outline_rounded,
-                            color: _kAccent,
-                            size: 18,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      // View Details
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () {
-                            debugPrint('[NewJobCard] "View Details" pressed job.id=${job.id}');
-                            context.push('/worker/job/${job.id}');
-                          },
-                          icon: const Icon(Icons.info_outline_rounded, size: 14),
-                          label: Text(context.l10n.workerViewJobDetails),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: _kAccent,
-                            side: const BorderSide(color: _kAccent),
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            textStyle: const TextStyle(
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ),
-                      if (!isDirectAssign) ...[
-                        const SizedBox(width: 8),
-                        // Bid Now / Update Bid
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: () {
-                              if (!ensureApprovedOrWarn(context, ref)) return;
-                              debugPrint('[NewJobCard] bid button pressed job.id=${job.id}');
-                              final title = Uri.encodeComponent(job.displayTitle);
-                              context.push('/worker/job/${job.id}/bid?title=$title');
-                            },
-                            icon: const Icon(Icons.gavel_rounded, size: 14),
-                            label: Text(job.hasMyBid
-                                ? context.l10n.workerChangeOffer
-                                : context.l10n.workerSendOffer),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: _kAccent,
-                              foregroundColor: Colors.white,
-                              elevation: 0,
-                              padding: const EdgeInsets.symmetric(vertical: 10),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              textStyle: const TextStyle(
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                  if (isDirectAssign) ...[
-                    const SizedBox(height: 8),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: _kAccent.withValues(alpha: 0.06),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.info_outline_rounded, size: 13, color: _kAccent),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              context.l10n.workerDirectHireNote,
-                              style: TextStyle(fontSize: 11, color: _kAccent.withValues(alpha: 0.9)),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ],
+            // ── Description snippet ───────────────────────────────────────
+            if (job.description != null && job.description!.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                job.description!,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: c.textSecondary,
+                  height: 1.45,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
+            ],
+
+            // ── Action buttons ────────────────────────────────────────────
+            //
+            // "View Details" as a third control is gone: it pushed
+            // `/worker/job/:id`, which is exactly where tapping the card
+            // already goes. On a direct-assign job — where there is no offer
+            // to send — it becomes the one big button instead, so that route
+            // still has a control of its own. Chat keeps its own tap target.
+            const SizedBox(height: 13),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SizedBox(
+                  width: _hButton,
+                  height: _hButton,
+                  child: GestureDetector(
+                    onTap: () =>
+                        openWorkerChatForBooking(context, ref, job.id),
+                    child: Container(
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: c.softTeal,
+                        borderRadius: BorderRadius.circular(_rButton),
+                        border: Border.all(color: c.primary),
+                      ),
+                      child: Icon(
+                        Icons.chat_bubble_outline_rounded,
+                        color: c.primary,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 9),
+                if (!isDirectAssign)
+                  // Bid Now / Update Bid — same guard, same route, same
+                  // title encoding as before.
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        if (!ensureApprovedOrWarn(context, ref)) return;
+                        debugPrint('[NewJobCard] bid button pressed job.id=${job.id}');
+                        final title = Uri.encodeComponent(job.displayTitle);
+                        context.push('/worker/job/${job.id}/bid?title=$title');
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: c.primary,
+                        foregroundColor: c.onPrimary,
+                        elevation: 0,
+                        minimumSize: const Size.fromHeight(_hButton),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(_rButton),
+                        ),
+                        textStyle: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      child: Text(job.hasMyBid
+                          ? context.l10n.workerChangeOffer
+                          : context.l10n.workerSendOffer),
+                    ),
+                  )
+                else
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        debugPrint('[NewJobCard] "View Details" pressed job.id=${job.id}');
+                        context.push('/worker/job/${job.id}');
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: c.primary,
+                        foregroundColor: c.onPrimary,
+                        elevation: 0,
+                        minimumSize: const Size.fromHeight(_hButton),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(_rButton),
+                        ),
+                        textStyle: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      child: Text(context.l10n.workerViewJobDetails),
+                    ),
+                  ),
+              ],
             ),
+            if (isDirectAssign) ...[
+              const SizedBox(height: 9),
+              Container(
+                width: double.infinity,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                decoration: BoxDecoration(
+                  color: c.softTeal,
+                  borderRadius: BorderRadius.circular(_rButton),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline_rounded, size: 15, color: c.primary),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        context.l10n.workerDirectHireNote,
+                        style: TextStyle(fontSize: 13, color: c.primary),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -581,28 +585,35 @@ class _NewJobCard extends ConsumerWidget {
 
 // ── Standard job badge ─────────────────────────────────────────────────────────
 
+// ── Badges ────────────────────────────────────────────────────────────────────
+//
+// All three are the prototype's `.tg` tag (CSS lines 74–78): 12.5px / 700,
+// fully round, a state colour on its own tint. Only the paint changed — which
+// badge appears when is decided in _NewJobCard, exactly as before.
+
 class _StandardJobBadge extends StatelessWidget {
   const _StandardJobBadge();
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration: BoxDecoration(
-        color: _kAccent,
-        borderRadius: BorderRadius.circular(20),
+        color: c.softTeal,
+        borderRadius: BorderRadius.circular(_rPill),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.verified_rounded, size: 11, color: Colors.white),
-          const SizedBox(width: 3),
+          Icon(Icons.verified_rounded, size: 13, color: c.primary),
+          const SizedBox(width: 4),
           Text(
             context.l10n.workerListedJob,
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
+              color: c.primary,
             ),
           ),
         ],
@@ -610,31 +621,30 @@ class _StandardJobBadge extends StatelessWidget {
     );
   }
 }
-
-// ── Bid placed badge ──────────────────────────────────────────────────────────
 
 class _BidPlacedBadge extends StatelessWidget {
   const _BidPlacedBadge();
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration: BoxDecoration(
-        color: _kAccent,
-        borderRadius: BorderRadius.circular(20),
+        color: c.successSoft,
+        borderRadius: BorderRadius.circular(_rPill),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.check_circle_rounded, size: 11, color: Colors.white),
-          const SizedBox(width: 3),
+          Icon(Icons.check_circle_rounded, size: 13, color: c.success),
+          const SizedBox(width: 4),
           Text(
             context.l10n.workerOfferSent,
-            style: const TextStyle(
-              fontSize: 10.5,
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
+              color: c.success,
             ),
           ),
         ],
@@ -642,8 +652,6 @@ class _BidPlacedBadge extends StatelessWidget {
     );
   }
 }
-
-// ── Small urgency chip ────────────────────────────────────────────────────────
 
 class _UrgencyChip extends StatelessWidget {
   final bool isUrgent;
@@ -651,29 +659,32 @@ class _UrgencyChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
+    // `urgent`, not `error`: the token file draws that line explicitly —
+    // urgent is not a failure. A normal job is simply not urgent, so it takes
+    // the muted tag rather than a colour of its own.
+    final fg = isUrgent ? c.urgent : c.textSecondary;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration: BoxDecoration(
-        color: isUrgent
-            ? const Color(0xFFFFF7ED)
-            : const Color(0xFFF1F5F9),
-        borderRadius: BorderRadius.circular(20),
+        color: isUrgent ? c.urgentSoft : c.surfaceSubtle,
+        borderRadius: BorderRadius.circular(_rPill),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
             isUrgent ? Icons.bolt_rounded : Icons.schedule_rounded,
-            size: 11,
-            color: isUrgent ? const Color(0xFFEA580C) : _kLight,
+            size: 13,
+            color: fg,
           ),
-          const SizedBox(width: 3),
+          const SizedBox(width: 4),
           Text(
             isUrgent ? context.l10n.postJobUrgent : context.l10n.postJobNormal,
             style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: isUrgent ? const Color(0xFFEA580C) : _kLight,
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
+              color: fg,
             ),
           ),
         ],
@@ -682,36 +693,15 @@ class _UrgencyChip extends StatelessWidget {
   }
 }
 
-// ── Meta chip ─────────────────────────────────────────────────────────────────
-
-class _MetaChip extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  const _MetaChip({required this.icon, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 12, color: _kLight),
-        const SizedBox(width: 3),
-        Text(
-          label,
-          style: const TextStyle(fontSize: 11.5, color: _kGray),
-        ),
-      ],
-    );
-  }
-}
-
-// ── Empty state ───────────────────────────────────────────────────────────────
+// `_MetaChip` is gone: the four 11.5px chips it drew are one 15.5px line on
+// the card now, the way the prototype writes them.
 
 class _EmptyState extends StatelessWidget {
   const _EmptyState();
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 40),
@@ -721,8 +711,8 @@ class _EmptyState extends StatelessWidget {
             Container(
               width: 80,
               height: 80,
-              decoration: const BoxDecoration(
-                color: Color(0xFFE6F5F0),
+              decoration: BoxDecoration(
+                color: c.softTeal,
                 shape: BoxShape.circle,
               ),
               child: const Center(
@@ -732,19 +722,19 @@ class _EmptyState extends StatelessWidget {
             const SizedBox(height: 20),
             Text(
               context.l10n.workerNoNewJobs,
-              style: const TextStyle(
-                fontSize: 16,
+              style: TextStyle(
+                fontSize: 18,
                 fontWeight: FontWeight.w700,
-                color: _kDark,
+                color: c.textPrimary,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               context.l10n.workerNoNewJobsHint,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 13,
-                color: _kLight,
+              style: TextStyle(
+                fontSize: 15.5,
+                color: c.textSecondary,
                 height: 1.5,
               ),
             ),
@@ -755,22 +745,19 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
-// ── Error state ───────────────────────────────────────────────────────────────
-
-/// Shown above the list only when a background poll failed but previous
-/// jobs are still cached/visible — never replaces the list itself.
 class _RefreshFailedBanner extends StatelessWidget {
   const _RefreshFailedBanner();
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Container(
       width: double.infinity,
-      color: const Color(0xFFFEF3C7),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      color: c.warningSurface,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 9),
       child: Text(
         context.l10n.myBookingsRefreshFailed,
-        style: const TextStyle(fontSize: 12, color: Color(0xFF92400E)),
+        style: TextStyle(fontSize: 14, color: c.warning),
       ),
     );
   }
@@ -783,6 +770,7 @@ class _ErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 40),
@@ -792,8 +780,8 @@ class _ErrorState extends StatelessWidget {
             Container(
               width: 70,
               height: 70,
-              decoration: const BoxDecoration(
-                color: Color(0xFFFFF1F2),
+              decoration: BoxDecoration(
+                color: c.urgentSoft,
                 shape: BoxShape.circle,
               ),
               child: const Center(
@@ -803,20 +791,20 @@ class _ErrorState extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               context.l10n.myBookingsSomethingWrong,
-              style: const TextStyle(
-                fontSize: 16,
+              style: TextStyle(
+                fontSize: 18,
                 fontWeight: FontWeight.w700,
-                color: _kDark,
+                color: c.textPrimary,
               ),
             ),
             const SizedBox(height: 6),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 12.5,
-                color: _kLight,
-                height: 1.4,
+              style: TextStyle(
+                fontSize: 14,
+                color: c.textSecondary,
+                height: 1.45,
               ),
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
@@ -825,17 +813,19 @@ class _ErrorState extends StatelessWidget {
             GestureDetector(
               onTap: onRetry,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                alignment: Alignment.center,
+                constraints: const BoxConstraints(minHeight: _hButton),
+                padding: const EdgeInsets.symmetric(horizontal: 24),
                 decoration: BoxDecoration(
-                  color: _kAccent,
-                  borderRadius: BorderRadius.circular(12),
+                  color: c.primary,
+                  borderRadius: BorderRadius.circular(_rButton),
                 ),
                 child: Text(
                   context.l10n.commonRetry,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: c.onPrimary,
                     fontWeight: FontWeight.w700,
-                    fontSize: 13,
+                    fontSize: 16,
                   ),
                 ),
               ),
