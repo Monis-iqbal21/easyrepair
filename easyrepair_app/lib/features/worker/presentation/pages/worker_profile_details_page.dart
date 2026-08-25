@@ -435,17 +435,8 @@ void _openFullScreen(BuildContext context, String url, String label) {
 
 /// A submitted image at full size, pinchable and pannable.
 ///
-/// DELIBERATELY NOT ON THE SEMANTIC TOKENS — the only widget in this file that
-/// is not. A photo lightbox wants a fixed dark ground and light chrome in BOTH
-/// themes, so that the CNIC scan is judged against neutral surroundings rather
-/// than a cream page. `background`/`surface` flip with the theme and would put
-/// a light ground behind the photo in light mode; `textPrimary` is near-white
-/// in the dark palette, so it cannot stand in for the ground either.
-///
-/// The palette has no scrim/lightbox token, and inventing one here — or fading
-/// an existing colour — is exactly what the colour rule forbids. Adding
-/// `scrim` + `onScrim` to BOTH palettes is a one-line decision for Anzal; until
-/// then this stays as it was rather than being quietly mis-tokenised.
+/// The lightbox stays visually dark in both app themes through the centralized
+/// [AppSemanticColors.scrim] and [AppSemanticColors.onScrim] tokens.
 class _FullScreenImagePage extends StatelessWidget {
   final String url;
   final String label;
@@ -453,16 +444,17 @@ class _FullScreenImagePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: c.scrim,
       appBar: AppBar(
-        backgroundColor: Colors.black,
+        backgroundColor: c.scrim,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: IconThemeData(color: c.onScrim),
         title: Text(
           label,
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: c.onScrim,
             fontSize: 16,
             fontWeight: FontWeight.w600,
           ),
@@ -475,10 +467,10 @@ class _FullScreenImagePage extends StatelessWidget {
           child: Image.network(
             url,
             fit: BoxFit.contain,
-            errorBuilder: (_, _, _) => const Icon(
+            errorBuilder: (_, _, _) => Icon(
               Icons.broken_image_outlined,
               size: 48,
-              color: Colors.white54,
+              color: c.onScrim.withValues(alpha: 0.54),
             ),
           ),
         ),

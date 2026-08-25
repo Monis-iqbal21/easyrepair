@@ -69,6 +69,12 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
   /// the dark pairing inverts to a deep ink.
   final Color onPrimaryMuted;
 
+  /// Fixed dark backdrop for media/document lightboxes in both themes.
+  final Color scrim;
+
+  /// Primary chrome drawn over [scrim].
+  final Color onScrim;
+
   // ── Lines ─────────────────────────────────────────────────────────────────
   /// Hairline outlines around cards, and separators inside a surface.
   final Color border;
@@ -128,6 +134,8 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
     required this.textSecondary,
     required this.onPrimary,
     required this.onPrimaryMuted,
+    required this.scrim,
+    required this.onScrim,
     required this.border,
     required this.controlBorder,
     required this.primary,
@@ -167,6 +175,8 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
     // primary fill matches the wrench beside it instead of glaring pure white.
     onPrimary: Color(0xFFF7F3EA),
     onPrimaryMuted: Color(0xFFCFE6E2),
+    scrim: Color(0xFF000000),
+    onScrim: Color(0xFFFFFFFF),
     border: Color(0xFFD7E0DC),
     controlBorder: Color(0xFF7D8B87),
     primary: Color(0xFF11645D),
@@ -203,6 +213,8 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
     // Dark ink on the lifted teal — the readable pairing at that lightness.
     onPrimary: Color(0xFF06201D),
     onPrimaryMuted: Color(0xFF0F3630),
+    scrim: Color(0xFF000000),
+    onScrim: Color(0xFFFFFFFF),
     border: Color(0xFF2C3E3B),
     controlBorder: Color(0xFF61736F),
     primary: Color(0xFF3FA79B),
@@ -242,6 +254,8 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
     Color? textSecondary,
     Color? onPrimary,
     Color? onPrimaryMuted,
+    Color? scrim,
+    Color? onScrim,
     Color? border,
     Color? controlBorder,
     Color? primary,
@@ -264,6 +278,8 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
       textSecondary: textSecondary ?? this.textSecondary,
       onPrimary: onPrimary ?? this.onPrimary,
       onPrimaryMuted: onPrimaryMuted ?? this.onPrimaryMuted,
+      scrim: scrim ?? this.scrim,
+      onScrim: onScrim ?? this.onScrim,
       border: border ?? this.border,
       controlBorder: controlBorder ?? this.controlBorder,
       primary: primary ?? this.primary,
@@ -291,6 +307,8 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
       textSecondary: Color.lerp(textSecondary, other.textSecondary, t)!,
       onPrimary: Color.lerp(onPrimary, other.onPrimary, t)!,
       onPrimaryMuted: Color.lerp(onPrimaryMuted, other.onPrimaryMuted, t)!,
+      scrim: Color.lerp(scrim, other.scrim, t)!,
+      onScrim: Color.lerp(onScrim, other.onScrim, t)!,
       border: Color.lerp(border, other.border, t)!,
       controlBorder: Color.lerp(controlBorder, other.controlBorder, t)!,
       primary: Color.lerp(primary, other.primary, t)!,

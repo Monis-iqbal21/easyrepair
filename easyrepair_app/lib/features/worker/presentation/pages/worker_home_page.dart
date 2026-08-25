@@ -1591,7 +1591,7 @@ Future<void> showSkillsSheet(BuildContext context, WidgetRef ref) async {
   await showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: Colors.transparent,
+    backgroundColor: context.semanticColors.surface.withValues(alpha: 0),
     builder: (ctx) => ProviderScope(
       parent: ProviderScope.containerOf(context),
       child: const _SkillsSheet(),
