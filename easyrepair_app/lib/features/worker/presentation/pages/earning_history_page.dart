@@ -4,22 +4,32 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/errors/failure_messages.dart';
 import '../../../../core/network/offline_banner.dart';
+import '../../../../core/theme/app_semantic_colors.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../domain/entities/earning_history_entity.dart';
 import '../providers/earning_history_providers.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
 
-// ── Palette (matches existing worker UI) ─────────────────────────────────────
-const _kOrange = Color(0xFFDB6234);
-const _kDark = Color(0xFF1A1A1A);
-const _kGray = Color(0xFF6B7280);
-const _kLight = Color(0xFF94A3B8);
-const _kBorder = Color(0xFFE2E8F0);
-const _kBg = Color(0xFFF9FAFB);
-const _kGreen = Color(0xFF22C55E);
-const _kPendingBg = Color(0xFFFFF7ED);
-const _kPendingText = Color(0xFFB45309);
-const _kPaidBg = Color(0xFFF0FDF4);
+// ── Palette ───────────────────────────────────────────────────────────────────
+//
+// There isn't one. Every colour comes from `context.semanticColors`.
+//
+// What used to live here, and what each became:
+//
+//   _kOrange      #DB6234 -> c.primary          EasyRepair's orange, not in the
+//                                               Ustaad prototype at all.
+//   _kDark        #1A1A1A -> c.textPrimary
+//   _kGray        #6B7280 -> c.textSecondary
+//   _kLight       #94A3B8 -> c.textSecondary    two greys in the palette, not three.
+//   _kBorder      #E2E8F0 -> c.border
+//   _kBg          #F9FAFB -> c.background
+//   _kGreen       #22C55E -> c.success
+//   _kPendingBg   #FFF7ED -> c.warningSurface
+//   _kPendingText #B45309 -> c.warning
+//   _kPaidBg      #F0FDF4 -> c.successSoft
+
+const double _rCard = 16;   // prototype `.crd`
+const double _rPill = 999;  // prototype `.tg`
 
 String _laneLabel(BuildContext context, EarningHistoryJobEntity job) {
   if (job.isInspectionOnly) return context.l10n.postJobInspectionFeeTitle;
@@ -35,18 +45,19 @@ String _laneLabel(BuildContext context, EarningHistoryJobEntity job) {
   }
 }
 
-Color _laneColor(EarningHistoryJobEntity job) {
-  if (job.isInspectionOnly) return _kPendingText;
-  switch (job.lane) {
-    case 'STANDARD':
-      return _kOrange;
-    case 'INSPECTION':
-      return _kPendingText;
-    case 'BIDDING':
-      return _kGreen;
-    default:
-      return _kGray;
-  }
+/// Background and text for the lane chip, as a pair.
+///
+/// It used to return one colour and the chip painted its own background with
+/// `color.withValues(alpha: 0.1)`. Deriving a colour is not allowed — it comes
+/// from the palette or it does not exist — so each lane now names both halves.
+(Color bg, Color fg) _laneColors(AppSemanticColors c, EarningHistoryJobEntity job) {
+  if (job.isInspectionOnly) return (c.warningSurface, c.warning);
+  return switch (job.lane) {
+    'STANDARD' => (c.softTeal, c.primary),
+    'INSPECTION' => (c.warningSurface, c.warning),
+    'BIDDING' => (c.successSoft, c.success),
+    _ => (c.surfaceSubtle, c.textSecondary),
+  };
 }
 
 class EarningHistoryPage extends ConsumerWidget {
@@ -58,18 +69,19 @@ class EarningHistoryPage extends ConsumerWidget {
     final isShowingCachedData =
         ref.watch(workerEarningsHistoryIsOfflineProvider) &&
         historyAsync.hasValue;
+    final c = context.semanticColors;
 
     return Scaffold(
-      backgroundColor: _kBg,
+      backgroundColor: c.background,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: c.surface,
         elevation: 0,
-        surfaceTintColor: Colors.white,
+        surfaceTintColor: c.surface,
         leading: IconButton(
-          icon: const Icon(
+          icon: Icon(
             Icons.arrow_back_ios_new_rounded,
             size: 18,
-            color: _kDark,
+            color: c.textPrimary,
           ),
           onPressed: () => Navigator.of(context).pop(),
         ),
@@ -78,13 +90,13 @@ class EarningHistoryPage extends ConsumerWidget {
           style: TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w700,
-            color: _kDark,
+            color: c.textPrimary,
           ),
         ),
         centerTitle: false,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
-          child: Container(height: 1, color: _kBorder),
+          child: Container(height: 1, color: c.border),
         ),
       ),
       body: Column(
@@ -92,8 +104,8 @@ class EarningHistoryPage extends ConsumerWidget {
           if (isShowingCachedData) const OfflineDataBanner(),
           Expanded(
             child: historyAsync.when(
-              loading: () => const Center(
-                child: CircularProgressIndicator(color: _kOrange),
+              loading: () => Center(
+                child: CircularProgressIndicator(color: c.primary),
               ),
               error: (err, _) => _ErrorState(
                 message: failureMessage(context.l10n, err),
@@ -137,6 +149,7 @@ class _TotalsHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     var gross = 0.0;
     var commission = 0.0;
     var ustaad = 0.0;
@@ -151,31 +164,31 @@ class _TotalsHeader extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _kBorder),
+        color: c.surface,
+        borderRadius: BorderRadius.circular(_rCard),
+        border: Border.all(color: c.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _TotalRow(
+          _MoneyRow(
             label: context.l10n.earningGrossEarnings,
             amount: gross,
-            color: _kDark,
+            color: c.textPrimary,
           ),
           const SizedBox(height: 10),
-          _TotalRow(
+          _MoneyRow(
             label: context.l10n.earningCommissionLabel,
             amount: commission,
-            color: _kGray,
+            color: c.textSecondary,
           ),
           const SizedBox(height: 10),
-          const Divider(height: 1, color: _kBorder),
+          Container(height: 1, color: c.border),
           const SizedBox(height: 10),
-          _TotalRow(
+          _MoneyRow(
             label: context.l10n.earningUstaadEarnings,
             amount: ustaad,
-            color: _kGreen,
+            color: c.success,
             emphasize: true,
           ),
         ],
@@ -184,12 +197,19 @@ class _TotalsHeader extends StatelessWidget {
   }
 }
 
-class _TotalRow extends StatelessWidget {
+/// One label on the left, one amount on the right.
+///
+/// This is also what a job's own breakdown uses now. It used to be three
+/// side-by-side columns, which gave each label a third of the screen — not
+/// enough for "HandyGo Commission (18%)", which truncated on a real phone.
+/// Stacked rows fit the words, and the amounts line up in one column where
+/// they can actually be compared.
+class _MoneyRow extends StatelessWidget {
   final String label;
-  final double amount;
+  final double? amount;
   final Color color;
   final bool emphasize;
-  const _TotalRow({
+  const _MoneyRow({
     required this.label,
     required this.amount,
     required this.color,
@@ -198,22 +218,25 @@ class _TotalRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 13,
-            color: emphasize ? _kDark : _kGray,
-            fontWeight: emphasize ? FontWeight.w700 : FontWeight.w500,
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              color: emphasize ? c.textPrimary : c.textSecondary,
+              fontWeight: emphasize ? FontWeight.w700 : FontWeight.w500,
+            ),
           ),
         ),
+        const SizedBox(width: 12),
         Text(
-          formatPkr(amount),
+          amount == null ? '—' : formatPkr(amount!),
           style: TextStyle(
             fontSize: emphasize ? 16 : 13.5,
-            fontWeight: emphasize ? FontWeight.w800 : FontWeight.w600,
+            fontWeight: emphasize ? FontWeight.w700 : FontWeight.w600,
             color: color,
           ),
         ),
@@ -228,11 +251,12 @@ class _DayCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _kBorder),
+        color: c.surface,
+        borderRadius: BorderRadius.circular(_rCard),
+        border: Border.all(color: c.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -248,32 +272,32 @@ class _DayCard extends StatelessWidget {
                     children: [
                       Text(
                         DateFormat('EEEE, d MMMM').format(day.date),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
-                          color: _kDark,
+                          color: c.textPrimary,
                         ),
                       ),
                       const SizedBox(height: 3),
                       Text(
                         context.l10n.earningJobsCompleted(day.jobsCount),
-                        style: const TextStyle(fontSize: 12, color: _kGray),
+                        style: TextStyle(fontSize: 12.5, color: c.textSecondary),
                       ),
                     ],
                   ),
                 ),
                 Text(
                   formatPkr(day.grossTotal),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    color: _kGreen,
+                    fontWeight: FontWeight.w700,
+                    color: c.success,
                   ),
                 ),
               ],
             ),
           ),
-          const Divider(height: 1, color: _kBorder),
+          Container(height: 1, color: c.border),
           for (final job in day.jobs) _JobCard(job: job),
         ],
       ),
@@ -281,20 +305,21 @@ class _DayCard extends StatelessWidget {
   }
 }
 
-/// One completed job's full breakdown: lane + category + date on top, then
-/// Gross / HandyGo Commission (18%) / Ustaad Earning, and the job's own
-/// commission status chip — independent of every other job's status.
+/// One completed job's full breakdown: lane + category + status on top, then
+/// Gross / HandyGo Commission (18%) / Ustaad Earning — the job's own commission
+/// status chip is independent of every other job's status.
 class _JobCard extends StatelessWidget {
   final EarningHistoryJobEntity job;
   const _JobCard({required this.job});
 
   @override
   Widget build(BuildContext context) {
-    final color = _laneColor(job);
+    final c = context.semanticColors;
+    final (laneBg, laneFg) = _laneColors(c, job);
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: _kBorder, width: 0.6)),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: c.border, width: 0.6)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -302,17 +327,18 @@ class _JobCard extends StatelessWidget {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(20),
+                  color: laneBg,
+                  borderRadius: BorderRadius.circular(_rPill),
                 ),
                 child: Text(
                   _laneLabel(context, job),
                   style: TextStyle(
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w700,
-                    color: color,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: laneFg,
                   ),
                 ),
               ),
@@ -320,80 +346,36 @@ class _JobCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   job.serviceCategory,
-                  style: const TextStyle(fontSize: 12.5, color: _kDark),
+                  style: TextStyle(fontSize: 12.5, color: c.textPrimary),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
+              const SizedBox(width: 8),
               _CommissionStatusChip(status: job.commissionStatus),
             ],
           ),
           const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: _AmountColumn(
-                  label: context.l10n.earningGrossEarnings,
-                  amount: job.grossEarning,
-                  color: _kDark,
-                ),
-              ),
-              Expanded(
-                child: _AmountColumn(
-                  label: context.l10n.earningCommissionLabel,
-                  amount: job.commissionAmount,
-                  color: _kGray,
-                ),
-              ),
-              Expanded(
-                child: _AmountColumn(
-                  label: context.l10n.earningUstaadEarnings,
-                  amount: job.ustaadEarning,
-                  color: _kGreen,
-                  emphasize: true,
-                ),
-              ),
-            ],
+          _MoneyRow(
+            label: context.l10n.earningGrossEarnings,
+            amount: job.grossEarning,
+            color: c.textPrimary,
+          ),
+          const SizedBox(height: 6),
+          _MoneyRow(
+            label: context.l10n.earningCommissionLabel,
+            amount: job.commissionAmount,
+            color: c.textSecondary,
+          ),
+          const SizedBox(height: 6),
+          _MoneyRow(
+            label: context.l10n.earningUstaadEarnings,
+            amount: job.ustaadEarning,
+            color: c.success,
+            emphasize: true,
           ),
         ],
       ),
-    );
-  }
-}
-
-class _AmountColumn extends StatelessWidget {
-  final String label;
-  final double? amount;
-  final Color color;
-  final bool emphasize;
-  const _AmountColumn({
-    required this.label,
-    required this.amount,
-    required this.color,
-    this.emphasize = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(fontSize: 10, color: _kLight),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        const SizedBox(height: 2),
-        Text(
-          amount == null ? '—' : formatPkr(amount!),
-          style: TextStyle(
-            fontSize: emphasize ? 13.5 : 12.5,
-            fontWeight: emphasize ? FontWeight.w800 : FontWeight.w700,
-            color: color,
-          ),
-        ),
-      ],
     );
   }
 }
@@ -404,9 +386,10 @@ class _CommissionStatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     final isPaid = status == CommissionStatus.paid;
-    final bg = isPaid ? _kPaidBg : _kPendingBg;
-    final text = isPaid ? _kGreen : _kPendingText;
+    final bg = isPaid ? c.successSoft : c.warningSurface;
+    final text = isPaid ? c.success : c.warning;
     final label =
         // Reuses bidStatusPending — the app-wide "Pending" copy already used
         // for bid status; ARB parity guards against a second key carrying
@@ -414,10 +397,10 @@ class _CommissionStatusChip extends StatelessWidget {
         isPaid ? context.l10n.earningStatusPaid : context.l10n.bidStatusPending;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(_rPill),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -427,12 +410,12 @@ class _CommissionStatusChip extends StatelessWidget {
             height: 5,
             decoration: BoxDecoration(color: text, shape: BoxShape.circle),
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: 5),
           Text(
             label,
             style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
+              fontSize: 12.5,
+              fontWeight: FontWeight.w600,
               color: text,
             ),
           ),
@@ -447,27 +430,37 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.savings_outlined, size: 48, color: _kLight),
-            const SizedBox(height: 12),
+            Container(
+              width: 72,
+              height: 72,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: c.softTeal,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Icon(Icons.savings_outlined, size: 36, color: c.primary),
+            ),
+            const SizedBox(height: 16),
             Text(
               context.l10n.earningNoneYet,
               style: TextStyle(
-                fontSize: 15,
+                fontSize: 17,
                 fontWeight: FontWeight.w700,
-                color: _kDark,
+                color: c.textPrimary,
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 8),
             Text(
               context.l10n.earningNoneHint,
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12.5, color: _kGray),
+              style: TextStyle(fontSize: 14, color: c.textSecondary, height: 1.5),
             ),
           ],
         ),
@@ -483,26 +476,25 @@ class _ErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline_rounded, size: 40, color: _kGray),
+            Icon(Icons.error_outline_rounded, size: 40, color: c.textSecondary),
             const SizedBox(height: 12),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: _kGray, fontSize: 13.5),
+              style: TextStyle(color: c.textSecondary, fontSize: 14),
             ),
             const SizedBox(height: 16),
+            // No colours: AppTheme's OutlinedButton theme resolves them from
+            // the same palette.
             OutlinedButton(
               onPressed: onRetry,
-              style: OutlinedButton.styleFrom(
-                foregroundColor: _kOrange,
-                side: const BorderSide(color: _kOrange),
-              ),
               child: Text(context.l10n.commonRetry),
             ),
           ],

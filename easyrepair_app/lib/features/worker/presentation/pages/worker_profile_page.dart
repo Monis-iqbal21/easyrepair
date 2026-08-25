@@ -30,8 +30,29 @@ import '../pages/worker_profile_details_page.dart';
 import '../providers/worker_providers.dart';
 import '../providers/worker_review_providers.dart';
 import '../widgets/worker_bottom_nav_bar.dart';
+import '../../../../core/theme/app_semantic_colors.dart';
 
-const _kOrange = Color(0xFFDB6234);
+// ── Palette ───────────────────────────────────────────────────────────────────
+//
+// There isn't one. Every colour comes from `context.semanticColors`.
+//
+// Two page-local constants used to live here, and both were misleading:
+//
+//   c.primary    #DB6234  EasyRepair's orange              -> c.primary
+//   c.error #DB6234  named "DeleteRed", and the SAME orange. "Delete
+//                        Account" has never actually been red -> c.error
+//
+// Loose literals went the same way: #1A1A1A -> textPrimary,
+// #6B7280 -> textSecondary, #E2E8F0 / #F1F5F9 -> border, #F9FAFB -> background,
+// #FFF0E8 -> softTeal, #EF4444 -> error, and the five approval-status pairs
+// onto warning / error / success and their surfaces.
+//
+// Colour, type size and shape only. No provider, API call, navigation target
+// or condition was touched.
+
+const double _rCard = 16;   // prototype `.crd`
+const double _rPill = 999;  // prototype `.tg`
+const double _hButton = 52; // prototype `.btnp`
 
 // ── Local avatar cache (user-specific key) ────────────────────────────────────
 
@@ -127,12 +148,13 @@ class _WorkerProfilePageState extends ConsumerState<WorkerProfilePage> {
   }
 
   Future<void> _changeAvatar() async {
+    final c = context.semanticColors;
     final user = ref.read(authStateProvider).valueOrNull;
     if (user == null) return;
 
     final choice = await showModalBottomSheet<_AvatarAction>(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: c.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -177,7 +199,7 @@ class _WorkerProfilePageState extends ConsumerState<WorkerProfilePage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(context.l10n.clientProfileAvatarLocalOnly),
-            backgroundColor: Colors.orange.shade700,
+            backgroundColor: c.warning,
             duration: const Duration(seconds: 4),
           ),
         );
@@ -189,6 +211,7 @@ class _WorkerProfilePageState extends ConsumerState<WorkerProfilePage> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     final user = ref.watch(authStateProvider).valueOrNull;
     final avatarPath = ref.watch(_workerLocalAvatarPathProvider);
     final cloudUrl = ref.watch(_workerCloudAvatarUrlProvider);
@@ -200,7 +223,7 @@ class _WorkerProfilePageState extends ConsumerState<WorkerProfilePage> {
     final initials = firstName.isNotEmpty ? firstName[0].toUpperCase() : '?';
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
+      backgroundColor: c.background,
       extendBody: true,
       body: SafeArea(
         bottom: false,
@@ -214,10 +237,10 @@ class _WorkerProfilePageState extends ConsumerState<WorkerProfilePage> {
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
                 child: Text(
                   context.l10n.clientProfileTitle,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF1A1A1A),
+                    color: c.textPrimary,
                   ),
                 ),
               ),
@@ -234,21 +257,15 @@ class _WorkerProfilePageState extends ConsumerState<WorkerProfilePage> {
                       height: 88,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: _kOrange,
-                        boxShadow: [
-                          BoxShadow(
-                            color: _kOrange.withValues(alpha: 0.25),
-                            blurRadius: 16,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
+                        color: c.softTeal,
+                        border: Border.all(color: c.border),
                       ),
                       child: ClipOval(
                         child: _uploading
-                            ? const Center(
+                            ? Center(
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation(Colors.white),
+                                  valueColor: AlwaysStoppedAnimation(c.onPrimary),
                                 ),
                               )
                             : _buildAvatarContent(avatarPath, cloudUrl, initials),
@@ -263,23 +280,14 @@ class _WorkerProfilePageState extends ConsumerState<WorkerProfilePage> {
                           width: 28,
                           height: 28,
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: c.surface,
                             shape: BoxShape.circle,
-                            border: Border.all(
-                              color: const Color(0xFFF9FAFB),
-                              width: 2,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.08),
-                                blurRadius: 6,
-                              ),
-                            ],
+                            border: Border.all(color: c.border),
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.edit_rounded,
                             size: 14,
-                            color: _kOrange,
+                            color: c.primary,
                           ),
                         ),
                       ),
@@ -294,10 +302,10 @@ class _WorkerProfilePageState extends ConsumerState<WorkerProfilePage> {
                 Center(
                   child: Text(
                     fullName,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF1A1A1A),
+                      color: c.textPrimary,
                     ),
                   ),
                 ),
@@ -305,9 +313,9 @@ class _WorkerProfilePageState extends ConsumerState<WorkerProfilePage> {
                 Center(
                   child: Text(
                     user.phone,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
-                      color: Color(0xFF6B7280),
+                      color: c.textSecondary,
                     ),
                   ),
                 ),
@@ -317,15 +325,15 @@ class _WorkerProfilePageState extends ConsumerState<WorkerProfilePage> {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 12, vertical: 4),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFFF0E8),
-                      borderRadius: BorderRadius.circular(20),
+                      color: c.softTeal,
+                      borderRadius: BorderRadius.circular(_rPill),
                     ),
                     child: Text(
                       context.l10n.workerRoleBadge,
-                      style: const TextStyle(
-                        fontSize: 12,
+                      style: TextStyle(
+                        fontSize: 12.5,
                         fontWeight: FontWeight.w600,
-                        color: _kOrange,
+                        color: c.primary,
                       ),
                     ),
                   ),
@@ -340,8 +348,8 @@ class _WorkerProfilePageState extends ConsumerState<WorkerProfilePage> {
                       fontSize: 12.5,
                       fontWeight: FontWeight.w500,
                       color: mainSkillName != null
-                          ? const Color(0xFF1A1A1A)
-                          : const Color(0xFF6B7280),
+                          ? c.textPrimary
+                          : c.textSecondary,
                     ),
                   ),
                 ),
@@ -517,48 +525,50 @@ class _ProfileApprovalCard extends ConsumerWidget {
   /// translated. Same mapping as the Profile Completion page's banner.
   (String, Color, Color, IconData) _visual(
     AppLocalizations l10n,
+    AppSemanticColors c,
     String onboardingStatus,
   ) =>
       switch (onboardingStatus) {
         'SUBMITTED_FOR_REVIEW' => (
             l10n.workerOnboardingSubmitted,
-            const Color(0xFFB45309),
-            const Color(0xFFFFFBEB),
+            c.warning,
+            c.warningSurface,
             Icons.hourglass_top_rounded,
           ),
         'CHANGES_REQUIRED' => (
             l10n.workerOnboardingChangesRequired,
-            const Color(0xFFB45309),
-            const Color(0xFFFFF7ED),
+            c.warning,
+            c.warningSurface,
             Icons.edit_note_rounded,
           ),
         'REJECTED' => (
             l10n.bidStatusRejected,
-            const Color(0xFFDC2626),
-            const Color(0xFFFEF2F2),
+            c.error,
+            c.surfaceSubtle,
             Icons.cancel_outlined,
           ),
         'APPROVED' => (
             l10n.workerOnboardingApproved,
-            const Color(0xFF15803D),
-            const Color(0xFFF0FDF4),
+            c.success,
+            c.successSoft,
             Icons.verified_rounded,
           ),
         _ => (
             l10n.workerOnboardingDraft,
-            const Color(0xFF6B7280),
-            const Color(0xFFF1F5F9),
+            c.textSecondary,
+            c.surfaceSubtle,
             Icons.description_outlined,
           ),
       };
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.semanticColors;
     final profile = ref.watch(workerProfileProvider).valueOrNull;
     if (profile == null) return const SizedBox.shrink();
 
     final status = profile.onboardingStatus;
-    final (label, fg, bg, icon) = _visual(context.l10n, status);
+    final (label, fg, bg, icon) = _visual(context.l10n, c, status);
     final reason = status == 'CHANGES_REQUIRED'
         ? profile.changesRequiredReason
         : status == 'REJECTED'
@@ -569,11 +579,9 @@ class _ProfileApprovalCard extends ConsumerWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2)),
-        ],
+        color: c.surface,
+        borderRadius: BorderRadius.circular(_rCard),
+        border: Border.all(color: c.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -582,15 +590,15 @@ class _ProfileApprovalCard extends ConsumerWidget {
             children: [
               Text(
                 context.l10n.workerProfileApproval,
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF1A1A1A)),
+                    color: c.textPrimary),
               ),
               const Spacer(),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
+                decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(_rPill)),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -598,7 +606,7 @@ class _ProfileApprovalCard extends ConsumerWidget {
                     const SizedBox(width: 4),
                     Text(
                       label,
-                      style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: fg),
+                      style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: fg),
                     ),
                   ],
                 ),
@@ -609,7 +617,7 @@ class _ProfileApprovalCard extends ConsumerWidget {
             const SizedBox(height: 10),
             Text(
               reason,
-              style: const TextStyle(fontSize: 12.5, color: Color(0xFF6B7280), height: 1.4),
+              style: TextStyle(fontSize: 12.5, color: c.textSecondary, height: 1.4),
             ),
           ],
           if (status == 'APPROVED') ...[
@@ -629,11 +637,11 @@ class _ProfileApprovalCard extends ConsumerWidget {
                       fontSize: 13.5, fontWeight: FontWeight.w700),
                 ),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: _kOrange,
-                  side: const BorderSide(color: _kOrange),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  foregroundColor: c.primary,
+                  side: BorderSide(color: c.primary),
+                  minimumSize: const Size.fromHeight(_hButton),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(14)),
                 ),
               ),
             ),
@@ -650,11 +658,11 @@ class _ProfileApprovalCard extends ConsumerWidget {
               child: ElevatedButton(
                 onPressed: () => context.push('/worker/profile-completion'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: _kOrange,
-                  foregroundColor: Colors.white,
+                  backgroundColor: c.primary,
+                  foregroundColor: c.onPrimary,
                   elevation: 0,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  minimumSize: const Size.fromHeight(_hButton),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
                 // Was an English label with a hard-coded Urdu line under it;
                 // the app now speaks one language at a time.
@@ -677,6 +685,7 @@ class _ProfileApprovalCard extends ConsumerWidget {
 class _ReviewsSummaryCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.semanticColors;
     final summaryAsync = ref.watch(workerReviewSummaryProvider);
     final reviewsAsync = ref.watch(workerAllReviewsProvider);
 
@@ -686,13 +695,10 @@ class _ReviewsSummaryCard extends ConsumerWidget {
       data: (summary) {
         if (summary.totalReviews == 0) return const SizedBox.shrink();
 
+        // "Highest 5 · Lowest 5" said nothing — the same pair PR #6 took out
+        // of My Reviews. How many gave five is what an Ustaad actually reads.
         final reviews = reviewsAsync.valueOrNull ?? [];
-        final maxRating = reviews.isNotEmpty
-            ? reviews.map((r) => r.rating).reduce((a, b) => a > b ? a : b)
-            : 0;
-        final minRating = reviews.isNotEmpty
-            ? reviews.map((r) => r.rating).reduce((a, b) => a < b ? a : b)
-            : 0;
+        final topCount = reviews.where((r) => r.rating == 5).length;
 
         return GestureDetector(
           onTap: () => Navigator.of(context).push(
@@ -701,16 +707,9 @@ class _ReviewsSummaryCard extends ConsumerWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+              color: c.surface,
+              borderRadius: BorderRadius.circular(_rCard),
+              border: Border.all(color: c.border),
             ),
             child: Row(
               children: [
@@ -718,11 +717,11 @@ class _ReviewsSummaryCard extends ConsumerWidget {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: _kOrange.withValues(alpha: 0.1),
+                    color: c.softTeal,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.star_rounded,
-                      color: _kOrange, size: 22),
+                  child: Icon(Icons.star_rounded,
+                      color: c.primary, size: 22),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -734,26 +733,25 @@ class _ReviewsSummaryCard extends ConsumerWidget {
                           summary.averageRating.toStringAsFixed(1),
                           summary.totalReviews,
                         ),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF1A1A1A),
+                          color: c.textPrimary,
                         ),
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        context.l10n
-                            .reviewsHighestLowest('$maxRating', '$minRating'),
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF6B7280),
+                        context.l10n.reviewsCount(topCount),
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          color: c.textSecondary,
                         ),
                       ),
                     ],
                   ),
                 ),
-                const Icon(Icons.chevron_right_rounded,
-                    size: 20, color: Color(0xFF6B7280)),
+                Icon(Icons.chevron_right_rounded,
+                    size: 20, color: c.textSecondary),
               ],
             ),
           ),
@@ -772,6 +770,7 @@ class _AvatarPickerSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
       child: Column(
@@ -781,17 +780,17 @@ class _AvatarPickerSheet extends StatelessWidget {
             width: 36,
             height: 4,
             decoration: BoxDecoration(
-              color: const Color(0xFFE2E8F0),
+              color: c.border,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
           const SizedBox(height: 16),
           Text(
             context.l10n.profilePhotoTitle,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF1A1A1A),
+              color: c.textPrimary,
             ),
           ),
           const SizedBox(height: 20),
@@ -811,7 +810,7 @@ class _AvatarPickerSheet extends StatelessWidget {
               _AvatarOption(
                 icon: Icons.delete_outline_rounded,
                 label: context.l10n.commonRemove,
-                iconColor: const Color(0xFFEF4444),
+                iconColor: c.error,
                 onTap: () => Navigator.pop(context, _AvatarAction.remove),
               ),
             ],
@@ -837,7 +836,8 @@ class _AvatarOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = iconColor ?? _kOrange;
+    final c = context.semanticColors;
+    final color = iconColor ?? c.primary;
     return GestureDetector(
       onTap: onTap,
       child: Column(
@@ -847,7 +847,7 @@ class _AvatarOption extends StatelessWidget {
             width: 56,
             height: 56,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.08),
+              color: c.softTeal,
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: color, size: 24),
@@ -856,7 +856,7 @@ class _AvatarOption extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 12.5,
               fontWeight: FontWeight.w500,
               color: color,
             ),
@@ -875,12 +875,13 @@ class _InitialsWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Center(
       child: Text(
         initials,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 30,
-          color: Colors.white,
+          color: c.primary,
           fontWeight: FontWeight.w700,
         ),
       ),
@@ -897,13 +898,14 @@ class _SectionLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Text(
       label.toUpperCase(),
-      style: const TextStyle(
-        fontSize: 11,
-        fontWeight: FontWeight.w600,
-        color: Color(0xFF6B7280),
-        letterSpacing: 0.8,
+      style: TextStyle(
+        fontSize: 12.5,
+        fontWeight: FontWeight.w700,
+        color: c.textSecondary,
+        letterSpacing: 0.75,
       ),
     );
   }
@@ -916,17 +918,12 @@ class _SettingsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: c.surface,
+        borderRadius: BorderRadius.circular(_rCard),
+        border: Border.all(color: c.border),
       ),
       child: Column(children: items),
     );
@@ -953,6 +950,7 @@ class _SettingsItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -967,59 +965,58 @@ class _SettingsItem extends StatelessWidget {
                   width: 36,
                   height: 36,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFFF0E8),
+                    color: c.softTeal,
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(icon, size: 18, color: _kOrange),
+                  child: Icon(icon, size: 18, color: c.primary),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Text(
                     label,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
-                      color: Color(0xFF1A1A1A),
+                      color: c.textPrimary,
                     ),
                   ),
                 ),
                 if (trailingText != null) ...[
                   Text(
                     trailingText!,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
-                      color: Color(0xFF6B7280),
+                      color: c.textSecondary,
                     ),
                   ),
                   const SizedBox(width: 6),
                 ],
                 // Icons.chevron_right_rounded declares matchTextDirection, so
                 // it points left on its own in Urdu.
-                const Icon(Icons.chevron_right_rounded,
-                    size: 20, color: Color(0xFF6B7280)),
+                Icon(Icons.chevron_right_rounded,
+                    size: 20, color: c.textSecondary),
               ],
             ),
           ),
         ),
         if (showDivider)
-          const Divider(
+          Divider(
             height: 1,
             indent: 66,
             endIndent: 16,
-            color: Color(0xFFF1F5F9),
+            color: c.border,
           ),
       ],
     );
   }
 }
 
-const _kDeleteRed = Color(0xFFDB6234);
-
 class _DeleteAccountSection extends StatelessWidget {
   final WidgetRef ref;
   const _DeleteAccountSection({required this.ref});
 
   Future<void> _confirmDelete(BuildContext context) async {
+    final c = context.semanticColors;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -1030,19 +1027,19 @@ class _DeleteAccountSection extends StatelessWidget {
         ),
         content: Text(
           context.l10n.deleteAccountConfirmBody,
-          style: const TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
+          style: TextStyle(fontSize: 14, color: c.textSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
             child: Text(context.l10n.commonCancel,
-                style: const TextStyle(color: Color(0xFF6B7280))),
+                style: TextStyle(color: c.textSecondary)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(context.l10n.commonDelete,
-                style: const TextStyle(
-                    color: _kDeleteRed, fontWeight: FontWeight.w700)),
+                style: TextStyle(
+                    color: c.error, fontWeight: FontWeight.w700)),
           ),
         ],
       ),
@@ -1061,7 +1058,7 @@ class _DeleteAccountSection extends StatelessWidget {
           ? (state.error as dynamic).message as String? ?? failedMessage
           : failedMessage;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(msg), backgroundColor: Colors.red.shade700),
+        SnackBar(content: Text(msg), backgroundColor: c.error),
       );
     }
   }
@@ -1075,17 +1072,12 @@ class _DeleteAccountSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: c.surface,
+        borderRadius: BorderRadius.circular(_rCard),
+        border: Border.all(color: c.border),
       ),
       child: Column(
         children: [
@@ -1100,30 +1092,30 @@ class _DeleteAccountSection extends StatelessWidget {
                     width: 36,
                     height: 36,
                     decoration: BoxDecoration(
-                      color: _kDeleteRed.withValues(alpha: 0.1),
+                      color: c.urgentSoft,
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(Icons.delete_forever_rounded,
-                        size: 18, color: _kDeleteRed),
+                    child: Icon(Icons.delete_forever_rounded,
+                        size: 18, color: c.error),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Text(
                       context.l10n.deleteAccountTitle,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
-                        color: _kDeleteRed,
+                        color: c.error,
                       ),
                     ),
                   ),
-                  const Icon(Icons.chevron_right_rounded,
-                      size: 20, color: Color(0xFF6B7280)),
+                  Icon(Icons.chevron_right_rounded,
+                      size: 20, color: c.textSecondary),
                 ],
               ),
             ),
           ),
-          const Divider(height: 1, indent: 66, endIndent: 16, color: Color(0xFFF1F5F9)),
+          Divider(height: 1, indent: 66, endIndent: 16, color: c.border),
           InkWell(
             onTap: _requestByEmail,
             borderRadius: BorderRadius.circular(16),
@@ -1135,25 +1127,25 @@ class _DeleteAccountSection extends StatelessWidget {
                     width: 36,
                     height: 36,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF6B7280).withValues(alpha: 0.08),
+                      color: c.surfaceSubtle,
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(Icons.mail_outline_rounded,
-                        size: 18, color: Color(0xFF6B7280)),
+                    child: Icon(Icons.mail_outline_rounded,
+                        size: 18, color: c.textSecondary),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Text(
                       context.l10n.deleteAccountRequestByEmail,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
-                        color: Color(0xFF6B7280),
+                        color: c.textSecondary,
                       ),
                     ),
                   ),
-                  const Icon(Icons.chevron_right_rounded,
-                      size: 20, color: Color(0xFF6B7280)),
+                  Icon(Icons.chevron_right_rounded,
+                      size: 20, color: c.textSecondary),
                 ],
               ),
             ),
@@ -1171,6 +1163,7 @@ class _LogoutButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return SizedBox(
       width: double.infinity,
       child: OutlinedButton.icon(
@@ -1178,10 +1171,12 @@ class _LogoutButton extends StatelessWidget {
             ref.read(logoutNotifierProvider.notifier).logout(),
         icon: const Icon(Icons.logout_rounded, size: 18),
         label: Text(context.l10n.commonLogout),
+        // Logout is not destructive; Delete Account is. The red outline sat
+        // here while Delete wore the brand orange — exactly backwards.
         style: OutlinedButton.styleFrom(
-          foregroundColor: const Color(0xFFEF4444),
-          side: const BorderSide(color: Color(0xFFEF4444), width: 1.2),
-          padding: const EdgeInsets.symmetric(vertical: 14),
+          foregroundColor: c.textPrimary,
+          side: BorderSide(color: c.border),
+          minimumSize: const Size.fromHeight(_hButton),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),

@@ -5,13 +5,7 @@ import '../../domain/entities/worker_profile_entity.dart';
 import '../providers/worker_providers.dart';
 import '../pages/worker_agreements_page.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
-
-// ── Palette (matches the rest of the worker app) ────────────────────────────
-const _kOrange = Color(0xFFDB6234);
-const _kDark = Color(0xFF1A1A1A);
-const _kGray = Color(0xFF6B7280);
-const _kBorder = Color(0xFFE2E8F0);
-const _kBg = Color(0xFFF9FAFB);
+import '../../../../core/theme/app_semantic_colors.dart';
 
 /// Everything the Ustaad submitted during onboarding, as a sealed record.
 ///
@@ -25,19 +19,20 @@ class WorkerProfileDetailsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.semanticColors;
     final l10n = context.l10n;
     final profileAsync = ref.watch(workerProfileProvider);
 
     return Scaffold(
-      backgroundColor: _kBg,
+      backgroundColor: c.background,
       appBar: AppBar(
-        backgroundColor: _kBg,
+        backgroundColor: c.background,
         elevation: 0,
         scrolledUnderElevation: 0,
         title: Text(
           l10n.workerSubmittedDetails,
-          style: const TextStyle(
-            color: _kDark,
+          style: TextStyle(
+            color: c.textPrimary,
             fontWeight: FontWeight.w700,
             fontSize: 18,
           ),
@@ -45,14 +40,14 @@ class WorkerProfileDetailsPage extends ConsumerWidget {
       ),
       body: profileAsync.when(
         loading: () =>
-            const Center(child: CircularProgressIndicator(color: _kOrange)),
+            Center(child: CircularProgressIndicator(color: c.primary)),
         error: (_, _) => Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: Text(
               l10n.workerProfileLoadFailed,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 13, color: _kGray),
+              style: TextStyle(fontSize: 14, color: c.textSecondary),
             ),
           ),
         ),
@@ -68,6 +63,7 @@ class _Details extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     final l10n = context.l10n;
     final skills = profile.skills;
     final mainTrade = skills.isNotEmpty ? skills.first.categoryName : null;
@@ -186,20 +182,20 @@ class _Details extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 10),
                   child: Row(
                     children: [
-                      const Icon(Icons.gavel_rounded, size: 18, color: _kOrange),
+                      Icon(Icons.gavel_rounded, size: 18, color: c.primary),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
                           l10n.workerAcceptedAgreementsTitle,
-                          style: const TextStyle(
-                            fontSize: 13.5,
+                          style: TextStyle(
+                            fontSize: 14,
                             fontWeight: FontWeight.w600,
-                            color: _kDark,
+                            color: c.textPrimary,
                           ),
                         ),
                       ),
-                      const Icon(Icons.chevron_right_rounded,
-                          size: 20, color: _kGray),
+                      Icon(Icons.chevron_right_rounded,
+                          size: 20, color: c.textSecondary),
                     ],
                   ),
                 ),
@@ -217,23 +213,24 @@ class _ReadOnlyNotice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF5E8E0),
+        color: c.softTeal,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _kOrange.withValues(alpha: 0.3)),
+        border: Border.all(color: c.border),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.lock_outline_rounded, size: 18, color: _kOrange),
+          Icon(Icons.lock_outline_rounded, size: 18, color: c.primary),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               context.l10n.workerDetailsReadOnlyNotice,
-              style: const TextStyle(fontSize: 12.5, color: _kDark, height: 1.4),
+              style: TextStyle(fontSize: 12.5, color: c.textPrimary, height: 1.4),
             ),
           ),
         ],
@@ -249,23 +246,24 @@ class _Card extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: c.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _kBorder),
+        border: Border.all(color: c.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
-            style: const TextStyle(
-              fontSize: 13.5,
+            style: TextStyle(
+              fontSize: 14,
               fontWeight: FontWeight.w700,
-              color: _kDark,
+              color: c.textPrimary,
             ),
           ),
           const SizedBox(height: 10),
@@ -285,6 +283,7 @@ class _Field extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     final shown = (value == null || value!.trim().isEmpty) ? '—' : value!.trim();
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -293,15 +292,15 @@ class _Field extends StatelessWidget {
         children: [
           Text(
             label,
-            style: const TextStyle(fontSize: 11.5, color: _kGray),
+            style: TextStyle(fontSize: 12.5, color: c.textSecondary),
           ),
           const SizedBox(height: 2),
           Text(
             shown,
-            style: const TextStyle(
-              fontSize: 13.5,
+            style: TextStyle(
+              fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: _kDark,
+              color: c.textPrimary,
               height: 1.35,
             ),
           ),
@@ -317,18 +316,19 @@ class _SkillChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFFF5E8E0),
-        borderRadius: BorderRadius.circular(20),
+        color: c.softTeal,
+        borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
         label,
-        style: const TextStyle(
-          fontSize: 12,
+        style: TextStyle(
+          fontSize: 12.5,
           fontWeight: FontWeight.w600,
-          color: _kOrange,
+          color: c.primary,
         ),
       ),
     );
@@ -342,6 +342,7 @@ class _PhotoAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Column(
       children: [
         GestureDetector(
@@ -353,19 +354,19 @@ class _PhotoAvatar extends StatelessWidget {
             height: 104,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Colors.white,
-              border: Border.all(color: _kBorder, width: 2),
+              color: c.surface,
+              border: Border.all(color: c.border, width: 2),
             ),
             clipBehavior: Clip.antiAlias,
             child: url == null
-                ? const Icon(Icons.person_rounded, size: 44, color: _kGray)
+                ? Icon(Icons.person_rounded, size: 44, color: c.textSecondary)
                 : Image.network(
                     url!,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => const Icon(
+                    errorBuilder: (_, _, _) => Icon(
                       Icons.person_rounded,
                       size: 44,
-                      color: _kGray,
+                      color: c.textSecondary,
                     ),
                   ),
           ),
@@ -373,7 +374,7 @@ class _PhotoAvatar extends StatelessWidget {
         const SizedBox(height: 6),
         Text(
           label,
-          style: const TextStyle(fontSize: 11.5, color: _kGray),
+          style: TextStyle(fontSize: 12.5, color: c.textSecondary),
         ),
       ],
     );
@@ -387,33 +388,34 @@ class _DocumentThumb extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 11.5, color: _kGray)),
+        Text(label, style: TextStyle(fontSize: 12.5, color: c.textSecondary)),
         const SizedBox(height: 6),
         GestureDetector(
           onTap: url == null ? null : () => _openFullScreen(context, url!, label),
           child: Container(
             height: 96,
             decoration: BoxDecoration(
-              color: _kBg,
+              color: c.background,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: _kBorder),
+              border: Border.all(color: c.border),
             ),
             clipBehavior: Clip.antiAlias,
             child: url == null
-                ? const Center(
+                ? Center(
                     child: Icon(Icons.image_not_supported_outlined,
-                        size: 22, color: _kGray),
+                        size: 22, color: c.textSecondary),
                   )
                 : Image.network(
                     url!,
                     fit: BoxFit.cover,
                     width: double.infinity,
-                    errorBuilder: (_, _, _) => const Center(
+                    errorBuilder: (_, _, _) => Center(
                       child: Icon(Icons.broken_image_outlined,
-                          size: 22, color: _kGray),
+                          size: 22, color: c.textSecondary),
                     ),
                   ),
           ),
@@ -432,6 +434,18 @@ void _openFullScreen(BuildContext context, String url, String label) {
 }
 
 /// A submitted image at full size, pinchable and pannable.
+///
+/// DELIBERATELY NOT ON THE SEMANTIC TOKENS — the only widget in this file that
+/// is not. A photo lightbox wants a fixed dark ground and light chrome in BOTH
+/// themes, so that the CNIC scan is judged against neutral surroundings rather
+/// than a cream page. `background`/`surface` flip with the theme and would put
+/// a light ground behind the photo in light mode; `textPrimary` is near-white
+/// in the dark palette, so it cannot stand in for the ground either.
+///
+/// The palette has no scrim/lightbox token, and inventing one here — or fading
+/// an existing colour — is exactly what the colour rule forbids. Adding
+/// `scrim` + `onScrim` to BOTH palettes is a one-line decision for Anzal; until
+/// then this stays as it was rather than being quietly mis-tokenised.
 class _FullScreenImagePage extends StatelessWidget {
   final String url;
   final String label;

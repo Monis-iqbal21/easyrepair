@@ -7,14 +7,17 @@ import '../../domain/entities/worker_review_entity.dart';
 import '../providers/worker_review_providers.dart';
 import '../../../../core/errors/failure_messages.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
+import '../../../../core/theme/app_semantic_colors.dart';
 
-// ── Palette (matches existing worker UI) ─────────────────────────────────────
-const _kOrange = Color(0xFFDB6234);
-const _kDark   = Color(0xFF1A1A1A);
-const _kGray   = Color(0xFF6B7280);
-const _kLight  = Color(0xFF94A3B8);
-const _kBorder = Color(0xFFE2E8F0);
-const _kBg     = Color(0xFFF9FAFB);
+// Every colour on this screen now comes from `context.semanticColors`. The six
+// `_k*` constants that used to sit here — including EasyRepair's orange
+// `#DB6234`, which is not in the Ustaad prototype at all — are gone, and so are
+// the two `BoxShadow`s: a card in this design is `surface` + radius 16 + a 1px
+// hairline, nothing else.
+
+// Shared shape values, matching Home and New Jobs.
+const double _rCard = 16;
+const double _rPill = 999;
 
 class WorkerReviewsPage extends ConsumerWidget {
   const WorkerReviewsPage({super.key});
@@ -23,16 +26,17 @@ class WorkerReviewsPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final reviewsAsync = ref.watch(workerAllReviewsProvider);
     final summaryAsync = ref.watch(workerReviewSummaryProvider);
+    final c = context.semanticColors;
 
     return Scaffold(
-      backgroundColor: _kBg,
+      backgroundColor: c.background,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: c.surface,
         elevation: 0,
-        surfaceTintColor: Colors.white,
+        surfaceTintColor: c.surface,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded,
-              size: 18, color: _kDark),
+          icon: Icon(Icons.arrow_back_ios_new_rounded,
+              size: 18, color: c.textPrimary),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
@@ -40,17 +44,19 @@ class WorkerReviewsPage extends ConsumerWidget {
           style: TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w700,
-            color: _kDark,
+            color: c.textPrimary,
           ),
         ),
         centerTitle: false,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
-          child: Container(height: 1, color: _kBorder),
+          child: Container(height: 1, color: c.border),
         ),
       ),
       body: reviewsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => Center(
+          child: CircularProgressIndicator(color: c.primary),
+        ),
         error: (err, _) => _ErrorState(
           message: failureMessage(context.l10n, err),
           onRetry: () => ref.invalidate(workerAllReviewsProvider),
@@ -97,27 +103,34 @@ class _SummaryBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final maxRating = reviews.isNotEmpty
-        ? reviews.map((r) => r.rating).reduce((a, b) => a > b ? a : b)
-        : 0;
-    final minRating = reviews.isNotEmpty
-        ? reviews.map((r) => r.rating).reduce((a, b) => a < b ? a : b)
-        : 0;
+    final c = context.semanticColors;
+
+    // Replaces the old Avg / Max / Min row. "Max 5, Min 5" said nothing: with
+    // two reviews it is noise, and with two hundred it only reports that
+    // somebody once gave five and somebody once gave one. A count per star is
+    // the shape of the reputation, which is what an Ustaad actually reads.
+    //
+    // Counted from the list this page already has — exactly the same source the
+    // old Max/Min used, so this is no less trustworthy than what it replaces.
+    // The request sends no `limit`, but whether the backend applies one of its
+    // own is UNKNOWN, so `summary.totalReviews` stays the number of record and
+    // the bars are only ever drawn relative to each other.
+    final counts = List<int>.filled(5, 0);
+    for (final r in reviews) {
+      // clamped because a malformed row must never throw a RangeError on a
+      // screen whose whole job is to display what the backend sent.
+      final i = (r.rating < 1 ? 1 : (r.rating > 5 ? 5 : r.rating)) - 1;
+      counts[i] = counts[i] + 1;
+    }
+    final busiest = counts.reduce((a, b) => a > b ? a : b);
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 4),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: _kBorder),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: c.surface,
+        borderRadius: BorderRadius.circular(_rCard),
+        border: Border.all(color: c.border),
       ),
       child: Column(
         children: [
@@ -129,10 +142,10 @@ class _SummaryBanner extends StatelessWidget {
                 children: [
                   Text(
                     summary.averageRating.toStringAsFixed(1),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 36,
-                      fontWeight: FontWeight.w800,
-                      color: _kDark,
+                      fontWeight: FontWeight.w700,
+                      color: c.textPrimary,
                       height: 1,
                     ),
                   ),
@@ -141,7 +154,7 @@ class _SummaryBanner extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     context.l10n.reviewsCount(summary.totalReviews),
-                    style: const TextStyle(fontSize: 12, color: _kGray),
+                    style: TextStyle(fontSize: 12.5, color: c.textSecondary),
                   ),
                 ],
               ),
@@ -150,13 +163,13 @@ class _SummaryBanner extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.verified_rounded, color: _kOrange, size: 28),
-                    SizedBox(height: 6),
+                    Icon(Icons.verified_rounded, color: c.primary, size: 28),
+                    const SizedBox(height: 6),
                     Text(
                       context.l10n.reviewsSubtitle,
                       style: TextStyle(
-                        fontSize: 12,
-                        color: _kGray,
+                        fontSize: 12.5,
+                        color: c.textSecondary,
                         height: 1.4,
                       ),
                     ),
@@ -167,16 +180,18 @@ class _SummaryBanner extends StatelessWidget {
           ),
           if (reviews.isNotEmpty) ...[
             const SizedBox(height: 14),
-            Container(height: 1, color: _kBorder),
+            Container(height: 1, color: c.border),
             const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _RatingStat(label: context.l10n.reviewsAvg, value: summary.averageRating.toStringAsFixed(1)),
-                _RatingStat(label: context.l10n.reviewsMax, value: '$maxRating'),
-                _RatingStat(label: context.l10n.reviewsMin, value: '$minRating'),
-              ],
-            ),
+            // 5 at the top, 1 at the bottom — the order everyone reads a
+            // rating breakdown in.
+            for (var star = 5; star >= 1; star--) ...[
+              _StarBreakdownRow(
+                star: star,
+                count: counts[star - 1],
+                busiest: busiest,
+              ),
+              if (star > 1) const SizedBox(height: 6),
+            ],
           ],
         ],
       ),
@@ -184,25 +199,67 @@ class _SummaryBanner extends StatelessWidget {
   }
 }
 
-class _RatingStat extends StatelessWidget {
-  final String label;
-  final String value;
-  const _RatingStat({required this.label, required this.value});
+/// One row of the breakdown: `5 ★ ▓▓▓▓▓░░░░░ 2`.
+///
+/// The bar is drawn relative to the busiest star, not to the total, so a
+/// perfect record still fills its row instead of showing five stubs.
+class _StarBreakdownRow extends StatelessWidget {
+  final int star;
+  final int count;
+  final int busiest;
+
+  const _StarBreakdownRow({
+    required this.star,
+    required this.count,
+    required this.busiest,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    final c = context.semanticColors;
+    final fraction = busiest == 0 ? 0.0 : count / busiest;
+
+    return Row(
       children: [
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
-            color: _kDark,
+        SizedBox(
+          width: 14,
+          child: Text(
+            '$star',
+            textAlign: TextAlign.end,
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w600,
+              color: c.textSecondary,
+            ),
           ),
         ),
-        const SizedBox(height: 2),
-        Text(label, style: const TextStyle(fontSize: 11, color: _kGray)),
+        const SizedBox(width: 4),
+        Icon(Icons.star_rounded, size: 13, color: c.warning),
+        const SizedBox(width: 10),
+        Expanded(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(_rPill),
+            child: LinearProgressIndicator(
+              value: fraction,
+              minHeight: 7,
+              backgroundColor: c.surfaceSubtle,
+              valueColor: AlwaysStoppedAnimation<Color>(c.primary),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        SizedBox(
+          width: 22,
+          child: Text(
+            '$count',
+            textAlign: TextAlign.end,
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w600,
+              color: count == 0 ? c.textSecondary : c.textPrimary,
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -216,108 +273,104 @@ class _ReviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return GestureDetector(
+      // Unchanged: the card still opens the booking it belongs to, and still
+      // only when there is a booking id to open.
       onTap: review.bookingId != null
           ? () => context.push('/worker/job/${review.bookingId}')
           : null,
       child: Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _kBorder),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ── Top: stars + date ──────────────────────────────────────
-          Row(
-            children: [
-              _StarRow(rating: review.rating),
-              const Spacer(),
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: c.surface,
+          borderRadius: BorderRadius.circular(_rCard),
+          border: Border.all(color: c.border),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Top: stars + date ──────────────────────────────────────
+            Row(
+              children: [
+                _StarRow(rating: review.rating),
+                const Spacer(),
+                Text(
+                  DateFormat('MMM d, yyyy').format(review.createdAt),
+                  style: TextStyle(fontSize: 12.5, color: c.textSecondary),
+                ),
+              ],
+            ),
+
+            // ── Comment ────────────────────────────────────────────────
+            if (review.comment != null && review.comment!.isNotEmpty) ...[
+              const SizedBox(height: 10),
               Text(
-                DateFormat('MMM d, yyyy').format(review.createdAt),
-                style: const TextStyle(fontSize: 11, color: _kLight),
+                review.comment!,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: c.textPrimary,
+                  height: 1.5,
+                ),
               ),
             ],
-          ),
 
-          // ── Comment ────────────────────────────────────────────────
-          if (review.comment != null && review.comment!.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Container(height: 1, color: c.border),
             const SizedBox(height: 10),
-            Text(
-              review.comment!,
-              style: const TextStyle(
-                fontSize: 13.5,
-                color: Color(0xFF374151),
-                height: 1.5,
-              ),
+
+            // ── Footer: client + category ──────────────────────────────
+            Row(
+              children: [
+                if (review.clientName != null &&
+                    review.clientName!.isNotEmpty) ...[
+                  Icon(Icons.person_outline_rounded,
+                      size: 14, color: c.textSecondary),
+                  const SizedBox(width: 4),
+                  Text(
+                    review.clientName!,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: c.textSecondary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    width: 3,
+                    height: 3,
+                    decoration: BoxDecoration(
+                      color: c.textSecondary,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                Flexible(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: c.softTeal,
+                      borderRadius: BorderRadius.circular(_rPill),
+                    ),
+                    child: Text(
+                      review.serviceCategory,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: c.primary,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
-
-          const SizedBox(height: 12),
-          const Divider(height: 1, color: Color(0xFFF1F5F9)),
-          const SizedBox(height: 10),
-
-          // ── Footer: client + category ──────────────────────────────
-          Row(
-            children: [
-              if (review.clientName != null &&
-                  review.clientName!.isNotEmpty) ...[
-                const Icon(Icons.person_outline_rounded,
-                    size: 13, color: _kLight),
-                const SizedBox(width: 4),
-                Text(
-                  review.clientName!,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: _kGray,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  width: 3,
-                  height: 3,
-                  decoration: const BoxDecoration(
-                    color: _kLight,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 8),
-              ],
-              Flexible(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: _kOrange.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    review.serviceCategory,
-                    style: const TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      color: _kOrange,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+        ),
       ),
     );
   }
@@ -331,13 +384,14 @@ class _StarRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: List.generate(5, (i) {
         return Icon(
           i < rating ? Icons.star_rounded : Icons.star_outline_rounded,
           size: 16,
-          color: i < rating ? const Color(0xFFF59E0B) : const Color(0xFFD1D5DB),
+          color: i < rating ? c.warning : c.border,
         );
       }),
     );
@@ -351,6 +405,7 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(40),
@@ -361,13 +416,13 @@ class _EmptyState extends StatelessWidget {
               width: 72,
               height: 72,
               decoration: BoxDecoration(
-                color: const Color(0xFFF1F5F9),
+                color: c.softTeal,
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.star_outline_rounded,
                 size: 36,
-                color: Color(0xFFCBD5E1),
+                color: c.primary,
               ),
             ),
             const SizedBox(height: 20),
@@ -376,15 +431,15 @@ class _EmptyState extends StatelessWidget {
               style: TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.w700,
-                color: _kDark,
+                color: c.textPrimary,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               context.l10n.reviewsEmptyHint,
               style: TextStyle(
-                fontSize: 13,
-                color: _kGray,
+                fontSize: 14,
+                color: c.textSecondary,
                 height: 1.5,
               ),
               textAlign: TextAlign.center,
@@ -405,30 +460,25 @@ class _ErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(40),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline_rounded,
-                size: 48, color: Color(0xFFCBD5E1)),
+            Icon(Icons.error_outline_rounded, size: 48, color: c.textSecondary),
             const SizedBox(height: 12),
             Text(
               message,
-              style: const TextStyle(color: _kGray, fontSize: 14),
+              style: TextStyle(color: c.textSecondary, fontSize: 14),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
+            // No colours here: AppTheme's ElevatedButton theme already resolves
+            // background and foreground from the same palette.
             ElevatedButton(
               onPressed: onRetry,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _kOrange,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10)),
-              ),
               child: Text(context.l10n.commonRetry),
             ),
           ],

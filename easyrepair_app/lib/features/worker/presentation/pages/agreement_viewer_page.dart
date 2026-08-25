@@ -6,14 +6,7 @@ import '../providers/worker_providers.dart';
 import '../utils/agreement_labels.dart';
 import '../../../../core/errors/failure_messages.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
-
-// ── Palette (matches the rest of the worker app) ────────────────────────────
-const _kOrange = Color(0xFFDB6234);
-const _kDark = Color(0xFF1A1A1A);
-const _kGray = Color(0xFF6B7280);
-const _kBorder = Color(0xFFE2E8F0);
-const _kBg = Color(0xFFF9FAFB);
-const _kRed = Color(0xFFDC2626);
+import '../../../../core/theme/app_semantic_colors.dart';
 
 /// The one in-app reader for an approved HandyGo agreement.
 ///
@@ -51,6 +44,7 @@ class _AgreementViewerPageState extends ConsumerState<AgreementViewerPage> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     final templatesAsync = ref.watch(agreementTemplatesProvider);
 
     return PopScope(
@@ -62,27 +56,27 @@ class _AgreementViewerPageState extends ConsumerState<AgreementViewerPage> {
         Navigator.of(context).pop(_evidence);
       },
       child: Scaffold(
-        backgroundColor: _kBg,
+        backgroundColor: c.background,
         appBar: AppBar(
-          backgroundColor: _kBg,
+          backgroundColor: c.background,
           elevation: 0,
           scrolledUnderElevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: _kDark),
+            icon: Icon(Icons.arrow_back, color: c.textPrimary),
             onPressed: () => Navigator.of(context).pop(_evidence),
           ),
           title: Text(
             context.l10n.agreementViewerTitle,
-            style: const TextStyle(
-              color: _kDark,
+            style: TextStyle(
+              color: c.textPrimary,
               fontWeight: FontWeight.w700,
               fontSize: 18,
             ),
           ),
         ),
         body: templatesAsync.when(
-          loading: () => const Center(
-            child: CircularProgressIndicator(color: _kOrange),
+          loading: () => Center(
+            child: CircularProgressIndicator(color: c.primary),
           ),
           error: (err, _) => _ErrorState(
             message: failureMessage(
@@ -122,6 +116,7 @@ class _AgreementBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     final l10n = context.l10n;
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
@@ -131,10 +126,10 @@ class _AgreementBody extends StatelessWidget {
           // Backend-authored title — shown as-is, never translated.
           Text(
             template.title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 17,
               fontWeight: FontWeight.w700,
-              color: _kDark,
+              color: c.textPrimary,
               height: 1.35,
             ),
           ),
@@ -166,16 +161,16 @@ class _AgreementBody extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: _kBorder),
+              color: c.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: c.border),
             ),
             child: SelectableText(
               // The complete approved legal body, verbatim.
               template.contentText,
-              style: const TextStyle(
-                fontSize: 13,
-                color: _kDark,
+              style: TextStyle(
+                fontSize: 14,
+                color: c.textPrimary,
                 height: 1.6,
               ),
             ),
@@ -195,25 +190,26 @@ class _LanguageNotice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF5E8E0),
+        color: c.softTeal,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _kOrange.withValues(alpha: 0.3)),
+        border: Border.all(color: c.border),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.info_outline_rounded, size: 18, color: _kOrange),
+          Icon(Icons.info_outline_rounded, size: 18, color: c.primary),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               context.l10n.agreementLanguageNotice,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12.5,
-                color: Color(0xFF7C3A16),
+                color: c.primary,
                 height: 1.45,
               ),
             ),
@@ -230,19 +226,20 @@ class _Chip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: c.surface,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: _kBorder),
+        border: Border.all(color: c.border),
       ),
       child: Text(
         label,
-        style: const TextStyle(
-          fontSize: 11.5,
+        style: TextStyle(
+          fontSize: 12.5,
           fontWeight: FontWeight.w600,
-          color: _kGray,
+          color: c.textSecondary,
         ),
       ),
     );
@@ -256,29 +253,29 @@ class _ErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline_rounded, size: 36, color: _kRed),
+            Icon(Icons.error_outline_rounded, size: 36, color: c.error),
             const SizedBox(height: 12),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 13.5, color: _kGray, height: 1.5),
+              style: TextStyle(fontSize: 14, color: c.textSecondary, height: 1.5),
             ),
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: onRetry,
               style: ElevatedButton.styleFrom(
-                backgroundColor: _kOrange,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+                minimumSize: const Size(0, 52),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(14),
                 ),
               ),
               child: Text(context.l10n.commonRetry),

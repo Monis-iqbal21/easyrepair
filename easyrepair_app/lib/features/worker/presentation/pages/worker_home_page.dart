@@ -21,6 +21,7 @@ import '../../domain/entities/category_entity.dart';
 import '../../domain/entities/worker_review_entity.dart';
 import '../providers/worker_providers.dart';
 import '../providers/worker_review_providers.dart';
+import 'earning_history_page.dart';
 import '../utils/worker_status_labels.dart';
 import '../widgets/worker_bottom_nav_bar.dart';
 import '../widgets/profile_completion_modal.dart';
@@ -870,11 +871,14 @@ class _AvailabilityCard extends ConsumerWidget {
 // `--accT`, a 16/700 title, a 14px supporting line, `min-height: 96`.
 //
 // "New Complaints" inherits the destination the full-width CTA button used to
-// own — `context.go('/worker/new-jobs')`, unchanged. "Kamai" is deliberately
-// NOT tappable: the earnings screen has no named route (it is pushed from
-// `worker_profile_page.dart:402`), so giving this tile a tap would be adding a
-// navigation target, which is not this pass's job. One line turns it on when
-// Anzal says so.
+// own — `context.go('/worker/new-jobs')`, unchanged.
+//
+// "Kamai" opens the earnings screen the same way Profile already does:
+// `Navigator.push(MaterialPageRoute(builder: (_) => const EarningHistoryPage()))`,
+// which is the exact call at `worker_profile_page.dart:400`. It is deliberately
+// NOT a new GoRouter route — `EarningHistoryPage` has never had one, and adding
+// a route entry would be changing navigation structure rather than reusing it.
+// Approved by Anzal on 25 Aug after he found the tile did nothing.
 
 class _QuickTiles extends StatelessWidget {
   final WorkerProfileEntity profile;
@@ -907,6 +911,11 @@ class _QuickTiles extends StatelessWidget {
               icon: Icons.payments_outlined,
               title: l10n.workerTodaysEarnings,
               subtitle: formatPkr(profile.stats.todayEarnings),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const EarningHistoryPage(),
+                ),
+              ),
             ),
           ),
         ],

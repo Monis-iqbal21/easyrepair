@@ -3,13 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
+import '../../../../core/theme/app_semantic_colors.dart';
 import '../../../../core/utils/support_contact.dart';
-
-const _kOrange = Color(0xFFDB6234);
-const _kDark = Color(0xFF1A1A1A);
-const _kGray = Color(0xFF6B7280);
-const _kBg = Color(0xFFF9FAFB);
-const _kRed = Color(0xFFEF4444);
 
 /// Full-screen lock for `WorkerStatus.SUSPENDED` — the ONLY page a suspended
 /// Ustaad can ever see.
@@ -31,10 +26,11 @@ class WorkerSuspendedPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.semanticColors;
     return PopScope(
       canPop: false,
       child: Scaffold(
-        backgroundColor: _kBg,
+        backgroundColor: c.background,
         body: SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 28),
@@ -45,23 +41,22 @@ class WorkerSuspendedPage extends ConsumerWidget {
                   width: 84,
                   height: 84,
                   decoration: BoxDecoration(
-                    color: _kRed.withValues(alpha: 0.1),
+                    // The tint that pairs with `error`, straight from the
+                    // palette — not `error` faded, which is not a colour the
+                    // palette owns.
+                    color: c.urgentSoft,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
-                    Icons.block_rounded,
-                    color: _kRed,
-                    size: 42,
-                  ),
+                  child: Icon(Icons.block_rounded, color: c.error, size: 42),
                 ),
                 const SizedBox(height: 24),
                 Text(
                   context.l10n.workerSuspendedMessage,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 15.5,
                     height: 1.5,
-                    color: _kDark,
+                    color: c.textPrimary,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -73,15 +68,13 @@ class WorkerSuspendedPage extends ConsumerWidget {
                     icon: const Icon(Icons.call_outlined, size: 18),
                     label: Text(context.l10n.workerSuspendedContactSupport),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: _kOrange,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      minimumSize: const Size.fromHeight(52),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
                       textStyle: const TextStyle(
                         fontSize: 15,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
@@ -95,15 +88,15 @@ class WorkerSuspendedPage extends ConsumerWidget {
                     icon: const Icon(Icons.logout_rounded, size: 18),
                     label: Text(context.l10n.commonLogout),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: _kGray,
-                      side: const BorderSide(color: Color(0xFFE2E8F0), width: 1.2),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      foregroundColor: c.textPrimary,
+                      side: BorderSide(color: c.border),
+                      minimumSize: const Size.fromHeight(52),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
                       textStyle: const TextStyle(
                         fontSize: 15,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),

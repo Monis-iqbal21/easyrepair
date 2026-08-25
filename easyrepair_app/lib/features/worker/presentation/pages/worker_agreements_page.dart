@@ -9,16 +9,9 @@ import '../../domain/entities/agreement_template_entity.dart';
 import '../providers/worker_providers.dart';
 import '../utils/agreement_labels.dart';
 import '../../../../core/errors/failure_messages.dart';
+import '../../../../core/theme/app_semantic_colors.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
 import '../../../../l10n/app_localizations.dart';
-
-// ── Palette (matches the rest of the worker app) ────────────────────────────
-const _kOrange = Color(0xFFDB6234);
-const _kDark = Color(0xFF1A1A1A);
-const _kGray = Color(0xFF6B7280);
-const _kBorder = Color(0xFFE2E8F0);
-const _kBg = Color(0xFFF9FAFB);
-const _kRed = Color(0xFFDC2626);
 
 /// The Ustaad's own legal history: every agreement they have permanently
 /// accepted, exactly as it was sealed.
@@ -99,19 +92,21 @@ class _WorkerAgreementsPageState extends ConsumerState<WorkerAgreementsPage> {
   }
 
   void _snack(String message, {bool isError = false}) {
+    final c = context.semanticColors;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: isError ? _kRed : _kDark,
+        backgroundColor: isError ? c.error : c.textPrimary,
         behavior: SnackBarBehavior.floating,
       ),
     );
   }
 
   void _view(AcceptedAgreementEntity record) {
+    final c = context.semanticColors;
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: c.surface,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -128,18 +123,19 @@ class _WorkerAgreementsPageState extends ConsumerState<WorkerAgreementsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     final recordsAsync = ref.watch(myAgreementsProvider);
 
     return Scaffold(
-      backgroundColor: _kBg,
+      backgroundColor: c.background,
       appBar: AppBar(
-        backgroundColor: _kBg,
+        backgroundColor: c.background,
         elevation: 0,
         scrolledUnderElevation: 0,
         title: Text(
           context.l10n.workerAcceptedAgreementsTitle,
-          style: const TextStyle(
-            color: _kDark,
+          style: TextStyle(
+            color: c.textPrimary,
             fontWeight: FontWeight.w700,
             fontSize: 18,
           ),
@@ -147,7 +143,7 @@ class _WorkerAgreementsPageState extends ConsumerState<WorkerAgreementsPage> {
       ),
       body: recordsAsync.when(
         loading: () =>
-            const Center(child: CircularProgressIndicator(color: _kOrange)),
+            Center(child: CircularProgressIndicator(color: c.primary)),
         error: (err, _) => Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
@@ -161,7 +157,7 @@ class _WorkerAgreementsPageState extends ConsumerState<WorkerAgreementsPage> {
                     fallback: context.l10n.agreementsLoadFailed,
                   ),
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 13.5, color: _kGray),
+                  style: TextStyle(fontSize: 14, color: c.textSecondary),
                 ),
                 const SizedBox(height: 12),
                 TextButton(
@@ -180,7 +176,7 @@ class _WorkerAgreementsPageState extends ConsumerState<WorkerAgreementsPage> {
                 child: Text(
                   context.l10n.workerAcceptedAgreementsEmpty,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 13.5, color: _kGray),
+                  style: TextStyle(fontSize: 14, color: c.textSecondary),
                 ),
               ),
             );
@@ -216,14 +212,15 @@ class _AcceptedAgreementCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     final l10n = context.l10n;
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: _kBorder),
+        color: c.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: c.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -231,34 +228,34 @@ class _AcceptedAgreementCard extends StatelessWidget {
           // Backend-authored title, frozen at acceptance time.
           Text(
             record.title,
-            style: const TextStyle(
-              fontSize: 13.5,
+            style: TextStyle(
+              fontSize: 14,
               fontWeight: FontWeight.w700,
-              color: _kDark,
+              color: c.textPrimary,
               height: 1.35,
             ),
           ),
           const SizedBox(height: 6),
           Text(
             l10n.workerAgreementVersion(record.version),
-            style: const TextStyle(fontSize: 11.5, color: _kGray),
+            style: TextStyle(fontSize: 12.5, color: c.textSecondary),
           ),
           Text(
             l10n.agreementLanguageChip(
               agreementLocaleLabel(l10n, record.agreementLocale),
             ),
-            style: const TextStyle(fontSize: 11.5, color: _kGray),
+            style: TextStyle(fontSize: 12.5, color: c.textSecondary),
           ),
           if (record.applicableTrade != null)
             Text(
               l10n.agreementTradeChip(
                 tradeLabel(l10n, record.applicableTrade!),
               ),
-              style: const TextStyle(fontSize: 11.5, color: _kGray),
+              style: TextStyle(fontSize: 12.5, color: c.textSecondary),
             ),
           Text(
             l10n.agreementAcceptedOn(formatAgreementDate(l10n, record.acceptedAt)),
-            style: const TextStyle(fontSize: 11.5, color: _kGray),
+            style: TextStyle(fontSize: 12.5, color: c.textSecondary),
           ),
           const SizedBox(height: 10),
           Row(
@@ -270,12 +267,12 @@ class _AcceptedAgreementCard extends StatelessWidget {
               ),
               const SizedBox(width: 18),
               if (downloading)
-                const SizedBox(
+                SizedBox(
                   width: 16,
                   height: 16,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: _kOrange,
+                    color: c.primary,
                   ),
                 )
               else
@@ -300,19 +297,20 @@ class _Action extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return GestureDetector(
       onTap: onTap,
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 15, color: _kOrange),
+          Icon(icon, size: 15, color: c.primary),
           const SizedBox(width: 6),
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12.5,
               fontWeight: FontWeight.w700,
-              color: _kOrange,
+              color: c.primary,
             ),
           ),
         ],
@@ -335,6 +333,7 @@ class _AcceptedAgreementSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     final l10n = context.l10n;
     return SafeArea(
       child: Padding(
@@ -348,7 +347,7 @@ class _AcceptedAgreementSheet extends StatelessWidget {
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: _kBorder,
+                  color: c.border,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -356,10 +355,10 @@ class _AcceptedAgreementSheet extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               record.title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
-                color: _kDark,
+                color: c.textPrimary,
                 height: 1.35,
               ),
             ),
@@ -391,12 +390,9 @@ class _AcceptedAgreementSheet extends StatelessWidget {
                 icon: const Icon(Icons.download_outlined, size: 18),
                 label: Text(l10n.agreementDownload),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: _kOrange,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  minimumSize: const Size.fromHeight(52),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(14),
                   ),
                 ),
               ),
@@ -414,11 +410,12 @@ class _Row extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
       child: Text(
         label,
-        style: const TextStyle(fontSize: 12.5, color: _kGray, height: 1.45),
+        style: TextStyle(fontSize: 12.5, color: c.textSecondary, height: 1.45),
       ),
     );
   }

@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../../core/theme/app_semantic_colors.dart';
 import '../../domain/entities/worker_profile_entity.dart';
 import '../../domain/entities/agreement_template_entity.dart';
 import '../providers/worker_providers.dart';
@@ -16,16 +17,6 @@ import '../../../../core/l10n/l10n_extensions.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../core/errors/failure_messages.dart';
 import '../../../../core/permissions/media_permission_helper.dart';
-
-// ── Palette (matches the rest of the worker app) ────────────────────────────
-const _kOrange = Color(0xFFDB6234);
-const _kDark = Color(0xFF1A1A1A);
-const _kGray = Color(0xFF6B7280);
-const _kLight = Color(0xFF94A3B8);
-const _kBorder = Color(0xFFE2E8F0);
-const _kBg = Color(0xFFF9FAFB);
-const _kRed = Color(0xFFDC2626);
-const _kGreen = Color(0xFF22C55E);
 
 // Missing-field keys used by both the validation set and each widget's
 // error lookup — kept as constants so a typo can't silently break a check.
@@ -234,9 +225,10 @@ class _WorkerProfileCompletionPageState
       ];
 
   Future<ImageSource?> _chooseImageSource() {
+    final c = context.semanticColors;
     return showModalBottomSheet<ImageSource>(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: c.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -249,7 +241,7 @@ class _WorkerProfileCompletionPageState
               width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: const Color(0xFFE2E8F0),
+                color: c.border,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -257,7 +249,7 @@ class _WorkerProfileCompletionPageState
             for (final (source, icon, label)
                 in _imageSourceOptions(context.l10n))
               ListTile(
-                leading: Icon(icon, color: _kOrange),
+                leading: Icon(icon, color: c.primary),
                 title: Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                 onTap: () => Navigator.pop(ctx, source),
               ),
@@ -274,6 +266,7 @@ class _WorkerProfileCompletionPageState
     String fieldKey, {
     ImageSource? forceSource,
   }) async {
+    final c = context.semanticColors;
     // The profile photo doubles as the identity-verification image, so it is
     // taken with the camera rather than picked from the gallery.
     final source = forceSource ?? await _chooseImageSource();
@@ -299,7 +292,7 @@ class _WorkerProfileCompletionPageState
         SnackBar(
           content: Text(
               failureMessage(context.l10n, err, fallback: context.l10n.workerUploadFailed)),
-          backgroundColor: _kRed,
+          backgroundColor: c.error,
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -408,6 +401,7 @@ class _WorkerProfileCompletionPageState
     WorkerProfileEntity profile,
     List<AgreementTemplateEntity> templates,
   ) async {
+    final c = context.semanticColors;
     if (_submitting) return; // hard guard against a double tap
 
     final missing = _computeMissingFields(profile, templates);
@@ -422,7 +416,7 @@ class _WorkerProfileCompletionPageState
                 ? context.l10n.agreementsAllThreeRequired
                 : context.l10n.workerCompleteHighlightedFields,
           ),
-          backgroundColor: _kRed,
+          backgroundColor: c.error,
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -470,7 +464,7 @@ class _WorkerProfileCompletionPageState
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(context.l10n.workerProfileSubmitted),
-          backgroundColor: _kGreen,
+          backgroundColor: c.success,
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -483,11 +477,12 @@ class _WorkerProfileCompletionPageState
   }
 
   void _showError(String fallback) {
+    final c = context.semanticColors;
     final err = ref.read(profileCompletionNotifierProvider).error;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(failureMessage(context.l10n, err, fallback: fallback)),
-        backgroundColor: _kRed,
+        backgroundColor: c.error,
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -495,6 +490,7 @@ class _WorkerProfileCompletionPageState
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     final profileAsync = ref.watch(workerProfileProvider);
     final templatesAsync = ref.watch(agreementTemplatesProvider);
     final templates =
@@ -503,20 +499,20 @@ class _WorkerProfileCompletionPageState
         ref.watch(profileCompletionNotifierProvider).isLoading;
 
     return Scaffold(
-      backgroundColor: _kBg,
+      backgroundColor: c.background,
       appBar: AppBar(
-        backgroundColor: _kBg,
+        backgroundColor: c.background,
         elevation: 0,
         scrolledUnderElevation: 0,
         title: Text(
           context.l10n.workerCompleteProfile,
-          style: const TextStyle(
-              color: _kDark, fontWeight: FontWeight.w700, fontSize: 18),
+          style: TextStyle(
+              color: c.textPrimary, fontWeight: FontWeight.w700, fontSize: 18),
         ),
       ),
       body: profileAsync.when(
         skipError: true,
-        loading: () => const Center(child: CircularProgressIndicator(color: _kOrange)),
+        loading: () => Center(child: CircularProgressIndicator(color: c.primary)),
         error: (err, _) => Center(
           child: Text(failureMessage(context.l10n, err, fallback: context.l10n.workerProfileLoadFailed)),
         ),
@@ -686,11 +682,11 @@ class _WorkerProfileCompletionPageState
                 // activated document or version appears without an app
                 // release.
                 ...templatesAsync.when(
-                  loading: () => const [
+                  loading: () => [
                     Padding(
                       padding: EdgeInsets.symmetric(vertical: 16),
                       child: Center(
-                        child: CircularProgressIndicator(color: _kOrange),
+                        child: CircularProgressIndicator(color: c.primary),
                       ),
                     ),
                   ],
@@ -725,21 +721,18 @@ class _WorkerProfileCompletionPageState
                       onPressed:
                           busy ? null : () => _submit(profile, templates),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: _kOrange,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(vertical: 15),
+                        minimumSize: const Size.fromHeight(52),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
                         ),
                       ),
                       child: busy
-                          ? const SizedBox(
+                          ? SizedBox(
                               height: 20,
                               width: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                color: Colors.white,
+                                color: c.onPrimary,
                               ),
                             )
                           : Text(
@@ -816,15 +809,16 @@ class _AgreementRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     final l10n = context.l10n;
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
+        color: c.surface,
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: hasError ? _kRed : _kBorder,
+          color: hasError ? c.error : c.border,
           width: hasError ? 1.4 : 1,
         ),
       ),
@@ -838,10 +832,10 @@ class _AgreementRow extends StatelessWidget {
                 // Backend-authored agreement title — shown as-is.
                 child: Text(
                   template.title,
-                  style: const TextStyle(
-                    fontSize: 13.5,
+                  style: TextStyle(
+                    fontSize: 14,
                     fontWeight: FontWeight.w700,
-                    color: _kDark,
+                    color: c.textPrimary,
                     height: 1.35,
                   ),
                 ),
@@ -851,15 +845,15 @@ class _AgreementRow extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF5E8E0),
+                  color: c.softTeal,
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
                   l10n.workerDocumentRequired,
-                  style: const TextStyle(
-                    fontSize: 10.5,
+                  style: TextStyle(
+                    fontSize: 12.5,
                     fontWeight: FontWeight.w700,
-                    color: _kOrange,
+                    color: c.primary,
                   ),
                 ),
               ),
@@ -868,28 +862,28 @@ class _AgreementRow extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             l10n.workerAgreementVersion(template.version),
-            style: const TextStyle(fontSize: 11.5, color: _kGray),
+            style: TextStyle(fontSize: 12.5, color: c.textSecondary),
           ),
           Text(
             l10n.agreementLanguageChip(
               agreementLocaleLabel(l10n, template.agreementLocale),
             ),
-            style: const TextStyle(fontSize: 11.5, color: _kGray),
+            style: TextStyle(fontSize: 12.5, color: c.textSecondary),
           ),
           if (template.applicableTrade != null)
             Text(
               l10n.agreementTradeChip(
                 tradeLabel(l10n, template.applicableTrade!),
               ),
-              style: const TextStyle(fontSize: 11.5, color: _kGray),
+              style: TextStyle(fontSize: 12.5, color: c.textSecondary),
             ),
           if (stale) ...[
             const SizedBox(height: 6),
             Text(
               l10n.agreementTradeChangedReopen,
-              style: const TextStyle(
-                fontSize: 11.5,
-                color: Color(0xFFB45309),
+              style: TextStyle(
+                fontSize: 12.5,
+                color: c.warning,
                 height: 1.4,
               ),
             ),
@@ -900,25 +894,25 @@ class _AgreementRow extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.menu_book_outlined, size: 15, color: _kOrange),
+                Icon(Icons.menu_book_outlined, size: 15, color: c.primary),
                 const SizedBox(width: 6),
                 Text(
                   l10n.workerViewAgreement,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12.5,
                     fontWeight: FontWeight.w700,
-                    color: _kOrange,
+                    color: c.primary,
                   ),
                 ),
                 if (viewed) ...[
                   const SizedBox(width: 6),
-                  const Icon(Icons.check_circle_rounded,
-                      size: 14, color: _kGreen),
+                  Icon(Icons.check_circle_rounded,
+                      size: 14, color: c.success),
                 ],
               ],
             ),
           ),
-          const Divider(height: 20, color: _kBorder),
+          Divider(height: 20, color: c.border),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -927,9 +921,9 @@ class _AgreementRow extends StatelessWidget {
                 height: 22,
                 child: Checkbox(
                   value: accepted,
-                  activeColor: _kOrange,
+                  activeColor: c.primary,
                   side: hasError
-                      ? const BorderSide(color: _kRed, width: 1.4)
+                      ? BorderSide(color: c.error, width: 1.4)
                       : null,
                   // Ticking is the Ustaad's own act - opening the viewer is
                   // offered, never required. The row still records which exact
@@ -949,7 +943,7 @@ class _AgreementRow extends StatelessWidget {
                       l10n.agreementAcceptCheckbox,
                       style: TextStyle(
                         fontSize: 12.5,
-                        color: _kDark,
+                        color: c.textPrimary,
                         height: 1.4,
                       ),
                     ),
@@ -957,7 +951,7 @@ class _AgreementRow extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         l10n.agreementAcceptRequired,
-                        style: const TextStyle(fontSize: 11.5, color: _kRed),
+                        style: TextStyle(fontSize: 12.5, color: c.error),
                       ),
                     ],
                   ],
@@ -979,26 +973,27 @@ class _AgreementUnavailableRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
+        color: c.surface,
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: hasError ? _kRed : _kBorder,
+          color: hasError ? c.error : c.border,
           width: hasError ? 1.4 : 1,
         ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.info_outline_rounded, size: 18, color: _kRed),
+          Icon(Icons.info_outline_rounded, size: 18, color: c.error),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               context.l10n.agreementUnavailableForTrade,
-              style: const TextStyle(fontSize: 12.5, color: _kGray, height: 1.45),
+              style: TextStyle(fontSize: 12.5, color: c.textSecondary, height: 1.45),
             ),
           ),
         ],
@@ -1014,30 +1009,31 @@ class _AgreementsError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: _kBorder),
+        color: c.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: c.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             message,
-            style: const TextStyle(fontSize: 12.5, color: _kGray, height: 1.45),
+            style: TextStyle(fontSize: 12.5, color: c.textSecondary, height: 1.45),
           ),
           const SizedBox(height: 8),
           GestureDetector(
             onTap: onRetry,
             child: Text(
               context.l10n.commonRetry,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12.5,
                 fontWeight: FontWeight.w700,
-                color: _kOrange,
+                color: c.primary,
               ),
             ),
           ),
@@ -1055,43 +1051,48 @@ class _StatusBanner extends StatelessWidget {
 
   /// [profile.onboardingStatus] stays the raw backend token — only the words
   /// on the banner are translated.
-  (String, Color, Color, IconData) _visual(AppLocalizations l10n) =>
+  /// Takes the palette because a `=>` method has no `BuildContext` of its own.
+  (String, Color, Color, IconData) _visual(
+    AppLocalizations l10n,
+    AppSemanticColors c,
+  ) =>
       switch (profile.onboardingStatus) {
         'SUBMITTED_FOR_REVIEW' => (
             l10n.workerOnboardingSubmitted,
-            const Color(0xFFB45309),
-            const Color(0xFFFFFBEB),
+            c.warning,
+            c.warningSurface,
             Icons.hourglass_top_rounded,
           ),
         'CHANGES_REQUIRED' => (
             l10n.workerOnboardingChangesRequired,
-            const Color(0xFFB45309),
-            const Color(0xFFFFF7ED),
+            c.warning,
+            c.warningSurface,
             Icons.edit_note_rounded,
           ),
         'REJECTED' => (
             l10n.bidStatusRejected,
-            _kRed,
-            const Color(0xFFFEF2F2),
+            c.error,
+            c.urgentSoft,
             Icons.cancel_outlined,
           ),
         'APPROVED' => (
             l10n.workerOnboardingApproved,
-            const Color(0xFF15803D),
-            const Color(0xFFF0FDF4),
+            c.success,
+            c.successSoft,
             Icons.verified_rounded,
           ),
         _ => (
             l10n.workerOnboardingDraft,
-            _kGray,
-            const Color(0xFFF1F5F9),
+            c.textSecondary,
+            c.surfaceSubtle,
             Icons.description_outlined,
           ),
       };
 
   @override
   Widget build(BuildContext context) {
-    final (label, fg, bg, icon) = _visual(context.l10n);
+    final c = context.semanticColors;
+    final (label, fg, bg, icon) = _visual(context.l10n, c);
     final reason = profile.onboardingStatus == 'CHANGES_REQUIRED'
         ? profile.changesRequiredReason
         : profile.onboardingStatus == 'REJECTED'
@@ -1103,8 +1104,8 @@ class _StatusBanner extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: fg.withValues(alpha: 0.3)),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: fg),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1123,7 +1124,7 @@ class _StatusBanner extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               reason,
-              style: TextStyle(fontSize: 12.5, color: fg.withValues(alpha: 0.9), height: 1.4),
+              style: TextStyle(fontSize: 12.5, color: fg, height: 1.4),
             ),
           ],
         ],
@@ -1140,9 +1141,10 @@ class _SectionLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Text(
       text,
-      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _kDark),
+      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: c.textPrimary),
     );
   }
 }
@@ -1172,7 +1174,8 @@ class _TextInput extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final borderColor = hasError ? _kRed : _kBorder;
+    final c = context.semanticColors;
+    final borderColor = hasError ? c.error : c.border;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1183,12 +1186,12 @@ class _TextInput extends StatelessWidget {
           keyboardType: keyboardType,
           inputFormatters: inputFormatters,
           onChanged: onChanged,
-          style: const TextStyle(fontSize: 14, color: _kDark),
+          style: TextStyle(fontSize: 14, color: c.textPrimary),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: const TextStyle(color: _kLight, fontSize: 13),
+            hintStyle: TextStyle(color: c.textSecondary, fontSize: 14),
             filled: true,
-            fillColor: enabled ? Colors.white : const Color(0xFFF1F5F9),
+            fillColor: enabled ? c.surface : c.surfaceSubtle,
             contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
@@ -1200,7 +1203,7 @@ class _TextInput extends StatelessWidget {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: hasError ? _kRed : _kOrange),
+              borderSide: BorderSide(color: hasError ? c.error : c.primary),
             ),
           ),
         ),
@@ -1208,7 +1211,7 @@ class _TextInput extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             errorText!,
-            style: const TextStyle(fontSize: 11.5, color: _kRed),
+            style: TextStyle(fontSize: 12.5, color: c.error),
           ),
         ],
       ],
@@ -1237,6 +1240,7 @@ class _DateInput extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     final hasValue = value != null && value!.isNotEmpty;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1246,10 +1250,10 @@ class _DateInput extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
             decoration: BoxDecoration(
-              color: enabled ? Colors.white : const Color(0xFFF1F5F9),
+              color: enabled ? c.surface : c.surfaceSubtle,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: hasError ? _kRed : _kBorder,
+                color: hasError ? c.error : c.border,
                 width: hasError ? 1.4 : 1,
               ),
             ),
@@ -1263,19 +1267,19 @@ class _DateInput extends StatelessWidget {
                     hasValue ? value! : hint,
                     style: TextStyle(
                       fontSize: 14,
-                      color: hasValue ? _kDark : _kLight,
+                      color: hasValue ? c.textPrimary : c.textSecondary,
                     ),
                   ),
                 ),
-                const Icon(Icons.calendar_today_outlined,
-                    size: 16, color: _kLight),
+                Icon(Icons.calendar_today_outlined,
+                    size: 16, color: c.textSecondary),
               ],
             ),
           ),
         ),
         if (hasError) ...[
           const SizedBox(height: 4),
-          Text(errorText, style: const TextStyle(fontSize: 11.5, color: _kRed)),
+          Text(errorText, style: TextStyle(fontSize: 12.5, color: c.error)),
         ],
       ],
     );
@@ -1297,15 +1301,16 @@ class _MainSkillRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: c.surface,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: hasError ? _kRed : _kBorder, width: hasError ? 1.4 : 1),
+            border: Border.all(color: hasError ? c.error : c.border, width: hasError ? 1.4 : 1),
           ),
           child: Row(
             children: [
@@ -1314,7 +1319,7 @@ class _MainSkillRow extends StatelessWidget {
                   skillName ?? context.l10n.workerMainSkillNotSelected,
                   style: TextStyle(
                     fontSize: 14,
-                    color: skillName != null ? _kDark : _kLight,
+                    color: skillName != null ? c.textPrimary : c.textSecondary,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -1324,10 +1329,10 @@ class _MainSkillRow extends StatelessWidget {
                   onTap: onChangeTap,
                   child: Text(
                     context.l10n.workerChangeSkill,
-                    style: const TextStyle(
-                        fontSize: 13,
+                    style: TextStyle(
+                        fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: _kOrange),
+                        color: c.primary),
                   ),
                 ),
             ],
@@ -1337,7 +1342,7 @@ class _MainSkillRow extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             context.l10n.workerMainSkillRequired,
-            style: const TextStyle(fontSize: 11.5, color: _kRed),
+            style: TextStyle(fontSize: 12.5, color: c.error),
           ),
         ],
       ],
@@ -1365,7 +1370,9 @@ class _DocumentTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final uploaded = imageUrl != null && imageUrl!.isNotEmpty;
-    final borderColor = hasError ? _kRed : (uploaded ? _kGreen.withValues(alpha: 0.4) : _kBorder);
+    final c = context.semanticColors;
+    final borderColor =
+        hasError ? c.error : (uploaded ? c.success : c.border);
     return GestureDetector(
       onTap: (editable && !uploading) ? onTap : null,
       child: Column(
@@ -1374,7 +1381,7 @@ class _DocumentTile extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: c.surface,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: borderColor, width: hasError ? 1.4 : 1),
             ),
@@ -1384,33 +1391,33 @@ class _DocumentTile extends StatelessWidget {
                   width: 56,
                   height: 42,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF1F5F9),
+                    color: c.surfaceSubtle,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   clipBehavior: Clip.antiAlias,
                   child: uploading
-                      ? const Center(
+                      ? Center(
                           child: SizedBox(
                             width: 16,
                             height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: _kOrange),
+                            child: CircularProgressIndicator(strokeWidth: 2, color: c.primary),
                           ),
                         )
                       : uploaded
                           ? Image.network(imageUrl!, fit: BoxFit.cover)
-                          : const Icon(Icons.image_outlined, color: _kLight, size: 20),
+                          : Icon(Icons.image_outlined, color: c.textSecondary, size: 20),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     label,
-                    style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: _kDark),
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: c.textPrimary),
                   ),
                 ),
                 Icon(
                   uploaded ? Icons.check_circle_rounded : Icons.upload_outlined,
                   size: 18,
-                  color: uploaded ? _kGreen : _kLight,
+                  color: uploaded ? c.success : c.textSecondary,
                 ),
               ],
             ),
@@ -1419,7 +1426,7 @@ class _DocumentTile extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               context.l10n.workerDocumentRequired,
-              style: const TextStyle(fontSize: 11.5, color: _kRed),
+              style: TextStyle(fontSize: 12.5, color: c.error),
             ),
           ],
         ],
@@ -1448,6 +1455,7 @@ class _AgreementCheckbox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
@@ -1458,8 +1466,8 @@ class _AgreementCheckbox extends StatelessWidget {
             height: 22,
             child: Checkbox(
               value: value,
-              activeColor: _kOrange,
-              side: hasError ? const BorderSide(color: _kRed, width: 1.4) : null,
+              activeColor: c.primary,
+              side: hasError ? BorderSide(color: c.error, width: 1.4) : null,
               onChanged: enabled ? (v) => onChanged(v ?? false) : null,
               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
@@ -1471,13 +1479,13 @@ class _AgreementCheckbox extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: const TextStyle(fontSize: 13, color: _kDark, height: 1.4),
+                  style: TextStyle(fontSize: 14, color: c.textPrimary, height: 1.4),
                 ),
                 if (hasError) ...[
                   const SizedBox(height: 2),
                   Text(
                     context.l10n.workerConfirmationRequired,
-                    style: const TextStyle(fontSize: 11.5, color: _kRed),
+                    style: TextStyle(fontSize: 12.5, color: c.error),
                   ),
                 ],
               ],
