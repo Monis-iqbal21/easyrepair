@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
 
+import '../../../../core/theme/app_semantic_colors.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../../bookings/domain/entities/inspection_report_entity.dart';
 import '../../../bookings/presentation/providers/booking_providers.dart';
@@ -18,16 +19,26 @@ import '../../../../core/l10n/l10n_extensions.dart';
 import '../../../../core/errors/failure_messages.dart';
 import '../../../../core/permissions/media_permission_helper.dart';
 
-const _kPrimary = Color(0xFFDB6234);
-const _kDark = Color(0xFF1A1A1A);
-const _kGray = Color(0xFF6B7280);
-const _kBorder = Color(0xFFE5E7EB);
-const _kBg = Color(0xFFF9FAFB);
-const _kError = Color(0xFFEF4444);
 const _kMaxPhotos = 6;
+
+// Type scale. These users read outdoors, often in sunlight — nothing here
+// drops below 12.5px, and every field label is at body weight.
+const double _fLabel = 14;
+const double _fBody = 14;
+const double _fSection = 16;
+const double _fNote = 13;
 
 /// Worker-side inspection report form — "Masla kya nikla?" / repair quote,
 /// submitted after the worker taps "Start Inspection" and inspects on-site.
+///
+/// ORDER IS THE DESIGN
+/// -------------------
+/// Most Ustaads read and write very little. The voice note is therefore the
+/// FIRST thing on the screen and the loudest control on it; photos come
+/// second (a picture needs no literacy at all); the two typed fields come
+/// third, for the Ustaads who prefer to write. Nothing about what the form
+/// accepts changed — `_isValid` and the submit call are untouched — only the
+/// order in which an Ustaad meets the inputs.
 class InspectionReportFormPage extends ConsumerStatefulWidget {
   final String bookingId;
   const InspectionReportFormPage({super.key, required this.bookingId});
@@ -176,7 +187,7 @@ class _InspectionReportFormPageState
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: _kError,
+        backgroundColor: context.semanticColors.error,
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -184,6 +195,7 @@ class _InspectionReportFormPageState
 
   Future<void> _pickPhoto() async {
     if (_photos.length >= _kMaxPhotos) return;
+    final c = context.semanticColors;
     final source = await showModalBottomSheet<ImageSource>(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -198,18 +210,18 @@ class _InspectionReportFormPageState
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: _kBorder,
+                color: c.border,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
             const SizedBox(height: 8),
             ListTile(
-              leading: const Icon(Icons.camera_alt_rounded, color: _kPrimary),
+              leading: Icon(Icons.camera_alt_rounded, color: c.primary),
               title: Text(context.l10n.chatTakePhoto),
               onTap: () => Navigator.pop(context, ImageSource.camera),
             ),
             ListTile(
-              leading: const Icon(Icons.image_rounded, color: _kPrimary),
+              leading: Icon(Icons.image_rounded, color: c.primary),
               title: Text(context.l10n.inspFormChooseFromGallery),
               onTap: () => Navigator.pop(context, ImageSource.gallery),
             ),
@@ -264,7 +276,7 @@ class _InspectionReportFormPageState
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(context.l10n.inspFormSubmitted),
-            backgroundColor: _kPrimary,
+            backgroundColor: context.semanticColors.primary,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -275,9 +287,13 @@ class _InspectionReportFormPageState
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              failureMessage(context.l10n, e, fallback: context.l10n.inspFormSubmitFailed),
+              failureMessage(
+                context.l10n,
+                e,
+                fallback: context.l10n.inspFormSubmitFailed,
+              ),
             ),
-            backgroundColor: _kError,
+            backgroundColor: context.semanticColors.error,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -291,6 +307,7 @@ class _InspectionReportFormPageState
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     final isSubmitting = ref
         .watch(inspectionReportSubmitNotifierProvider)
         .isLoading;
@@ -303,14 +320,11 @@ class _InspectionReportFormPageState
     final hints = inspectionFieldHintsFor(context.l10n, categoryName);
 
     return Scaffold(
-      backgroundColor: _kBg,
+      backgroundColor: c.background,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        foregroundColor: _kDark,
         title: Text(
           context.l10n.inspectionReportTitle,
-          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
+          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
         ),
       ),
       body: SafeArea(
@@ -322,6 +336,31 @@ class _InspectionReportFormPageState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // 1. Speak. The easiest way in for an Ustaad who does not
+                    //    write, so it leads the screen.
+                    _Card(
+                      child: _VoiceNoteSection(
+                        isRecording: _isRecordingVoice,
+                        recordingDuration: _recordingDuration,
+                        voiceNotePath: _voiceNotePath,
+                        voiceNoteDurationSeconds: _voiceNoteDurationSeconds,
+                        onStartRecording: _startVoiceRecording,
+                        onStopRecording: _stopVoiceRecording,
+                        onCancelRecording: _cancelRecording,
+                        onDelete: _deleteVoiceNote,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    // 2. Show. A photo needs no literacy at all.
+                    _Card(
+                      child: _PhotosSection(
+                        photos: _photos,
+                        onAdd: _pickPhoto,
+                        onRemove: (i) => setState(() => _photos.removeAt(i)),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    // 3. Write — for the Ustaads who prefer to.
                     _Card(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -340,7 +379,9 @@ class _InspectionReportFormPageState
                           _FieldLabel(
                             _hasVoiceNote
                                 ? context.l10n.inspFormRecommendedRepair
-                                : context.l10n.inspFormRecommendedRepairRequired,
+                                : context
+                                      .l10n
+                                      .inspFormRecommendedRepairRequired,
                           ),
                           _TextInput(
                             controller: _repairCtrl,
@@ -351,38 +392,17 @@ class _InspectionReportFormPageState
                         ],
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    _Card(
-                      child: _VoiceNoteSection(
-                        isRecording: _isRecordingVoice,
-                        recordingDuration: _recordingDuration,
-                        voiceNotePath: _voiceNotePath,
-                        voiceNoteDurationSeconds: _voiceNoteDurationSeconds,
-                        onStartRecording: _startVoiceRecording,
-                        onStopRecording: _stopVoiceRecording,
-                        onCancelRecording: _cancelRecording,
-                        onDelete: _deleteVoiceNote,
-                      ),
-                    ),
                     if (!_hasReportContent) ...[
                       const SizedBox(height: 8),
                       Text(
                         context.l10n.inspFormWriteOrRecord,
                         style: TextStyle(
-                          color: _kError,
-                          fontSize: 12.5,
+                          color: c.error,
+                          fontSize: _fNote,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                     ],
-                    const SizedBox(height: 12),
-                    _Card(
-                      child: _PhotosSection(
-                        photos: _photos,
-                        onAdd: _pickPhoto,
-                        onRemove: (i) => setState(() => _photos.removeAt(i)),
-                      ),
-                    ),
                     const SizedBox(height: 12),
                     _Card(
                       child: Column(
@@ -391,17 +411,18 @@ class _InspectionReportFormPageState
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(
-                                context.l10n.inspFormPartsRequired,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 14.5,
-                                  color: _kDark,
+                              Expanded(
+                                child: Text(
+                                  context.l10n.inspFormPartsRequired,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: _fSection,
+                                    color: c.textPrimary,
+                                  ),
                                 ),
                               ),
                               Switch(
                                 value: _partsNeeded,
-                                activeThumbColor: _kPrimary,
                                 onChanged: (v) => setState(() {
                                   _partsNeeded = v;
                                   if (!v) _parts.clear();
@@ -428,13 +449,18 @@ class _InspectionReportFormPageState
                                   const InspectionReportPartDraft(),
                                 ),
                               ),
-                              icon: const Icon(Icons.add_rounded, size: 18),
-                              label: Text(context.l10n.inspFormAddPart),
+                              icon: const Icon(Icons.add_rounded, size: 20),
+                              label: Text(
+                                context.l10n.inspFormAddPart,
+                                style: const TextStyle(
+                                  fontSize: _fBody,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
                               style: OutlinedButton.styleFrom(
-                                foregroundColor: _kPrimary,
-                                side: const BorderSide(color: _kPrimary),
+                                minimumSize: const Size.fromHeight(48),
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(14),
                                 ),
                               ),
                             ),
@@ -474,38 +500,38 @@ class _InspectionReportFormPageState
                 ),
               ),
             ),
+            // A hairline above the footer so the primary "Submit" never reads
+            // as part of the scrolling content — it is the one control that
+            // ends the screen.
+            Container(height: 1, color: c.border),
             SafeArea(
               top: false,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
                 child: SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: _isValid && !isSubmitting ? _submit : null,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: _kPrimary,
-                      foregroundColor: Colors.white,
-                      disabledBackgroundColor: _kBorder,
-                      elevation: 0,
-                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      minimumSize: const Size.fromHeight(52),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
                     ),
                     child: isSubmitting
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
+                        ? SizedBox(
+                            width: 20,
+                            height: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: Colors.white,
+                              color: c.onPrimary,
                             ),
                           )
                         : Text(
                             context.l10n.inspFormSubmitReport,
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w800,
+                            style: const TextStyle(
+                              fontSize: 15.5,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                   ),
@@ -525,22 +551,33 @@ class _Card extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: c.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _kBorder),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        border: Border.all(color: c.border),
       ),
       child: child,
+    );
+  }
+}
+
+class _SectionTitle extends StatelessWidget {
+  final String text;
+  const _SectionTitle(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: TextStyle(
+        fontSize: _fSection,
+        fontWeight: FontWeight.w700,
+        color: context.semanticColors.textPrimary,
+      ),
     );
   }
 }
@@ -555,10 +592,10 @@ class _FieldLabel extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 6),
       child: Text(
         text,
-        style: const TextStyle(
-          fontSize: 13,
+        style: TextStyle(
+          fontSize: _fLabel,
           fontWeight: FontWeight.w700,
-          color: _kDark,
+          color: context.semanticColors.textPrimary,
         ),
       ),
     );
@@ -572,39 +609,46 @@ class _TextInput extends StatelessWidget {
   final TextInputType? keyboardType;
   final ValueChanged<String>? onChanged;
 
+  /// The fill a field needs to read against whatever sits behind it — a
+  /// [_Card] fills with `surface`, a [_PartCard] with `surfaceSubtle`.
+  final bool onSubtleSurface;
+
   const _TextInput({
     required this.controller,
     required this.hint,
     this.maxLines = 1,
     this.keyboardType,
     this.onChanged,
+    this.onSubtleSurface = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
+    final fill = onSubtleSurface ? c.surface : c.background;
     return TextField(
       controller: controller,
       maxLines: maxLines,
       keyboardType: keyboardType,
       onChanged: onChanged,
-      style: const TextStyle(fontSize: 14, color: _kDark),
+      style: TextStyle(fontSize: _fBody, color: c.textPrimary),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(color: _kGray, fontSize: 13.5),
+        hintStyle: TextStyle(color: c.textSecondary, fontSize: _fBody),
         filled: true,
-        fillColor: _kBg,
+        fillColor: fill,
         contentPadding: const EdgeInsets.all(12),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: _kBorder),
+          borderSide: BorderSide(color: c.border),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: _kBorder),
+          borderSide: BorderSide(color: c.border),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: _kPrimary, width: 1.5),
+          borderSide: BorderSide(color: c.primary, width: 1.5),
         ),
       ),
     );
@@ -624,18 +668,12 @@ class _PhotosSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     final canAddMore = photos.length < _kMaxPhotos;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          context.l10n.inspFormIssuePhotos(_kMaxPhotos),
-          style: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
-            color: _kDark,
-          ),
-        ),
+        _SectionTitle(context.l10n.inspFormIssuePhotos(_kMaxPhotos)),
         const SizedBox(height: 10),
         GridView.builder(
           shrinkWrap: true,
@@ -653,18 +691,15 @@ class _PhotosSection extends StatelessWidget {
                 onTap: onAdd,
                 child: Container(
                   decoration: BoxDecoration(
-                    color: _kBg,
+                    color: c.softTeal,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: _kBorder,
-                      style: BorderStyle.solid,
-                    ),
+                    border: Border.all(color: c.controlBorder),
                   ),
-                  child: const Center(
+                  child: Center(
                     child: Icon(
-                      Icons.camera_alt_rounded,
-                      color: _kPrimary,
-                      size: 22,
+                      Icons.add_a_photo_rounded,
+                      color: c.primary,
+                      size: 26,
                     ),
                   ),
                 ),
@@ -683,15 +718,16 @@ class _PhotosSection extends StatelessWidget {
                   child: GestureDetector(
                     onTap: () => onRemove(i),
                     child: Container(
-                      padding: const EdgeInsets.all(3),
-                      decoration: const BoxDecoration(
-                        color: Colors.black54,
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: c.surface,
                         shape: BoxShape.circle,
+                        border: Border.all(color: c.border),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.close_rounded,
-                        color: Colors.white,
-                        size: 14,
+                        color: c.error,
+                        size: 16,
                       ),
                     ),
                   ),
@@ -734,55 +770,53 @@ class _VoiceNoteSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          context.l10n.inspFormVoiceNote,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
-            color: _kDark,
-          ),
-        ),
+        _SectionTitle(context.l10n.inspFormVoiceNote),
         const SizedBox(height: 4),
         Text(
           context.l10n.inspFormVoiceNoteHint,
-          style: TextStyle(fontSize: 12, color: _kGray),
+          style: TextStyle(
+            fontSize: _fBody,
+            color: c.textSecondary,
+            height: 1.35,
+          ),
         ),
         const SizedBox(height: 12),
         if (isRecording)
           Row(
             children: [
               Container(
-                width: 10,
-                height: 10,
-                decoration: const BoxDecoration(
-                  color: _kError,
+                width: 12,
+                height: 12,
+                decoration: BoxDecoration(
+                  color: c.error,
                   shape: BoxShape.circle,
                 ),
               ),
               const SizedBox(width: 10),
               Text(
                 context.l10n.inspFormRecording(_fmt(recordingDuration)),
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: _kDark,
-                  fontWeight: FontWeight.w500,
+                style: TextStyle(
+                  fontSize: _fSection,
+                  color: c.textPrimary,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
               const Spacer(),
               IconButton(
                 onPressed: onCancelRecording,
-                icon: const Icon(Icons.close_rounded, color: _kGray),
+                icon: Icon(Icons.close_rounded, color: c.textSecondary),
                 tooltip: context.l10n.commonCancel,
               ),
               IconButton(
                 onPressed: onStopRecording,
-                icon: const Icon(
+                icon: Icon(
                   Icons.stop_circle_rounded,
-                  color: _kPrimary,
-                  size: 32,
+                  color: c.primary,
+                  size: 38,
                 ),
                 tooltip: context.l10n.inspFormStop,
               ),
@@ -796,23 +830,33 @@ class _VoiceNoteSection extends StatelessWidget {
               ),
               IconButton(
                 onPressed: onDelete,
-                icon: const Icon(Icons.delete_outline_rounded, color: _kError),
+                icon: Icon(Icons.delete_outline_rounded, color: c.error),
                 tooltip: context.l10n.commonDelete,
               ),
             ],
           )
         else
-          OutlinedButton.icon(
-            onPressed: onStartRecording,
-            icon: const Icon(Icons.mic_rounded, size: 18),
-            label: Text(context.l10n.inspFormStartRecording),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: _kPrimary,
-              side: const BorderSide(color: _kPrimary),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+          // The single loudest control on the screen: full width, 56 high,
+          // a filled brand button rather than a thin outline. An Ustaad who
+          // cannot write should not have to hunt for it.
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: onStartRecording,
+              icon: const Icon(Icons.mic_rounded, size: 24),
+              label: Text(
+                context.l10n.inspFormStartRecording,
+                style: const TextStyle(
+                  fontSize: 15.5,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
-              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size.fromHeight(56),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
             ),
           ),
       ],
@@ -876,13 +920,14 @@ class _PartCardState extends State<_PartCard> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: _kBg,
+        color: c.surfaceSubtle,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: _kBorder),
+        border: Border.all(color: c.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -891,6 +936,7 @@ class _PartCardState extends State<_PartCard> {
           _TextInput(
             controller: _name,
             hint: widget.nameHint,
+            onSubtleSurface: true,
             onChanged: (_) => _emit(),
           ),
           const SizedBox(height: 10),
@@ -905,6 +951,7 @@ class _PartCardState extends State<_PartCard> {
                       controller: _qty,
                       hint: '1',
                       keyboardType: TextInputType.number,
+                      onSubtleSurface: true,
                       onChanged: (_) => _emit(),
                     ),
                   ],
@@ -920,6 +967,7 @@ class _PartCardState extends State<_PartCard> {
                       controller: _price,
                       hint: '0',
                       keyboardType: TextInputType.number,
+                      onSubtleSurface: true,
                       onChanged: (_) => _emit(),
                     ),
                   ],
@@ -932,21 +980,27 @@ class _PartCardState extends State<_PartCard> {
           _TextInput(
             controller: _warranty,
             hint: context.l10n.inspFormWarrantyHint,
+            onSubtleSurface: true,
             onChanged: (_) => _emit(),
           ),
-          const SizedBox(height: 10),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton(
+          const SizedBox(height: 4),
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: TextButton.icon(
               onPressed: widget.onRemove,
-              style: OutlinedButton.styleFrom(
-                foregroundColor: _kError,
-                side: const BorderSide(color: _kError),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+              icon: const Icon(Icons.delete_outline_rounded, size: 20),
+              label: Text(
+                context.l10n.inspFormRemovePart,
+                style: const TextStyle(
+                  fontSize: _fBody,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
-              child: Text(context.l10n.inspFormRemovePart),
+              style: TextButton.styleFrom(
+                foregroundColor: c.error,
+                minimumSize: const Size(0, 44),
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+              ),
             ),
           ),
         ],
@@ -968,49 +1022,55 @@ class _SummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _kDark,
+        color: c.surface,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: c.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _line(context.l10n.inspFormPartsTotal, formatPkr(partsTotal)),
-          _line(context.l10n.inspFormLabour, formatPkr(labourCost)),
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 8),
-            child: Divider(height: 1, color: Colors.white24),
+          _line(c, context.l10n.inspFormPartsTotal, formatPkr(partsTotal)),
+          _line(c, context.l10n.inspFormLabour, formatPkr(labourCost)),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            child: Divider(height: 1, color: c.border),
           ),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                context.l10n.inspFormTotalAmount,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 15.5,
-                  fontWeight: FontWeight.w800,
+              Flexible(
+                child: Text(
+                  context.l10n.inspFormTotalAmount,
+                  style: TextStyle(
+                    color: c.textPrimary,
+                    fontSize: _fSection,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
+              const SizedBox(width: 10),
               Text(
                 formatPkr(finalQuote),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 17,
-                  fontWeight: FontWeight.w900,
+                style: TextStyle(
+                  color: c.primary,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           Text(
             context.l10n.inspFormFeeWaivedNote,
             style: TextStyle(
-              color: Colors.white60,
-              fontSize: 11.5,
+              color: c.success,
+              fontSize: _fNote,
+              fontWeight: FontWeight.w600,
               height: 1.4,
             ),
           ),
@@ -1019,22 +1079,25 @@ class _SummaryCard extends StatelessWidget {
     );
   }
 
-  Widget _line(String label, String value, {Color valueColor = Colors.white}) {
+  Widget _line(AppSemanticColors c, String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: const TextStyle(color: Colors.white70, fontSize: 13.5),
+          Flexible(
+            child: Text(
+              label,
+              style: TextStyle(color: c.textSecondary, fontSize: _fBody),
+            ),
           ),
+          const SizedBox(width: 10),
           Text(
             value,
             style: TextStyle(
-              color: valueColor,
+              color: c.textPrimary,
               fontWeight: FontWeight.w700,
-              fontSize: 13.5,
+              fontSize: _fBody,
             ),
           ),
         ],

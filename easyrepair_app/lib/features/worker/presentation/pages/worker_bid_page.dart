@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/theme/app_semantic_colors.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../../bids/domain/entities/bid_entity.dart';
 import '../../../bookings/domain/entities/booking_entity.dart';
@@ -20,15 +21,6 @@ import '../../../../core/l10n/l10n_extensions.dart';
 import '../../../bookings/presentation/utils/status_labels.dart';
 import '../../../bookings/presentation/utils/worker_labels.dart';
 import '../../../../core/errors/failure_messages.dart';
-
-// ── Palette ───────────────────────────────────────────────────────────────────
-const _kGreen  = Color(0xFFDB6234);
-const _kDark   = Color(0xFF1A1A1A);
-const _kGray   = Color(0xFF6B7280);
-const _kLight  = Color(0xFF94A3B8);
-const _kBorder = Color(0xFFE2E8F0);
-const _kBg     = Color(0xFFF9FAFB);
-const _kRed    = Color(0xFFEF4444);
 
 // ── Provider: look up job from cached new-jobs list by id ────────────────────
 final _newJobByIdProvider =
@@ -67,10 +59,11 @@ class _WorkerBidPageState extends ConsumerState<WorkerBidPage> {
 
   void _showSnack(String msg, {bool error = false}) {
     if (!mounted) return;
+    final c = context.semanticColors;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(msg),
-        backgroundColor: error ? _kRed : _kGreen,
+        backgroundColor: error ? c.error : c.primary,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
@@ -118,15 +111,16 @@ class _WorkerBidPageState extends ConsumerState<WorkerBidPage> {
 
   @override
   Widget build(BuildContext context) {
+    final c            = context.semanticColors;
     final myBidAsync   = ref.watch(myBidProvider(widget.jobId));
     final feedAsync    = ref.watch(jobBidsFeedProvider(widget.jobId));
     final isSubmitting = ref.watch(submitBidProvider).isLoading;
     final job          = ref.watch(_newJobByIdProvider(widget.jobId));
 
     return Scaffold(
-      backgroundColor: _kBg,
+      backgroundColor: c.background,
       appBar: AppBar(
-        backgroundColor: _kBg,
+        backgroundColor: c.background,
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: GestureDetector(
@@ -134,22 +128,17 @@ class _WorkerBidPageState extends ConsumerState<WorkerBidPage> {
           child: Container(
             margin: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(10),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.06),
-                  blurRadius: 8,
-                ),
-              ],
+              color: c.surface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: c.border),
             ),
-            child: const Icon(Icons.arrow_back_rounded, color: _kDark, size: 20),
+            child: Icon(Icons.arrow_back_rounded, color: c.textPrimary, size: 20),
           ),
         ),
         title: Text(
           context.l10n.bidPlaceABid,
           style: TextStyle(
-            color: _kDark,
+            color: c.textPrimary,
             fontWeight: FontWeight.w700,
             fontSize: 18,
           ),
@@ -163,19 +152,19 @@ class _WorkerBidPageState extends ConsumerState<WorkerBidPage> {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: _kBorder),
+              color: c.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: c.border),
             ),
             child: Row(
               children: [
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: _kGreen.withValues(alpha: 0.10),
-                    borderRadius: BorderRadius.circular(10),
+                    color: c.softTeal,
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.work_outline_rounded, size: 18, color: _kGreen),
+                  child: Icon(Icons.work_outline_rounded, size: 18, color: c.primary),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -183,10 +172,10 @@ class _WorkerBidPageState extends ConsumerState<WorkerBidPage> {
                     widget.jobTitle.isNotEmpty
                         ? widget.jobTitle
                         : context.l10n.workerBidJobFallbackTitle,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
-                      color: _kDark,
+                      color: c.textPrimary,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -222,11 +211,11 @@ class _WorkerBidPageState extends ConsumerState<WorkerBidPage> {
               icon: const Icon(Icons.chat_bubble_outline_rounded, size: 16),
               label: Text(context.l10n.bidChatWithClient),
               style: OutlinedButton.styleFrom(
-                foregroundColor: _kGreen,
-                side: const BorderSide(color: _kGreen),
+                foregroundColor: c.primary,
+                side: BorderSide(color: c.primary),
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(14),
                 ),
                 textStyle: const TextStyle(
                   fontSize: 13,
@@ -246,9 +235,9 @@ class _WorkerBidPageState extends ConsumerState<WorkerBidPage> {
 
           // ── My current bid (if any) ───────────────────────────────────────
           myBidAsync.when(
-            loading: () => const SizedBox(
+            loading: () => SizedBox(
               height: 48,
-              child: Center(child: CircularProgressIndicator(color: _kGreen, strokeWidth: 2)),
+              child: Center(child: CircularProgressIndicator(color: c.primary, strokeWidth: 2)),
             ),
             error: (e, s) => const SizedBox.shrink(),
             data: (bid) => bid != null ? _CurrentBidCard(bid: bid) : const SizedBox.shrink(),
@@ -272,25 +261,25 @@ class _WorkerBidPageState extends ConsumerState<WorkerBidPage> {
               Text(
                 context.l10n.bidLiveBids,
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 16,
                   fontWeight: FontWeight.w700,
-                  color: _kDark,
+                  color: c.textPrimary,
                 ),
               ),
               const SizedBox(width: 8),
               GestureDetector(
                 onTap: () => ref.invalidate(jobBidsFeedProvider(widget.jobId)),
-                child: const Icon(Icons.refresh_rounded, size: 16, color: _kLight),
+                child: Icon(Icons.refresh_rounded, size: 16, color: c.textSecondary),
               ),
             ],
           ),
           const SizedBox(height: 10),
 
           feedAsync.when(
-            loading: () => const Center(
+            loading: () => Center(
               child: Padding(
                 padding: EdgeInsets.symmetric(vertical: 24),
-                child: CircularProgressIndicator(color: _kGreen, strokeWidth: 2),
+                child: CircularProgressIndicator(color: c.primary, strokeWidth: 2),
               ),
             ),
             error: (e, _) => _FeedError(
@@ -320,13 +309,14 @@ class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration: BoxDecoration(
         color: isLive
-            ? _kGreen.withValues(alpha: 0.12)
-            : _kLight.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(20),
+            ? c.softTeal
+            : c.surfaceSubtle,
+        borderRadius: BorderRadius.circular(999),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -336,17 +326,17 @@ class _StatusBadge extends StatelessWidget {
               width: 6,
               height: 6,
               margin: const EdgeInsetsDirectional.only(end: 4),
-              decoration: const BoxDecoration(
-                color: _kGreen,
+              decoration: BoxDecoration(
+                color: c.primary,
                 shape: BoxShape.circle,
               ),
             ),
           Text(
             label,
             style: TextStyle(
-              fontSize: 11,
+              fontSize: 12.5,
               fontWeight: FontWeight.w600,
-              color: isLive ? _kGreen : _kGray,
+              color: isLive ? c.primary : c.textSecondary,
             ),
           ),
         ],
@@ -368,14 +358,15 @@ class _JobLocationCard extends StatelessWidget {
     // BidsService.getNewJobsForWorker) — latitude/longitude default to 0 and
     // addressLine to '' when absent, so this naturally degrades to the
     // approximate area + distance view below without a map or exact pin.
+    final c         = context.semanticColors;
     final hasCoords = job.latitude != 0 || job.longitude != 0;
     final position  = LatLng(job.latitude, job.longitude);
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: c.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _kBorder),
+        border: Border.all(color: c.border),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -414,7 +405,7 @@ class _JobLocationCard extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.location_on_rounded, size: 16, color: _kGreen),
+                Icon(Icons.location_on_rounded, size: 16, color: c.primary),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Column(
@@ -424,9 +415,9 @@ class _JobLocationCard extends StatelessWidget {
                         job.addressLine?.isNotEmpty == true
                             ? '${job.addressLine}, ${job.city}'
                             : (job.city.isNotEmpty ? job.city : context.l10n.bidAreaNotAvailable),
-                        style: const TextStyle(
-                          fontSize: 12.5,
-                          color: _kGray,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: c.textSecondary,
                           height: 1.4,
                         ),
                       ),
@@ -436,14 +427,14 @@ class _JobLocationCard extends StatelessWidget {
                           workerDistanceLabel(context.l10n, job.distanceKm).isNotEmpty
                               ? workerDistanceLabel(context.l10n, job.distanceKm)
                               : '',
-                          style: const TextStyle(fontSize: 11.5, color: _kLight),
+                          style: TextStyle(fontSize: 12.5, color: c.textSecondary),
                         ),
                       ],
                       if (!hasCoords) ...[
                         const SizedBox(height: 4),
                         Text(
                           context.l10n.bidExactAddressAfterAccept,
-                          style: TextStyle(fontSize: 11, color: _kLight, height: 1.3),
+                          style: TextStyle(fontSize: 12.5, color: c.textSecondary, height: 1.3),
                         ),
                       ],
                     ],
@@ -466,10 +457,11 @@ class _CurrentBidCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     final (bg, fg) = switch (bid.status) {
-      BidStatus.accepted => (const Color(0xFFDCFCE7), const Color(0xFF15803D)),
-      BidStatus.rejected => (const Color(0xFFFEF2F2), _kRed),
-      _                  => (const Color(0xFFFFF7ED), const Color(0xFFD97706)),
+      BidStatus.accepted => (c.successSoft, c.success),
+      BidStatus.rejected => (c.urgentSoft, c.error),
+      _                  => (c.warningSurface, c.warning),
     };
 
     final statusLabel = switch (bid.status) {
@@ -481,9 +473,9 @@ class _CurrentBidCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: _kBorder),
+        color: c.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: c.border),
       ),
       child: Row(
         children: [
@@ -493,22 +485,22 @@ class _CurrentBidCard extends StatelessWidget {
               children: [
                 Text(
                   context.l10n.bidYourCurrentBid,
-                  style: TextStyle(fontSize: 11, color: _kLight),
+                  style: TextStyle(fontSize: 12.5, color: c.textSecondary),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   formatPkr(bid.amount),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w700,
-                    color: _kGreen,
+                    color: c.primary,
                   ),
                 ),
                 if (bid.message != null && bid.message!.isNotEmpty) ...[
                   const SizedBox(height: 4),
                   Text(
                     bid.message!,
-                    style: const TextStyle(fontSize: 12, color: _kGray),
+                    style: TextStyle(fontSize: 13, color: c.textSecondary),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -518,10 +510,10 @@ class _CurrentBidCard extends StatelessWidget {
           ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
+            decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(999)),
             child: Text(
               statusLabel,
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: fg),
+              style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: fg),
             ),
           ),
         ],
@@ -591,6 +583,7 @@ class _BidFormState extends State<_BidForm> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     final hasExisting = widget.existingBid != null;
     final onCooldown = hasExisting && _remaining > 0;
     final label = hasExisting ? context.l10n.bidUpdate : context.l10n.bidSubmit;
@@ -598,19 +591,19 @@ class _BidFormState extends State<_BidForm> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: c.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _kBorder),
+        border: Border.all(color: c.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             hasExisting ? context.l10n.bidUpdateYourBid : context.l10n.bidPlaceYourBid,
-            style: const TextStyle(
-              fontSize: 14,
+            style: TextStyle(
+              fontSize: 16,
               fontWeight: FontWeight.w700,
-              color: _kDark,
+              color: c.textPrimary,
             ),
           ),
           if (hasExisting) ...[
@@ -620,9 +613,9 @@ class _BidFormState extends State<_BidForm> {
                   ? context.l10n.bidCanUpdateIn('$_remaining')
                   : context.l10n.bidCanUpdateNow,
               style: TextStyle(
-                fontSize: 11.5,
+                fontSize: 12.5,
                 fontWeight: onCooldown ? FontWeight.w600 : FontWeight.normal,
-                color: onCooldown ? const Color(0xFFB45309) : _kLight,
+                color: onCooldown ? c.warning : c.textSecondary,
               ),
             ),
           ],
@@ -635,31 +628,30 @@ class _BidFormState extends State<_BidForm> {
               inputFormatters: [
                 FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
               ],
-              decoration: _inputDec(hint: context.l10n.bidAmountHint),
-              style: const TextStyle(fontSize: 15, color: _kDark),
+              decoration: _inputDec(c, hint: context.l10n.bidAmountHint),
+              style: TextStyle(fontSize: 15, color: c.textPrimary),
             ),
           ),
           const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
-            height: 48,
+            // CLAUDE.md minimum for a primary button.
+            height: 52,
             child: ElevatedButton(
               onPressed:
                   (widget.isSubmitting || onCooldown) ? null : widget.onSubmit,
               style: ElevatedButton.styleFrom(
-                backgroundColor: _kGreen,
-                disabledBackgroundColor: _kGreen.withValues(alpha: 0.5),
-                foregroundColor: Colors.white,
+                backgroundColor: c.primary,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(14),
                 ),
               ),
               child: widget.isSubmitting
-                  ? const SizedBox(
+                  ? SizedBox(
                       width: 18,
                       height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      child: CircularProgressIndicator(strokeWidth: 2, color: c.onPrimary),
                     )
                   : Text(
                       onCooldown ? context.l10n.bidLabelWithCountdown(label, '$_remaining') : label,
@@ -672,23 +664,24 @@ class _BidFormState extends State<_BidForm> {
     );
   }
 
-  InputDecoration _inputDec({required String hint}) => InputDecoration(
+  InputDecoration _inputDec(AppSemanticColors c, {required String hint}) =>
+      InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(color: _kLight, fontSize: 13),
+        hintStyle: TextStyle(color: c.textSecondary, fontSize: 13),
         filled: true,
-        fillColor: _kBg,
+        fillColor: c.background,
         counterText: '',
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: _kBorder),
+          borderSide: BorderSide(color: c.border),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: _kBorder),
+          borderSide: BorderSide(color: c.border),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: _kGreen, width: 1.4),
+          borderSide: BorderSide(color: c.primary, width: 1.4),
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       );
@@ -701,12 +694,13 @@ class _FormField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(fontSize: 12, color: _kGray, fontWeight: FontWeight.w500),
+          style: TextStyle(fontSize: 13, color: c.textSecondary, fontWeight: FontWeight.w500),
         ),
         const SizedBox(height: 6),
         child,
@@ -723,6 +717,7 @@ class _BidFeedTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c      = context.semanticColors;
     final bid    = bidWithWorker.bid;
     final worker = bidWithWorker;
 
@@ -730,9 +725,9 @@ class _BidFeedTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: _kBorder),
+        color: c.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: c.border),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -740,17 +735,17 @@ class _BidFeedTile extends StatelessWidget {
           // Avatar
           CircleAvatar(
             radius: 20,
-            backgroundColor: _kGreen.withValues(alpha: 0.12),
+            backgroundColor: c.softTeal,
             backgroundImage: worker.avatarUrl != null
                 ? NetworkImage(worker.avatarUrl!)
                 : null,
             child: worker.avatarUrl == null
                 ? Text(
                     worker.initials,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
-                      color: _kGreen,
+                      color: c.primary,
                     ),
                   )
                 : null,
@@ -766,10 +761,10 @@ class _BidFeedTile extends StatelessWidget {
                     Expanded(
                       child: Text(
                         worker.fullName,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
-                          color: _kDark,
+                          color: c.textPrimary,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -777,10 +772,10 @@ class _BidFeedTile extends StatelessWidget {
                     ),
                     Text(
                       formatPkr(bid.amount),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
-                        color: _kGreen,
+                        color: c.primary,
                       ),
                     ),
                   ],
@@ -788,23 +783,33 @@ class _BidFeedTile extends StatelessWidget {
                 const SizedBox(height: 3),
                 Row(
                   children: [
-                    const Icon(Icons.star_rounded, size: 12, color: Color(0xFFF59E0B)),
+                    Icon(Icons.star_rounded, size: 14, color: c.warning),
                     const SizedBox(width: 2),
                     Text(
                       worker.rating > 0
                           ? worker.rating.toStringAsFixed(1)
                           : context.l10n.chooseNewBadge,
-                      style: const TextStyle(fontSize: 11, color: _kGray),
+                      style: TextStyle(fontSize: 12.5, color: c.textSecondary),
+                    ),
+                    const SizedBox(width: 6),
+                    // The type on this row went from 11px to 12.5px, which is
+                    // enough to overflow a narrow phone once the job count is
+                    // four digits — so both variable-width labels clip rather
+                    // than throw a RenderFlex.
+                    Expanded(
+                      child: Text(
+                        context.l10n.bidJobCount(worker.completedJobs),
+                        style: TextStyle(fontSize: 12.5, color: c.textSecondary),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      context.l10n.bidJobCount(worker.completedJobs),
-                      style: const TextStyle(fontSize: 11, color: _kLight),
-                    ),
-                    const Spacer(),
-                    Text(
                       _relativeTime(context, bid.updatedAt),
-                      style: const TextStyle(fontSize: 10.5, color: _kLight),
+                      style: TextStyle(fontSize: 12.5, color: c.textSecondary),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
@@ -812,7 +817,7 @@ class _BidFeedTile extends StatelessWidget {
                   const SizedBox(height: 5),
                   Text(
                     bid.message!,
-                    style: const TextStyle(fontSize: 12, color: _kGray, height: 1.4),
+                    style: TextStyle(fontSize: 13, color: c.textSecondary, height: 1.4),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -840,17 +845,18 @@ class _FeedEmpty extends StatelessWidget {
   const _FeedEmpty();
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: _kBorder),
+        color: c.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: c.border),
       ),
       child: Center(
         child: Text(
           context.l10n.bidBeFirstToBid,
-          style: TextStyle(fontSize: 13, color: _kLight),
+          style: TextStyle(fontSize: 13, color: c.textSecondary),
         ),
       ),
     );
@@ -864,18 +870,19 @@ class _FeedError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: _kBorder),
+        color: c.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: c.border),
       ),
       child: Column(
         children: [
           Text(
             message,
-            style: const TextStyle(fontSize: 13, color: _kGray),
+            style: TextStyle(fontSize: 13, color: c.textSecondary),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
@@ -884,8 +891,8 @@ class _FeedError extends StatelessWidget {
             child: Text(
               context.l10n.commonRetry,
               style: TextStyle(
-                fontSize: 12,
-                color: _kGreen,
+                fontSize: 13,
+                color: c.primary,
                 fontWeight: FontWeight.w600,
               ),
             ),
