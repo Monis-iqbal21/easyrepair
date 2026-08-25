@@ -18,6 +18,7 @@ class CreateBookingRequest {
   final BookingLane lane;
   final String? standardServiceId;
   final List<String> standardServiceIds;
+  final String? idempotencyKey;
 
   /// Optional: the id of one of this client's OWN previously completed
   /// inspection bookings, whose report they chose to attach to this new
@@ -42,6 +43,7 @@ class CreateBookingRequest {
     this.lane = BookingLane.bidding,
     this.standardServiceId,
     this.standardServiceIds = const [],
+    this.idempotencyKey,
     this.attachedInspectionBookingId,
   });
 }

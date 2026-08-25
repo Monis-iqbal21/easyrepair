@@ -8,7 +8,9 @@ class _FakeGeolocatorPlatform extends GeolocatorPlatform {
   LocationPermission requestResult = LocationPermission.whileInUse;
   Object? getCurrentPositionError;
   Position? position;
+  Position? lastKnownPosition;
   int requestPermissionCalls = 0;
+  int currentPositionCalls = 0;
   int openLocationSettingsCalls = 0;
   int openAppSettingsCalls = 0;
 
@@ -25,10 +27,18 @@ class _FakeGeolocatorPlatform extends GeolocatorPlatform {
   }
 
   @override
-  Future<Position> getCurrentPosition({LocationSettings? locationSettings}) async {
+  Future<Position> getCurrentPosition({
+    LocationSettings? locationSettings,
+  }) async {
+    currentPositionCalls++;
     if (getCurrentPositionError != null) throw getCurrentPositionError!;
     return position!;
   }
+
+  @override
+  Future<Position?> getLastKnownPosition({
+    bool forceLocationManager = false,
+  }) async => lastKnownPosition;
 
   @override
   Future<bool> openLocationSettings() async {
@@ -44,17 +54,17 @@ class _FakeGeolocatorPlatform extends GeolocatorPlatform {
 }
 
 Position _fakePosition() => Position(
-      latitude: 24.86,
-      longitude: 67.00,
-      timestamp: DateTime(2026, 1, 1),
-      accuracy: 5,
-      altitude: 0,
-      altitudeAccuracy: 0,
-      heading: 0,
-      headingAccuracy: 0,
-      speed: 0,
-      speedAccuracy: 0,
-    );
+  latitude: 24.86,
+  longitude: 67.00,
+  timestamp: DateTime(2026, 1, 1),
+  accuracy: 5,
+  altitude: 0,
+  altitudeAccuracy: 0,
+  heading: 0,
+  headingAccuracy: 0,
+  speed: 0,
+  speedAccuracy: 0,
+);
 
 void main() {
   late _FakeGeolocatorPlatform fake;
@@ -73,21 +83,29 @@ void main() {
 
       expect(result.status, LocationAvailability.serviceDisabled);
       expect(result.isAvailable, isFalse);
-      expect(fake.requestPermissionCalls, 0,
-          reason: 'must not attempt a permission request when GPS is off');
+      expect(
+        fake.requestPermissionCalls,
+        0,
+        reason: 'must not attempt a permission request when GPS is off',
+      );
     });
 
-    test('permission denied but askable is reported as permissionDenied',
-        () async {
-      fake.checkResult = LocationPermission.denied;
-      fake.requestResult = LocationPermission.denied;
+    test(
+      'permission denied but askable is reported as permissionDenied',
+      () async {
+        fake.checkResult = LocationPermission.denied;
+        fake.requestResult = LocationPermission.denied;
 
-      final result = await resolveCurrentLocation();
+        final result = await resolveCurrentLocation();
 
-      expect(result.status, LocationAvailability.permissionDenied);
-      expect(fake.requestPermissionCalls, 1,
-          reason: 're-prompts once when initially denied');
-    });
+        expect(result.status, LocationAvailability.permissionDenied);
+        expect(
+          fake.requestPermissionCalls,
+          1,
+          reason: 're-prompts once when initially denied',
+        );
+      },
+    );
 
     test('permission permanently denied is reported distinctly', () async {
       fake.checkResult = LocationPermission.denied;
@@ -98,19 +116,21 @@ void main() {
       expect(result.status, LocationAvailability.permissionPermanentlyDenied);
     });
 
-    test('a fix that fails/times out is reported as unavailable — never an '
-        'infinite wait, never a raw exception surfaced to the caller',
-        () async {
-      fake.checkResult = LocationPermission.whileInUse;
-      fake.getCurrentPositionError = Exception('platform channel boom');
+    test(
+      'a fix that fails/times out is reported as unavailable — never an '
+      'infinite wait, never a raw exception surfaced to the caller',
+      () async {
+        fake.checkResult = LocationPermission.whileInUse;
+        fake.getCurrentPositionError = Exception('platform channel boom');
 
-      final result = await resolveCurrentLocation(
-        timeLimit: const Duration(milliseconds: 50),
-      );
+        final result = await resolveCurrentLocation(
+          timeLimit: const Duration(milliseconds: 50),
+        );
 
-      expect(result.status, LocationAvailability.unavailable);
-      expect(result.position, isNull);
-    });
+        expect(result.status, LocationAvailability.unavailable);
+        expect(result.position, isNull);
+      },
+    );
 
     test('permission granted and GPS on returns a fresh position', () async {
       fake.checkResult = LocationPermission.whileInUse;
@@ -133,17 +153,64 @@ void main() {
     });
   });
 
-  group('Settings routing', () {
-    test('openLocationServicesSettings opens the OS location-services screen',
-        () async {
-      await openLocationServicesSettings();
-      expect(fake.openLocationSettingsCalls, 1);
-    });
+  group('resolvePassiveLocationPreview', () {
+    test(
+      'denied permission returns no preview and never requests permission',
+      () async {
+        fake.checkResult = LocationPermission.denied;
 
-    test('openAppPermissionSettings opens this app\'s permission page',
-        () async {
-      await openAppPermissionSettings();
-      expect(fake.openAppSettingsCalls, 1);
-    });
+        final preview = await resolvePassiveLocationPreview();
+
+        expect(preview, isNull);
+        expect(fake.requestPermissionCalls, 0);
+        expect(fake.currentPositionCalls, 0);
+      },
+    );
+
+    test(
+      'already-granted permission reuses the latest known position',
+      () async {
+        fake.checkResult = LocationPermission.whileInUse;
+        fake.lastKnownPosition = _fakePosition();
+
+        final preview = await resolvePassiveLocationPreview();
+
+        expect(preview?.latitude, 24.86);
+        expect(fake.requestPermissionCalls, 0);
+        expect(fake.currentPositionCalls, 0);
+      },
+    );
+
+    test(
+      'already-granted permission may obtain a short fresh preview fix',
+      () async {
+        fake.checkResult = LocationPermission.always;
+        fake.position = _fakePosition();
+
+        final preview = await resolvePassiveLocationPreview();
+
+        expect(preview?.longitude, 67.00);
+        expect(fake.requestPermissionCalls, 0);
+        expect(fake.currentPositionCalls, 1);
+      },
+    );
+  });
+
+  group('Settings routing', () {
+    test(
+      'openLocationServicesSettings opens the OS location-services screen',
+      () async {
+        await openLocationServicesSettings();
+        expect(fake.openLocationSettingsCalls, 1);
+      },
+    );
+
+    test(
+      'openAppPermissionSettings opens this app\'s permission page',
+      () async {
+        await openAppPermissionSettings();
+        expect(fake.openAppSettingsCalls, 1);
+      },
+    );
   });
 }

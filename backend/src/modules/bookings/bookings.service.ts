@@ -204,6 +204,18 @@ export class BookingsService {
       );
     }
 
+    if (dto.urgency === BookingUrgency.NORMAL && !scheduledAt) {
+      throw new BadRequestException(
+        'A scheduled date is required for normal bookings.',
+      );
+    }
+
+    if (dto.urgency === BookingUrgency.URGENT && !dto.urgentWindow) {
+      throw new BadRequestException(
+        'An arrival window is required for urgent bookings.',
+      );
+    }
+
     // Only meaningful for URGENT bookings â€” ignore any urgentWindow sent
     // alongside a NORMAL booking so stored data never contradicts urgency.
     const urgentWindow: UrgentWindow | undefined =
@@ -212,6 +224,18 @@ export class BookingsService {
     // Lane defaults to BIDDING when omitted â€” older app builds that don't
     // send `lane` at all keep exercising the existing bidding flow unchanged.
     const lane: BookingLane = dto.lane ?? BookingLane.BIDDING;
+
+    if (lane === BookingLane.INSPECTION && !dto.description?.trim()) {
+      throw new BadRequestException(
+        'A problem description is required for inspection bookings.',
+      );
+    }
+
+    if (lane === BookingLane.BIDDING && !dto.title?.trim()) {
+      throw new BadRequestException(
+        'A work or problem title is required for Custom Kaam bookings.',
+      );
+    }
 
     let standardServiceId: string | undefined;
     let standardServiceNameSnapshot: string | undefined;
@@ -535,9 +559,17 @@ export class BookingsService {
     const newUrgency = dto.urgency ?? booking.urgency;
     const newTimeSlot =
       dto.timeSlot !== undefined ? dto.timeSlot : booking.timeSlot;
+    const newScheduledAt = dto.scheduledAt
+      ? new Date(dto.scheduledAt)
+      : booking.scheduledAt;
     if (newUrgency === BookingUrgency.NORMAL && !newTimeSlot) {
       throw new BadRequestException(
         'A time slot is required for normal (non-urgent) bookings.',
+      );
+    }
+    if (newUrgency === BookingUrgency.NORMAL && !newScheduledAt) {
+      throw new BadRequestException(
+        'A scheduled date is required for normal bookings.',
       );
     }
 
@@ -546,6 +578,29 @@ export class BookingsService {
     // undefined here means "leave the stored value untouched".
     const urgentWindow: UrgentWindow | null | undefined =
       newUrgency === BookingUrgency.URGENT ? dto.urgentWindow : null;
+    const newUrgentWindow = dto.urgentWindow ?? booking.urgentWindow;
+    if (newUrgency === BookingUrgency.URGENT && !newUrgentWindow) {
+      throw new BadRequestException(
+        'An arrival window is required for urgent bookings.',
+      );
+    }
+
+    const effectiveDescription = dto.description ?? booking.description;
+    if (
+      booking.lane === BookingLane.INSPECTION &&
+      !effectiveDescription.trim()
+    ) {
+      throw new BadRequestException(
+        'A problem description is required for inspection bookings.',
+      );
+    }
+
+    const effectiveTitle = dto.title ?? booking.title;
+    if (booking.lane === BookingLane.BIDDING && !effectiveTitle?.trim()) {
+      throw new BadRequestException(
+        'A work or problem title is required for Custom Kaam bookings.',
+      );
+    }
 
     // Replace the STANDARD-lane sub-service selection when the client sent
     // one. Lane itself is never editable here, so this only makes sense on a
@@ -2091,5 +2146,4 @@ export class BookingsService {
     };
   }
 }
-
 

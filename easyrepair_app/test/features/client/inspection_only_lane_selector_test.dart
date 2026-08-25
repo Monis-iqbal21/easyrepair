@@ -7,6 +7,8 @@ import 'package:handygo_app/features/categories/domain/entities/service_category
 import 'package:handygo_app/features/categories/presentation/providers/categories_providers.dart';
 import 'package:handygo_app/features/client/presentation/pages/post_job_page.dart';
 import 'package:handygo_app/features/client/presentation/widgets/service_data.dart';
+import 'package:handygo_app/features/saved_addresses/domain/entities/saved_address_entity.dart';
+import 'package:handygo_app/features/saved_addresses/presentation/providers/saved_addresses_providers.dart';
 
 import '../../support/l10n_test_app.dart';
 
@@ -22,22 +24,20 @@ import '../../support/l10n_test_app.dart';
 const _romanUrdu = AppLocale.romanUrdu;
 
 // Copy taken from app_ur_Latn.arb — the locale these tests render in.
-const _standardWork = 'Standard kaam';
-const _somethingBroken = 'Kuch kharab hai';
-const _iKnowThePart = 'Mujhe exact part pata hai';
-const _orDivider = 'OR';
+const _standardWork = 'Fixed-price services';
+const _somethingBroken = 'Inspection';
+const _iKnowThePart = 'Custom Kaam';
 
 ServiceCategoryEntity _category({
   required String name,
   double? inspectionFee,
   bool inspectionOnly = false,
-}) =>
-    ServiceCategoryEntity(
-      id: 'cat-${name.toLowerCase().replaceAll(' ', '-')}',
-      name: name,
-      inspectionFee: inspectionFee,
-      inspectionOnly: inspectionOnly,
-    );
+}) => ServiceCategoryEntity(
+  id: 'cat-${name.toLowerCase().replaceAll(' ', '-')}',
+  name: name,
+  inspectionFee: inspectionFee,
+  inspectionOnly: inspectionOnly,
+);
 
 final _appliances = _category(
   name: 'Appliances Repair',
@@ -47,17 +47,28 @@ final _appliances = _category(
 
 final _electrician = _category(name: 'Electrician', inspectionFee: 500);
 
+class _SavedAddressNotifier extends SavedAddressesNotifier {
+  @override
+  Future<List<SavedAddressEntity>> build() async => const [
+    SavedAddressEntity(
+      id: 'home',
+      label: 'Home',
+      normalizedLabel: 'home',
+      addressLine: 'House 12, Street 5, Karachi',
+      city: 'Karachi',
+      latitude: 24.86,
+      longitude: 67.01,
+    ),
+  ];
+}
+
 /// Pumps the booking form straight onto its lane step for [service].
 Future<void> _pumpLaneStep(
   WidgetTester tester, {
   required String service,
   required List<ServiceCategoryEntity> categories,
 }) async {
-  // Deliberately roomy. The booking form's footer Row overflows horizontally
-  // at ordinary phone widths — a PRE-EXISTING layout issue in this page, not
-  // something these tests introduced or are about. A wide surface keeps that
-  // unrelated exception from masking the lane-card assertions.
-  tester.view.physicalSize = const Size(1000, 2200);
+  tester.view.physicalSize = const Size(320, 900);
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
 
@@ -65,6 +76,7 @@ Future<void> _pumpLaneStep(
     ProviderScope(
       overrides: [
         allCategoriesProvider.overrideWith((ref) async => categories),
+        savedAddressesProvider.overrideWith(_SavedAddressNotifier.new),
       ],
       child: localizedApp(
         BookServicePage(preselectedService: service),
@@ -74,13 +86,8 @@ Future<void> _pumpLaneStep(
   );
   await tester.pumpAndSettle();
 
-  // Step 1 only gates on a non-empty address (see _validateStep1); fill it so
-  // the wizard advances to the lane step, which is what these tests are about.
-  final addressField = find.byType(TextFormField);
-  expect(addressField, findsWidgets,
-      reason: 'step 1 must expose an address field to fill');
-  await tester.enterText(addressField.first, 'House 12, Street 5, Karachi');
-  await tester.pumpAndSettle();
+  await tester.tap(find.text('Home'));
+  await tester.pump();
 
   await tester.ensureVisible(find.text('Aage'));
   await tester.tap(find.text('Aage'));
@@ -89,46 +96,63 @@ Future<void> _pumpLaneStep(
 
 void main() {
   group('Appliances Repair — inspection only', () {
-    testWidgets('renders ONLY the inspection card', (tester) async {
+    testWidgets('renders all three reference cards without preselection', (
+      tester,
+    ) async {
       await _pumpLaneStep(
         tester,
         service: 'Appliances Repair',
         categories: [_appliances, _electrician],
       );
 
+      expect(find.text(_standardWork), findsOneWidget);
       expect(find.text(_somethingBroken), findsOneWidget);
+      expect(find.text(_iKnowThePart), findsOneWidget);
+      for (final lane in ['standard', 'inspection', 'bidding']) {
+        final semantics = tester.widget<Semantics>(
+          find.byKey(ValueKey('booking-lane-$lane')),
+        );
+        expect(semantics.properties.selected, isFalse);
+      }
     });
 
-    testWidgets('the Standard card is not rendered at all — not merely '
-        'disabled or faded', (tester) async {
+    testWidgets('unsupported Standard and Custom cards remain disabled', (
+      tester,
+    ) async {
       await _pumpLaneStep(
         tester,
         service: 'Appliances Repair',
         categories: [_appliances, _electrician],
       );
 
-      expect(find.text(_standardWork), findsNothing);
+      expect(
+        tester
+            .widget<Semantics>(
+              find.byKey(const ValueKey('booking-lane-standard')),
+            )
+            .properties
+            .enabled,
+        isFalse,
+      );
+      expect(
+        tester
+            .widget<Semantics>(
+              find.byKey(const ValueKey('booking-lane-bidding')),
+            )
+            .properties
+            .enabled,
+        isFalse,
+      );
     });
 
-    testWidgets('the Bidding card is not rendered at all', (tester) async {
+    testWidgets('the old OR divider is not rendered', (tester) async {
       await _pumpLaneStep(
         tester,
         service: 'Appliances Repair',
         categories: [_appliances, _electrician],
       );
 
-      expect(find.text(_iKnowThePart), findsNothing);
-    });
-
-    testWidgets('the OR divider that separates Bidding is not rendered',
-        (tester) async {
-      await _pumpLaneStep(
-        tester,
-        service: 'Appliances Repair',
-        categories: [_appliances, _electrician],
-      );
-
-      expect(find.text(_orDivider), findsNothing);
+      expect(find.text('OR'), findsNothing);
     });
 
     testWidgets('the lane step is still shown — never auto-skipped into the '
@@ -140,13 +164,17 @@ void main() {
       );
 
       // The client still sees, and confirms, what they are booking.
-      expect(find.text(_somethingBroken), findsOneWidget);
+      final inspection = tester.widget<Semantics>(
+        find.byKey(const ValueKey('booking-lane-inspection')),
+      );
+      expect(inspection.properties.selected, isFalse);
     });
   });
 
   group('other categories are untouched', () {
-    testWidgets('a normal category still offers all three lanes',
-        (tester) async {
+    testWidgets('a normal category still offers all three lanes', (
+      tester,
+    ) async {
       await _pumpLaneStep(
         tester,
         service: 'Electrician',
@@ -156,15 +184,16 @@ void main() {
       expect(find.text(_standardWork), findsOneWidget);
       expect(find.text(_somethingBroken), findsOneWidget);
       expect(find.text(_iKnowThePart), findsOneWidget);
-      expect(find.text(_orDivider), findsOneWidget);
+      expect(find.text('OR'), findsNothing);
     });
   });
 
   group('an unresolvable category never guesses', () {
     testWidgets('a category missing from the backend list shows no lane cards '
         'rather than defaulting to all of them — this is the exact defect '
-        'that leaked Standard and Bidding into Appliances Repair',
-        (tester) async {
+        'that leaked Standard and Bidding into Appliances Repair', (
+      tester,
+    ) async {
       await _pumpLaneStep(
         tester,
         service: 'Appliances Repair',
@@ -174,7 +203,7 @@ void main() {
 
       expect(find.text(_standardWork), findsNothing);
       expect(find.text(_iKnowThePart), findsNothing);
-      expect(find.text(_orDivider), findsNothing);
+      expect(find.text('OR'), findsNothing);
     });
   });
 
@@ -230,10 +259,7 @@ void main() {
 
     test('existing categories keep the artwork they already had', () {
       expect(imagePathForCategory('AC Technician'), 'assets/images/ac.jpg');
-      expect(
-        imagePathForCategory('Carpenter'),
-        'assets/images/carpenter.jpg',
-      );
+      expect(imagePathForCategory('Carpenter'), 'assets/images/carpenter.jpg');
     });
   });
 }

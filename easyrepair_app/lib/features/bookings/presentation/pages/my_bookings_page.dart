@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../features/auth/presentation/providers/auth_providers.dart';
-import '../../../../features/client/presentation/widgets/client_bottom_nav_bar.dart';
 import '../../domain/entities/booking_entity.dart';
 import '../providers/booking_providers.dart';
 import '../widgets/booking_card.dart';
@@ -156,8 +155,6 @@ class _MyBookingsPageState extends ConsumerState<MyBookingsPage> {
           ],
         ),
       ),
-      extendBody: true,
-      bottomNavigationBar: const ClientBottomNavBar(currentIndex: 1),
     );
   }
 

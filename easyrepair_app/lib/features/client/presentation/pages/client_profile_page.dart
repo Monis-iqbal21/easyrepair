@@ -10,7 +10,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../auth/presentation/providers/auth_providers.dart';
-import '../widgets/client_bottom_nav_bar.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
 import '../../../../core/notifications/notification_permission_card.dart';
 import '../../../../core/permissions/media_permission_helper.dart';
@@ -408,7 +407,6 @@ class _ClientProfilePageState extends ConsumerState<ClientProfilePage> {
         ),
       ),
       extendBody: true,
-      bottomNavigationBar: const ClientBottomNavBar(currentIndex: 3),
     );
   }
 

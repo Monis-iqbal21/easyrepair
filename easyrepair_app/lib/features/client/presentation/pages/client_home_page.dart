@@ -3,325 +3,134 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
+import '../../../../core/l10n/l10n_extensions.dart';
+import '../../../../core/theme/app_semantic_colors.dart';
+import '../../../../core/theme/theme_mode_provider.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
-import '../../../notifications/domain/entities/notification_entity.dart';
 import '../../../notifications/presentation/providers/notification_providers.dart';
-import '../../../../core/presentation/responsive_utils.dart';
-import '../widgets/client_bottom_nav_bar.dart';
 import '../widgets/service_card.dart';
 import '../widgets/service_data.dart';
-import '../../../../core/l10n/l10n_extensions.dart';
 
-const _kGreen = Color(0xFFDB6234);
-const _kDark = Color(0xFF1A1A1A);
-const _kGray = Color(0xFF6B7280);
-
-// Resolves the current area name, or null when it cannot be determined.
-// The fallback wording lives in the widget — a provider has no BuildContext
-// and must not decide user-facing copy.
-final _currentAreaProvider = FutureProvider<String?>((ref) async {
+final currentClientAreaProvider = FutureProvider<String?>((ref) async {
   try {
-    LocationPermission perm = await Geolocator.checkPermission();
-    if (perm == LocationPermission.denied) {
-      perm = await Geolocator.requestPermission();
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
     }
-    if (perm == LocationPermission.denied ||
-        perm == LocationPermission.deniedForever) {
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
       return null;
     }
-    final pos = await Geolocator.getCurrentPosition(
+    final position = await Geolocator.getCurrentPosition(
       locationSettings: const LocationSettings(
         accuracy: LocationAccuracy.low,
         timeLimit: Duration(seconds: 6),
       ),
     );
-    final marks = await placemarkFromCoordinates(pos.latitude, pos.longitude);
+    final marks = await placemarkFromCoordinates(
+      position.latitude,
+      position.longitude,
+    );
     if (marks.isEmpty) return null;
-    final m = marks.first;
-    return m.subLocality?.isNotEmpty == true
-        ? m.subLocality!
-        : m.locality?.isNotEmpty == true
-            ? m.locality!
-            : null;
+    final mark = marks.first;
+    final parts = <String>{
+      if (mark.subLocality?.isNotEmpty == true) mark.subLocality!,
+      if (mark.locality?.isNotEmpty == true) mark.locality!,
+    };
+    return parts.isEmpty ? null : parts.join(', ');
   } catch (_) {
     return null;
   }
 });
 
-class ClientHomePage extends ConsumerStatefulWidget {
+class ClientHomePage extends ConsumerWidget {
   const ClientHomePage({super.key});
 
-  @override
-  ConsumerState<ClientHomePage> createState() => _ClientHomePageState();
-}
+  List<_Service> _services(BuildContext context) => [
+    _Service(context.l10n.serviceAcTechnician, 'AC Technician', '❄️'),
+    _Service(context.l10n.serviceElectrician, 'Electrician', '⚡'),
+    _Service(context.l10n.servicePlumber, 'Plumber', '🔧'),
+    _Service(context.l10n.serviceCarpenter, 'Carpenter', '🪚'),
+    _Service(context.l10n.serviceAppliancesRepair, 'Appliances Repair', '🧺'),
+    _Service(context.l10n.serviceDeepCleaning, 'Cleaner', '🧹'),
+    _Service(context.l10n.servicePestControl, 'Pest Control', '🐛'),
+    _Service(context.l10n.servicePainter, 'Painter', '🎨'),
+    _Service(context.l10n.serviceGardening, 'Gardener', '🌿'),
+    _Service(context.l10n.serviceCarWash, 'Car Wash', '🚗'),
+  ];
 
-class _ClientHomePageState extends ConsumerState<ClientHomePage> {
-  final _searchController = TextEditingController();
-  String _searchQuery = '';
+  void _open(
+    BuildContext context,
+    _Service service, {
+    bool urgentEntry = false,
+  }) => context.push(
+    '/client/post-job?service=${Uri.encodeComponent(service.backendName)}'
+    '${urgentEntry ? '&urgentEntry=1' : ''}',
+  );
 
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  // Fixed homepage sections — display-layer only, no backend/worker impact.
-  // Built per call rather than held in a const field, because the headings and
-  // display titles are now localized. backendName values are untouched.
-  List<_SectionData> _sections(BuildContext context) => [
-    _SectionData(
-      heading: context.l10n.clientHomeSectionRepairs,
-      items: [
-        _HomeServiceItem(
-          displayTitle: context.l10n.serviceAcTechnician,
-          backendName: 'AC Technician',
-          emoji: '❄️',
-          bg: Color(0xFFE8F4F8),
-          emojiBg: Color(0xFFB2DFF0),
-          imagePath: 'assets/images/ac.jpg',
-        ),
-        _HomeServiceItem(
-          displayTitle: context.l10n.serviceElectrician,
-          backendName: 'Electrician',
-          emoji: '⚡',
-          bg: Color(0xFFFFF8E1),
-          emojiBg: Color(0xFFFFECB3),
-          imagePath: 'assets/images/electrician.jpg',
-        ),
-        _HomeServiceItem(
-          displayTitle: context.l10n.servicePlumber,
-          backendName: 'Plumber',
-          emoji: '🔧',
-          bg: Color(0xFFE8F5E9),
-          emojiBg: Color(0xFFC8E6C9),
-          imagePath: 'assets/images/plumber.jpg',
-        ),
-        _HomeServiceItem(
-          displayTitle: context.l10n.serviceCarpenter,
-          backendName: 'Carpenter',
-          emoji: '🪚',
-          bg: Color(0xFFEFEBE9),
-          emojiBg: Color(0xFFD7CCC8),
-          imagePath: 'assets/images/carpenter.jpg',
-        ),
-        _HomeServiceItem(
-          displayTitle: context.l10n.serviceAppliancesRepair,
-          backendName: 'Appliances Repair',
-          emoji: '🧺',
-          // Deliberately the shared defaults from service_data.dart rather
-          // than a new bespoke pastel: adding one would mean a fresh
-          // hardcoded colour, and this file's tile palette is scheduled to
-          // move onto the semantic tokens with the app-wide redesign.
-          bg: bgColorForCategory('Appliances Repair'),
-          emojiBg: emojiBgForCategory('Appliances Repair'),
-          // Same Image.asset/BoxFit tile treatment as AC, Electrician,
-          // Plumber and Carpenter — resolved through the one shared lookup
-          // in service_data.dart rather than repeated here.
-          imagePath: imagePathForCategory('Appliances Repair'),
-        ),
-      ],
-    ),
-    _SectionData(
-      heading: context.l10n.clientHomeSectionCleaning,
-      items: [
-        _HomeServiceItem(
-          displayTitle: context.l10n.serviceDeepCleaning,
-          backendName: 'Cleaner',
-          emoji: '🧹',
-          bg: Color(0xFFFFF3E0),
-          emojiBg: Color(0xFFFFE0B2),
-          imagePath: 'assets/images/deepcleaning.png',
-        ),
-        _HomeServiceItem(
-          displayTitle: context.l10n.servicePestControl,
-          backendName: 'Pest Control',
-          emoji: '🐛',
-          bg: Color(0xFFE8F5E9),
-          emojiBg: Color(0xFFC8E6C9),
-          imagePath: 'assets/images/pest.png',
-        ),
-      ],
-    ),
-    _SectionData(
-      heading: context.l10n.clientHomeSectionPainting,
-      items: [
-        _HomeServiceItem(
-          displayTitle: context.l10n.servicePainter,
-          backendName: 'Painter',
-          emoji: '🎨',
-          bg: Color(0xFFFCE4EC),
-          emojiBg: Color(0xFFF8BBD0),
-          imagePath: 'assets/images/painting.jpg',
-        ),
-      ],
-    ),
-    _SectionData(
-      heading: context.l10n.clientHomeSectionOutdoorVehicle,
-      items: [
-        _HomeServiceItem(
-          displayTitle: context.l10n.serviceGardening,
-          backendName: 'Gardener',
-          emoji: '🌿',
-          bg: Color(0xFFE8F5E9),
-          emojiBg: Color(0xFFA5D6A7),
-          imagePath: 'assets/images/gardening.jpg',
-        ),
-        _HomeServiceItem(
-          displayTitle: context.l10n.serviceCarWash,
-          backendName: 'Car Wash',
-          emoji: '🚗',
-          bg: Color(0xFFE3F2FD),
-          emojiBg: Color(0xFFBBDEFB),
-          imagePath: 'assets/images/carwash.png',
-        ),
-      ],
-    ),
-      ];
-
-  Widget _buildServiceSections(BuildContext context) {
-    void onTap(_HomeServiceItem item) {
-      context.push(
-        '/client/post-job?service=${Uri.encodeComponent(item.backendName)}',
-      );
-    }
-
-    final q = _searchQuery.toLowerCase();
-
-    if (q.isNotEmpty) {
-      final matched = [
-        for (final sec in _sections(context))
-          for (final item in sec.items)
-            if (item.displayTitle.toLowerCase().contains(q) ||
-                item.backendName.toLowerCase().contains(q))
-              item,
-      ];
-
-      if (matched.isEmpty) {
-        return Padding(
-          padding: EdgeInsets.symmetric(vertical: 32),
-          child: Center(
-            child: Text(
-              context.l10n.clientHomeNoServicesFound,
-              style: TextStyle(fontSize: 14, color: Color(0xFF94A3B8)),
-            ),
-          ),
-        );
-      }
-
-      return _ServiceSection(
-        heading: context.l10n.clientHomeSearchResults,
-        items: matched,
-        onItemTap: onTap,
-      );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        for (final sec in _sections(context))
-          _ServiceSection(
-            heading: sec.heading,
-            items: sec.items,
-            onItemTap: onTap,
-          ),
-        const _MoversPackersCard(),
-      ],
-    );
-  }
-
-  // Book Urgently entry point: a quick category-selection step showing only
-  // launch-active services (no "Coming Soon" tiles), then hands off into the
-  // exact same normal booking flow/route used from the service grid above —
-  // preserving the picked category via the same `service=` query param.
-  void _showUrgentCategoryPicker(BuildContext context) {
-    final availableItems = [
-      for (final sec in _sections(context))
-        for (final item in sec.items)
-          if (kLaunchActiveServiceCategories.contains(item.backendName)) item,
-    ];
-
-    showModalBottomSheet(
+  Future<void> _urgentPicker(BuildContext context, List<_Service> services) {
+    final colors = context.semanticColors;
+    final available = services
+        .where(
+          (item) => kLaunchActiveServiceCategories.contains(item.backendName),
+        )
+        .toList();
+    return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (sheetCtx) {
-        return Container(
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(sheetCtx).size.height * 0.75,
-          ),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
+      backgroundColor: colors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFCBD5E1),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
+              Center(
+                child: Container(width: 40, height: 4, color: colors.border),
               ),
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20),
-                child: Align(
-                  alignment: AlignmentDirectional.centerStart,
-                  child: Text(
-                    context.l10n.clientHomeBookUrgently,
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      color: _kDark,
-                    ),
-                  ),
+              const SizedBox(height: 18),
+              Text(
+                context.l10n.clientHomeBookUrgently,
+                style: TextStyle(
+                  color: colors.textPrimary,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
               const SizedBox(height: 4),
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20),
-                child: Align(
-                  alignment: AlignmentDirectional.centerStart,
-                  child: Text(
-                    context.l10n.clientHomeChooseServiceHelp,
-                    style: TextStyle(fontSize: 13, color: _kGray),
-                  ),
-                ),
+              Text(
+                context.l10n.clientHomeChooseServiceHelp,
+                style: TextStyle(color: colors.textSecondary),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 18),
               Flexible(
                 child: GridView.builder(
                   shrinkWrap: true,
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-                  itemCount: availableItems.length,
-                  gridDelegate:
-                      const SliverGridDelegateWithFixedCrossAxisCount(
+                  itemCount: available.length,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 14,
+                    crossAxisSpacing: 14,
                     childAspectRatio: 1.35,
                   ),
-                  itemBuilder: (_, i) {
-                    final item = availableItems[i];
+                  itemBuilder: (_, index) {
+                    final item = available[index];
                     return ServiceCard(
-                      title: item.displayTitle,
+                      title: item.title,
                       emoji: item.emoji,
-                      backgroundColor: item.bg,
-                      emojiBackgroundColor: item.emojiBg,
-                      imagePath: item.imagePath,
+                      backgroundColor: colors.surfaceSubtle,
+                      emojiBackgroundColor: colors.softTeal,
+                      imagePath: imagePathForCategory(item.backendName),
                       useImageStyle: true,
                       onTap: () {
-                        Navigator.of(sheetCtx).pop();
-                        context.push(
-                          '/client/post-job?service='
-                          '${Uri.encodeComponent(item.backendName)}',
-                        );
+                        Navigator.of(sheetContext).pop();
+                        _open(context, item, urgentEntry: true);
                       },
                     );
                   },
@@ -329,819 +138,327 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage> {
               ),
             ],
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
   @override
-  Widget build(BuildContext context) {
-    final authState = ref.watch(authStateProvider);
-    final user = authState.valueOrNull;
-    final firstName = user?.firstName ?? 'there';
-    final screenWidth = MediaQuery.sizeOf(context).width;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = context.semanticColors;
+    final user = ref.watch(authStateProvider).valueOrNull;
+    final rawName = user?.firstName.trim();
+    final firstName = rawName == null || rawName.isEmpty
+        ? context.l10n.clientHomeGuest
+        : rawName;
+    final services = _services(context);
+    final width = MediaQuery.sizeOf(context).width;
+    final side = width <= 340 ? 14.0 : 18.0;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFFFFEFB),
-      body: SafeArea(
+    return ColoredBox(
+      color: colors.background,
+      child: SafeArea(
         bottom: false,
-        child: Column(
-          children: [
-            // ── Header: logo + Handygo | location pill | notification ─────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-              child: Row(
-                children: [
-                  // Logo icon
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.asset(
-                      'assets/images/logo-green.png',
-                      height: 30,
-                      width: 30,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => Container(
-                        width: 30,
-                        height: 30,
-                        decoration: BoxDecoration(
-                          color: _kGreen.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(
-                          Icons.home_repair_service_rounded,
-                          color: _kGreen,
-                          size: 18,
-                        ),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 680),
+            child: CustomScrollView(
+              slivers: [
+                SliverPadding(
+                  padding: EdgeInsets.fromLTRB(side, 14, side, 0),
+                  sliver: SliverToBoxAdapter(
+                    child: _Header(
+                      firstName: firstName,
+                      area: ref.watch(currentClientAreaProvider),
+                      unread:
+                          ref
+                              .watch(unreadNotificationCountProvider)
+                              .valueOrNull ??
+                          0,
+                      isDark: Theme.of(context).brightness == Brightness.dark,
+                      onTheme: () =>
+                          ref.read(themeModeProvider.notifier).toggle(),
+                      onNotifications: () => context.push('/notifications'),
+                    ),
+                  ),
+                ),
+                SliverPadding(
+                  padding: EdgeInsets.fromLTRB(side, 18, side, 0),
+                  sliver: SliverToBoxAdapter(
+                    child: _UrgentBanner(
+                      onTap: () => _urgentPicker(context, services),
+                    ),
+                  ),
+                ),
+                SliverPadding(
+                  padding: EdgeInsets.fromLTRB(side, 22, side, 12),
+                  sliver: SliverToBoxAdapter(
+                    child: Text(
+                      context.l10n.clientHomeWhatNeedsDoing,
+                      style: TextStyle(
+                        color: colors.textPrimary,
+                        fontSize: 19,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 7),
-                  Text(
-                    'Handygo',
-                    style: TextStyle(
-                      fontSize: rFont(screenWidth, 19, min: 16, max: 22),
-                      fontWeight: FontWeight.w800,
-                      color: _kGreen,
-                      letterSpacing: -0.3,
+                ),
+                SliverPadding(
+                  padding: EdgeInsets.symmetric(horizontal: side),
+                  sliver: SliverGrid.builder(
+                    itemCount: services.length,
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      mainAxisSpacing: width <= 340 ? 14 : 18,
+                      crossAxisSpacing: width <= 340 ? 10 : 14,
+                      childAspectRatio: width <= 340 ? 1.3 : 1.42,
                     ),
-                  ),
-                  const Spacer(),
-                  // Dynamic location pill
-                  Consumer(
-                    builder: (_, cRef, _) {
-                      final area =
-                          cRef.watch(_currentAreaProvider).valueOrNull ??
-                          context.l10n.clientHomeYourArea;
-                      return Container(
-                        constraints: BoxConstraints(
-                          maxWidth: screenWidth * 0.32,
+                    itemBuilder: (_, index) {
+                      final item = services[index];
+                      return ServiceCard(
+                        title: item.title,
+                        emoji: item.emoji,
+                        backgroundColor: colors.surfaceSubtle,
+                        emojiBackgroundColor: colors.softTeal,
+                        imagePath: imagePathForCategory(item.backendName),
+                        useImageStyle: true,
+                        locked: !kLaunchActiveServiceCategories.contains(
+                          item.backendName,
                         ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 5,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFF8F5),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: const Color(0xFFE2E8F0),
-                            width: 1,
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.location_on_rounded,
-                              size: 12,
-                              color: _kGreen,
-                            ),
-                            const SizedBox(width: 4),
-                            Flexible(
-                              child: Text(
-                                area,
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  color: _kDark,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
+                        onTap: () => _open(context, item),
                       );
                     },
                   ),
-                  const SizedBox(width: 10),
-                  // Notification bell with unread badge
-                  GestureDetector(
-                    onTap: () => context.push('/notifications'),
-                    child: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        Container(
-                          width: 38,
-                          height: 38,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.07),
-                                blurRadius: 8,
-                              ),
-                            ],
-                          ),
-                          child: const Icon(
-                            Icons.notifications_outlined,
-                            size: 20,
-                            color: _kDark,
-                          ),
-                        ),
-                        Consumer(
-                          builder: (_, cRef, _) {
-                            final count =
-                                cRef
-                                    .watch(unreadNotificationCountProvider)
-                                    .valueOrNull ??
-                                0;
-                            if (count == 0) return const SizedBox.shrink();
-                            return Positioned(
-                              top: -2,
-                              right: -2,
-                              child: Container(
-                                width: 16,
-                                height: 16,
-                                decoration: BoxDecoration(
-                                  color: _kGreen,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: Colors.white,
-                                    width: 1.5,
-                                  ),
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    count > 9 ? '9+' : '$count',
-                                    style: const TextStyle(
-                                      fontSize: 8,
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // ── Scrollable content ────────────────────────────────────────
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // ── Compact greeting + search pill ────────────────────
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(50),
-                        border: Border.all(
-                          color: const Color(0xFFE2E8F0),
-                          width: 1,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.04),
-                            blurRadius: 6,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        children: [
-                          if (_searchQuery.isEmpty) ...[
-                            Text(
-                              context.l10n.clientHomeGreeting(firstName),
-                              style: TextStyle(
-                                fontSize: rFont(screenWidth, 13, min: 11, max: 14),
-                                fontWeight: FontWeight.w600,
-                                color: _kDark,
-                              ),
-                            ),
-                            Container(
-                              margin: const EdgeInsets.symmetric(horizontal: 8),
-                              width: 1,
-                              height: 14,
-                              color: const Color(0xFFE2E8F0),
-                            ),
-                          ],
-                          const Icon(
-                            Icons.search_rounded,
-                            color: _kGreen,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: TextField(
-                              controller: _searchController,
-                              onChanged: (v) =>
-                                  setState(() => _searchQuery = v.trim()),
-                              style: TextStyle(
-                                fontSize: rFont(screenWidth, 13, min: 11, max: 14),
-                                color: _kDark,
-                              ),
-                              decoration: InputDecoration(
-                                hintText: _searchQuery.isEmpty
-                                    ? context.l10n.clientHomeSearchHint
-                                    : null,
-                                hintStyle: TextStyle(
-                                  fontSize: rFont(screenWidth, 12, min: 11, max: 13),
-                                  color: const Color(0xFF94A3B8),
-                                ),
-                                border: InputBorder.none,
-                                isDense: true,
-                                contentPadding: EdgeInsets.zero,
-                              ),
-                            ),
-                          ),
-                          if (_searchQuery.isNotEmpty)
-                            GestureDetector(
-                              onTap: () {
-                                _searchController.clear();
-                                setState(() => _searchQuery = '');
-                              },
-                              child: const Icon(
-                                Icons.close_rounded,
-                                size: 18,
-                                color: _kGray,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // ── Seasonal AC banner ────────────────────────────────────
-                    _SeasonalBanner(
-                      onBookAC: () => context.push(
-                        '/client/post-job?service='
-                        '${Uri.encodeComponent('AC Technician')}',
-                      ),
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    // ── Urgent help card ──────────────────────────────────────
-                    _UrgentHelpCard(
-                      onBookUrgently: () => _showUrgentCategoryPicker(context),
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // ── Service sections ──────────────────────────────────
-                    _buildServiceSections(context),
-
-                    // ── Recent Notifications ──────────────────────────────
-                    const _RecentNotifications(),
-
-                    const SizedBox(height: 90),
-                  ],
                 ),
-              ),
-            ),
-          ],
-        ),
-      ),
-      extendBody: true,
-      bottomNavigationBar: const ClientBottomNavBar(currentIndex: 0),
-    );
-  }
-}
-
-// ── Data models ───────────────────────────────────────────────────────────────
-
-class _HomeServiceItem {
-  final String displayTitle;
-  final String backendName;
-  final String emoji;
-  final Color bg;
-  final Color emojiBg;
-  final String? imagePath;
-
-  const _HomeServiceItem({
-    required this.displayTitle,
-    required this.backendName,
-    required this.emoji,
-    required this.bg,
-    required this.emojiBg,
-    this.imagePath,
-  });
-}
-
-class _SectionData {
-  final String heading;
-  final List<_HomeServiceItem> items;
-  const _SectionData({required this.heading, required this.items});
-}
-
-// ── Movers & Packers coming soon card ────────────────────────────────────────
-
-class _MoversPackersCard extends StatelessWidget {
-  const _MoversPackersCard();
-
-  @override
-  Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.sizeOf(context).width;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          context.l10n.serviceMoversPackers,
-          style: TextStyle(
-            fontSize: rFont(screenWidth, 16, min: 14, max: 18),
-            fontWeight: FontWeight.w700,
-            color: _kDark,
-          ),
-        ),
-        const SizedBox(height: 10),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: Image.asset(
-            'assets/images/banner.png',
-            width: double.infinity,
-            fit: BoxFit.cover,
-          ),
-        ),
-        const SizedBox(height: 20),
-      ],
-    );
-  }
-}
-
-// ── Seasonal AC banner ────────────────────────────────────────────────────────
-
-class _SeasonalBanner extends StatelessWidget {
-  final VoidCallback onBookAC;
-  const _SeasonalBanner({required this.onBookAC});
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        height: 130,
-        decoration: BoxDecoration(
-          color: const Color(0xFFFFF5EF),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFEDD5C5), width: 1),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Stack(
-          children: [
-            // Right side AC image
-            Positioned(
-              right: 0,
-              top: 0,
-              bottom: 0,
-              width: 140,
-              child: Image.asset(
-                'assets/images/ac.jpg',
-                fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => Container(
-                  color: const Color(0xFFFFE5D5),
-                  child: const Icon(Icons.ac_unit_rounded,
-                      size: 48, color: Color(0xFFDB6234)),
-                ),
-              ),
-            ),
-            // Fade overlay: cream on left blending into transparent on right
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Color(0xFFFFF5EF),
-                      Color(0xFFFFF5EF),
-                      Color(0x99FFF5EF),
-                      Colors.transparent,
-                    ],
-                    stops: [0.0, 0.45, 0.65, 1.0],
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                  ),
-                ),
-              ),
-            ),
-            // Left text content
-            Positioned(
-              left: 0,
-              top: 0,
-              bottom: 0,
-              right: 80,
-              child: Padding(
-                padding: const EdgeInsetsDirectional.fromSTEB(16, 14, 8, 14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          context.l10n.clientHomeBeatTheHeat,
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFF1A1A1A),
-                            height: 1.2,
-                          ),
-                        ),
-                        SizedBox(height: 4),
-                        Text(
-                          context.l10n.clientHomeAcServiceBanner,
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Color(0xFF6B7280),
-                            height: 1.35,
-                          ),
-                        ),
-                      ],
-                    ),
-                    GestureDetector(
-                      onTap: onBookAC,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 7),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFDB6234),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          context.l10n.clientHomeBookAcTechnician,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── Urgent help card ──────────────────────────────────────────────────────────
-
-class _UrgentHelpCard extends StatelessWidget {
-  final VoidCallback onBookUrgently;
-  const _UrgentHelpCard({required this.onBookUrgently});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          // Lightning icon circle
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: const Color(0xFFDB6234).withValues(alpha: 0.12),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.bolt_rounded,
-              color: Color(0xFFDB6234),
-              size: 24,
-            ),
-          ),
-          const SizedBox(width: 12),
-          // Text
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  context.l10n.clientHomeNeedHelpNow,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF1A1A1A),
-                  ),
-                ),
-                SizedBox(height: 2),
-                Text(
-                  context.l10n.clientHomeUrgentSubtitle,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF6B7280),
-                  ),
+                SliverPadding(
+                  padding: EdgeInsets.fromLTRB(side, 24, side, 96),
+                  sliver: const SliverToBoxAdapter(child: _TrustStrip()),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 8),
-          // Book Urgently button + 24/7 Service caption
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            mainAxisSize: MainAxisSize.min,
+        ),
+      ),
+    );
+  }
+}
+
+class _Header extends StatelessWidget {
+  const _Header({
+    required this.firstName,
+    required this.area,
+    required this.unread,
+    required this.isDark,
+    required this.onTheme,
+    required this.onNotifications,
+  });
+  final String firstName;
+  final AsyncValue<String?> area;
+  final int unread;
+  final bool isDark;
+  final VoidCallback onTheme;
+  final VoidCallback onNotifications;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.semanticColors;
+    final location = area.when(
+      data: (value) => value ?? context.l10n.clientHomeYourArea,
+      loading: () => context.l10n.clientHomeLocating,
+      error: (_, _) => context.l10n.clientHomeYourArea,
+    );
+    return Row(
+      children: [
+        Icon(
+          Icons.home_repair_service_rounded,
+          color: colors.primary,
+          size: 31,
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              GestureDetector(
-                onTap: onBookUrgently,
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFDB6234),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    context.l10n.clientHomeBookUrgently,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                    ),
-                  ),
+              Text(
+                context.l10n.clientHomeHello(firstName),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: colors.primary,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 2),
               Row(
-                mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
-                    Icons.access_time_filled_rounded,
-                    size: 11,
-                    color: Color(0xFFDB6234),
+                    Icons.location_on_outlined,
+                    size: 13,
+                    color: colors.textSecondary,
                   ),
-                  SizedBox(width: 4),
-                  Text(
-                    context.l10n.clientHome247Service,
-                    style: TextStyle(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFFDB6234),
+                  const SizedBox(width: 3),
+                  Expanded(
+                    child: Text(
+                      location,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: colors.textSecondary,
+                        fontSize: 11.5,
+                      ),
                     ),
                   ),
                 ],
               ),
             ],
           ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── One categorized service section ──────────────────────────────────────────
-
-class _ServiceSection extends StatelessWidget {
-  final String heading;
-  final List<_HomeServiceItem> items;
-  final void Function(_HomeServiceItem item) onItemTap;
-
-  const _ServiceSection({
-    required this.heading,
-    required this.items,
-    required this.onItemTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.sizeOf(context).width;
-
-    // cardW derived from screen width minus the outer 20+20 padding that the
-    // parent SingleChildScrollView already applies, so heading and cards share
-    // the same left edge automatically.
-    const hPad = 20.0; // must match parent SingleChildScrollView padding
-    const spacing = 10.0;
-    final availableW = screenWidth - hPad * 2;
-    final cardW = (availableW - spacing) / 2.28;
-    final imageH = cardW * 0.55;
-    final cardH = imageH + 30; // image + 6px gap + ~18px title + 6px bottom
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          heading,
-          style: TextStyle(
-            fontSize: rFont(screenWidth, 16, min: 14, max: 18),
-            fontWeight: FontWeight.w700,
-            color: _kDark,
-          ),
         ),
-        const SizedBox(height: 10),
-        Align(
-          alignment: AlignmentDirectional.centerStart,
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            clipBehavior: Clip.none,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: items.map((s) {
-                return Padding(
-                  padding: const EdgeInsetsDirectional.only(end: spacing),
-                  child: SizedBox(
-                    width: cardW,
-                    height: cardH,
-                    child: ServiceCard(
-                      title: s.displayTitle,
-                      emoji: s.emoji,
-                      backgroundColor: s.bg,
-                      emojiBackgroundColor: s.emojiBg,
-                      imagePath: s.imagePath,
-                      useImageStyle: true,
-                      locked: !kLaunchActiveServiceCategories.contains(
-                        s.backendName,
-                      ),
-                      onTap: () => onItemTap(s),
+        const SizedBox(width: 8),
+        _Action(
+          icon: isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+          onTap: onTheme,
+        ),
+        const SizedBox(width: 8),
+        Stack(
+          clipBehavior: Clip.none,
+          children: [
+            _Action(icon: Icons.notifications_outlined, onTap: onNotifications),
+            if (unread > 0)
+              PositionedDirectional(
+                top: -3,
+                end: -3,
+                child: Container(
+                  constraints: const BoxConstraints(
+                    minWidth: 16,
+                    minHeight: 16,
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 3),
+                  decoration: BoxDecoration(
+                    color: colors.error,
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    unread > 9 ? '9+' : '$unread',
+                    style: TextStyle(
+                      color: colors.surface,
+                      fontSize: 8,
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
-                );
-              }).toList(),
-            ),
-          ),
+                ),
+              ),
+          ],
         ),
-        const SizedBox(height: 20),
       ],
     );
   }
 }
 
-// ── Recent notifications strip ────────────────────────────────────────────────
-
-class _RecentNotifications extends ConsumerWidget {
-  const _RecentNotifications();
-
+class _Action extends StatelessWidget {
+  const _Action({required this.icon, required this.onTap});
+  final IconData icon;
+  final VoidCallback onTap;
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final async = ref.watch(notificationsProvider);
-    final screenWidth = MediaQuery.sizeOf(context).width;
-
-    return async.maybeWhen(
-      data: (all) {
-        if (all.isEmpty) return const SizedBox.shrink();
-        final items = all.take(4).toList();
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  context.l10n.clientHomeRecent,
-                  style: TextStyle(
-                    fontSize: rFont(screenWidth, 18, min: 15, max: 21),
-                    fontWeight: FontWeight.w700,
-                    color: _kDark,
-                  ),
-                ),
-                GestureDetector(
-                  onTap: () => context.push('/notifications'),
-                  child: Text(
-                    context.l10n.clientHomeSeeAll,
-                    style: TextStyle(
-                      fontSize: rFont(screenWidth, 13, min: 11, max: 15),
-                      fontWeight: FontWeight.w500,
-                      color: _kGreen,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            ...items.map((n) => _CompactNotifTile(n)),
-          ],
-        );
-      },
-      orElse: () => const SizedBox.shrink(),
+  Widget build(BuildContext context) {
+    final colors = context.semanticColors;
+    return Material(
+      color: colors.surfaceSubtle,
+      shape: const CircleBorder(),
+      child: InkWell(
+        onTap: onTap,
+        customBorder: const CircleBorder(),
+        child: SizedBox.square(
+          dimension: 44,
+          child: Icon(icon, color: colors.textPrimary, size: 20),
+        ),
+      ),
     );
   }
 }
 
-class _CompactNotifTile extends StatelessWidget {
-  final NotificationEntity n;
-  const _CompactNotifTile(this.n);
-
+class _UrgentBanner extends StatelessWidget {
+  const _UrgentBanner({required this.onTap});
+  final VoidCallback onTap;
   @override
   Widget build(BuildContext context) {
-    final isUnread = !n.isRead;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: GestureDetector(
-        onTap: () {
-          if (n.route != null && n.route!.isNotEmpty) {
-            context.push(n.route!);
-          }
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          decoration: BoxDecoration(
-            color: isUnread ? const Color(0xFFFFF7F4) : const Color(0xFFFAF9F8),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: isUnread
-                  ? _kGreen.withValues(alpha: 0.45)
-                  : const Color(0xFFE2E8F0),
-            ),
-          ),
+    final colors = context.semanticColors;
+    return Material(
+      color: colors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: colors.urgent),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
           child: Row(
             children: [
-              Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  color: isUnread
-                      ? _kGreen.withValues(alpha: 0.14)
-                      : const Color(0xFFF1F5F9),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.notifications_outlined,
-                  size: 17,
-                  color: isUnread ? _kGreen : _kGray,
-                ),
+              CircleAvatar(
+                radius: 19,
+                backgroundColor: colors.urgent,
+                foregroundColor: colors.surface,
+                child: const Icon(Icons.bolt_rounded),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 11),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      n.title,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight:
-                            isUnread ? FontWeight.w600 : FontWeight.w500,
-                        color: _kDark,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    Wrap(
+                      spacing: 7,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Text(
+                          context.l10n.clientHomeUrgentTitle,
+                          style: TextStyle(
+                            color: colors.urgent,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 15,
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: colors.urgent,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            '24/7',
+                            style: TextStyle(
+                              color: colors.surface,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 3),
                     Text(
-                      n.body,
-                      style: const TextStyle(fontSize: 12, color: _kGray),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                      context.l10n.clientHomeUrgentPromise,
+                      style: TextStyle(
+                        color: colors.textSecondary,
+                        fontSize: 11.5,
+                        height: 1.3,
+                      ),
                     ),
                   ],
                 ),
               ),
               const SizedBox(width: 8),
-              Text(
-                _fmt(context, n.createdAt),
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: Color(0xFF94A3B8),
-                ),
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: colors.urgent,
+                foregroundColor: colors.surface,
+                child: const Icon(Icons.arrow_forward_rounded, size: 18),
               ),
             ],
           ),
@@ -1149,12 +466,44 @@ class _CompactNotifTile extends StatelessWidget {
       ),
     );
   }
+}
 
-  String _fmt(BuildContext context, DateTime dt) {
-    final diff = DateTime.now().difference(dt);
-    if (diff.inMinutes < 1) return context.l10n.timeNow;
-    if (diff.inMinutes < 60) return context.l10n.timeMinutesShort(diff.inMinutes);
-    if (diff.inHours < 24) return context.l10n.timeHoursShort(diff.inHours);
-    return DateFormat('MMM d').format(dt);
+class _TrustStrip extends StatelessWidget {
+  const _TrustStrip();
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.semanticColors;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: colors.softTeal,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: colors.border),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.verified_user_outlined, color: colors.primary, size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              context.l10n.clientHomeTrustMessage,
+              style: TextStyle(
+                color: colors.textSecondary,
+                fontSize: 11.5,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
+}
+
+class _Service {
+  const _Service(this.title, this.backendName, this.emoji);
+  final String title;
+  final String backendName;
+  final String emoji;
 }

@@ -20,19 +20,19 @@ import '../../support/l10n_test_app.dart';
 
 /// The label lookups each bar uses, in on-screen order.
 List<String> clientTabs(AppLocalizations l) => [
-      l.navHome,
-      l.navBookings,
-      l.navChats,
-      l.clientProfileTitle,
-    ];
+  l.navHome,
+  l.navBookings,
+  l.chatTitleFallback,
+  l.clientProfileTitle,
+];
 
 List<String> workerTabs(AppLocalizations l) => [
-      l.navHome,
-      l.workerNewJobsTitle,
-      l.clientJobsTitle,
-      l.chatTitleFallback,
-      l.clientProfileTitle,
-    ];
+  l.navHome,
+  l.workerNewJobsTitle,
+  l.clientJobsTitle,
+  l.chatTitleFallback,
+  l.clientProfileTitle,
+];
 
 Future<void> _pumpNav(
   WidgetTester tester,
@@ -48,15 +48,16 @@ Future<void> _pumpNav(
 /// Labels in the order they are laid out on screen, left to right.
 List<String> _labelsInVisualOrder(WidgetTester tester) {
   final texts = tester.widgetList<Text>(find.byType(Text)).toList();
-  final entries = texts
-      .map(
-        (t) => (
-          label: t.data ?? '',
-          dx: tester.getTopLeft(find.byWidget(t)).dx,
-        ),
-      )
-      .toList()
-    ..sort((a, b) => a.dx.compareTo(b.dx));
+  final entries =
+      texts
+          .map(
+            (t) => (
+              label: t.data ?? '',
+              dx: tester.getTopLeft(find.byWidget(t)).dx,
+            ),
+          )
+          .toList()
+        ..sort((a, b) => a.dx.compareTo(b.dx));
   return entries.map((e) => e.label).toList();
 }
 
@@ -71,14 +72,11 @@ Future<AppLocalizations> _l10nFor(AppLocale locale) =>
     AppLocalizations.delegate.load(locale.locale);
 
 void main() {
-  for (final (name, barBuilder, tabsFor) in <(
-    String,
-    Widget Function(),
-    List<String> Function(AppLocalizations),
-  )>[
-    ('Client', () => const ClientBottomNavBar(currentIndex: 0), clientTabs),
-    ('Ustaad', () => const WorkerBottomNavBar(currentIndex: 0), workerTabs),
-  ]) {
+  for (final (name, barBuilder, tabsFor)
+      in <(String, Widget Function(), List<String> Function(AppLocalizations))>[
+        ('Client', () => const ClientBottomNavBar(currentIndex: 0), clientTabs),
+        ('Ustaad', () => const WorkerBottomNavBar(currentIndex: 0), workerTabs),
+      ]) {
     group('$name bottom navigation', () {
       for (final locale in AppLocale.values) {
         testWidgets('labels are translated in ${locale.storageValue}', (

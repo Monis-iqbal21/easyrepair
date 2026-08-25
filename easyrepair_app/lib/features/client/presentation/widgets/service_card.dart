@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/presentation/responsive_utils.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
-
-const _kAccent = Color(0xFF1D9E75);
+import '../../../../core/theme/app_semantic_colors.dart';
 
 /// Only these categories are launch-approved for booking. Any other category
 /// (by name) renders as a locked "Coming Soon" tile wherever [ServiceCard] is
@@ -50,6 +49,7 @@ class ServiceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.semanticColors;
     final effectiveOnTap = locked ? null : onTap;
 
     // Homepage / image-tile style: always use _ImageTile (with emoji fallback).
@@ -75,10 +75,10 @@ class ServiceCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: backgroundColor,
           borderRadius: BorderRadius.circular(16),
-          border: isSelected ? Border.all(color: _kAccent, width: 2) : null,
+          border: isSelected ? Border.all(color: colors.primary, width: 2) : null,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: isSelected ? 0.12 : 0.07),
+              color: colors.textPrimary.withValues(alpha: isSelected ? 0.12 : 0.07),
               blurRadius: isSelected ? 14 : 10,
               offset: const Offset(0, 2),
             ),
@@ -119,6 +119,7 @@ class _ImageTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.semanticColors;
     final w = MediaQuery.sizeOf(context).width;
     final titleSize = rFont(w, 13, min: 11, max: 15);
 
@@ -141,7 +142,7 @@ class _ImageTile extends StatelessWidget {
                       )
                     : _placeholder(),
                 if (locked) ...[
-                  Container(color: Colors.black.withValues(alpha: 0.45)),
+                  Container(color: colors.textPrimary.withValues(alpha: 0.45)),
                   Center(
                     child: Container(
                       padding: const EdgeInsets.symmetric(
@@ -149,7 +150,7 @@ class _ImageTile extends StatelessWidget {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: colors.surface,
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
@@ -157,7 +158,7 @@ class _ImageTile extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 10.5,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF1A1A1A),
+                          color: colors.textPrimary,
                         ),
                       ),
                     ),
@@ -173,7 +174,7 @@ class _ImageTile extends StatelessWidget {
           style: TextStyle(
             fontSize: titleSize,
             fontWeight: FontWeight.w700,
-            color: locked ? const Color(0xFF94A3B8) : const Color(0xFF1A1A1A),
+            color: locked ? colors.textSecondary : colors.textPrimary,
           ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
@@ -210,6 +211,7 @@ class _EmojiLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.semanticColors;
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -232,21 +234,21 @@ class _EmojiLayout extends StatelessWidget {
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: locked ? const Color(0xFF94A3B8) : const Color(0xFF1A1A1A),
+              color: locked ? colors.textSecondary : colors.textPrimary,
             ),
           ),
           const SizedBox(height: 6),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
-              color: locked ? const Color(0xFF94A3B8) : _kAccent,
+              color: locked ? colors.textSecondary : colors.primary,
               borderRadius: BorderRadius.circular(6),
             ),
             child: Text(
               locked ? context.l10n.serviceComingSoon : (isSelected ? context.l10n.serviceSelectedTick : context.l10n.serviceBookNow),
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 11,
-                color: Colors.white,
+                color: colors.onPrimary,
                 fontWeight: FontWeight.w600,
               ),
             ),

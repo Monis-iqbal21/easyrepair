@@ -1018,7 +1018,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get postJobHowInspectionWorks => 'How inspection works';
 
   @override
-  String get postJobWhatDoYouSee => 'What do you see? (optional)';
+  String get postJobWhatDoYouSee => 'What problem do you observe? (required)';
 
   @override
   String get postJobWhatDoYouSeeHint => 'e.g. AC turns on but room stays hot…';
@@ -1115,6 +1115,35 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get clientHomeChooseServiceHelp =>
       'Choose a service to get help right away.';
+
+  @override
+  String clientHomeHello(String name) {
+    return 'Hello, $name';
+  }
+
+  @override
+  String get clientHomeGuest => 'there';
+
+  @override
+  String get clientHomeLocating => 'Finding your location…';
+
+  @override
+  String get clientHomeUrgentTitle => 'Need help right now?';
+
+  @override
+  String get clientHomeUrgentPromise =>
+      'We’ll send an Ustaad quickly — same rate, no extra charge';
+
+  @override
+  String get clientHomeWhatNeedsDoing => 'What needs to be done?';
+
+  @override
+  String get clientHomeTrustMessage =>
+      'Every Ustaad is CNIC verified · Rate is agreed first';
+
+  @override
+  String get clientHomeSupportUnavailable =>
+      'HandyGo Support is unavailable right now. Please try again.';
 
   @override
   String clientHomeGreeting(String name) {
@@ -1290,7 +1319,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get postJobGpsPrefix => 'Pinned Location';
 
   @override
-  String get postJobBookService => 'Book Service';
+  String get postJobBookService => 'Book';
 
   @override
   String get postJobSaveChanges => 'Save Changes';
@@ -3647,9 +3676,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Enter a whole PKR amount without decimals.';
 
   @override
-  String get cashPaymentConfirmAction => 'Confirm cash payment';
-
-  @override
   String get cashPaymentConfirmedTitle => 'Cash payment confirmed';
 
   @override
@@ -3686,6 +3712,200 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get cashPaymentReviewBlocked =>
       'Confirm the cash payment before reviewing the Ustaad.';
+
+  @override
+  String get postJobSelectBookingTypeFirst => 'Choose Normal or Urgent first.';
+
+  @override
+  String get postJobInspectionDescriptionRequired =>
+      'Describe the problem you observe before continuing.';
+
+  @override
+  String get postJobCustomVoiceRequired =>
+      'Add a voice note before continuing with Custom Kaam.';
+
+  @override
+  String get postJobCompleteAddressBeforeSaving =>
+      'Add a complete address and map pin before saving it.';
+
+  @override
+  String get postJobDay => 'Day';
+
+  @override
+  String get postJobTomorrow => 'Tomorrow';
+
+  @override
+  String get postJobCustomVoiceAndPhotos =>
+      'Voice note (required) & photos/video (optional)';
+
+  @override
+  String get postJobInspectionVoiceAndPhotos =>
+      'Voice note & photos/video (optional)';
+
+  @override
+  String get postJobInspectionRateNote =>
+      'You only pay the visit fee now. The repair quote appears in the app before work starts.';
+
+  @override
+  String get postJobBiddingRateNote =>
+      'Ustaads will send a complete repair quote. The quote you accept is final and cannot change at the door.';
+
+  @override
+  String get savedAddresses => 'Saved addresses';
+
+  @override
+  String get savedAddressForNextTime => 'Save this address for next time';
+
+  @override
+  String get savedAddressOffice => 'Office';
+
+  @override
+  String get savedAddressName => 'Saved address name';
+
+  @override
+  String get savedAddressNameRequired => 'Enter a name.';
+
+  @override
+  String get savedAddressCustomNameTitle => 'Name this saved address';
+
+  @override
+  String get savedAddressRenameTitle => 'Rename saved address';
+
+  @override
+  String get savedAddressRenameConflict =>
+      'That name is already used. Choose another name.';
+
+  @override
+  String get savedAddressSaved => 'Address saved.';
+
+  @override
+  String get savedAddressUse => 'Use address';
+
+  @override
+  String get savedAddressUpdateWithCurrent =>
+      'Update with current address and pin';
+
+  @override
+  String get savedAddressRename => 'Rename';
+
+  @override
+  String get savedAddressDeleteTitle => 'Delete saved address?';
+
+  @override
+  String savedAddressDeleteBody(String name) {
+    return 'Delete $name from your saved addresses?';
+  }
+
+  @override
+  String savedAddressUpdateTitle(String name) {
+    return 'Update $name?';
+  }
+
+  @override
+  String savedAddressUpdateBody(String name) {
+    return '$name is already saved. Update it with this address?';
+  }
+
+  @override
+  String get savedAddressUpdateAction => 'Update address';
+
+  @override
+  String get postJobAddressIntro =>
+      'First booking? Add the address once — you can save it for next time.';
+
+  @override
+  String get postJobCompleteAddressLabel => 'Enter your complete address';
+
+  @override
+  String get postJobAddressLandmarkHelper =>
+      'A nearby landmark helps your Ustaad arrive without needing to call.';
+
+  @override
+  String get postJobAddressResolving => 'Finding this address on the map…';
+
+  @override
+  String get postJobAddressUnresolved =>
+      'We couldn\'t find this address. Add more detail or choose it on the map.';
+
+  @override
+  String get postJobAddressRequired => 'Enter an address before continuing.';
+
+  @override
+  String get postJobMapPreviewEmpty => 'MAP — TAP TO PLACE THE PIN';
+
+  @override
+  String get postJobLanePageTitle => 'Choose a booking option';
+
+  @override
+  String postJobLaneStepIndicator(String service) {
+    return 'Step 2 / 4 · $service';
+  }
+
+  @override
+  String get postJobLaneFixedTitle => 'Fixed-price services';
+
+  @override
+  String get postJobLaneFixedSubtitle =>
+      'Service and price are fixed in advance';
+
+  @override
+  String get postJobLaneFixedBody => 'See the final price before booking.';
+
+  @override
+  String get postJobLaneFixedAction => 'View services and prices →';
+
+  @override
+  String get postJobLaneFixedCta => 'View services and prices';
+
+  @override
+  String get postJobLaneInspectionTitle => 'Inspection';
+
+  @override
+  String get postJobLaneInspectionSubtitle => 'Not sure what the problem is?';
+
+  @override
+  String postJobLaneInspectionFeeBody(String fee) {
+    return '$fee inspection fee — paid after inspection, not now.';
+  }
+
+  @override
+  String get postJobLaneInspectionReportBody =>
+      'The Ustaad checks the issue and sends the report and final quote in the app.';
+
+  @override
+  String postJobLaneInspectionWaiverBody(String fee) {
+    return 'If you proceed with the repair, the $fee inspection fee is waived and you only pay the repair price.';
+  }
+
+  @override
+  String get postJobLaneInspectionAction => 'Book inspection →';
+
+  @override
+  String get postJobLaneInspectionCta => 'Book inspection';
+
+  @override
+  String get postJobLaneCustomTitle => 'Custom Work';
+
+  @override
+  String get postJobLaneCustomBody =>
+      'Send details and photos for a small repair, fitting, or replacement.';
+
+  @override
+  String get postJobLaneCustomRatesBody =>
+      'Nearby Ustaads will send their prices.';
+
+  @override
+  String get postJobLaneCustomAction => 'Add job details →';
+
+  @override
+  String get postJobLaneCustomCta => 'Add job details';
+
+  @override
+  String get postJobLanePriceNote =>
+      'The price can only change after a new quote is sent through the app — not after the Ustaad reaches your home.';
+
+  @override
+  String get postJobLaneChooseCta => 'Choose a booking option';
 
   @override
   String aboutVersionValue(String version, String build) {

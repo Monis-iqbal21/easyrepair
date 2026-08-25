@@ -4,8 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
 import '../../../../core/presentation/responsive_utils.dart';
 import '../../../../l10n/app_localizations.dart';
-
-const _kAccent = Color(0xFFDB6234);
+import '../../../../core/theme/app_semantic_colors.dart';
 
 class ClientBottomNavBar extends StatelessWidget {
   final int currentIndex;
@@ -43,17 +42,19 @@ class ClientBottomNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).padding.bottom;
     final l10n = context.l10n;
+    final colors = context.semanticColors;
     // Labels are translated, but the bar itself stays pinned LTR: Urdu RTL
     // must never reverse tab order or move Home away from the left edge.
     // Verified by test/core/l10n/bottom_nav_protection_test.dart.
     return Directionality(
       textDirection: TextDirection.ltr,
       child: Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
+      decoration: BoxDecoration(
+        color: colors.surface,
+        border: Border(top: BorderSide(color: colors.border)),
         boxShadow: [
           BoxShadow(
-            color: Color(0x18000000),
+            color: colors.textPrimary.withValues(alpha: 0.08),
             blurRadius: 16,
             offset: Offset(0, -2),
           ),
@@ -88,8 +89,8 @@ class ClientBottomNavBar extends StatelessWidget {
                             tab.icon,
                             size: iconSize,
                             color: isActive
-                                ? _kAccent
-                                : const Color(0xFF9CA3AF),
+                                ? colors.primary
+                                : colors.textSecondary,
                           ),
                           SizedBox(height: gap),
                           Text(
@@ -100,8 +101,8 @@ class ClientBottomNavBar extends StatelessWidget {
                                   ? FontWeight.w600
                                   : FontWeight.w400,
                               color: isActive
-                                  ? _kAccent
-                                  : const Color(0xFF9CA3AF),
+                                  ? colors.primary
+                                  : colors.textSecondary,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,

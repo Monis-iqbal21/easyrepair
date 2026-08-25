@@ -169,7 +169,7 @@ class _CashPaymentConfirmationCardState
                               ),
                             )
                           : const Icon(Icons.check_circle_outline_rounded),
-                      label: Text(context.l10n.cashPaymentConfirmAction),
+                      label: Text(context.l10n.cashPaymentTitle),
                     ),
                   ],
                 ),

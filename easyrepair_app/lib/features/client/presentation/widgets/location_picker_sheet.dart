@@ -9,6 +9,8 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
 import '../../../../core/location/location_availability.dart';
 import '../../../../core/location/location_recovery_snack.dart';
+import '../../../../core/services/geocoding_service.dart';
+import '../../../../core/theme/app_semantic_colors.dart';
 
 // ── API key (dart-define) ──────────────────────────────────────────────────────
 const _kMapsApiKey = String.fromEnvironment('GOOGLE_MAPS_API_KEY');
@@ -16,13 +18,6 @@ const _kMapsApiKey = String.fromEnvironment('GOOGLE_MAPS_API_KEY');
 // ── Karachi reference ─────────────────────────────────────────────────────────
 const _kKarachiCenter = LatLng(24.8607, 67.0011);
 const _kKarachiRadiusM = 55000.0; // 55 km
-
-// ── Palette ───────────────────────────────────────────────────────────────────
-const _kOrange  = Color(0xFFDB6234);
-const _kDark    = Color(0xFF1A1A1A);
-const _kGray    = Color(0xFF6B7280);
-const _kBorder  = Color(0xFFE2E8F0);
-const _kSurface = Color(0xFFF9FAFB);
 
 // ── Result model ──────────────────────────────────────────────────────────────
 
@@ -63,7 +58,7 @@ Future<PickedLocation?> showLocationPicker(
   return showModalBottomSheet<PickedLocation>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: Colors.transparent,
+    backgroundColor: context.semanticColors.surface.withValues(alpha: 0),
     builder: (_) => _LocationPickerSheet(initial: initial),
   );
 }
@@ -79,11 +74,13 @@ class _LocationPickerSheet extends StatefulWidget {
 }
 
 class _LocationPickerSheetState extends State<_LocationPickerSheet> {
+  AppSemanticColors get _colors => context.semanticColors;
+
   GoogleMapController? _mapCtrl;
 
   LatLng? _picked;
-  String  _addressLabel = '';
-  bool    _reverseGeocoding = false;
+  String _addressLabel = '';
+  bool _reverseGeocoding = false;
   LatLng? _cameraCenter;
 
   /// Prevents [_onCameraIdle] from re-geocoding after a programmatic move.
@@ -104,8 +101,8 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
   int _geocodeGeneration = 0;
 
   // ── Search ─────────────────────────────────────────────────────────────────
-  final _searchCtrl  = TextEditingController();
-  bool _searching    = false;
+  final _searchCtrl = TextEditingController();
+  bool _searching = false;
   List<_PlacePrediction> _predictions = [];
   Timer? _debounce;
 
@@ -127,7 +124,7 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
       ),
     );
     if (widget.initial != null) {
-      _picked       = LatLng(widget.initial!.latitude, widget.initial!.longitude);
+      _picked = LatLng(widget.initial!.latitude, widget.initial!.longitude);
       _addressLabel = widget.initial!.address;
       _cameraCenter = _picked;
       // Address is already known — skip the first onCameraIdle geocode.
@@ -184,9 +181,7 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
 
   // ── Google Geocoding API (reverse) ─────────────────────────────────────────
 
-  Future<String> _reverseGeocode(LatLng latlng) async {
-    // Read before the request: everything below runs after an await.
-    final fallback = context.l10n.locationSelected;
+  Future<String?> _reverseGeocode(LatLng latlng) async {
     try {
       final res = await _geoDio.get(
         'https://maps.googleapis.com/maps/api/geocode/json',
@@ -198,20 +193,24 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
       );
       final results = res.data['results'] as List?;
       if (results != null && results.isNotEmpty) {
-        return (results.first['formatted_address'] as String?) ?? fallback;
+        final address = results.first['formatted_address'] as String?;
+        if (address != null && address.trim().isNotEmpty) return address;
       }
     } catch (_) {}
-    return fallback;
+    return GeocodingService.addressFromCoordinates(
+      latlng.latitude,
+      latlng.longitude,
+    );
   }
 
   Future<void> _resolveAndSet(LatLng latlng) async {
     if (!mounted) return;
     final myGeneration = ++_geocodeGeneration;
     setState(() {
-      _picked           = latlng;
-      _cameraCenter     = latlng;
+      _picked = latlng;
+      _cameraCenter = latlng;
       _reverseGeocoding = true;
-      _addressLabel     = '';
+      _addressLabel = '';
     });
     final address = await _reverseGeocode(latlng);
     if (!mounted) return;
@@ -220,9 +219,12 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
     // fresher selection with an out-of-order response.
     if (myGeneration != _geocodeGeneration) return;
     setState(() {
-      _addressLabel     = address;
+      _addressLabel = address ?? '';
       _reverseGeocoding = false;
     });
+    if (address == null || address.trim().isEmpty) {
+      _showSnack(context.l10n.locationResolveFailed);
+    }
   }
 
   void _moveMap(LatLng latlng) {
@@ -266,7 +268,7 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
     if (query.trim().isEmpty) {
       setState(() {
         _predictions = [];
-        _searching   = false;
+        _searching = false;
       });
       return;
     }
@@ -283,12 +285,13 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
       final res = await _geoDio.get(
         'https://maps.googleapis.com/maps/api/place/autocomplete/json',
         queryParameters: {
-          'input'     : query,
-          'key'       : _kMapsApiKey,
+          'input': query,
+          'key': _kMapsApiKey,
           'components': 'country:pk',
-          'location'  : '${_kKarachiCenter.latitude},${_kKarachiCenter.longitude}',
-          'radius'    : '50000',
-          'language'  : 'en',
+          'location':
+              '${_kKarachiCenter.latitude},${_kKarachiCenter.longitude}',
+          'radius': '50000',
+          'language': 'en',
         },
       );
       final raw = (res.data['predictions'] as List?) ?? [];
@@ -297,8 +300,10 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
           _predictions = raw.take(5).map((p) {
             final sf = p['structured_formatting'] as Map?;
             return _PlacePrediction(
-              placeId      : p['place_id'] as String,
-              mainText     : (sf?['main_text']      as String?) ?? (p['description'] as String? ?? ''),
+              placeId: p['place_id'] as String,
+              mainText:
+                  (sf?['main_text'] as String?) ??
+                  (p['description'] as String? ?? ''),
               secondaryText: (sf?['secondary_text'] as String?) ?? '',
             );
           }).toList();
@@ -318,15 +323,15 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
     FocusScope.of(context).unfocus();
     setState(() {
       _predictions = [];
-      _searching   = true;
+      _searching = true;
     });
     try {
       final res = await _geoDio.get(
         'https://maps.googleapis.com/maps/api/place/details/json',
         queryParameters: {
           'place_id': prediction.placeId,
-          'key'     : _kMapsApiKey,
-          'fields'  : 'geometry,formatted_address',
+          'key': _kMapsApiKey,
+          'fields': 'geometry,formatted_address',
           'language': 'en',
         },
       );
@@ -335,12 +340,13 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
         if (mounted) _showSnack(context.l10n.locationResolveFailed);
         return;
       }
-      final loc    = result['geometry']['location'] as Map;
+      final loc = result['geometry']['location'] as Map;
       final latlng = LatLng(
         (loc['lat'] as num).toDouble(),
         (loc['lng'] as num).toDouble(),
       );
-      final address = (result['formatted_address'] as String?) ??
+      final address =
+          (result['formatted_address'] as String?) ??
           '${prediction.mainText}, ${prediction.secondaryText}';
 
       if (!_isInKarachi(latlng)) {
@@ -354,9 +360,9 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
       _geocodeDebounce?.cancel();
       _geocodeGeneration++;
       setState(() {
-        _picked           = latlng;
-        _cameraCenter     = latlng;
-        _addressLabel     = address;
+        _picked = latlng;
+        _cameraCenter = latlng;
+        _addressLabel = address;
         _reverseGeocoding = false;
       });
       _moveMap(latlng);
@@ -380,9 +386,9 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
     if (_picked == null) return;
     Navigator.of(context).pop(
       PickedLocation(
-        latitude : _picked!.latitude,
+        latitude: _picked!.latitude,
         longitude: _picked!.longitude,
-        address  : _addressLabel,
+        address: _addressLabel,
       ),
     );
   }
@@ -390,9 +396,9 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
   void _showSnack(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content  : Text(msg),
-        behavior : SnackBarBehavior.floating,
-        shape    : RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        content: Text(msg),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
@@ -402,13 +408,13 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
   @override
   Widget build(BuildContext context) {
     final screenH = MediaQuery.of(context).size.height;
-    final topPad  = MediaQuery.of(context).padding.top;
+    final topPad = MediaQuery.of(context).padding.top;
 
     return Container(
-      height    : screenH - topPad - 24,
-      decoration: const BoxDecoration(
-        color        : Colors.white,
-        borderRadius : BorderRadius.vertical(top: Radius.circular(24)),
+      height: screenH - topPad - 24,
+      decoration: BoxDecoration(
+        color: _colors.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
         children: [
@@ -426,11 +432,11 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Container(
-        width : 40,
+        width: 40,
         height: 4,
         decoration: BoxDecoration(
-          color        : const Color(0xFFCBD5E1),
-          borderRadius : BorderRadius.circular(2),
+          color: _colors.border,
+          borderRadius: BorderRadius.circular(2),
         ),
       ),
     );
@@ -443,53 +449,66 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
         children: [
           Expanded(
             child: TextField(
-              controller     : _searchCtrl,
-              onChanged      : _onSearchChanged,
+              controller: _searchCtrl,
+              onChanged: _onSearchChanged,
               textInputAction: TextInputAction.search,
-              onSubmitted    : (v) {
+              onSubmitted: (v) {
                 if (v.trim().isNotEmpty) _runAutocomplete(v.trim());
               },
               decoration: InputDecoration(
                 hintText: context.l10n.locationSearchHint,
-                hintStyle: const TextStyle(color: _kGray, fontSize: 13.5),
+                hintStyle: TextStyle(
+                  color: _colors.textSecondary,
+                  fontSize: 13.5,
+                ),
                 prefixIcon: _searching
-                    ? const Padding(
-                        padding: EdgeInsets.all(12),
+                    ? Padding(
+                        padding: const EdgeInsets.all(12),
                         child: SizedBox(
-                          width : 16,
+                          width: 16,
                           height: 16,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color      : _kOrange,
+                            color: _colors.primary,
                           ),
                         ),
                       )
-                    : const Icon(Icons.search_rounded, size: 20, color: _kGray),
+                    : Icon(
+                        Icons.search_rounded,
+                        size: 20,
+                        color: _colors.textSecondary,
+                      ),
                 suffixIcon: _searchCtrl.text.isNotEmpty
                     ? IconButton(
-                        icon    : const Icon(Icons.clear, size: 18, color: _kGray),
+                        icon: Icon(
+                          Icons.clear,
+                          size: 18,
+                          color: _colors.textSecondary,
+                        ),
                         onPressed: () {
                           _searchCtrl.clear();
                           setState(() => _predictions = []);
                         },
                       )
                     : null,
-                filled      : true,
-                fillColor   : _kSurface,
+                filled: true,
+                fillColor: _colors.surfaceSubtle,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
-                  borderSide  : const BorderSide(color: _kBorder),
+                  borderSide: BorderSide(color: _colors.controlBorder),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
-                  borderSide  : const BorderSide(color: _kBorder),
+                  borderSide: BorderSide(color: _colors.controlBorder),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
-                  borderSide  : const BorderSide(color: _kOrange, width: 1.4),
+                  borderSide: BorderSide(color: _colors.primary, width: 1.4),
                 ),
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
               ),
             ),
           ),
@@ -497,21 +516,26 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
           GestureDetector(
             onTap: _gpsLoading ? null : _goToCurrentLocation,
             child: Container(
-              width : 44,
+              width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color        : _kOrange.withValues(alpha: 0.08),
-                borderRadius : BorderRadius.circular(12),
-                border       : Border.all(color: _kOrange.withValues(alpha: 0.3)),
+                color: _colors.softTeal,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: _colors.primary),
               ),
               child: _gpsLoading
-                  ? const Padding(
-                      padding: EdgeInsets.all(12),
+                  ? Padding(
+                      padding: const EdgeInsets.all(12),
                       child: CircularProgressIndicator(
-                          strokeWidth: 2, color: _kOrange),
+                        strokeWidth: 2,
+                        color: _colors.primary,
+                      ),
                     )
-                  : const Icon(Icons.my_location_rounded,
-                      size: 20, color: _kOrange),
+                  : Icon(
+                      Icons.my_location_rounded,
+                      size: 20,
+                      color: _colors.primary,
+                    ),
             ),
           ),
         ],
@@ -522,37 +546,40 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
   Widget _buildPredictionList() {
     return Container(
       constraints: const BoxConstraints(maxHeight: 220),
-      margin     : const EdgeInsets.fromLTRB(16, 0, 16, 8),
-      decoration : BoxDecoration(
-        color       : Colors.white,
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      decoration: BoxDecoration(
+        color: _colors.surface,
         borderRadius: BorderRadius.circular(14),
-        border      : Border.all(color: _kBorder),
-        boxShadow   : [
+        border: Border.all(color: _colors.border),
+        boxShadow: [
           BoxShadow(
-            color     : Colors.black.withValues(alpha: 0.06),
+            color: _colors.textPrimary.withValues(alpha: 0.06),
             blurRadius: 8,
-            offset    : const Offset(0, 2),
+            offset: const Offset(0, 2),
           ),
         ],
       ),
       child: ListView.builder(
         shrinkWrap: true,
-        padding   : EdgeInsets.zero,
-        itemCount : _predictions.length,
+        padding: EdgeInsets.zero,
+        itemCount: _predictions.length,
         itemBuilder: (_, i) {
           final p = _predictions[i];
           return InkWell(
             borderRadius: BorderRadius.circular(14),
-            onTap       : () => _selectPrediction(p),
+            onTap: () => _selectPrediction(p),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Padding(
+                  Padding(
                     padding: EdgeInsets.only(top: 2),
-                    child  : Icon(Icons.location_on_outlined,
-                        size: 18, color: _kGray),
+                    child: Icon(
+                      Icons.location_on_outlined,
+                      size: 18,
+                      color: _colors.textSecondary,
+                    ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -561,21 +588,21 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
                       children: [
                         Text(
                           p.mainText,
-                          style    : const TextStyle(
-                            fontSize  : 13.5,
+                          style: TextStyle(
+                            fontSize: 13.5,
                             fontWeight: FontWeight.w600,
-                            color     : _kDark,
+                            color: _colors.textPrimary,
                           ),
-                          maxLines : 1,
-                          overflow : TextOverflow.ellipsis,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                         if (p.secondaryText.isNotEmpty) ...[
                           const SizedBox(height: 2),
                           Text(
                             p.secondaryText,
-                            style  : const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
-                              color   : _kGray,
+                              color: _colors.textSecondary,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -602,10 +629,10 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
         Positioned.fill(
           child: GoogleMap(
             initialCameraPosition: CameraPosition(target: initial, zoom: 14),
-            onMapCreated          : (ctrl) => _mapCtrl = ctrl,
-            onTap                 : _onMapTap,
-            onCameraMove          : _onCameraMove,
-            onCameraIdle          : _onCameraIdle,
+            onMapCreated: (ctrl) => _mapCtrl = ctrl,
+            onTap: _onMapTap,
+            onCameraMove: _onCameraMove,
+            onCameraIdle: _onCameraIdle,
             // Claim pan/drag gestures immediately so they can't be won by the
             // enclosing modal bottom sheet's drag-to-dismiss detector — without
             // this, dragging the map was being interpreted as a swipe to close
@@ -615,16 +642,16 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
                 () => EagerGestureRecognizer(),
               ),
             },
-            markers               : const {},
-            mapType               : MapType.normal,
-            myLocationEnabled     : true,
+            markers: const {},
+            mapType: MapType.normal,
+            myLocationEnabled: true,
             myLocationButtonEnabled: false,
-            zoomControlsEnabled   : false,
-            mapToolbarEnabled     : false,
-            buildingsEnabled      : true,
-            tiltGesturesEnabled   : false,
-            rotateGesturesEnabled : false,
-            compassEnabled        : false,
+            zoomControlsEnabled: false,
+            mapToolbarEnabled: false,
+            buildingsEnabled: true,
+            tiltGesturesEnabled: false,
+            rotateGesturesEnabled: false,
+            compassEnabled: false,
           ),
         ),
 
@@ -641,36 +668,37 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
                   // Pin head — scales up slightly while dragging
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 150),
-                    curve   : Curves.easeOut,
-                    width   : _isDragging ? 46 : 40,
-                    height  : _isDragging ? 46 : 40,
+                    curve: Curves.easeOut,
+                    width: _isDragging ? 46 : 40,
+                    height: _isDragging ? 46 : 40,
                     decoration: BoxDecoration(
-                      color    : _kOrange,
-                      shape    : BoxShape.circle,
+                      color: _colors.primary,
+                      shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color     : _kOrange.withValues(
-                              alpha: _isDragging ? 0.45 : 0.3),
+                          color: _colors.primary.withValues(
+                            alpha: _isDragging ? 0.45 : 0.3,
+                          ),
                           blurRadius: _isDragging ? 18 : 12,
-                          offset    : const Offset(0, 4),
+                          offset: const Offset(0, 4),
                         ),
                       ],
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.location_on_rounded,
-                      color: Colors.white,
-                      size : 22,
+                      color: _colors.onPrimary,
+                      size: 22,
                     ),
                   ),
                   // Pin stem
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 150),
-                    width   : 3,
-                    height  : _isDragging ? 20 : 16,
+                    width: 3,
+                    height: _isDragging ? 20 : 16,
                     decoration: BoxDecoration(
-                      color       : _kOrange,
+                      color: _colors.primary,
                       borderRadius: const BorderRadius.only(
-                        bottomLeft : Radius.circular(2),
+                        bottomLeft: Radius.circular(2),
                         bottomRight: Radius.circular(2),
                       ),
                     ),
@@ -678,12 +706,12 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
                   // Ground shadow dot — fades when lifted
                   AnimatedOpacity(
                     duration: const Duration(milliseconds: 150),
-                    opacity : _isDragging ? 0.3 : 1.0,
+                    opacity: _isDragging ? 0.3 : 1.0,
                     child: Container(
-                      width : 10,
+                      width: 10,
                       height: 5,
                       decoration: BoxDecoration(
-                        color       : Colors.black.withValues(alpha: 0.18),
+                        color: _colors.textPrimary.withValues(alpha: 0.18),
                         borderRadius: BorderRadius.circular(3),
                       ),
                     ),
@@ -698,7 +726,10 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
   }
 
   Widget _buildBottomPanel() {
-    final canConfirm = _picked != null && !_reverseGeocoding;
+    final canConfirm =
+        _picked != null &&
+        !_reverseGeocoding &&
+        _addressLabel.trim().isNotEmpty;
 
     return Container(
       padding: EdgeInsets.fromLTRB(
@@ -707,12 +738,12 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
         16,
         MediaQuery.of(context).padding.bottom + 16,
       ),
-      decoration: const BoxDecoration(
-        color : Colors.white,
-        border: Border(top: BorderSide(color: _kBorder)),
+      decoration: BoxDecoration(
+        color: _colors.surface,
+        border: Border(top: BorderSide(color: _colors.border)),
       ),
       child: Column(
-        mainAxisSize      : MainAxisSize.min,
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // ── Selected address ───────────────────────────────────────────────
@@ -721,8 +752,10 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
             children: [
               Icon(
                 Icons.location_on_rounded,
-                size : 18,
-                color: _picked != null ? _kOrange : _kGray,
+                size: 18,
+                color: _picked != null
+                    ? _colors.primary
+                    : _colors.textSecondary,
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -730,15 +763,20 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
                     ? Row(
                         children: [
                           SizedBox(
-                            width : 14,
+                            width: 14,
                             height: 14,
-                            child : CircularProgressIndicator(
-                                strokeWidth: 2, color: _kOrange),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: _colors.primary,
+                            ),
                           ),
                           SizedBox(width: 8),
                           Text(
                             context.l10n.locationGettingAddress,
-                            style: TextStyle(fontSize: 13, color: _kGray),
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: _colors.textSecondary,
+                            ),
                           ),
                         ],
                       )
@@ -746,11 +784,13 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
                         _picked == null
                             ? context.l10n.locationMoveMapHint
                             : _addressLabel.isNotEmpty
-                                ? _addressLabel
-                                : context.l10n.locationSelected,
+                            ? _addressLabel
+                            : context.l10n.locationResolveFailed,
                         style: TextStyle(
-                          fontSize  : 13,
-                          color     : _picked == null ? _kGray : _kDark,
+                          fontSize: 13,
+                          color: _picked == null
+                              ? _colors.textSecondary
+                              : _colors.textPrimary,
                           fontWeight: _picked != null
                               ? FontWeight.w600
                               : FontWeight.normal,
@@ -767,13 +807,14 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
             child: ElevatedButton(
               onPressed: canConfirm ? _confirm : null,
               style: ElevatedButton.styleFrom(
-                backgroundColor       : _kOrange,
-                foregroundColor       : Colors.white,
-                disabledBackgroundColor: _kOrange.withValues(alpha: 0.4),
-                disabledForegroundColor: Colors.white,
+                backgroundColor: _colors.primary,
+                foregroundColor: _colors.onPrimary,
+                disabledBackgroundColor: _colors.disabled,
+                disabledForegroundColor: _colors.textSecondary,
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                shape  : RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
                 elevation: 0,
               ),
               child: Text(

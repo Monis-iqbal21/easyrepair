@@ -1007,7 +1007,7 @@ class AppLocalizationsUr extends AppLocalizations {
   String get postJobHowInspectionWorks => 'معائنہ کیسے ہوتا ہے';
 
   @override
-  String get postJobWhatDoYouSee => 'آپ کو کیا نظر آ رہا ہے؟ (اختیاری)';
+  String get postJobWhatDoYouSee => 'آپ کو کیا مسئلہ نظر آ رہا ہے؟ (ضروری)';
 
   @override
   String get postJobWhatDoYouSeeHint =>
@@ -1105,6 +1105,35 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get clientHomeChooseServiceHelp =>
       'فوری مدد کے لیے کوئی سروس منتخب کریں۔';
+
+  @override
+  String clientHomeHello(String name) {
+    return 'ہیلو، $name';
+  }
+
+  @override
+  String get clientHomeGuest => 'دوست';
+
+  @override
+  String get clientHomeLocating => 'مقام تلاش کیا جا رہا ہے…';
+
+  @override
+  String get clientHomeUrgentTitle => 'ابھی مدد چاہیے؟';
+
+  @override
+  String get clientHomeUrgentPromise =>
+      'فوراً استاد بھیجتے ہیں — وہی ریٹ، کوئی اضافی چارج نہیں';
+
+  @override
+  String get clientHomeWhatNeedsDoing => 'کیا کروانا ہے؟';
+
+  @override
+  String get clientHomeTrustMessage =>
+      'ہر استاد کا شناختی کارڈ تصدیق شدہ · ریٹ پہلے طے ہوتا ہے';
+
+  @override
+  String get clientHomeSupportUnavailable =>
+      'HandyGo سپورٹ ابھی دستیاب نہیں۔ دوبارہ کوشش کریں۔';
 
   @override
   String clientHomeGreeting(String name) {
@@ -1281,7 +1310,7 @@ class AppLocalizationsUr extends AppLocalizations {
   String get postJobGpsPrefix => 'لوکیشن پن کر دی گئی';
 
   @override
-  String get postJobBookService => 'سروس بک کریں';
+  String get postJobBookService => 'بک کریں';
 
   @override
   String get postJobSaveChanges => 'تبدیلیاں محفوظ کریں';
@@ -3570,9 +3599,6 @@ class AppLocalizationsUr extends AppLocalizations {
   String get cashPaymentWholeRupees => 'اعشاریہ کے بغیر پوری PKR رقم لکھیں۔';
 
   @override
-  String get cashPaymentConfirmAction => 'نقد ادائیگی کی تصدیق کریں';
-
-  @override
   String get cashPaymentConfirmedTitle => 'نقد ادائیگی کی تصدیق ہو گئی';
 
   @override
@@ -3609,6 +3635,198 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get cashPaymentReviewBlocked =>
       'استاد کو جائزہ دینے سے پہلے نقد ادائیگی کی تصدیق کریں۔';
+
+  @override
+  String get postJobSelectBookingTypeFirst => 'پہلے عام یا فوری منتخب کریں۔';
+
+  @override
+  String get postJobInspectionDescriptionRequired =>
+      'آگے بڑھنے سے پہلے نظر آنے والا مسئلہ لکھیں۔';
+
+  @override
+  String get postJobCustomVoiceRequired =>
+      'کسٹم کام کے لیے آگے بڑھنے سے پہلے وائس نوٹ شامل کریں۔';
+
+  @override
+  String get postJobCompleteAddressBeforeSaving =>
+      'محفوظ کرنے سے پہلے مکمل پتہ اور نقشے کا پن لگائیں۔';
+
+  @override
+  String get postJobDay => 'دن';
+
+  @override
+  String get postJobTomorrow => 'کل';
+
+  @override
+  String get postJobCustomVoiceAndPhotos =>
+      'وائس نوٹ (ضروری) اور تصاویر/ویڈیو (اختیاری)';
+
+  @override
+  String get postJobInspectionVoiceAndPhotos =>
+      'وائس نوٹ اور تصاویر/ویڈیو (اختیاری)';
+
+  @override
+  String get postJobInspectionRateNote =>
+      'ابھی صرف آنے کی فیس دیں۔ مرمت کا نرخ کام شروع ہونے سے پہلے ایپ میں آئے گا۔';
+
+  @override
+  String get postJobBiddingRateNote =>
+      'استاد مکمل مرمت کا نرخ بھیجیں گے۔ آپ کا قبول کردہ نرخ حتمی ہے اور دروازے پر تبدیل نہیں ہوگا۔';
+
+  @override
+  String get savedAddresses => 'محفوظ پتے';
+
+  @override
+  String get savedAddressForNextTime => 'یہ پتہ اگلی بار کے لیے محفوظ کریں';
+
+  @override
+  String get savedAddressOffice => 'دفتر';
+
+  @override
+  String get savedAddressName => 'محفوظ پتے کا نام';
+
+  @override
+  String get savedAddressNameRequired => 'نام درج کریں۔';
+
+  @override
+  String get savedAddressCustomNameTitle => 'اس محفوظ پتے کا نام رکھیں';
+
+  @override
+  String get savedAddressRenameTitle => 'محفوظ پتے کا نام بدلیں';
+
+  @override
+  String get savedAddressRenameConflict =>
+      'یہ نام پہلے سے استعمال ہو رہا ہے۔ کوئی دوسرا نام منتخب کریں۔';
+
+  @override
+  String get savedAddressSaved => 'پتہ محفوظ ہو گیا۔';
+
+  @override
+  String get savedAddressUse => 'پتہ استعمال کریں';
+
+  @override
+  String get savedAddressUpdateWithCurrent =>
+      'موجودہ پتے اور پن سے اپ ڈیٹ کریں';
+
+  @override
+  String get savedAddressRename => 'نام بدلیں';
+
+  @override
+  String get savedAddressDeleteTitle => 'محفوظ پتہ حذف کریں؟';
+
+  @override
+  String savedAddressDeleteBody(String name) {
+    return '$name کو محفوظ پتوں سے حذف کریں؟';
+  }
+
+  @override
+  String savedAddressUpdateTitle(String name) {
+    return '$name اپ ڈیٹ کریں؟';
+  }
+
+  @override
+  String savedAddressUpdateBody(String name) {
+    return '$name پہلے سے محفوظ ہے۔ اس پتے سے اپ ڈیٹ کریں؟';
+  }
+
+  @override
+  String get savedAddressUpdateAction => 'پتہ اپ ڈیٹ کریں';
+
+  @override
+  String get postJobAddressIntro =>
+      'پہلی بکنگ ہے — پتہ ایک بار لکھ دیں۔ اگلی بار کے لیے محفوظ کیا جا سکتا ہے۔';
+
+  @override
+  String get postJobCompleteAddressLabel => 'اپنا مکمل پتہ لکھیں';
+
+  @override
+  String get postJobAddressLandmarkHelper =>
+      'قریبی نشانی سے استاد بغیر فون کیے سیدھا پہنچ سکتا ہے۔';
+
+  @override
+  String get postJobAddressResolving => 'اس پتے کو نقشے پر تلاش کیا جا رہا ہے…';
+
+  @override
+  String get postJobAddressUnresolved =>
+      'یہ پتہ نہیں ملا۔ مزید تفصیل لکھیں یا نقشے پر منتخب کریں۔';
+
+  @override
+  String get postJobAddressRequired => 'آگے بڑھنے سے پہلے پتہ درج کریں۔';
+
+  @override
+  String get postJobMapPreviewEmpty => 'نقشہ — پن لگانے کے لیے دبائیں';
+
+  @override
+  String get postJobLanePageTitle => 'بکنگ کا آپشن منتخب کریں';
+
+  @override
+  String postJobLaneStepIndicator(String service) {
+    return 'مرحلہ 2 / 4 · $service';
+  }
+
+  @override
+  String get postJobLaneFixedTitle => 'مقررہ قیمت کی سروسز';
+
+  @override
+  String get postJobLaneFixedSubtitle => 'سروس اور قیمت پہلے سے مقرر ہیں';
+
+  @override
+  String get postJobLaneFixedBody => 'بکنگ سے پہلے حتمی قیمت دیکھیں۔';
+
+  @override
+  String get postJobLaneFixedAction => 'سروسز اور قیمتیں دیکھیں ←';
+
+  @override
+  String get postJobLaneFixedCta => 'سروسز اور قیمتیں دیکھیں';
+
+  @override
+  String get postJobLaneInspectionTitle => 'معائنہ';
+
+  @override
+  String get postJobLaneInspectionSubtitle => 'مسئلہ سمجھ نہیں آ رہا؟';
+
+  @override
+  String postJobLaneInspectionFeeBody(String fee) {
+    return '$fee معائنہ فیس — ابھی نہیں، معائنے کے بعد۔';
+  }
+
+  @override
+  String get postJobLaneInspectionReportBody =>
+      'استاد مسئلہ چیک کر کے رپورٹ اور حتمی نرخ ایپ میں بھیجے گا۔';
+
+  @override
+  String postJobLaneInspectionWaiverBody(String fee) {
+    return 'کام کروا لیا تو $fee معائنہ فیس معاف ہوگی اور صرف مرمت کی قیمت دینی ہوگی۔';
+  }
+
+  @override
+  String get postJobLaneInspectionAction => 'معائنہ بک کریں ←';
+
+  @override
+  String get postJobLaneInspectionCta => 'معائنہ بک کریں';
+
+  @override
+  String get postJobLaneCustomTitle => 'کسٹم کام';
+
+  @override
+  String get postJobLaneCustomBody =>
+      'چھوٹی مرمت، فٹنگ یا تبدیلی کی تفصیل اور تصاویر بھیجیں۔';
+
+  @override
+  String get postJobLaneCustomRatesBody => 'قریبی استاد اپنی قیمتیں بھیجیں گے۔';
+
+  @override
+  String get postJobLaneCustomAction => 'کام کی تفصیل دیں ←';
+
+  @override
+  String get postJobLaneCustomCta => 'کام کی تفصیل دیں';
+
+  @override
+  String get postJobLanePriceNote =>
+      'قیمت صرف ایپ میں نیا نرخ بھیجنے کے بعد بدل سکتی ہے — گھر پہنچنے کے بعد نہیں۔';
+
+  @override
+  String get postJobLaneChooseCta => 'بکنگ کا آپشن منتخب کریں';
 
   @override
   String aboutVersionValue(String version, String build) {
@@ -4629,7 +4847,8 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get postJobHowInspectionWorks => 'Muaina kaise hota hai';
 
   @override
-  String get postJobWhatDoYouSee => 'Aap ko kya nazar aa raha hai? (optional)';
+  String get postJobWhatDoYouSee =>
+      'Aap ko kya masla nazar aa raha hai? (zaroori)';
 
   @override
   String get postJobWhatDoYouSeeHint =>
@@ -4727,6 +4946,35 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   @override
   String get clientHomeChooseServiceHelp =>
       'Foran madad ke liye koi service chunain.';
+
+  @override
+  String clientHomeHello(String name) {
+    return 'Hello, $name';
+  }
+
+  @override
+  String get clientHomeGuest => 'dost';
+
+  @override
+  String get clientHomeLocating => 'Location dhoond rahe hain…';
+
+  @override
+  String get clientHomeUrgentTitle => 'Abhi madad chahiye?';
+
+  @override
+  String get clientHomeUrgentPromise =>
+      'Foran Ustaad bhejte hain — rate wahi, koi extra charge nahi';
+
+  @override
+  String get clientHomeWhatNeedsDoing => 'Kya karwana hai?';
+
+  @override
+  String get clientHomeTrustMessage =>
+      'Har Ustaad CNIC verified · Rate pehle tay hota hai';
+
+  @override
+  String get clientHomeSupportUnavailable =>
+      'HandyGo Support abhi available nahi. Dobara koshish karein.';
 
   @override
   String clientHomeGreeting(String name) {
@@ -4905,7 +5153,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get postJobGpsPrefix => 'Pin Location';
 
   @override
-  String get postJobBookService => 'Service book karein';
+  String get postJobBookService => 'Book karein';
 
   @override
   String get postJobSaveChanges => 'Tabdeeliyan save karein';
@@ -7229,9 +7477,6 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
       'Decimal ke baghair poori PKR amount likhein.';
 
   @override
-  String get cashPaymentConfirmAction => 'Cash payment confirm karein';
-
-  @override
   String get cashPaymentConfirmedTitle => 'Cash payment confirm ho gayi';
 
   @override
@@ -7268,6 +7513,202 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   @override
   String get cashPaymentReviewBlocked =>
       'Ustaad ko review dene se pehle cash payment confirm karein.';
+
+  @override
+  String get postJobSelectBookingTypeFirst =>
+      'Pehle Normal ya Urgent choose karein.';
+
+  @override
+  String get postJobInspectionDescriptionRequired =>
+      'Aage barhne se pehle nazar aane wala masla likhein.';
+
+  @override
+  String get postJobCustomVoiceRequired =>
+      'Custom Kaam ke liye aage barhne se pehle voice note lagayen.';
+
+  @override
+  String get postJobCompleteAddressBeforeSaving =>
+      'Save karne se pehle poora address aur map pin lagayen.';
+
+  @override
+  String get postJobDay => 'Din';
+
+  @override
+  String get postJobTomorrow => 'Kal';
+
+  @override
+  String get postJobCustomVoiceAndPhotos =>
+      'Voice note (zaroori) aur photos/video (marzi se)';
+
+  @override
+  String get postJobInspectionVoiceAndPhotos =>
+      'Voice note aur photos/video (marzi se)';
+
+  @override
+  String get postJobInspectionRateNote =>
+      'Abhi sirf aane ki fee dein. Repair ka quote kaam shuru hone se pehle app mein aayega.';
+
+  @override
+  String get postJobBiddingRateNote =>
+      'Ustaads poore repair ka quote bhejenge. Jo quote aap accept karein woh final hai aur darwaze par nahi badlega.';
+
+  @override
+  String get savedAddresses => 'Save kiye hue addresses';
+
+  @override
+  String get savedAddressForNextTime =>
+      'Yeh address agli baar ke liye save karein';
+
+  @override
+  String get savedAddressOffice => 'Office';
+
+  @override
+  String get savedAddressName => 'Saved address ka naam';
+
+  @override
+  String get savedAddressNameRequired => 'Naam likhein.';
+
+  @override
+  String get savedAddressCustomNameTitle => 'Is address ka naam rakhein';
+
+  @override
+  String get savedAddressRenameTitle => 'Saved address ka naam badlein';
+
+  @override
+  String get savedAddressRenameConflict =>
+      'Yeh naam pehle se use ho raha hai. Koi aur naam choose karein.';
+
+  @override
+  String get savedAddressSaved => 'Address save ho gaya.';
+
+  @override
+  String get savedAddressUse => 'Address use karein';
+
+  @override
+  String get savedAddressUpdateWithCurrent =>
+      'Maujooda address aur pin se update karein';
+
+  @override
+  String get savedAddressRename => 'Naam badlein';
+
+  @override
+  String get savedAddressDeleteTitle => 'Saved address delete karein?';
+
+  @override
+  String savedAddressDeleteBody(String name) {
+    return '$name ko saved addresses se delete karein?';
+  }
+
+  @override
+  String savedAddressUpdateTitle(String name) {
+    return '$name update karein?';
+  }
+
+  @override
+  String savedAddressUpdateBody(String name) {
+    return '$name pehle se saved hai. Is address se update karein?';
+  }
+
+  @override
+  String get savedAddressUpdateAction => 'Address update karein';
+
+  @override
+  String get postJobAddressIntro =>
+      'Pehli booking hai — pata aik dafa likh dein. Aage se save ho sakta hai.';
+
+  @override
+  String get postJobCompleteAddressLabel => 'Apna complete address likhein';
+
+  @override
+  String get postJobAddressLandmarkHelper =>
+      'Nishani se Ustaad seedha pohanchta hai — phone karne ki zaroorat nahi.';
+
+  @override
+  String get postJobAddressResolving =>
+      'Is address ko map par dhoonda ja raha hai…';
+
+  @override
+  String get postJobAddressUnresolved =>
+      'Yeh address nahi mila. Mazeed tafseel likhein ya map par chunain.';
+
+  @override
+  String get postJobAddressRequired => 'Aage barhne se pehle address likhein.';
+
+  @override
+  String get postJobMapPreviewEmpty => 'MAP — PIN LAGANE KE LIYE TAP KAREIN';
+
+  @override
+  String get postJobLanePageTitle => 'Choose a booking option';
+
+  @override
+  String postJobLaneStepIndicator(String service) {
+    return 'Step 2 / 4 · $service';
+  }
+
+  @override
+  String get postJobLaneFixedTitle => 'Fixed-price services';
+
+  @override
+  String get postJobLaneFixedSubtitle => 'Service aur price pehle se fixed';
+
+  @override
+  String get postJobLaneFixedBody => 'Booking se pehle final price dekhein.';
+
+  @override
+  String get postJobLaneFixedAction => 'Services aur prices dekhein →';
+
+  @override
+  String get postJobLaneFixedCta => 'Services aur prices dekhein';
+
+  @override
+  String get postJobLaneInspectionTitle => 'Inspection';
+
+  @override
+  String get postJobLaneInspectionSubtitle => 'Masla samajh nahi aa raha?';
+
+  @override
+  String postJobLaneInspectionFeeBody(String fee) {
+    return '$fee inspection fee — abhi nahi, inspection ke baad.';
+  }
+
+  @override
+  String get postJobLaneInspectionReportBody =>
+      'Ustaad masla check karke report aur final quote app mein bhejega.';
+
+  @override
+  String postJobLaneInspectionWaiverBody(String fee) {
+    return 'Kaam karwa liya to ye $fee maaf — sirf repair ka rate dena hai.';
+  }
+
+  @override
+  String get postJobLaneInspectionAction => 'Inspection book karein →';
+
+  @override
+  String get postJobLaneInspectionCta => 'Inspection book karein';
+
+  @override
+  String get postJobLaneCustomTitle => 'Custom Kaam';
+
+  @override
+  String get postJobLaneCustomBody =>
+      'Chhote repair, fitting ya replacement ki details aur photos bhejein.';
+
+  @override
+  String get postJobLaneCustomRatesBody =>
+      'Qareebi Ustaads apne rates bhejenge.';
+
+  @override
+  String get postJobLaneCustomAction => 'Kaam ki details dein →';
+
+  @override
+  String get postJobLaneCustomCta => 'Kaam ki details dein';
+
+  @override
+  String get postJobLanePriceNote =>
+      'Price sirf app mein naya quote bhejne ke baad badal sakta hai — ghar pohanch kar nahi.';
+
+  @override
+  String get postJobLaneChooseCta => 'Booking option choose karein';
 
   @override
   String aboutVersionValue(String version, String build) {

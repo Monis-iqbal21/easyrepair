@@ -87,7 +87,11 @@ class BookingRemoteDataSourceImpl implements BookingRemoteDataSource {
   final LocalCacheService _cache;
   final SecureStorageService _secureStorage;
 
-  const BookingRemoteDataSourceImpl(this._dio, this._cache, this._secureStorage);
+  const BookingRemoteDataSourceImpl(
+    this._dio,
+    this._cache,
+    this._secureStorage,
+  );
 
   @override
   Future<BookingModel> createBooking(CreateBookingRequest request) async {
@@ -111,6 +115,8 @@ class BookingRemoteDataSourceImpl implements BookingRemoteDataSource {
           'description': request.description,
         'inspection': request.inspection,
         'lane': request.lane.raw,
+        if (request.idempotencyKey != null)
+          'idempotencyKey': request.idempotencyKey,
         if (request.standardServiceIds.isNotEmpty)
           'standardServiceIds': request.standardServiceIds
         else if (request.standardServiceId != null)
@@ -141,8 +147,10 @@ class BookingRemoteDataSourceImpl implements BookingRemoteDataSource {
       );
       final data = response.data['data'] as List<dynamic>? ?? [];
       return data
-          .map((e) =>
-              AttachableInspectionEntity.fromJson(e as Map<String, dynamic>))
+          .map(
+            (e) =>
+                AttachableInspectionEntity.fromJson(e as Map<String, dynamic>),
+          )
           .toList();
     } on DioException catch (e) {
       throw dioExceptionToFailure(e);
@@ -214,7 +222,10 @@ class BookingRemoteDataSourceImpl implements BookingRemoteDataSource {
         if (request.standardServiceIds != null)
           'standardServiceIds': request.standardServiceIds,
       };
-      final response = await _dio.patch('/bookings/${request.bookingId}', data: body);
+      final response = await _dio.patch(
+        '/bookings/${request.bookingId}',
+        data: body,
+      );
       final data = response.data['data'] as Map<String, dynamic>;
       return BookingModel.fromJson(data);
     } on DioException catch (e) {
@@ -244,8 +255,10 @@ class BookingRemoteDataSourceImpl implements BookingRemoteDataSource {
         if (request.comment != null && request.comment!.isNotEmpty)
           'comment': request.comment,
       };
-      final response =
-          await _dio.post('/bookings/${request.bookingId}/review', data: body);
+      final response = await _dio.post(
+        '/bookings/${request.bookingId}/review',
+        data: body,
+      );
       final data = response.data['data'] as Map<String, dynamic>;
       return BookingModel.fromJson(data);
     } on DioException catch (e) {
@@ -285,7 +298,8 @@ class BookingRemoteDataSourceImpl implements BookingRemoteDataSource {
           filename: fileName,
           contentType: DioMediaType.parse(mimeType),
         ),
-        if (durationSeconds != null) 'durationSeconds': durationSeconds.toString(),
+        if (durationSeconds != null)
+          'durationSeconds': durationSeconds.toString(),
       });
       final response = await _dio.post(
         '/bookings/$bookingId/attachments',
@@ -355,8 +369,9 @@ class BookingRemoteDataSourceImpl implements BookingRemoteDataSource {
   @override
   Future<BookingModel> reopenAfterWorkerCancellation(String bookingId) async {
     try {
-      final response =
-          await _dio.post('/bookings/$bookingId/reopen-after-cancellation');
+      final response = await _dio.post(
+        '/bookings/$bookingId/reopen-after-cancellation',
+      );
       final data = response.data['data'] as Map<String, dynamic>;
       return BookingModel.fromJson(data);
     } on DioException catch (e) {
@@ -440,19 +455,22 @@ class BookingRemoteDataSourceImpl implements BookingRemoteDataSource {
   }) async {
     try {
       final payload = {
-        if (issueFound != null && issueFound.isNotEmpty) 'issueFound': issueFound,
+        if (issueFound != null && issueFound.isNotEmpty)
+          'issueFound': issueFound,
         if (recommendedRepair != null && recommendedRepair.isNotEmpty)
           'recommendedRepair': recommendedRepair,
         'labourCost': labourCost,
         'partsNeeded': partsNeeded,
         'parts': parts
-            .map((p) => {
-                  'name': p.name,
-                  'quantity': p.quantity,
-                  'unitPrice': p.unitPrice,
-                  if (p.warranty != null && p.warranty!.isNotEmpty)
-                    'warranty': p.warranty,
-                })
+            .map(
+              (p) => {
+                'name': p.name,
+                'quantity': p.quantity,
+                'unitPrice': p.unitPrice,
+                if (p.warranty != null && p.warranty!.isNotEmpty)
+                  'warranty': p.warranty,
+              },
+            )
             .toList(),
         if (notes != null && notes.isNotEmpty) 'notes': notes,
         if (voiceNoteFile != null && voiceNoteDurationSeconds != null)
@@ -528,7 +546,9 @@ class BookingRemoteDataSourceImpl implements BookingRemoteDataSource {
   @override
   Future<BookingModel> findOtherUstaad(String bookingId) async {
     try {
-      await _dio.post('/bookings/$bookingId/inspection-report/find-other-ustaad');
+      await _dio.post(
+        '/bookings/$bookingId/inspection-report/find-other-ustaad',
+      );
       return (await getBookingById(bookingId)).data;
     } on DioException catch (e) {
       throw dioExceptionToFailure(e);

@@ -1926,7 +1926,7 @@ abstract class AppLocalizations {
   /// No description provided for @postJobWhatDoYouSee.
   ///
   /// In en, this message translates to:
-  /// **'What do you see? (optional)'**
+  /// **'What problem do you observe? (required)'**
   String get postJobWhatDoYouSee;
 
   /// No description provided for @postJobWhatDoYouSeeHint.
@@ -2114,6 +2114,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Choose a service to get help right away.'**
   String get clientHomeChooseServiceHelp;
+
+  /// No description provided for @clientHomeHello.
+  ///
+  /// In en, this message translates to:
+  /// **'Hello, {name}'**
+  String clientHomeHello(String name);
+
+  /// No description provided for @clientHomeGuest.
+  ///
+  /// In en, this message translates to:
+  /// **'there'**
+  String get clientHomeGuest;
+
+  /// No description provided for @clientHomeLocating.
+  ///
+  /// In en, this message translates to:
+  /// **'Finding your location…'**
+  String get clientHomeLocating;
+
+  /// No description provided for @clientHomeUrgentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Need help right now?'**
+  String get clientHomeUrgentTitle;
+
+  /// No description provided for @clientHomeUrgentPromise.
+  ///
+  /// In en, this message translates to:
+  /// **'We’ll send an Ustaad quickly — same rate, no extra charge'**
+  String get clientHomeUrgentPromise;
+
+  /// No description provided for @clientHomeWhatNeedsDoing.
+  ///
+  /// In en, this message translates to:
+  /// **'What needs to be done?'**
+  String get clientHomeWhatNeedsDoing;
+
+  /// No description provided for @clientHomeTrustMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Every Ustaad is CNIC verified · Rate is agreed first'**
+  String get clientHomeTrustMessage;
+
+  /// No description provided for @clientHomeSupportUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'HandyGo Support is unavailable right now. Please try again.'**
+  String get clientHomeSupportUnavailable;
 
   /// No description provided for @clientHomeGreeting.
   ///
@@ -2442,7 +2490,7 @@ abstract class AppLocalizations {
   /// No description provided for @postJobBookService.
   ///
   /// In en, this message translates to:
-  /// **'Book Service'**
+  /// **'Book'**
   String get postJobBookService;
 
   /// No description provided for @postJobSaveChanges.
@@ -6513,12 +6561,6 @@ abstract class AppLocalizations {
   /// **'Enter a whole PKR amount without decimals.'**
   String get cashPaymentWholeRupees;
 
-  /// No description provided for @cashPaymentConfirmAction.
-  ///
-  /// In en, this message translates to:
-  /// **'Confirm cash payment'**
-  String get cashPaymentConfirmAction;
-
   /// No description provided for @cashPaymentConfirmedTitle.
   ///
   /// In en, this message translates to:
@@ -6572,6 +6614,336 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Confirm the cash payment before reviewing the Ustaad.'**
   String get cashPaymentReviewBlocked;
+
+  /// No description provided for @postJobSelectBookingTypeFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose Normal or Urgent first.'**
+  String get postJobSelectBookingTypeFirst;
+
+  /// No description provided for @postJobInspectionDescriptionRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Describe the problem you observe before continuing.'**
+  String get postJobInspectionDescriptionRequired;
+
+  /// No description provided for @postJobCustomVoiceRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a voice note before continuing with Custom Kaam.'**
+  String get postJobCustomVoiceRequired;
+
+  /// No description provided for @postJobCompleteAddressBeforeSaving.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a complete address and map pin before saving it.'**
+  String get postJobCompleteAddressBeforeSaving;
+
+  /// No description provided for @postJobDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Day'**
+  String get postJobDay;
+
+  /// No description provided for @postJobTomorrow.
+  ///
+  /// In en, this message translates to:
+  /// **'Tomorrow'**
+  String get postJobTomorrow;
+
+  /// No description provided for @postJobCustomVoiceAndPhotos.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice note (required) & photos/video (optional)'**
+  String get postJobCustomVoiceAndPhotos;
+
+  /// No description provided for @postJobInspectionVoiceAndPhotos.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice note & photos/video (optional)'**
+  String get postJobInspectionVoiceAndPhotos;
+
+  /// No description provided for @postJobInspectionRateNote.
+  ///
+  /// In en, this message translates to:
+  /// **'You only pay the visit fee now. The repair quote appears in the app before work starts.'**
+  String get postJobInspectionRateNote;
+
+  /// No description provided for @postJobBiddingRateNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Ustaads will send a complete repair quote. The quote you accept is final and cannot change at the door.'**
+  String get postJobBiddingRateNote;
+
+  /// No description provided for @savedAddresses.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved addresses'**
+  String get savedAddresses;
+
+  /// No description provided for @savedAddressForNextTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Save this address for next time'**
+  String get savedAddressForNextTime;
+
+  /// No description provided for @savedAddressOffice.
+  ///
+  /// In en, this message translates to:
+  /// **'Office'**
+  String get savedAddressOffice;
+
+  /// No description provided for @savedAddressName.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved address name'**
+  String get savedAddressName;
+
+  /// No description provided for @savedAddressNameRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a name.'**
+  String get savedAddressNameRequired;
+
+  /// No description provided for @savedAddressCustomNameTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Name this saved address'**
+  String get savedAddressCustomNameTitle;
+
+  /// No description provided for @savedAddressRenameTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename saved address'**
+  String get savedAddressRenameTitle;
+
+  /// No description provided for @savedAddressRenameConflict.
+  ///
+  /// In en, this message translates to:
+  /// **'That name is already used. Choose another name.'**
+  String get savedAddressRenameConflict;
+
+  /// No description provided for @savedAddressSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Address saved.'**
+  String get savedAddressSaved;
+
+  /// No description provided for @savedAddressUse.
+  ///
+  /// In en, this message translates to:
+  /// **'Use address'**
+  String get savedAddressUse;
+
+  /// No description provided for @savedAddressUpdateWithCurrent.
+  ///
+  /// In en, this message translates to:
+  /// **'Update with current address and pin'**
+  String get savedAddressUpdateWithCurrent;
+
+  /// No description provided for @savedAddressRename.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename'**
+  String get savedAddressRename;
+
+  /// No description provided for @savedAddressDeleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete saved address?'**
+  String get savedAddressDeleteTitle;
+
+  /// No description provided for @savedAddressDeleteBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete {name} from your saved addresses?'**
+  String savedAddressDeleteBody(String name);
+
+  /// No description provided for @savedAddressUpdateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Update {name}?'**
+  String savedAddressUpdateTitle(String name);
+
+  /// No description provided for @savedAddressUpdateBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} is already saved. Update it with this address?'**
+  String savedAddressUpdateBody(String name);
+
+  /// No description provided for @savedAddressUpdateAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Update address'**
+  String get savedAddressUpdateAction;
+
+  /// No description provided for @postJobAddressIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'First booking? Add the address once — you can save it for next time.'**
+  String get postJobAddressIntro;
+
+  /// No description provided for @postJobCompleteAddressLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your complete address'**
+  String get postJobCompleteAddressLabel;
+
+  /// No description provided for @postJobAddressLandmarkHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'A nearby landmark helps your Ustaad arrive without needing to call.'**
+  String get postJobAddressLandmarkHelper;
+
+  /// No description provided for @postJobAddressResolving.
+  ///
+  /// In en, this message translates to:
+  /// **'Finding this address on the map…'**
+  String get postJobAddressResolving;
+
+  /// No description provided for @postJobAddressUnresolved.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t find this address. Add more detail or choose it on the map.'**
+  String get postJobAddressUnresolved;
+
+  /// No description provided for @postJobAddressRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter an address before continuing.'**
+  String get postJobAddressRequired;
+
+  /// No description provided for @postJobMapPreviewEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'MAP — TAP TO PLACE THE PIN'**
+  String get postJobMapPreviewEmpty;
+
+  /// No description provided for @postJobLanePageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a booking option'**
+  String get postJobLanePageTitle;
+
+  /// No description provided for @postJobLaneStepIndicator.
+  ///
+  /// In en, this message translates to:
+  /// **'Step 2 / 4 · {service}'**
+  String postJobLaneStepIndicator(String service);
+
+  /// No description provided for @postJobLaneFixedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Fixed-price services'**
+  String get postJobLaneFixedTitle;
+
+  /// No description provided for @postJobLaneFixedSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Service and price are fixed in advance'**
+  String get postJobLaneFixedSubtitle;
+
+  /// No description provided for @postJobLaneFixedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'See the final price before booking.'**
+  String get postJobLaneFixedBody;
+
+  /// No description provided for @postJobLaneFixedAction.
+  ///
+  /// In en, this message translates to:
+  /// **'View services and prices →'**
+  String get postJobLaneFixedAction;
+
+  /// No description provided for @postJobLaneFixedCta.
+  ///
+  /// In en, this message translates to:
+  /// **'View services and prices'**
+  String get postJobLaneFixedCta;
+
+  /// No description provided for @postJobLaneInspectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Inspection'**
+  String get postJobLaneInspectionTitle;
+
+  /// No description provided for @postJobLaneInspectionSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Not sure what the problem is?'**
+  String get postJobLaneInspectionSubtitle;
+
+  /// No description provided for @postJobLaneInspectionFeeBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{fee} inspection fee — paid after inspection, not now.'**
+  String postJobLaneInspectionFeeBody(String fee);
+
+  /// No description provided for @postJobLaneInspectionReportBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The Ustaad checks the issue and sends the report and final quote in the app.'**
+  String get postJobLaneInspectionReportBody;
+
+  /// No description provided for @postJobLaneInspectionWaiverBody.
+  ///
+  /// In en, this message translates to:
+  /// **'If you proceed with the repair, the {fee} inspection fee is waived and you only pay the repair price.'**
+  String postJobLaneInspectionWaiverBody(String fee);
+
+  /// No description provided for @postJobLaneInspectionAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Book inspection →'**
+  String get postJobLaneInspectionAction;
+
+  /// No description provided for @postJobLaneInspectionCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Book inspection'**
+  String get postJobLaneInspectionCta;
+
+  /// No description provided for @postJobLaneCustomTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom Work'**
+  String get postJobLaneCustomTitle;
+
+  /// No description provided for @postJobLaneCustomBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Send details and photos for a small repair, fitting, or replacement.'**
+  String get postJobLaneCustomBody;
+
+  /// No description provided for @postJobLaneCustomRatesBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Nearby Ustaads will send their prices.'**
+  String get postJobLaneCustomRatesBody;
+
+  /// No description provided for @postJobLaneCustomAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Add job details →'**
+  String get postJobLaneCustomAction;
+
+  /// No description provided for @postJobLaneCustomCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Add job details'**
+  String get postJobLaneCustomCta;
+
+  /// No description provided for @postJobLanePriceNote.
+  ///
+  /// In en, this message translates to:
+  /// **'The price can only change after a new quote is sent through the app — not after the Ustaad reaches your home.'**
+  String get postJobLanePriceNote;
+
+  /// No description provided for @postJobLaneChooseCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a booking option'**
+  String get postJobLaneChooseCta;
 
   /// Runtime app version/build shown on the About page and Settings row
   ///

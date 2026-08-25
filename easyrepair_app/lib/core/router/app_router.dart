@@ -27,6 +27,7 @@ import '../../features/client/presentation/providers/customer_agreement_provider
 import '../../features/bookings/presentation/pages/my_bookings_page.dart';
 import '../../features/client/presentation/pages/client_chat_page.dart';
 import '../../features/client/presentation/pages/client_profile_page.dart';
+import '../../features/client/presentation/widgets/client_root_scaffold.dart';
 import '../../features/bookings/presentation/pages/booking_detail_page.dart';
 import '../../features/bookings/presentation/pages/inspection_report_page.dart';
 import '../../features/client/presentation/pages/post_job_page.dart';
@@ -223,7 +224,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/client/home',
-        builder: (_, __) => const ClientHomePage(),
+        builder: (_, __) =>
+            const ClientRootScaffold(currentIndex: 0, child: ClientHomePage()),
       ),
       GoRoute(
         path: '/client/agreement-gate',
@@ -235,11 +237,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/client/jobs',
-        builder: (_, __) => const MyBookingsPage(),
+        builder: (_, __) =>
+            const ClientRootScaffold(currentIndex: 1, child: MyBookingsPage()),
       ),
       GoRoute(
         path: '/client/chat',
-        builder: (_, __) => const ClientChatPage(),
+        builder: (_, __) =>
+            const ClientRootScaffold(currentIndex: 2, child: ClientChatPage()),
       ),
       GoRoute(
         path: '/client/chat/:id',
@@ -253,7 +257,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/client/profile',
-        builder: (_, __) => const ClientProfilePage(),
+        builder: (_, __) => const ClientRootScaffold(
+          currentIndex: 3,
+          child: ClientProfilePage(),
+        ),
       ),
       GoRoute(
         path: '/client/booking/:id',
@@ -272,9 +279,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final service = state.uri.queryParameters['service'];
           final editId = state.uri.queryParameters['editId'];
+          final urgentEntry = state.uri.queryParameters['urgentEntry'] == '1';
           return BookServicePage(
             preselectedService: service,
             editBookingId: editId,
+            urgentEntry: urgentEntry,
           );
         },
       ),

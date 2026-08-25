@@ -34,6 +34,38 @@ class LocationAvailabilityResult {
   bool get isAvailable => status == LocationAvailability.available;
 }
 
+/// Returns a best-effort camera position for non-authoritative map previews.
+///
+/// This deliberately never requests permission. If permission is already
+/// granted it prefers the platform's last known fix, then attempts a short,
+/// low-accuracy fresh fix when location services are enabled. Any denied
+/// permission, disabled service, timeout, or platform failure returns null so
+/// callers can use a neutral visual fallback without changing user state.
+Future<Position?> resolvePassiveLocationPreview({
+  Duration timeLimit = const Duration(seconds: 3),
+}) async {
+  try {
+    final permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      return null;
+    }
+
+    final latest = await Geolocator.getLastKnownPosition();
+    if (latest != null) return latest;
+
+    if (!await Geolocator.isLocationServiceEnabled()) return null;
+    return await Geolocator.getCurrentPosition(
+      locationSettings: LocationSettings(
+        accuracy: LocationAccuracy.low,
+        timeLimit: timeLimit,
+      ),
+    ).timeout(timeLimit + const Duration(seconds: 1));
+  } catch (_) {
+    return null;
+  }
+}
+
 /// Checks device location services, then permission, then attempts a fresh
 /// fix — in that order, so a disabled GPS is reported as [serviceDisabled]
 /// rather than masquerading as a permission problem, and a denied permission

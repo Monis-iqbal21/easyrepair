@@ -459,6 +459,9 @@ model ClientAddress {
   clientProfileId String
   clientProfile   ClientProfile @relation(fields: [clientProfileId], references: [id], onDelete: Cascade)
   label           String
+  /// Server-generated, trimmed/collapsed/lowercase label used for per-client
+  /// case-insensitive uniqueness. Clients never choose this value directly.
+  normalizedLabel String
   addressLine     String
   city            String
   latitude        Float
@@ -467,6 +470,7 @@ model ClientAddress {
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
+  @@unique([clientProfileId, normalizedLabel])
   @@index([clientProfileId])
   @@map("client_addresses")
 }

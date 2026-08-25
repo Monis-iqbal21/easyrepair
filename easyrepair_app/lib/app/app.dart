@@ -15,6 +15,7 @@ import '../core/router/app_router.dart';
 import '../core/services/chat_socket_service.dart';
 import '../core/storage/secure_storage_service.dart';
 import '../core/theme/app_theme.dart';
+import '../core/theme/theme_mode_provider.dart';
 import '../core/widgets/app_banner_overlay.dart';
 import '../features/auth/domain/entities/user_entity.dart';
 import '../features/auth/presentation/providers/auth_providers.dart';
@@ -444,6 +445,7 @@ class _EasyRepairAppState extends ConsumerState<EasyRepairApp>
 
     final router = ref.watch(routerProvider);
     final appLocale = ref.watch(localeProvider);
+    final themeMode = ref.watch(themeModeProvider);
     return MaterialApp.router(
       title: 'EasyRepair',
       debugShowCheckedModeBanner: false,
@@ -452,7 +454,7 @@ class _EasyRepairAppState extends ConsumerState<EasyRepairApp>
       // switch between them.
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: AppTheme.themeMode,
+      themeMode: themeMode,
       routerConfig: router,
       locale: appLocale.locale,
       supportedLocales: appSupportedLocales,
