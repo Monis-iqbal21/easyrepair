@@ -612,12 +612,16 @@ class _StandardJobBadge extends StatelessWidget {
         children: [
           Icon(Icons.verified_rounded, size: 13, color: c.primary),
           const SizedBox(width: 4),
-          Text(
-            context.l10n.workerListedJob,
-            style: TextStyle(
-              fontSize: 12.5,
-              fontWeight: FontWeight.w700,
-              color: c.primary,
+          Flexible(
+            child: Text(
+              context.l10n.workerListedJob,
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+                color: c.primary,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
@@ -643,12 +647,16 @@ class _BidPlacedBadge extends StatelessWidget {
         children: [
           Icon(Icons.check_circle_rounded, size: 13, color: c.success),
           const SizedBox(width: 4),
-          Text(
-            context.l10n.workerOfferSent,
-            style: TextStyle(
-              fontSize: 12.5,
-              fontWeight: FontWeight.w700,
-              color: c.success,
+          Flexible(
+            child: Text(
+              context.l10n.workerOfferSent,
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+                color: c.success,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
@@ -683,12 +691,16 @@ class _UrgencyChip extends StatelessWidget {
             color: fg,
           ),
           const SizedBox(width: 4),
-          Text(
-            isUrgent ? context.l10n.postJobUrgent : context.l10n.postJobNormal,
-            style: TextStyle(
-              fontSize: 12.5,
-              fontWeight: FontWeight.w700,
-              color: fg,
+          Flexible(
+            child: Text(
+              isUrgent ? context.l10n.postJobUrgent : context.l10n.postJobNormal,
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+                color: fg,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],

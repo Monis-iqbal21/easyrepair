@@ -4404,7 +4404,7 @@ abstract class AppLocalizations {
   /// No description provided for @workerFilterAllWork.
   ///
   /// In en, this message translates to:
-  /// **'All Work'**
+  /// **'All New'**
   String get workerFilterAllWork;
 
   /// No description provided for @workerFilterMyOffers.

@@ -114,6 +114,12 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
 
   final Color error;
 
+  /// Background pairing for [error] content — e.g. a cancelled-by-client
+  /// banner. Sourced directly from the prototype's own `--errT`, the same
+  /// tint relationship [urgentSoft] has to [urgent], expressed in the error
+  /// hue.
+  final Color errorSoft;
+
   const AppSemanticColors({
     required this.background,
     required this.surface,
@@ -134,6 +140,7 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
     required this.warning,
     required this.warningSurface,
     required this.error,
+    required this.errorSoft,
   });
 
   // ── Derived aliases ───────────────────────────────────────────────────────
@@ -176,6 +183,7 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
     // relationship urgentSoft has to urgent, expressed in the warning hue.
     warningSurface: Color(0xFFFBF0DC),
     error: Color(0xFFB42318),
+    errorSoft: Color(0xFFFDECEB),
   );
 
   /// FINAL HANDYGO DARK PALETTE.
@@ -208,6 +216,7 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
     warning: Color(0xFFD9A441),
     warningSurface: Color(0xFF35290F),
     error: Color(0xFFE57A6E),
+    errorSoft: Color(0xFF3A2020),
   );
 
   /// The palette for a [Brightness] — the only place the two are chosen
@@ -245,6 +254,7 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
     Color? warning,
     Color? warningSurface,
     Color? error,
+    Color? errorSoft,
   }) {
     return AppSemanticColors(
       background: background ?? this.background,
@@ -266,6 +276,7 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
       warning: warning ?? this.warning,
       warningSurface: warningSurface ?? this.warningSurface,
       error: error ?? this.error,
+      errorSoft: errorSoft ?? this.errorSoft,
     );
   }
 
@@ -292,6 +303,7 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
       warning: Color.lerp(warning, other.warning, t)!,
       warningSurface: Color.lerp(warningSurface, other.warningSurface, t)!,
       error: Color.lerp(error, other.error, t)!,
+      errorSoft: Color.lerp(errorSoft, other.errorSoft, t)!,
     );
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/theme/app_semantic_colors.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../../bookings/domain/entities/booking_entity.dart';
 import '../../../bookings/presentation/providers/booking_providers.dart';
@@ -18,15 +19,6 @@ import '../../../../core/network/offline_banner.dart';
 import '../../../bookings/presentation/utils/status_labels.dart';
 import '../utils/worker_status_labels.dart';
 import '../../../../core/errors/failure_messages.dart';
-
-// ── Palette ───────────────────────────────────────────────────────────────────
-const _kGreen  = Color(0xFFDB6234);
-const _kDark   = Color(0xFF1A1A1A);
-const _kGray   = Color(0xFF6B7280);
-const _kLight  = Color(0xFF94A3B8);
-const _kBorder = Color(0xFFE2E8F0);
-const _kBg     = Color(0xFFF9FAFB);
-const _kRed    = Color(0xFFDC2626);
 
 class WorkerJobsPage extends ConsumerStatefulWidget {
   const WorkerJobsPage({super.key});
@@ -63,6 +55,7 @@ class _WorkerJobsPageState extends ConsumerState<WorkerJobsPage>
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     // In-place refresh on reconnect — same scoped, navigation-free
     // behaviour as the resume handler above.
     refreshOnReconnect(ref, () => ref.invalidate(workerJobsProvider));
@@ -78,7 +71,7 @@ class _WorkerJobsPageState extends ConsumerState<WorkerJobsPage>
     final isApproved = workerProfile?.isOnboardingApproved ?? true;
 
     return Scaffold(
-      backgroundColor: _kBg,
+      backgroundColor: c.background,
       extendBody: true,
       body: SafeArea(
         bottom: false,
@@ -92,10 +85,10 @@ class _WorkerJobsPageState extends ConsumerState<WorkerJobsPage>
                 // Same wording as the Client "My Jobs" screen title. The
                 // bottom-nav tab of the same name stays hard-coded English.
                 context.l10n.clientJobsTitle,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w800,
-                  color: _kDark,
+                  color: c.textPrimary,
                   letterSpacing: -0.3,
                 ),
               ),
@@ -136,8 +129,8 @@ class _WorkerJobsPageState extends ConsumerState<WorkerJobsPage>
                   data: (jobs) => jobs.isEmpty
                       ? _EmptyState(filter: filter)
                       : RefreshIndicator(
-                          color: _kGreen,
-                          backgroundColor: Colors.white,
+                          color: c.primary,
+                          backgroundColor: c.surface,
                           onRefresh: notifier.refresh,
                           child: ListView.builder(
                             padding: const EdgeInsets.fromLTRB(16, 8, 16, 110),
@@ -167,6 +160,7 @@ class _FilterTabs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -180,11 +174,13 @@ class _FilterTabs extends StatelessWidget {
               margin: const EdgeInsetsDirectional.only(end: 8),
               padding:
                   const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              constraints: const BoxConstraints(minHeight: 44),
+              alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: isActive ? _kGreen : Colors.white,
-                borderRadius: BorderRadius.circular(20),
+                color: isActive ? c.primary : c.surface,
+                borderRadius: BorderRadius.circular(999),
                 border: Border.all(
-                  color: isActive ? _kGreen : _kBorder,
+                  color: isActive ? c.primary : c.border,
                 ),
               ),
               child: Text(
@@ -192,7 +188,7 @@ class _FilterTabs extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: isActive ? Colors.white : _kGray,
+                  color: isActive ? c.onPrimary : c.textSecondary,
                 ),
               ),
             ),
@@ -211,6 +207,7 @@ class _JobCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.semanticColors;
     // STANDARD/BIDDING lane: granular next-action button (On My Way / Arrived
     // / Start Job / Complete Job), shared with worker_job_detail_page.dart via
     // BookingEntity.standardWorkerNextAction/biddingWorkerNextAction so the
@@ -236,6 +233,11 @@ class _JobCard extends ConsumerWidget {
         isActive && standardAction == null && inspectionAction == null;
     final cancelledByClient = job.status == BookingStatus.cancelled &&
         job.cancelledByRole == CancelledByRole.client;
+    // The two tests the card already ran inline, lifted to names so the
+    // headline and the supporting line cannot disagree about them. Both
+    // expressions are character-for-character what they replaced.
+    final hasTitle = job.title != null && job.title!.isNotEmpty;
+    final hasClient = job.clientName != null && job.clientName!.isNotEmpty;
 
     return GestureDetector(
       onTap: () => context.push('/worker/job/${job.id}').then((_) {
@@ -244,16 +246,9 @@ class _JobCard extends ConsumerWidget {
       child: Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: _kBorder),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
+        color: c.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: c.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -263,17 +258,17 @@ class _JobCard extends ConsumerWidget {
             Container(
               height: 3,
               decoration: BoxDecoration(
-                color: _kGreen,
+                color: c.primary,
                 borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(18)),
+                    const BorderRadius.vertical(top: Radius.circular(16)),
               ),
             )
           else if (cancelledByClient)
             Container(
               height: 3,
-              decoration: const BoxDecoration(
-                color: _kRed,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+              decoration: BoxDecoration(
+                color: c.error,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
               ),
             ),
 
@@ -283,14 +278,14 @@ class _JobCard extends ConsumerWidget {
               margin: const EdgeInsets.fromLTRB(14, 12, 14, 0),
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               decoration: BoxDecoration(
-                color: const Color(0xFFFFF1F2),
+                color: c.errorSoft,
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFFFECDD3)),
+                border: Border.all(color: c.error),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.info_outline_rounded, size: 14, color: _kRed),
+                  Icon(Icons.info_outline_rounded, size: 14, color: c.error),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Column(
@@ -298,10 +293,10 @@ class _JobCard extends ConsumerWidget {
                       children: [
                         Text(
                           context.l10n.workerClientCancelledBooking,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
-                            color: _kRed,
+                            color: c.error,
                           ),
                         ),
                         if (job.cancellationReason != null &&
@@ -309,7 +304,7 @@ class _JobCard extends ConsumerWidget {
                           const SizedBox(height: 2),
                           Text(
                             job.cancellationReason!,
-                            style: const TextStyle(fontSize: 11.5, color: _kGray),
+                            style: TextStyle(fontSize: 11.5, color: c.textSecondary),
                           ),
                         ],
                       ],
@@ -324,130 +319,41 @@ class _JobCard extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ── Top row ──────────────────────────────────────────────
+                // ── Status + flags on the left, money on the right ───────
+                //
+                // The prototype's job card leads with two things only: what
+                // kind of job this is, and what it is worth. The amount used
+                // to be an 11px item buried in a five-item Wrap between a
+                // chip and a clock — the single number an Ustaad scans for,
+                // rendered smaller than the address. It is the right-hand
+                // anchor now, and everything that was competing with it has
+                // moved below the divider.
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Emoji icon
-                    Container(
-                      width: 46,
-                      height: 46,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFF0EB),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Center(
-                        child: Text(
-                          job.serviceEmoji,
-                          style: const TextStyle(fontSize: 22),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    // Info
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      child: Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
-                          Text(
-                            job.serviceCategory,
-                            style: const TextStyle(
-                              fontSize: 14.5,
-                              fontWeight: FontWeight.w700,
-                              color: _kDark,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 3),
-                          Row(
-                            children: [
-                              // Flexible so a long reference id can never
-                              // overflow this row on a narrow screen.
-                              Flexible(
-                                child: Text(
-                                  job.referenceId,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    color: _kLight,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                              if (job.clientName != null &&
-                                  job.clientName!.isNotEmpty) ...[
-                                const Text(
-                                  ' · ',
-                                  style: TextStyle(
-                                      fontSize: 11, color: _kLight),
-                                ),
-                                const Icon(
-                                  Icons.person_outline_rounded,
-                                  size: 10,
-                                  color: _kLight,
-                                ),
-                                const SizedBox(width: 2),
-                                Flexible(
-                                  child: Text(
-                                    job.clientName!,
-                                    style: const TextStyle(
-                                      fontSize: 11,
-                                      color: _kLight,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
+                          // My Jobs → Applied shows THIS worker's own bid
+                          // outcome, not the booking's status: a job awarded
+                          // to someone else leaves the booking ACCEPTED while
+                          // this worker's bid is REJECTED, and showing
+                          // "Assigned" there would read as though they had
+                          // won it.
+                          if (job.myBidStatus != null)
+                            _BidStatusChip(outcome: job.myBidStatus!)
+                          else
+                            _StatusChip(status: job.status),
+                          _UrgencyPill(urgency: job.urgency),
+                          if (job.inspection)
+                            const InspectionBadge(small: true),
                         ],
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    // My Jobs → Applied shows THIS worker's own bid outcome,
-                    // not the booking's status: a job awarded to someone else
-                    // leaves the booking ACCEPTED while this worker's bid is
-                    // REJECTED, and showing "Assigned" there would read as
-                    // though they had won it.
-                    if (job.myBidStatus != null)
-                      _BidStatusChip(outcome: job.myBidStatus!)
-                    else
-                      _StatusChip(status: job.status),
-                  ],
-                ),
-
-                // ── Title ────────────────────────────────────────────────
-                if (job.title != null && job.title!.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    job.title!,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: _kGray,
-                      height: 1.4,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-
-                const SizedBox(height: 10),
-                const Divider(height: 1, color: Color(0xFFF1F5F9)),
-                const SizedBox(height: 10),
-
-                // ── Meta row ─────────────────────────────────────────────
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 6,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    // Urgency badge
-                    _UrgencyPill(urgency: job.urgency),
-                    if (job.inspection) const InspectionBadge(small: true),
+                    const SizedBox(width: 10),
                     // Price this Ustaad's work unit was hired/paid for — see
                     // BookingEntity.canonicalPrice. Under the Applied filter
                     // the job usually isn't assigned to this worker at all
@@ -455,43 +361,88 @@ class _JobCard extends ConsumerWidget {
                     // so their OWN bid amount is the only truthful figure to
                     // show there.
                     if ((job.myBidAmount ?? job.canonicalPrice) != null)
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.payments_outlined,
-                            size: 12,
-                            color: _kLight,
-                          ),
-                          const SizedBox(width: 3),
-                          Text(
-                            formatPkr(job.myBidAmount ?? job.canonicalPrice),
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: _kDark,
-                            ),
-                          ),
-                        ],
+                      Text(
+                        formatPkr(job.myBidAmount ?? job.canonicalPrice),
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          color: c.textPrimary,
+                          height: 1.1,
+                        ),
                       ),
-                    // Date
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.access_time_rounded,
-                          size: 12,
-                          color: _kLight,
+                  ],
+                ),
+
+                // ── What the job actually is ─────────────────────────────
+                //
+                // `title` is the job an Ustaad was hired for ("Distribution
+                // Box Setup"); `serviceCategory` is the trade ("Electrician").
+                // The card used to headline the trade and whisper the job in
+                // 13px grey underneath, so three cards for three different
+                // jobs all read "Electrician". The headline is the job now,
+                // and the trade joins the client on the supporting line —
+                // both fields still render, only their weight swapped.
+                const SizedBox(height: 10),
+                Text(
+                  hasTitle ? job.title! : job.serviceCategory,
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    color: c.textPrimary,
+                    height: 1.25,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (hasTitle || hasClient) ...[
+                  const SizedBox(height: 3),
+                  Text(
+                    [
+                      if (hasTitle) job.serviceCategory,
+                      if (hasClient) job.clientName!,
+                    ].join(' · '),
+                    style: TextStyle(fontSize: 13, color: c.textSecondary),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+
+                const SizedBox(height: 10),
+                Divider(height: 1, color: c.divider),
+                const SizedBox(height: 10),
+
+                // ── Quiet meta: when, where, which booking ───────────────
+                Row(
+                  children: [
+                    Icon(
+                      Icons.access_time_rounded,
+                      size: 14,
+                      color: c.textSecondary,
+                    ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        _fmtDate(context, job.acceptedAt ?? job.createdAt),
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          color: c.textSecondary,
                         ),
-                        const SizedBox(width: 3),
-                        Text(
-                          _fmtDate(context, job.acceptedAt ?? job.createdAt),
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: _kLight,
-                          ),
-                        ),
-                      ],
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // Kept, but no longer the second-loudest thing on the
+                    // card — an Ustaad needs it when he calls support, not
+                    // when he is scanning the list.
+                    Text(
+                      job.referenceId,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: c.textSecondary,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
@@ -501,18 +452,18 @@ class _JobCard extends ConsumerWidget {
                   const SizedBox(height: 6),
                   Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.location_on_outlined,
-                        size: 12,
-                        color: _kLight,
+                        size: 14,
+                        color: c.textSecondary,
                       ),
-                      const SizedBox(width: 3),
+                      const SizedBox(width: 4),
                       Expanded(
                         child: Text(
                           '${job.city.isNotEmpty ? '${job.city}, ' : ''}${job.address!}',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: _kLight,
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            color: c.textSecondary,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -572,27 +523,27 @@ class _InspectionOnlyCompletedBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFFBEB),
+        color: c.warningSurface,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFFDE9BC)),
+        border: Border.all(color: c.warning),
       ),
       child: Row(
         children: [
-          const Icon(Icons.fact_check_outlined,
-              size: 13, color: Color(0xFFB45309)),
+          Icon(Icons.fact_check_outlined, size: 13, color: c.warning),
           const SizedBox(width: 6),
           // Flexible so the label can never overflow, however narrow the card.
           Flexible(
             child: Text(
               context.l10n.workerOnlyInspectionCompleted,
-              style: const TextStyle(
-                fontSize: 11.5,
+              style: TextStyle(
+                fontSize: 12.5,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFFB45309),
+                color: c.warning,
               ),
             ),
           ),
@@ -610,44 +561,46 @@ class _CompleteBtn extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.semanticColors;
     final isLoading = ref.watch(completeJobProvider).isLoading;
 
     return GestureDetector(
       onTap: isLoading ? null : () => _confirm(context, ref),
       child: Container(
-        constraints: const BoxConstraints(minHeight: 38),
+        constraints: const BoxConstraints(minHeight: 52),
+        alignment: Alignment.center,
         padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
-          color: _kGreen,
-          borderRadius: BorderRadius.circular(10),
+          color: c.primary,
+          borderRadius: BorderRadius.circular(14),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (isLoading)
-              const SizedBox(
+              SizedBox(
                 width: 14,
                 height: 14,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: Colors.white,
+                  color: c.onPrimary,
                 ),
               )
             else
-              const Icon(
+              Icon(
                 Icons.check_circle_outline_rounded,
                 size: 14,
-                color: Colors.white,
+                color: c.onPrimary,
               ),
             const SizedBox(width: 5),
             Text(
               isLoading
                   ? context.l10n.workerCompleting
                   : context.l10n.workerComplete,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: Colors.white,
+                color: c.onPrimary,
               ),
             ),
           ],
@@ -657,6 +610,7 @@ class _CompleteBtn extends ConsumerWidget {
   }
 
   Future<void> _confirm(BuildContext context, WidgetRef ref) async {
+    final c = context.semanticColors;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -667,22 +621,22 @@ class _CompleteBtn extends ConsumerWidget {
         ),
         content: Text(
           context.l10n.workerMarkCompletedBody,
-          style: const TextStyle(color: _kGray, fontSize: 14),
+          style: TextStyle(color: c.textSecondary, fontSize: 14),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
             child: Text(context.l10n.commonCancel,
-                style: const TextStyle(color: _kLight)),
+                style: TextStyle(color: c.textSecondary)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: _kGreen,
-              foregroundColor: Colors.white,
+              backgroundColor: c.primary,
+              foregroundColor: c.onPrimary,
               elevation: 0,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
+                  borderRadius: BorderRadius.circular(14)),
             ),
             child: Text(context.l10n.workerComplete),
           ),
@@ -734,40 +688,42 @@ class _StandardActionBtn extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.semanticColors;
     final isLoading = ref.watch(workerLifecycleNotifierProvider).isLoading;
 
     return GestureDetector(
       onTap: isLoading ? null : () => _run(context, ref),
       child: Container(
-        constraints: const BoxConstraints(minHeight: 38),
+        constraints: const BoxConstraints(minHeight: 52),
+        alignment: Alignment.center,
         padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
-          color: _kGreen,
-          borderRadius: BorderRadius.circular(10),
+          color: c.primary,
+          borderRadius: BorderRadius.circular(14),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (isLoading)
-              const SizedBox(
+              SizedBox(
                 width: 14,
                 height: 14,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: Colors.white,
+                  color: c.onPrimary,
                 ),
               )
             else
-              Icon(_icon, size: 14, color: Colors.white),
+              Icon(_icon, size: 14, color: c.onPrimary),
             const SizedBox(width: 5),
             Text(
               isLoading
                   ? '${lifecycleActionLabel(context.l10n, action)}...'
                   : lifecycleActionLabel(context.l10n, action),
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: Colors.white,
+                color: c.onPrimary,
               ),
             ),
           ],
@@ -784,10 +740,11 @@ class _StandardActionBtn extends ConsumerWidget {
     try {
       await action.invoke(ref, jobId);
       if (context.mounted) {
+        final c = context.semanticColors;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(lifecycleActionSuccess(context.l10n, action)),
-            backgroundColor: _kGreen,
+            backgroundColor: c.primary,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
@@ -795,11 +752,12 @@ class _StandardActionBtn extends ConsumerWidget {
       }
     } catch (e) {
       if (context.mounted) {
+        final c = context.semanticColors;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
                 failureMessage(context.l10n, e, fallback: context.l10n.inspectionActionFailed)),
-            backgroundColor: const Color(0xFFDC2626),
+            backgroundColor: c.error,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
@@ -833,26 +791,30 @@ class _InspectionActionBtn extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.semanticColors;
     if (action == InspectionWorkerAction.waitingForDecision) {
+      // Same "waiting" pairing as the prototype's own `.tg.w` tag class
+      // (urg/urgT, not warn/warnT) — not tappable, purely informational.
       return Container(
-        constraints: const BoxConstraints(minHeight: 38),
+        constraints: const BoxConstraints(minHeight: 52),
+        alignment: Alignment.center,
         padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
-          color: const Color(0xFFFFF7ED),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: const Color(0xFFFDBA74)),
+          color: c.urgentSoft,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: c.urgent),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(_icon, size: 14, color: const Color(0xFFC2541D)),
+            Icon(_icon, size: 14, color: c.urgent),
             const SizedBox(width: 5),
             Text(
               inspectionActionLabel(context.l10n, action),
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFFC2541D),
+                color: c.urgent,
               ),
             ),
           ],
@@ -867,35 +829,36 @@ class _InspectionActionBtn extends ConsumerWidget {
     return GestureDetector(
       onTap: isLoading ? null : () => _run(context, ref),
       child: Container(
-        constraints: const BoxConstraints(minHeight: 38),
+        constraints: const BoxConstraints(minHeight: 52),
+        alignment: Alignment.center,
         padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
-          color: _kGreen,
-          borderRadius: BorderRadius.circular(10),
+          color: c.primary,
+          borderRadius: BorderRadius.circular(14),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (isLoading)
-              const SizedBox(
+              SizedBox(
                 width: 14,
                 height: 14,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: Colors.white,
+                  color: c.onPrimary,
                 ),
               )
             else
-              Icon(_icon, size: 14, color: Colors.white),
+              Icon(_icon, size: 14, color: c.onPrimary),
             const SizedBox(width: 5),
             Text(
               isLoading
                   ? '${inspectionActionLabel(context.l10n, action)}...'
                   : inspectionActionLabel(context.l10n, action),
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: Colors.white,
+                color: c.onPrimary,
               ),
             ),
           ],
@@ -913,10 +876,11 @@ class _InspectionActionBtn extends ConsumerWidget {
     try {
       await action.invoke(ref, jobId);
       if (context.mounted) {
+        final c = context.semanticColors;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(inspectionActionSuccess(context.l10n, action)),
-            backgroundColor: _kGreen,
+            backgroundColor: c.primary,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
@@ -924,11 +888,12 @@ class _InspectionActionBtn extends ConsumerWidget {
       }
     } catch (e) {
       if (context.mounted) {
+        final c = context.semanticColors;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
                 failureMessage(context.l10n, e, fallback: context.l10n.inspectionActionFailed)),
-            backgroundColor: const Color(0xFFDC2626),
+            backgroundColor: c.error,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
@@ -946,17 +911,18 @@ class _StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (bg, fg) = _colors();
+    final c = context.semanticColors;
+    final (bg, fg) = _colors(c);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
         workerJobStatusLabel(context.l10n, status),
         style: TextStyle(
-          fontSize: 11,
+          fontSize: 12.5,
           fontWeight: FontWeight.w600,
           color: fg,
         ),
@@ -964,16 +930,15 @@ class _StatusChip extends StatelessWidget {
     );
   }
 
-  (Color, Color) _colors() {
+  (Color, Color) _colors(AppSemanticColors c) {
     if (status.isWorkerActive) {
-      return (const Color(0xFFDCFCE7), const Color(0xFF15803D));
+      return (c.successSoft, c.success);
     }
     return switch (status) {
-      BookingStatus.completed =>
-        (const Color(0xFFDCFCE7), const Color(0xFF15803D)),
+      BookingStatus.completed => (c.successSoft, c.success),
       BookingStatus.cancelled || BookingStatus.rejected =>
-        (const Color(0xFFFEF2F2), const Color(0xFFDC2626)),
-      _ => (const Color(0xFFF1F5F9), _kGray),
+        (c.errorSoft, c.error),
+      _ => (c.surfaceSubtle, c.textSecondary),
     };
   }
 }
@@ -989,10 +954,12 @@ class _BidStatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     final (bg, fg) = switch (outcome) {
-      BidOutcome.accepted => (const Color(0xFFDCFCE7), const Color(0xFF15803D)),
-      BidOutcome.rejected => (const Color(0xFFFEF2F2), const Color(0xFFDC2626)),
-      BidOutcome.pending => (const Color(0xFFFFF7ED), const Color(0xFFC2541D)),
+      BidOutcome.accepted => (c.successSoft, c.success),
+      BidOutcome.rejected => (c.errorSoft, c.error),
+      // Same "waiting" pairing as the prototype's `.tg.w` tag class.
+      BidOutcome.pending => (c.urgentSoft, c.urgent),
     };
     final label = switch (outcome) {
       BidOutcome.accepted => context.l10n.bidStatusAccepted,
@@ -1004,12 +971,12 @@ class _BidStatusChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
         label,
         style: TextStyle(
-          fontSize: 11,
+          fontSize: 12.5,
           fontWeight: FontWeight.w600,
           color: fg,
         ),
@@ -1024,13 +991,13 @@ class _UrgencyPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     final isUrgent = urgency == BookingUrgency.urgent;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color:
-            isUrgent ? const Color(0xFFFFF7ED) : const Color(0xFFF1F5F9),
-        borderRadius: BorderRadius.circular(6),
+        color: isUrgent ? c.urgentSoft : c.surfaceSubtle,
+        borderRadius: BorderRadius.circular(999),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1038,17 +1005,15 @@ class _UrgencyPill extends StatelessWidget {
           Icon(
             isUrgent ? Icons.bolt_rounded : Icons.schedule_rounded,
             size: 10,
-            color: isUrgent
-                ? const Color(0xFFEA580C)
-                : _kLight,
+            color: isUrgent ? c.urgent : c.textSecondary,
           ),
           const SizedBox(width: 3),
           Text(
             isUrgent ? context.l10n.postJobUrgent : context.l10n.postJobNormal,
             style: TextStyle(
-              fontSize: 10,
+              fontSize: 12.5,
               fontWeight: FontWeight.w600,
-              color: isUrgent ? const Color(0xFFEA580C) : _kLight,
+              color: isUrgent ? c.urgent : c.textSecondary,
             ),
           ),
         ],
@@ -1063,6 +1028,7 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     final l10n = context.l10n;
     final title = switch (filter) {
       WorkerJobFilter.active => l10n.workerNoActiveJobs,
@@ -1088,8 +1054,8 @@ class _EmptyState extends StatelessWidget {
             Container(
               width: 80,
               height: 80,
-              decoration: const BoxDecoration(
-                color: Color(0xFFFFF0EB),
+              decoration: BoxDecoration(
+                color: c.softTeal,
                 shape: BoxShape.circle,
               ),
               child: const Center(
@@ -1099,19 +1065,19 @@ class _EmptyState extends StatelessWidget {
             const SizedBox(height: 20),
             Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
-                color: _kDark,
+                color: c.textPrimary,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               subtitle,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
-                color: _kLight,
+                color: c.textSecondary,
                 height: 1.4,
               ),
             ),
@@ -1129,13 +1095,14 @@ class _RefreshFailedBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Container(
       width: double.infinity,
-      color: const Color(0xFFFEF3C7),
+      color: c.warningSurface,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Text(
         context.l10n.myBookingsRefreshFailed,
-        style: const TextStyle(fontSize: 12, color: Color(0xFF92400E)),
+        style: TextStyle(fontSize: 12, color: c.warning),
       ),
     );
   }
@@ -1148,6 +1115,7 @@ class _ErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 40),
@@ -1157,8 +1125,8 @@ class _ErrorState extends StatelessWidget {
             Container(
               width: 70,
               height: 70,
-              decoration: const BoxDecoration(
-                color: Color(0xFFFFF1F2),
+              decoration: BoxDecoration(
+                color: c.errorSoft,
                 shape: BoxShape.circle,
               ),
               child: const Center(
@@ -1168,19 +1136,19 @@ class _ErrorState extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               context.l10n.myBookingsSomethingWrong,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
-                color: _kDark,
+                color: c.textPrimary,
               ),
             ),
             const SizedBox(height: 6),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12.5,
-                color: _kLight,
+                color: c.textSecondary,
                 height: 1.4,
               ),
               maxLines: 3,
@@ -1190,16 +1158,18 @@ class _ErrorState extends StatelessWidget {
             GestureDetector(
               onTap: onRetry,
               child: Container(
+                constraints: const BoxConstraints(minHeight: 52),
+                alignment: Alignment.center,
                 padding: const EdgeInsets.symmetric(
                     horizontal: 24, vertical: 12),
                 decoration: BoxDecoration(
-                  color: _kGreen,
-                  borderRadius: BorderRadius.circular(12),
+                  color: c.primary,
+                  borderRadius: BorderRadius.circular(14),
                 ),
                 child: Text(
                   context.l10n.commonRetry,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: c.onPrimary,
                     fontWeight: FontWeight.w700,
                     fontSize: 13,
                   ),

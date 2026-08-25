@@ -122,6 +122,16 @@ String workerJobFilterLabel(AppLocalizations l10n, WorkerJobFilter filter) =>
 String newJobFilterLabel(AppLocalizations l10n, NewJobFilter filter) =>
     switch (filter) {
       NewJobFilter.all => l10n.workerFilterAllWork,
-      NewJobFilter.myBids => l10n.workerFilterMyOffers,
+      // NOT workerFilterMyOffers, which My Jobs also uses. The two lists are
+      // different things and must not share a word: this one is the open pool
+      // filtered to jobs the Ustaad has already bid on, while My Jobs' "My
+      // Offers" is the permanent record of every offer ever sent — including
+      // ones that were lost ("never disappears just because the job was later
+      // assigned to someone else", worker_job_providers.dart:22).
+      //
+      // Reuses `workerOfferSent` — the badge this very screen already puts on
+      // such a card (worker_new_jobs_page.dart:647) — so the chip and the badge
+      // say the same words for the same thing, and no new ARB key is needed.
+      NewJobFilter.myBids => l10n.workerOfferSent,
       NewJobFilter.notBidYet => l10n.workerFilterNoOfferSent,
     };
