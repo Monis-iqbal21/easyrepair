@@ -1863,6 +1863,60 @@ abstract class AppLocalizations {
   /// **'Inspection Fee'**
   String get postJobInspectionFeeTitle;
 
+  /// No description provided for @postJobInspectionDetailsPageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tell us the problem'**
+  String get postJobInspectionDetailsPageTitle;
+
+  /// No description provided for @postJobInspectionDetailsStepIndicator.
+  ///
+  /// In en, this message translates to:
+  /// **'Step 3 / 4 · {service}'**
+  String postJobInspectionDetailsStepIndicator(String service);
+
+  /// No description provided for @postJobInspectionDetailsFeeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'INSPECTION FEE'**
+  String get postJobInspectionDetailsFeeLabel;
+
+  /// No description provided for @postJobInspectionDetailsFeeWaiver.
+  ///
+  /// In en, this message translates to:
+  /// **'Approve the repair and this fee is waived — you only pay the repair price'**
+  String get postJobInspectionDetailsFeeWaiver;
+
+  /// No description provided for @postJobInspectionProblemHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'What do you see? · required'**
+  String get postJobInspectionProblemHeading;
+
+  /// No description provided for @postJobInspectionVoiceHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice note · optional'**
+  String get postJobInspectionVoiceHeading;
+
+  /// No description provided for @postJobInspectionRecordPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap and describe it in your own words'**
+  String get postJobInspectionRecordPrompt;
+
+  /// No description provided for @postJobInspectionAddPhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Add photo'**
+  String get postJobInspectionAddPhoto;
+
+  /// No description provided for @postJobInspectionAttachmentCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} / 4 attachments'**
+  String postJobInspectionAttachmentCount(int count);
+
   /// No description provided for @postJobChooseStandardService.
   ///
   /// In en, this message translates to:
@@ -5910,7 +5964,7 @@ abstract class AppLocalizations {
   /// Note under the standard-lane price summary
   ///
   /// In en, this message translates to:
-  /// **'Total amount is final — no offers. You choose your Ustaad in the next step.'**
+  /// **'This price is final. It will not change at your door.'**
   String get postJobStandardTotalFinal;
 
   /// "How inspection works" card, step 1
@@ -6860,6 +6914,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'View services and prices'**
   String get postJobLaneFixedCta;
+
+  /// No description provided for @postJobFixedPricePageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Fixed Price Services'**
+  String get postJobFixedPricePageTitle;
+
+  /// Fixed-price booking page subtitle with the selected service category
+  ///
+  /// In en, this message translates to:
+  /// **'Step 3 / 4 · {service}'**
+  String postJobFixedPriceStepIndicator(String service);
 
   /// No description provided for @postJobLaneInspectionTitle.
   ///

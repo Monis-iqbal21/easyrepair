@@ -974,6 +974,40 @@ class AppLocalizationsUr extends AppLocalizations {
   String get postJobInspectionFeeTitle => 'معائنہ فیس';
 
   @override
+  String get postJobInspectionDetailsPageTitle => 'مسئلہ بتائیں';
+
+  @override
+  String postJobInspectionDetailsStepIndicator(String service) {
+    return 'مرحلہ 3 / 4 · $service';
+  }
+
+  @override
+  String get postJobInspectionDetailsFeeLabel => 'معائنہ فیس';
+
+  @override
+  String get postJobInspectionDetailsFeeWaiver =>
+      'مرمت منظور کرنے پر یہ فیس معاف ہے — آپ صرف مرمت کی قیمت ادا کریں گے';
+
+  @override
+  String get postJobInspectionProblemHeading =>
+      'آپ کو کیا نظر آ رہا ہے؟ · ضروری';
+
+  @override
+  String get postJobInspectionVoiceHeading => 'وائس نوٹ · اختیاری';
+
+  @override
+  String get postJobInspectionRecordPrompt =>
+      'دبائیں اور اپنے الفاظ میں بتائیں';
+
+  @override
+  String get postJobInspectionAddPhoto => 'تصویر شامل کریں';
+
+  @override
+  String postJobInspectionAttachmentCount(int count) {
+    return '$count / 4 اٹیچمنٹس';
+  }
+
+  @override
   String get postJobChooseStandardService => 'اسٹینڈرڈ سروس منتخب کریں';
 
   @override
@@ -3227,7 +3261,7 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get postJobStandardTotalFinal =>
-      'کل رقم حتمی ہے — کوئی آفر نہیں۔ اگلے مرحلے میں آپ استاد منتخب کریں گے۔';
+      'یہ قیمت حتمی ہے۔ دروازے پر نہیں بدلے گی۔';
 
   @override
   String get postJobHowInspectionStep1 => 'معائنہ فیس مقرر ہے۔';
@@ -3778,6 +3812,14 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get postJobLaneFixedCta => 'سروسز اور قیمتیں دیکھیں';
+
+  @override
+  String get postJobFixedPricePageTitle => 'مقررہ قیمت کی سروسز';
+
+  @override
+  String postJobFixedPriceStepIndicator(String service) {
+    return 'مرحلہ 3 / 4 · $service';
+  }
 
   @override
   String get postJobLaneInspectionTitle => 'معائنہ';
@@ -4866,6 +4908,40 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get postJobInspectionFeeTitle => 'Muaina Fee';
+
+  @override
+  String get postJobInspectionDetailsPageTitle => 'Masla bataein';
+
+  @override
+  String postJobInspectionDetailsStepIndicator(String service) {
+    return 'Step 3 / 4 · $service';
+  }
+
+  @override
+  String get postJobInspectionDetailsFeeLabel => 'INSPECTION FEE';
+
+  @override
+  String get postJobInspectionDetailsFeeWaiver =>
+      'Repair approve kiya to ye fees maaf — sirf kaam ka rate';
+
+  @override
+  String get postJobInspectionProblemHeading =>
+      'Aap ko kya nazar aa raha hai? · zaroori';
+
+  @override
+  String get postJobInspectionVoiceHeading => 'Bol kar bataein · marzi se';
+
+  @override
+  String get postJobInspectionRecordPrompt =>
+      'Dabayein aur apne alfaz mein bolein';
+
+  @override
+  String get postJobInspectionAddPhoto => 'Photo daalein';
+
+  @override
+  String postJobInspectionAttachmentCount(int count) {
+    return '$count / 4 attachments';
+  }
 
   @override
   String get postJobChooseStandardService => 'Standard service chunain';
@@ -7154,7 +7230,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get postJobStandardTotalFinal =>
-      'Total amount final hai — koi offer nahi. Aap next step par Ustaad choose karenge.';
+      'Ye rate final hai. Darwazay par nahi badlega.';
 
   @override
   String get postJobHowInspectionStep1 => 'Muaina fee fixed hai.';
@@ -7714,6 +7790,14 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get postJobLaneFixedCta => 'Services aur prices dekhein';
+
+  @override
+  String get postJobFixedPricePageTitle => 'Fixed Price Services';
+
+  @override
+  String postJobFixedPriceStepIndicator(String service) {
+    return 'Step 3 / 4 · $service';
+  }
 
   @override
   String get postJobLaneInspectionTitle => 'Inspection';

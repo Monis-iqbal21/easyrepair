@@ -984,6 +984,39 @@ class AppLocalizationsEn extends AppLocalizations {
   String get postJobInspectionFeeTitle => 'Inspection Fee';
 
   @override
+  String get postJobInspectionDetailsPageTitle => 'Tell us the problem';
+
+  @override
+  String postJobInspectionDetailsStepIndicator(String service) {
+    return 'Step 3 / 4 · $service';
+  }
+
+  @override
+  String get postJobInspectionDetailsFeeLabel => 'INSPECTION FEE';
+
+  @override
+  String get postJobInspectionDetailsFeeWaiver =>
+      'Approve the repair and this fee is waived — you only pay the repair price';
+
+  @override
+  String get postJobInspectionProblemHeading => 'What do you see? · required';
+
+  @override
+  String get postJobInspectionVoiceHeading => 'Voice note · optional';
+
+  @override
+  String get postJobInspectionRecordPrompt =>
+      'Tap and describe it in your own words';
+
+  @override
+  String get postJobInspectionAddPhoto => 'Add photo';
+
+  @override
+  String postJobInspectionAttachmentCount(int count) {
+    return '$count / 4 attachments';
+  }
+
+  @override
   String get postJobChooseStandardService => 'Choose a standard service';
 
   @override
@@ -3298,7 +3331,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get postJobStandardTotalFinal =>
-      'Total amount is final — no offers. You choose your Ustaad in the next step.';
+      'This price is final. It will not change at your door.';
 
   @override
   String get postJobHowInspectionStep1 => 'The inspection fee is fixed.';
@@ -3856,6 +3889,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get postJobLaneFixedCta => 'View services and prices';
+
+  @override
+  String get postJobFixedPricePageTitle => 'Fixed Price Services';
+
+  @override
+  String postJobFixedPriceStepIndicator(String service) {
+    return 'Step 3 / 4 · $service';
+  }
 
   @override
   String get postJobLaneInspectionTitle => 'Inspection';

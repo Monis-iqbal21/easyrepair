@@ -54,11 +54,11 @@ Color _border(BuildContext context) => context.semanticColors.border;
 Color _surface(BuildContext context) => context.semanticColors.surface;
 Color _surfaceSubtle(BuildContext context) =>
     context.semanticColors.surfaceSubtle;
-Color _warningSurface(BuildContext context) =>
-    context.semanticColors.warningSurface;
+Color _background(BuildContext context) => context.semanticColors.background;
+Color _controlBorder(BuildContext context) =>
+    context.semanticColors.controlBorder;
+Color _softTeal(BuildContext context) => context.semanticColors.softTeal;
 Color _error(BuildContext context) => context.semanticColors.error;
-Color _success(BuildContext context) => context.semanticColors.success;
-Color _successSoft(BuildContext context) => context.semanticColors.successSoft;
 Color _onPrimary(BuildContext context) => context.semanticColors.onPrimary;
 const _kMaxVideoSecs = 30;
 const _kKarachiPreviewCenter = LatLng(24.8607, 67.0011);
@@ -68,6 +68,32 @@ final bookingMapPreviewPositionProvider = FutureProvider<LatLng?>((ref) async {
   if (position == null) return null;
   return LatLng(position.latitude, position.longitude);
 });
+
+typedef BookingAddressCoordinatesResolver =
+    Future<LatLng?> Function(String address);
+typedef BookingAddressLabelResolver =
+    Future<String?> Function(double latitude, double longitude);
+typedef BookingCurrentLocationResolver =
+    Future<LocationAvailabilityResult> Function();
+
+final bookingAddressCoordinatesResolverProvider =
+    Provider<BookingAddressCoordinatesResolver>((ref) {
+      return (address) async {
+        final location = await GeocodingService.coordinatesFromAddress(address);
+        if (location == null) return null;
+        return LatLng(location.latitude, location.longitude);
+      };
+    });
+
+final bookingAddressLabelResolverProvider =
+    Provider<BookingAddressLabelResolver>((ref) {
+      return GeocodingService.addressFromCoordinates;
+    });
+
+final bookingCurrentLocationResolverProvider =
+    Provider<BookingCurrentLocationResolver>((ref) {
+      return resolveCurrentLocation;
+    });
 
 class BookServicePage extends ConsumerStatefulWidget {
   final String? preselectedService;
@@ -170,6 +196,9 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
   bool _prefillDone = false;
 
   bool get _isEditMode => widget.editBookingId != null;
+
+  bool get _isFixedPriceDetailsStep =>
+      _currentStep == 2 && _laneChoice == BookingLane.standard;
 
   late final String _bookingAttemptId = _newUuidV4();
 
@@ -678,7 +707,9 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
 
   Future<void> _resolveTypedAddress(String query, int generation) async {
     try {
-      final location = await GeocodingService.coordinatesFromAddress(query);
+      final location = await ref.read(
+        bookingAddressCoordinatesResolverProvider,
+      )(query);
       if (!mounted || generation != _addressResolutionGeneration) return;
       if (location == null) {
         setState(() {
@@ -689,7 +720,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
       }
 
       final resolvedAddress =
-          await GeocodingService.addressFromCoordinates(
+          await ref.read(bookingAddressLabelResolverProvider)(
             location.latitude,
             location.longitude,
           ) ??
@@ -727,6 +758,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
           '[ReverseGeocode] ERROR: googleMapsApiKey is EMPTY — '
           'check dart-define GOOGLE_MAPS_API_KEY',
         );
+        return null;
       } else {
         final masked = key.length > 8
             ? '${key.substring(0, 4)}...${key.substring(key.length - 4)}'
@@ -807,7 +839,9 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     _cancelManualAddressResolution();
     setState(() => _locationLoading = true);
     try {
-      final locationResult = await resolveCurrentLocation();
+      final locationResult = await ref.read(
+        bookingCurrentLocationResolverProvider,
+      )();
       if (!locationResult.isAvailable) {
         if (mounted) {
           showLocationRecoverySnack(
@@ -832,7 +866,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
         debugPrint(
           '[CaptureLocation] HTTP reverse geocode failed, trying native geocoding fallback',
         );
-        addr = await GeocodingService.addressFromCoordinates(
+        addr = await ref.read(bookingAddressLabelResolverProvider)(
           pos.latitude,
           pos.longitude,
         );
@@ -1376,6 +1410,45 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     );
   }
 
+  Widget _inspectionSectionCard({
+    Key? key,
+    required String title,
+    required Widget child,
+  }) {
+    return Container(
+      key: key,
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: _surface(context),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _border(context)),
+        boxShadow: [
+          BoxShadow(
+            color: _textPrimary(context).withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: _textPrimary(context),
+            ),
+          ),
+          const SizedBox(height: 10),
+          child,
+        ],
+      ),
+    );
+  }
+
   Widget _infoNote(String text, {required Color color}) {
     return Container(
       padding: const EdgeInsets.all(12),
@@ -1715,7 +1788,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 150),
                   width: 68,
-                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  padding: const EdgeInsets.symmetric(vertical: 4),
                   decoration: BoxDecoration(
                     color: selected ? colors.softTeal : colors.surfaceSubtle,
                     borderRadius: BorderRadius.circular(12),
@@ -2534,121 +2607,136 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
         .toList();
     final canAddMore = _totalAttachmentCount < 4;
     final hasMedia = visibleExisting.isNotEmpty || _newAttachments.isNotEmpty;
+    final isInspection = _laneChoice == BookingLane.inspection;
 
-    return _sectionCard(
-      title: _laneChoice == BookingLane.bidding
-          ? context.l10n.postJobCustomVoiceAndPhotos
-          : context.l10n.postJobInspectionVoiceAndPhotos,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Existing voice note row (edit mode only)
-          if (_existingVoiceNote != null && _voiceNotePath == null) ...[
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: _primary(context).withValues(alpha: 0.07),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: _primary(context).withValues(alpha: 0.3),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: _primary(context),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.mic_rounded,
-                      color: _onPrimary(context),
-                      size: 17,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      context.l10n.postJobVoiceAttached,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        color: _textPrimary(context),
-                      ),
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: _removeExistingVoiceNote,
-                    child: Icon(
-                      Icons.delete_outline_rounded,
-                      size: 18,
-                      color: _textSecondary(context),
-                    ),
-                  ),
-                ],
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Existing voice note row (edit mode only)
+        if (_existingVoiceNote != null && _voiceNotePath == null) ...[
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: _primary(context).withValues(alpha: 0.07),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: _primary(context).withValues(alpha: 0.3),
               ),
             ),
-            const SizedBox(height: 8),
-          ],
+            child: Row(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: _primary(context),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.mic_rounded,
+                    color: _onPrimary(context),
+                    size: 17,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    context.l10n.postJobVoiceAttached,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: _textPrimary(context),
+                    ),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: _removeExistingVoiceNote,
+                  child: Icon(
+                    Icons.delete_outline_rounded,
+                    size: 18,
+                    color: _textSecondary(context),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
 
-          // WhatsApp-style voice bar
-          _buildVoiceBar(),
-          const SizedBox(height: 12),
+        // WhatsApp-style voice bar
+        _buildVoiceBar(inspectionStyle: isInspection),
+        const SizedBox(height: 12),
 
-          // Static rule explanation — photos and video share one combined
-          // cap of 4, never "4 photos plus a video".
+        // Static rule explanation — photos and video share one combined
+        // cap of 4, never "4 photos plus a video".
+        if (!isInspection) ...[
           Text(
             context.l10n.postJobAttachmentHelper,
             style: TextStyle(fontSize: 11, color: _textSecondary(context)),
           ),
           const SizedBox(height: 8),
+        ],
 
-          // Action row: file attachment + camera
-          Row(
-            children: [
-              Expanded(
-                child: _buildActionButton(
-                  icon: Icons.attach_file_rounded,
-                  label: context.l10n.postJobAddPhotoVideo,
-                  onTap: canAddMore ? _pickAttachment : null,
-                ),
+        // Action row: file attachment + camera
+        Row(
+          children: [
+            Expanded(
+              child: _buildActionButton(
+                icon: Icons.attach_file_rounded,
+                label: isInspection
+                    ? context.l10n.postJobInspectionAddPhoto
+                    : context.l10n.postJobAddPhotoVideo,
+                onTap: canAddMore ? _pickAttachment : null,
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _buildActionButton(
-                  icon: Icons.camera_alt_outlined,
-                  label: context.l10n.postJobCamera,
-                  onTap: canAddMore ? _pickFromCamera : null,
-                ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _buildActionButton(
+                icon: Icons.camera_alt_outlined,
+                label: context.l10n.postJobCamera,
+                onTap: canAddMore ? _pickFromCamera : null,
               ),
-            ],
-          ),
-
-          // Media previews (larger, 2-col, tap to expand)
-          if (hasMedia) ...[
-            const SizedBox(height: 14),
-            _buildAttachmentPreviews(visibleExisting),
-          ],
-
-          const SizedBox(height: 8),
-          Text(
-            context.l10n.postJobAttachmentCount(_totalAttachmentCount),
-            style: TextStyle(fontSize: 11, color: _textSecondary(context)),
-          ),
-          if (_removedAttachmentIds.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(
-              context.l10n.postJobAttachmentsWillBeRemoved(
-                _removedAttachmentIds.length,
-              ),
-              style: TextStyle(fontSize: 11, color: _urgent(context)),
             ),
           ],
+        ),
+
+        // Media previews (larger, 2-col, tap to expand)
+        if (hasMedia) ...[
+          const SizedBox(height: 14),
+          _buildAttachmentPreviews(visibleExisting),
         ],
-      ),
+
+        const SizedBox(height: 8),
+        Text(
+          isInspection
+              ? context.l10n.postJobInspectionAttachmentCount(
+                  _totalAttachmentCount,
+                )
+              : context.l10n.postJobAttachmentCount(_totalAttachmentCount),
+          style: TextStyle(fontSize: 11, color: _textSecondary(context)),
+        ),
+        if (_removedAttachmentIds.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Text(
+            context.l10n.postJobAttachmentsWillBeRemoved(
+              _removedAttachmentIds.length,
+            ),
+            style: TextStyle(fontSize: 11, color: _urgent(context)),
+          ),
+        ],
+      ],
     );
+
+    return isInspection
+        ? _inspectionSectionCard(
+            key: const ValueKey('inspection-media-card'),
+            title: context.l10n.postJobInspectionVoiceHeading,
+            child: content,
+          )
+        : _sectionCard(
+            title: context.l10n.postJobCustomVoiceAndPhotos,
+            child: content,
+          );
   }
 
   Widget _buildCustomMediaSection() {
@@ -2748,6 +2836,11 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
           ] else
             _buildVoiceBar(),
           const SizedBox(height: 10),
+          Text(
+            context.l10n.postJobAttachmentHelper,
+            style: TextStyle(fontSize: 11, color: colors.textSecondary),
+          ),
+          const SizedBox(height: 8),
           Row(
             children: [
               Expanded(
@@ -2795,7 +2888,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
   }
 
   // WhatsApp-style voice note bar — 3 states: idle, recording, preview.
-  Widget _buildVoiceBar() {
+  Widget _buildVoiceBar({bool inspectionStyle = false}) {
     // ── State: preview ready — player with inline delete icon ────────────
     if (_voiceNotePath != null) {
       return WhatsAppVoiceNotePlayer(
@@ -2874,37 +2967,62 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: _surfaceSubtle(context),
-          borderRadius: BorderRadius.circular(50),
-          border: Border.all(color: _border(context)),
+          color: inspectionStyle
+              ? _primary(context).withValues(alpha: 0.09)
+              : _surfaceSubtle(context),
+          borderRadius: BorderRadius.circular(inspectionStyle ? 14 : 50),
+          border: inspectionStyle ? null : Border.all(color: _border(context)),
         ),
         child: Row(
           children: [
-            Icon(
-              Icons.mic_none_rounded,
-              size: 18,
-              color: _textSecondary(context),
-            ),
+            if (inspectionStyle)
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: _primary(context),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.mic_rounded,
+                  size: 16,
+                  color: _onPrimary(context),
+                ),
+              )
+            else
+              Icon(
+                Icons.mic_none_rounded,
+                size: 18,
+                color: _textSecondary(context),
+              ),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
-                context.l10n.postJobTapToRecord,
-                style: TextStyle(fontSize: 13, color: _textSecondary(context)),
+                inspectionStyle
+                    ? context.l10n.postJobInspectionRecordPrompt
+                    : context.l10n.postJobTapToRecord,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: inspectionStyle
+                      ? _primary(context)
+                      : _textSecondary(context),
+                ),
               ),
             ),
-            Container(
-              width: 30,
-              height: 30,
-              decoration: BoxDecoration(
-                color: _primary(context).withValues(alpha: 0.1),
-                shape: BoxShape.circle,
+            if (!inspectionStyle)
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: _primary(context).withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.mic_rounded,
+                  size: 16,
+                  color: _primary(context),
+                ),
               ),
-              child: Icon(
-                Icons.mic_rounded,
-                size: 16,
-                color: _primary(context),
-              ),
-            ),
           ],
         ),
       ),
@@ -3599,6 +3717,30 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     );
   }
 
+  Widget _buildFixedPriceProgressIndicator() {
+    final colors = context.semanticColors;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Row(
+        children: List.generate(4, (index) {
+          return Expanded(
+            child: Padding(
+              padding: EdgeInsetsDirectional.only(end: index < 3 ? 5 : 0),
+              child: Container(
+                key: ValueKey('fixed-price-progress-$index'),
+                height: 2,
+                decoration: BoxDecoration(
+                  color: index <= 2 ? colors.primary : colors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
   // ── Step 1: Service address ────────────────────────────────────────────────
   Widget _buildStep1() {
     // Entry points like "Book Urgently" push here with no preselected
@@ -3654,6 +3796,15 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
   // Shown only after a lane has been committed to on step 2.1 — one lane's
   // fields at a time, on their own page.
   Widget _buildLaneDetailsStep() {
+    if (_laneChoice == BookingLane.standard) {
+      return SingleChildScrollView(
+        key: const ValueKey(2),
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+        child: _buildStandardServicesSection(),
+      );
+    }
+
     if (_laneChoice == BookingLane.bidding) {
       return _buildCustomRequestStep();
     }
@@ -3666,26 +3817,22 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
 
     return SingleChildScrollView(
       key: const ValueKey(2),
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+      padding: EdgeInsets.fromLTRB(
+        20,
+        _laneChoice == BookingLane.inspection ? 0 : 16,
+        20,
+        16,
+      ),
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (_laneChoice == BookingLane.standard) ...[
-            _buildStandardServicesSection(),
-          ] else if (_laneChoice == BookingLane.inspection) ...[
+          if (_laneChoice == BookingLane.inspection) ...[
             _buildInspectionOverviewCard(fee: inspectionFee),
-            const SizedBox(height: 16),
-            _buildInspectionInfoCard(),
-            const SizedBox(height: 16),
-            _buildInspectionOptionalField(),
-            const SizedBox(height: 16),
+            const SizedBox(height: 10),
+            _buildInspectionProblemField(),
+            const SizedBox(height: 10),
             _buildMediaSection(),
-            const SizedBox(height: 12),
-            _infoNote(
-              context.l10n.postJobInspectionRateNote,
-              color: _primary(context),
-            ),
           ],
           const SizedBox(height: 8),
         ],
@@ -4185,81 +4332,57 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     );
   }
 
-  // ── Step 2.2 (INSPECTION): fee + how-it-works recap ────────────────────────
-  // Previously rendered inline inside the lane-selector hero card once
-  // INSPECTION was selected; moved here so Page 2.1 (lane choice) never
-  // shows lane-specific detail. Shown at the top of the INSPECTION details
-  // step, above the existing report/media sections.
+  // ── Step 2.2 (INSPECTION): compact fee/waiver card ────────────────────────
   Widget _buildInspectionOverviewCard({required double? fee}) {
+    final formattedFee = fee == null
+        ? '—'
+        : formatPkr(fee).replaceFirst(' ', '\n');
+
     return Container(
+      key: const ValueKey('inspection-fee-card'),
       width: double.infinity,
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
       decoration: BoxDecoration(
-        color: _primary(context).withValues(alpha: 0.05),
+        color: _primary(context),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: _primary(context), width: 1.5),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: _warningSurface(context),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Text(
-                    context.l10n.postJobInspectionFeeTitle,
-                    maxLines: 2,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: _urgent(context),
-                    ),
+                Text(
+                  context.l10n.postJobInspectionDetailsFeeLabel,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.5,
+                    color: _onPrimary(context),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(height: 3),
                 Text(
-                  fee != null ? formatPkr(fee) : '—',
+                  context.l10n.postJobInspectionDetailsFeeWaiver,
                   style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    color: _urgent(context),
+                    fontSize: 11,
+                    height: 1.35,
+                    color: _onPrimary(context).withValues(alpha: 0.88),
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 13),
-          _heroStep(1, context.l10n.postJobInspectionHeroStep1),
-          const SizedBox(height: 9),
-          _heroStep(2, context.l10n.postJobInspectionHeroStep2),
-          const SizedBox(height: 9),
-          _heroStep(3, context.l10n.postJobInspectionHeroStep3),
-          const SizedBox(height: 12),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: _successSoft(context),
-              borderRadius: BorderRadius.horizontal(right: Radius.circular(9)),
-              border: Border(
-                left: BorderSide(color: _success(context), width: 3),
-              ),
-            ),
-            child: Text(
-              context.l10n.postJobUnderstandingIsOurJob,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                height: 1.35,
-                color: _success(context),
-              ),
+          const SizedBox(width: 16),
+          Text(
+            formattedFee,
+            textAlign: TextAlign.end,
+            style: TextStyle(
+              fontSize: 20,
+              height: 1.08,
+              fontWeight: FontWeight.w800,
+              color: _onPrimary(context),
             ),
           ),
         ],
@@ -4267,39 +4390,27 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     );
   }
 
-  Widget _heroStep(int n, String text) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: 19,
-          height: 19,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: _primary(context).withValues(alpha: 0.12),
-            shape: BoxShape.circle,
-          ),
-          child: Text(
-            '$n',
-            style: TextStyle(
-              fontSize: 10.5,
-              fontWeight: FontWeight.w800,
-              color: _urgent(context),
+  Widget _buildInspectionProgressIndicator() {
+    final colors = context.semanticColors;
+    return Padding(
+      key: const ValueKey('inspection-step-progress'),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Row(
+        children: List.generate(4, (index) {
+          return Expanded(
+            child: Padding(
+              padding: EdgeInsetsDirectional.only(end: index < 3 ? 6 : 0),
+              child: Container(
+                height: 2,
+                decoration: BoxDecoration(
+                  color: index <= 2 ? colors.primary : colors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
             ),
-          ),
-        ),
-        const SizedBox(width: 9),
-        Expanded(
-          child: Text(
-            text,
-            style: TextStyle(
-              fontSize: 12.5,
-              height: 1.3,
-              color: _textSecondary(context),
-            ),
-          ),
-        ),
-      ],
+          );
+        }),
+      ),
     );
   }
 
@@ -4619,178 +4730,65 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
   Widget _buildStandardServicesSection() {
     final categoriesAsync = ref.watch(clientBookingCategoriesProvider);
     return categoriesAsync.when(
-      loading: () => _sectionCard(
-        title: context.l10n.postJobChooseStandardService,
-        child: const Padding(
-          padding: EdgeInsets.symmetric(vertical: 12),
-          child: Center(
-            child: SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
+      loading: () => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        child: Center(
+          child: SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: _primary(context),
             ),
           ),
         ),
       ),
-      error: (_, _) => _sectionCard(
-        title: context.l10n.postJobChooseStandardService,
-        child: Text(
-          context.l10n.postJobServicesUnavailable,
-          style: TextStyle(fontSize: 13, color: _textSecondary(context)),
-        ),
-      ),
+      error: (_, _) =>
+          _fixedPriceStateMessage(context.l10n.postJobServicesUnavailable),
       data: (categories) {
         final category = _resolveCategory(categories);
         if (category == null) {
-          return _sectionCard(
-            title: context.l10n.postJobChooseStandardService,
-            child: Text(
-              context.l10n.postJobSelectCategoryFirst,
-              style: TextStyle(fontSize: 13, color: _textSecondary(context)),
-            ),
+          return _fixedPriceStateMessage(
+            context.l10n.postJobSelectCategoryFirst,
           );
         }
         final servicesAsync = ref.watch(standardServicesProvider(category.id));
         return servicesAsync.when(
-          loading: () => _sectionCard(
-            title: context.l10n.postJobChooseStandardService,
-            child: const Padding(
-              padding: EdgeInsets.symmetric(vertical: 12),
-              child: Center(
-                child: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+          loading: () => Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: Center(
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: _primary(context),
                 ),
               ),
             ),
           ),
-          error: (_, _) => _sectionCard(
-            title: context.l10n.postJobChooseStandardService,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  context.l10n.postJobStandardServicesUnavailable,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: _textSecondary(context),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextButton(
-                  onPressed: () =>
-                      ref.invalidate(standardServicesProvider(category.id)),
-                  style: TextButton.styleFrom(
-                    foregroundColor: _primary(context),
-                  ),
-                  child: Text(context.l10n.commonRetry),
-                ),
-              ],
-            ),
+          error: (_, _) => _fixedPriceStateMessage(
+            context.l10n.postJobStandardServicesUnavailable,
+            onRetry: () =>
+                ref.invalidate(standardServicesProvider(category.id)),
           ),
           data: (services) {
             _applyPendingStandardServicePreselection(services);
             if (services.isEmpty) {
-              return _sectionCard(
-                title: context.l10n.postJobChooseStandardService,
-                child: Text(
-                  context.l10n.postJobNoStandardServices,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: _textSecondary(context),
-                    height: 1.4,
-                  ),
-                ),
+              return _fixedPriceStateMessage(
+                context.l10n.postJobNoStandardServices,
               );
             }
-            return _sectionCard(
-              title: context.l10n.postJobChooseStandardService,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    context.l10n.postJobMultiSelectHint,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: _textSecondary(context),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  for (var i = 0; i < services.length; i++) ...[
-                    if (i > 0) const SizedBox(height: 10),
-                    _standardServiceTile(services[i]),
-                  ],
-                  if (_selectedStandardServices.isNotEmpty) ...[
-                    const SizedBox(height: 14),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: _primary(context).withValues(alpha: 0.06),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          for (final s in _selectedStandardServices.values)
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 4),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      s.name,
-                                      style: TextStyle(
-                                        fontSize: 12.5,
-                                        color: _textPrimary(context),
-                                      ),
-                                    ),
-                                  ),
-                                  Text(
-                                    formatPkr(s.price),
-                                    style: TextStyle(
-                                      fontSize: 12.5,
-                                      fontWeight: FontWeight.w600,
-                                      color: _textPrimary(context),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          Divider(height: 14),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  context.l10n.postJobTotal,
-                                  style: TextStyle(
-                                    fontSize: 13.5,
-                                    fontWeight: FontWeight.w700,
-                                    color: _textPrimary(context),
-                                  ),
-                                ),
-                              ),
-                              Text(
-                                formatPkr(_selectedStandardServicesTotal),
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w800,
-                                  color: _primary(context),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 12),
-                  _infoNote(
-                    context.l10n.postJobStandardTotalFinal,
-                    color: _primary(context),
-                  ),
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (var i = 0; i < services.length; i++) ...[
+                  if (i > 0) const SizedBox(height: 8),
+                  _standardServiceTile(services[i]),
                 ],
-              ),
+                const SizedBox(height: 12),
+                _buildFixedPriceLockStrip(),
+              ],
             );
           },
         );
@@ -4798,77 +4796,140 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     );
   }
 
-  Widget _standardServiceTile(StandardServiceEntity service) {
-    final selected = _selectedStandardServices.containsKey(service.id);
-    return GestureDetector(
-      onTap: () => setState(() {
-        if (selected) {
-          _selectedStandardServices.remove(service.id);
-        } else {
-          _selectedStandardServices[service.id] = service;
-        }
-      }),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        width: double.infinity,
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: selected
-              ? _primary(context).withValues(alpha: 0.07)
-              : _surfaceSubtle(context),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: selected ? _primary(context) : _border(context),
-            width: selected ? 1.5 : 1,
+  Widget _fixedPriceStateMessage(String message, {VoidCallback? onRetry}) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: _surface(context),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _border(context)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            message,
+            style: TextStyle(
+              fontSize: 13,
+              height: 1.4,
+              color: _textSecondary(context),
+            ),
           ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: selected ? _primary(context) : _surface(context),
-                shape: BoxShape.circle,
-                border: selected ? null : Border.all(color: _border(context)),
-              ),
-              child: Icon(
-                Icons.build_rounded,
-                size: 16,
-                color: selected ? _onPrimary(context) : _textSecondary(context),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                service.name,
-                style: TextStyle(
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w600,
-                  color: selected ? _primary(context) : _textPrimary(context),
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              formatPkr(service.price),
-              style: TextStyle(
-                fontSize: 13.5,
-                fontWeight: FontWeight.w700,
-                color: selected ? _primary(context) : _textPrimary(context),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Icon(
-              selected
-                  ? Icons.check_box_rounded
-                  : Icons.check_box_outline_blank_rounded,
-              size: 20,
-              color: selected ? _primary(context) : _border(context),
+          if (onRetry != null) ...[
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: onRetry,
+              style: TextButton.styleFrom(foregroundColor: _primary(context)),
+              child: Text(context.l10n.commonRetry),
             ),
           ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFixedPriceLockStrip() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: _softTeal(context),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.lock_outline_rounded, size: 16, color: _primary(context)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              context.l10n.postJobStandardTotalFinal,
+              style: TextStyle(
+                fontSize: 11.5,
+                height: 1.3,
+                fontWeight: FontWeight.w500,
+                color: _primary(context),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _standardServiceTile(StandardServiceEntity service) {
+    final selected = _selectedStandardServices.containsKey(service.id);
+    return Semantics(
+      key: ValueKey('fixed-price-service-${service.id}'),
+      button: true,
+      selected: selected,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => setState(() {
+          if (selected) {
+            _selectedStandardServices.remove(service.id);
+          } else {
+            _selectedStandardServices[service.id] = service;
+          }
+        }),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          constraints: const BoxConstraints(minHeight: 50),
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
+          decoration: BoxDecoration(
+            color: selected ? _softTeal(context) : _background(context),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: selected ? _primary(context) : _controlBorder(context),
+            ),
+          ),
+          child: Row(
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
+                width: 20,
+                height: 20,
+                decoration: BoxDecoration(
+                  color: selected ? _primary(context) : _background(context),
+                  borderRadius: BorderRadius.circular(6),
+                  border: selected
+                      ? null
+                      : Border.all(color: _controlBorder(context)),
+                ),
+                child: selected
+                    ? Icon(
+                        Icons.check_rounded,
+                        size: 14,
+                        color: _onPrimary(context),
+                      )
+                    : null,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  service.name,
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    height: 1.2,
+                    fontWeight: FontWeight.w500,
+                    color: _textPrimary(context),
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                formatPkr(service.price),
+                style: TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w700,
+                  color: _textPrimary(context),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -4933,65 +4994,15 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     );
   }
 
-  // ── Mode B: "How inspection works" info card ───────────────────────────────
-  Widget _buildInspectionInfoCard() {
-    final steps = [
-      context.l10n.postJobHowInspectionStep1,
-      context.l10n.postJobHowInspectionStep2,
-      context.l10n.postJobHowInspectionStep3,
-    ];
-    return _sectionCard(
-      title: context.l10n.postJobHowInspectionWorks,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          for (var i = 0; i < steps.length; i++) ...[
-            if (i > 0) const SizedBox(height: 10),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 22,
-                  height: 22,
-                  decoration: BoxDecoration(
-                    color: _primary(context),
-                    shape: BoxShape.circle,
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    '${i + 1}',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: _onPrimary(context),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    steps[i],
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: _textPrimary(context),
-                      height: 1.4,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  // ── Mode B: optional "What do you see?" field ──────────────────────────────
-  Widget _buildInspectionOptionalField() {
-    return _sectionCard(
-      title: context.l10n.postJobWhatDoYouSee,
+  // ── Mode B: required "What do you see?" field ──────────────────────────────
+  Widget _buildInspectionProblemField() {
+    return _inspectionSectionCard(
+      key: const ValueKey('inspection-problem-card'),
+      title: context.l10n.postJobInspectionProblemHeading,
       child: TextFormField(
+        key: const ValueKey('inspection-problem-field'),
         controller: _descriptionCtrl,
+        minLines: 3,
         maxLines: 3,
         textInputAction: TextInputAction.done,
         decoration: InputDecoration(
@@ -5021,6 +5032,12 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
   Widget _buildStepNavButtons() {
     if (_currentStep == 1 && !_hideLaneCardsForEdit) {
       return _buildLaneSelectionCta();
+    }
+    if (_isFixedPriceDetailsStep) {
+      return _buildFixedPriceFooter();
+    }
+    if (_currentStep == 2 && _laneChoice == BookingLane.inspection) {
+      return _buildInspectionDetailsCta();
     }
     if (_currentStep == 2 && _laneChoice == BookingLane.bidding) {
       return _buildCustomRequestCta();
@@ -5142,6 +5159,94 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     );
   }
 
+  Widget _buildFixedPriceFooter() {
+    final hasValidSelection = _selectedStandardServices.isNotEmpty;
+    return Container(
+      color: _background(context),
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 14),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  context.l10n.postJobTotal,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: _textPrimary(context),
+                  ),
+                ),
+              ),
+              Text(
+                formatPkr(_selectedStandardServicesTotal),
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                  color: _textPrimary(context),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: ElevatedButton(
+              key: const ValueKey('fixed-price-next'),
+              onPressed: hasValidSelection ? _nextStep : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _primary(context),
+                disabledBackgroundColor: context.semanticColors.disabled,
+                foregroundColor: _onPrimary(context),
+                disabledForegroundColor: _surface(context),
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Text(
+                context.l10n.postJobNext,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInspectionDetailsCta() {
+    return Container(
+      key: const ValueKey('inspection-details-cta'),
+      color: _surfaceSubtle(context),
+      padding: const EdgeInsets.fromLTRB(20, 10, 20, 14),
+      child: SizedBox(
+        width: double.infinity,
+        height: 48,
+        child: ElevatedButton(
+          onPressed: _nextStep,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: _primary(context),
+            foregroundColor: _onPrimary(context),
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          child: Text(
+            context.l10n.postJobNext,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildLaneSelectionCta() {
     final lane = _laneChoice;
     final label = switch (lane) {
@@ -5184,8 +5289,18 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     final isLaneStep = _currentStep == 1 && !_hideLaneCardsForEdit;
     final isCustomRequestStep =
         _currentStep == 2 && _laneChoice == BookingLane.bidding;
-    final isCompactHeader = isLaneStep || isCustomRequestStep;
-    final title = isCustomRequestStep
+    final isInspectionDetails =
+        _currentStep == 2 && _laneChoice == BookingLane.inspection;
+    final isCompactHeader =
+        isLaneStep ||
+        _isFixedPriceDetailsStep ||
+        isInspectionDetails ||
+        isCustomRequestStep;
+    final title = isInspectionDetails
+        ? context.l10n.postJobInspectionDetailsPageTitle
+        : _isFixedPriceDetailsStep
+        ? context.l10n.postJobFixedPricePageTitle
+        : isCustomRequestStep
         ? context.l10n.postJobCustomRequestTitle
         : isLaneStep
         ? context.l10n.postJobLanePageTitle
@@ -5194,7 +5309,15 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
         : _currentStep == 0
         ? context.l10n.postJobStepAddress
         : context.l10n.postJobBookAService;
-    final subtitle = isCustomRequestStep
+    final subtitle = isInspectionDetails
+        ? context.l10n.postJobInspectionDetailsStepIndicator(
+            _selectedService ?? context.l10n.postJobService,
+          )
+        : _isFixedPriceDetailsStep
+        ? context.l10n.postJobFixedPriceStepIndicator(
+            _selectedService ?? context.l10n.postJobService,
+          )
+        : isCustomRequestStep
         ? context.l10n.postJobCustomRequestStepIndicator(
             _selectedService ?? context.l10n.postJobService,
           )
@@ -5284,7 +5407,9 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     ];
 
     return Scaffold(
-      backgroundColor: _surfaceSubtle(context),
+      backgroundColor: _isFixedPriceDetailsStep
+          ? _background(context)
+          : _surfaceSubtle(context),
       body: SafeArea(
         bottom: false,
         child: Column(
@@ -5297,6 +5422,10 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                 ? _buildAddressProgressIndicator()
                 : _currentStep == 1 && !_hideLaneCardsForEdit
                 ? _buildLaneProgressIndicator()
+                : _isFixedPriceDetailsStep
+                ? _buildFixedPriceProgressIndicator()
+                : _currentStep == 2 && _laneChoice == BookingLane.inspection
+                ? _buildInspectionProgressIndicator()
                 : _currentStep == 2 && _laneChoice == BookingLane.bidding
                 ? _buildCustomRequestProgressIndicator()
                 : _buildStepIndicator(),

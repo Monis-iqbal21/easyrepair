@@ -715,6 +715,29 @@
   "postJobSomethingIsBroken": "Something is broken",
   "postJobDontKnowIssue": "I do not know what the problem is",
   "postJobInspectionFeeTitle": "Inspection Fee",
+  "postJobInspectionDetailsPageTitle": "Tell us the problem",
+  "postJobInspectionDetailsStepIndicator": "Step 3 / 4 · {service}",
+  "@postJobInspectionDetailsStepIndicator": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  },
+  "postJobInspectionDetailsFeeLabel": "INSPECTION FEE",
+  "postJobInspectionDetailsFeeWaiver": "Approve the repair and this fee is waived — you only pay the repair price",
+  "postJobInspectionProblemHeading": "What do you see? · required",
+  "postJobInspectionVoiceHeading": "Voice note · optional",
+  "postJobInspectionRecordPrompt": "Tap and describe it in your own words",
+  "postJobInspectionAddPhoto": "Add photo",
+  "postJobInspectionAttachmentCount": "{count} / 4 attachments",
+  "@postJobInspectionAttachmentCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "postJobChooseStandardService": "Choose a standard service",
   "postJobServicesUnavailable": "Unable to load services. Please go back and try again.",
   "postJobSelectCategoryFirst": "Select a service category first.",
@@ -2039,7 +2062,7 @@
   "@postJobInspectionHeroStep3": {
     "description": "Inspection explainer, step 3"
   },
-  "postJobStandardTotalFinal": "Total amount is final — no offers. You choose your Ustaad in the next step.",
+  "postJobStandardTotalFinal": "This price is final. It will not change at your door.",
   "@postJobStandardTotalFinal": {
     "description": "Note under the standard-lane price summary"
   },
@@ -2435,6 +2458,12 @@
   "postJobLaneFixedBody": "See the final price before booking.",
   "postJobLaneFixedAction": "View services and prices →",
   "postJobLaneFixedCta": "View services and prices",
+  "postJobFixedPricePageTitle": "Fixed Price Services",
+  "postJobFixedPriceStepIndicator": "Step 3 / 4 · {service}",
+  "@postJobFixedPriceStepIndicator": {
+    "description": "Fixed-price booking page subtitle with the selected service category",
+    "placeholders": { "service": { "type": "String" } }
+  },
   "postJobLaneInspectionTitle": "Inspection",
   "postJobLaneInspectionSubtitle": "Not sure what the problem is?",
   "postJobLaneInspectionFeeBody": "{fee} inspection fee — paid after inspection, not now.",
