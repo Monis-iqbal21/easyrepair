@@ -3829,6 +3829,61 @@ class AppLocalizationsUr extends AppLocalizations {
   String get postJobLaneChooseCta => 'بکنگ کا آپشن منتخب کریں';
 
   @override
+  String get postJobCustomRequestTitle => 'آپ کی درخواست';
+
+  @override
+  String postJobCustomRequestStepIndicator(String service) {
+    return 'مرحلہ 3 / 4 · $service';
+  }
+
+  @override
+  String get postJobCustomWorkTitleLabel => 'کیا کام کروانا ہے؟';
+
+  @override
+  String get postJobCustomRequired => 'ضروری';
+
+  @override
+  String get postJobCustomWorkTitleHint => 'مثلاً سیلنگ فین لگوانا ہے';
+
+  @override
+  String get postJobCustomDetailsLabel => 'تفصیل سے بتائیں';
+
+  @override
+  String get postJobCustomOptional => 'اختیاری';
+
+  @override
+  String get postJobCustomDetailsHint => 'کوئی اور مددگار بات شامل کریں';
+
+  @override
+  String get postJobCustomVoiceLabel => 'وائس نوٹ';
+
+  @override
+  String get postJobCustomAddPhotos => 'تصاویر شامل کریں';
+
+  @override
+  String postJobCustomMediaAttached(int count) {
+    return '$count / 4 تصاویر · وائس نوٹ منسلک ہے';
+  }
+
+  @override
+  String postJobCustomMediaPending(int count) {
+    return '$count / 4 تصاویر · وائس نوٹ منسلک نہیں';
+  }
+
+  @override
+  String get postJobCustomHelperNote =>
+      'تصاویر اور وائس نوٹ سے استاد کو کام سب سے بہتر سمجھ آتا ہے۔ تکنیکی تفصیل کی ضرورت نہیں۔';
+
+  @override
+  String get postJobCustomReportLabel => 'پچھلی انسپکشن رپورٹ';
+
+  @override
+  String get postJobCustomAttachReport => 'رپورٹ منسلک کریں';
+
+  @override
+  String get postJobInspectionReportAttached => 'رپورٹ منسلک ہے';
+
+  @override
   String aboutVersionValue(String version, String build) {
     return 'ورژن $version ($build)';
   }
@@ -7709,6 +7764,61 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get postJobLaneChooseCta => 'Booking option choose karein';
+
+  @override
+  String get postJobCustomRequestTitle => 'Aap ki request';
+
+  @override
+  String postJobCustomRequestStepIndicator(String service) {
+    return 'Step 3 / 4 · $service';
+  }
+
+  @override
+  String get postJobCustomWorkTitleLabel => 'KYA KARWANA HAI?';
+
+  @override
+  String get postJobCustomRequired => 'zaroori';
+
+  @override
+  String get postJobCustomWorkTitleHint => 'Maslan ceiling fan lagwana hai';
+
+  @override
+  String get postJobCustomDetailsLabel => 'Details se batayein';
+
+  @override
+  String get postJobCustomOptional => 'marzi se';
+
+  @override
+  String get postJobCustomDetailsHint => 'Agar koi aur baat madad kare';
+
+  @override
+  String get postJobCustomVoiceLabel => 'Voice note';
+
+  @override
+  String get postJobCustomAddPhotos => 'Photo dalain';
+
+  @override
+  String postJobCustomMediaAttached(int count) {
+    return '$count / 4 photos · Voice note laga hua';
+  }
+
+  @override
+  String postJobCustomMediaPending(int count) {
+    return '$count / 4 photos · Voice note nahi laga';
+  }
+
+  @override
+  String get postJobCustomHelperNote =>
+      'Ustaad ko photo aur awaz se sab se zyada samajh aata hai. Technical details ki zaroorat nahi.';
+
+  @override
+  String get postJobCustomReportLabel => 'Pichli inspection report';
+
+  @override
+  String get postJobCustomAttachReport => 'Report lagayen';
+
+  @override
+  String get postJobInspectionReportAttached => 'Report laga hua';
 
   @override
   String aboutVersionValue(String version, String build) {

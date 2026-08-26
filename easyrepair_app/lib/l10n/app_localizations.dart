@@ -6945,6 +6945,102 @@ abstract class AppLocalizations {
   /// **'Choose a booking option'**
   String get postJobLaneChooseCta;
 
+  /// No description provided for @postJobCustomRequestTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your request'**
+  String get postJobCustomRequestTitle;
+
+  /// No description provided for @postJobCustomRequestStepIndicator.
+  ///
+  /// In en, this message translates to:
+  /// **'Step 3 / 4 · {service}'**
+  String postJobCustomRequestStepIndicator(String service);
+
+  /// No description provided for @postJobCustomWorkTitleLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'WHAT NEEDS TO BE DONE?'**
+  String get postJobCustomWorkTitleLabel;
+
+  /// No description provided for @postJobCustomRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'required'**
+  String get postJobCustomRequired;
+
+  /// No description provided for @postJobCustomWorkTitleHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Install a ceiling fan'**
+  String get postJobCustomWorkTitleHint;
+
+  /// No description provided for @postJobCustomDetailsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Tell us the details'**
+  String get postJobCustomDetailsLabel;
+
+  /// No description provided for @postJobCustomOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'optional'**
+  String get postJobCustomOptional;
+
+  /// No description provided for @postJobCustomDetailsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Add anything else that may help'**
+  String get postJobCustomDetailsHint;
+
+  /// No description provided for @postJobCustomVoiceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice note'**
+  String get postJobCustomVoiceLabel;
+
+  /// No description provided for @postJobCustomAddPhotos.
+  ///
+  /// In en, this message translates to:
+  /// **'Add photos'**
+  String get postJobCustomAddPhotos;
+
+  /// No description provided for @postJobCustomMediaAttached.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} / 4 photos · Voice note attached'**
+  String postJobCustomMediaAttached(int count);
+
+  /// No description provided for @postJobCustomMediaPending.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} / 4 photos · Voice note not attached'**
+  String postJobCustomMediaPending(int count);
+
+  /// No description provided for @postJobCustomHelperNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Photos and a voice note help the Ustaad understand best. No technical details needed.'**
+  String get postJobCustomHelperNote;
+
+  /// No description provided for @postJobCustomReportLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous inspection report'**
+  String get postJobCustomReportLabel;
+
+  /// No description provided for @postJobCustomAttachReport.
+  ///
+  /// In en, this message translates to:
+  /// **'Attach report'**
+  String get postJobCustomAttachReport;
+
+  /// No description provided for @postJobInspectionReportAttached.
+  ///
+  /// In en, this message translates to:
+  /// **'Report attached'**
+  String get postJobInspectionReportAttached;
+
   /// Runtime app version/build shown on the About page and Settings row
   ///
   /// In en, this message translates to:

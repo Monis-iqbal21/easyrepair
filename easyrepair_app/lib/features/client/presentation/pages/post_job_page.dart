@@ -988,6 +988,8 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     if (_laneChoice == BookingLane.standard) {
       return null;
     }
+    final details = _descriptionCtrl.text.trim();
+    if (details.isNotEmpty) return details;
     return _titleCtrl.text.trim().isEmpty ? null : _titleCtrl.text.trim();
   }
 
@@ -1839,69 +1841,6 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     );
   }
 
-  // ── D. Issue title ────────────────────────────────────────────────────────
-  Widget _buildTitleSection() {
-    return _sectionCard(
-      title: context.l10n.postJobWhatNeedsFixing,
-      child: TextFormField(
-        controller: _titleCtrl,
-        textInputAction: TextInputAction.next,
-        maxLength: 120,
-        decoration: InputDecoration(
-          hintText: context.l10n.postJobIssueHint,
-          hintStyle: TextStyle(color: _textSecondary(context), fontSize: 14),
-          counterText: '',
-          filled: true,
-          fillColor: _surfaceSubtle(context),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: _border(context)),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: _border(context)),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: _primary(context), width: 1.4),
-          ),
-          contentPadding: const EdgeInsets.all(14),
-        ),
-      ),
-    );
-  }
-
-  // ── E. Description (commented out — kept for future use) ─────────────────
-  // Widget _buildDescriptionSection() {
-  //   return _sectionCard(
-  //     title: context.l10n.postJobDescription,
-  //     child: TextFormField(
-  //       controller: _descriptionCtrl,
-  //       maxLines: 4,
-  //       textInputAction: TextInputAction.done,
-  //       decoration: InputDecoration(
-  //         hintText: context.l10n.postJobDescriptionHint,
-  //         hintStyle: TextStyle(color: _textSecondary(context), fontSize: 14),
-  //         filled: true,
-  //         fillColor: _surfaceSubtle(context),
-  //         border: OutlineInputBorder(
-  //           borderRadius: BorderRadius.circular(12),
-  //           borderSide: BorderSide(color: _border(context)),
-  //         ),
-  //         enabledBorder: OutlineInputBorder(
-  //           borderRadius: BorderRadius.circular(12),
-  //           borderSide: BorderSide(color: _border(context)),
-  //         ),
-  //         focusedBorder: OutlineInputBorder(
-  //           borderRadius: BorderRadius.circular(12),
-  //           borderSide: BorderSide(color: _primary(context), width: 1.4),
-  //         ),
-  //         contentPadding: const EdgeInsets.all(14),
-  //       ),
-  //     ),
-  //   );
-  // }
-
   // ── F. Location ───────────────────────────────────────────────────────────
   String _normalizeSavedAddressLabel(String value) =>
       value.trim().replaceAll(RegExp(r'\s+'), ' ').toLowerCase();
@@ -2712,6 +2651,149 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     );
   }
 
+  Widget _buildCustomMediaSection() {
+    final colors = context.semanticColors;
+    final visibleExisting = _existingAttachments
+        .where((attachment) => !_removedAttachmentIds.contains(attachment.id))
+        .toList();
+    final canAddMore = _totalAttachmentCount < 4;
+    final hasMedia = visibleExisting.isNotEmpty || _newAttachments.isNotEmpty;
+    final hasVoiceNote = _voiceNotePath != null || _existingVoiceNote != null;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colors.border),
+        boxShadow: [
+          BoxShadow(
+            color: colors.textPrimary.withValues(alpha: 0.035),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: context.l10n.postJobCustomVoiceLabel,
+                  style: TextStyle(
+                    color: colors.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                TextSpan(
+                  text: ' · ${context.l10n.postJobCustomRequired}',
+                  style: TextStyle(
+                    color: colors.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+            style: const TextStyle(fontSize: 12, height: 1.2),
+          ),
+          const SizedBox(height: 9),
+          if (_existingVoiceNote != null && _voiceNotePath == null) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+              decoration: BoxDecoration(
+                color: colors.successSoft,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 30,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      color: colors.success,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.mic_rounded,
+                      color: colors.onPrimary,
+                      size: 16,
+                    ),
+                  ),
+                  const SizedBox(width: 9),
+                  Expanded(
+                    child: Text(
+                      context.l10n.postJobVoiceAttached,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: colors.success,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: _removeExistingVoiceNote,
+                    visualDensity: VisualDensity.compact,
+                    icon: Icon(
+                      Icons.delete_outline_rounded,
+                      size: 18,
+                      color: colors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ] else
+            _buildVoiceBar(),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: _buildActionButton(
+                  icon: Icons.photo_outlined,
+                  label: context.l10n.postJobCustomAddPhotos,
+                  onTap: canAddMore ? _pickAttachment : null,
+                  outlined: true,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildActionButton(
+                  icon: Icons.camera_alt_outlined,
+                  label: context.l10n.postJobCamera,
+                  onTap: canAddMore ? _pickFromCamera : null,
+                  outlined: true,
+                ),
+              ),
+            ],
+          ),
+          if (hasMedia) ...[
+            const SizedBox(height: 12),
+            _buildCustomAttachmentPreviews(visibleExisting),
+          ],
+          const SizedBox(height: 8),
+          Text(
+            hasVoiceNote
+                ? context.l10n.postJobCustomMediaAttached(_totalAttachmentCount)
+                : context.l10n.postJobCustomMediaPending(_totalAttachmentCount),
+            style: TextStyle(fontSize: 11, color: colors.textSecondary),
+          ),
+          if (_removedAttachmentIds.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              context.l10n.postJobAttachmentsWillBeRemoved(
+                _removedAttachmentIds.length,
+              ),
+              style: TextStyle(fontSize: 11, color: colors.urgent),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   // WhatsApp-style voice note bar — 3 states: idle, recording, preview.
   Widget _buildVoiceBar() {
     // ── State: preview ready — player with inline delete icon ────────────
@@ -2833,6 +2915,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     required IconData icon,
     required String label,
     VoidCallback? onTap,
+    bool outlined = false,
   }) {
     final enabled = onTap != null;
     return GestureDetector(
@@ -2840,7 +2923,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 11),
         decoration: BoxDecoration(
-          color: _surfaceSubtle(context),
+          color: outlined ? _surface(context) : _surfaceSubtle(context),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: enabled
@@ -2931,6 +3014,47 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     );
   }
 
+  Widget _buildCustomAttachmentPreviews(
+    List<BookingAttachmentEntity> visibleExisting,
+  ) {
+    final tiles = <Widget>[
+      ...visibleExisting.map((attachment) {
+        final isVideo = attachment.type == AttachmentType.video;
+        return _buildPreviewTile(
+          w: 72,
+          h: 64,
+          compact: true,
+          isVideo: isVideo,
+          networkUrl: attachment.url,
+          onTap: () =>
+              _openPreviewDialog(networkUrl: attachment.url, isVideo: isVideo),
+          onRemove: () =>
+              setState(() => _removedAttachmentIds.add(attachment.id)),
+        );
+      }),
+      ..._newAttachments.asMap().entries.map((entry) {
+        final index = entry.key;
+        final file = entry.value;
+        final isVideo =
+            file.mimeType?.startsWith('video') == true ||
+            file.path.toLowerCase().endsWith('.mp4') ||
+            file.path.toLowerCase().endsWith('.mov');
+        return _buildPreviewTile(
+          w: 72,
+          h: 64,
+          compact: true,
+          isVideo: isVideo,
+          localPath: file.path,
+          onTap: () =>
+              _openPreviewDialog(localPath: file.path, isVideo: isVideo),
+          onRemove: () => setState(() => _newAttachments.removeAt(index)),
+        );
+      }),
+    ];
+
+    return Wrap(spacing: 8, runSpacing: 8, children: tiles);
+  }
+
   Widget _buildPreviewTile({
     required double w,
     required double h,
@@ -2939,6 +3063,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     String? networkUrl,
     required VoidCallback onTap,
     required VoidCallback onRemove,
+    bool compact = false,
   }) {
     return SizedBox(
       width: w,
@@ -2948,7 +3073,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
           GestureDetector(
             onTap: onTap,
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(compact ? 9 : 12),
               child: SizedBox.expand(
                 child: isVideo
                     ? Container(
@@ -2995,19 +3120,19 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
               onTap: onRemove,
               radius: 22,
               child: SizedBox(
-                width: 44,
-                height: 44,
+                width: compact ? 32 : 44,
+                height: compact ? 32 : 44,
                 child: Center(
                   child: Container(
-                    width: 28,
-                    height: 28,
+                    width: compact ? 20 : 28,
+                    height: compact ? 20 : 28,
                     decoration: BoxDecoration(
                       color: _textPrimary(context).withValues(alpha: 0.54),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
                       Icons.close,
-                      size: 16,
+                      size: compact ? 13 : 16,
                       color: _onPrimary(context),
                     ),
                   ),
@@ -3340,6 +3465,140 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     );
   }
 
+  Widget _buildCustomRequestProgressIndicator() {
+    final colors = context.semanticColors;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Row(
+        children: List.generate(4, (index) {
+          return Expanded(
+            child: Padding(
+              padding: EdgeInsetsDirectional.only(end: index < 3 ? 5 : 0),
+              child: Container(
+                height: 2,
+                decoration: BoxDecoration(
+                  color: index <= 2 ? colors.primary : colors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  Widget _buildCustomRequestTextCard({
+    required String label,
+    required String status,
+    required Color statusColor,
+    required TextEditingController controller,
+    required String hint,
+    required int maxLength,
+    required int minLines,
+    required int maxLines,
+    TextInputAction textInputAction = TextInputAction.next,
+  }) {
+    final colors = context.semanticColors;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colors.border),
+        boxShadow: [
+          BoxShadow(
+            color: colors.textPrimary.withValues(alpha: 0.035),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: label,
+                  style: TextStyle(
+                    color: colors.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                TextSpan(
+                  text: ' · $status',
+                  style: TextStyle(
+                    color: statusColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+            style: const TextStyle(fontSize: 12, height: 1.2),
+          ),
+          const SizedBox(height: 9),
+          TextFormField(
+            controller: controller,
+            minLines: minLines,
+            maxLines: maxLines,
+            maxLength: maxLength,
+            textInputAction: textInputAction,
+            decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: TextStyle(color: colors.textSecondary, fontSize: 13),
+              counterText: '',
+              filled: true,
+              fillColor: colors.surfaceSubtle,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: colors.controlBorder),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: colors.controlBorder),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: colors.primary, width: 1.4),
+              ),
+              contentPadding: const EdgeInsets.all(12),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCustomTitleSection() {
+    return _buildCustomRequestTextCard(
+      label: context.l10n.postJobCustomWorkTitleLabel,
+      status: context.l10n.postJobCustomRequired,
+      statusColor: _primary(context),
+      controller: _titleCtrl,
+      hint: context.l10n.postJobCustomWorkTitleHint,
+      maxLength: 120,
+      minLines: 1,
+      maxLines: 2,
+    );
+  }
+
+  Widget _buildCustomDetailsSection() {
+    return _buildCustomRequestTextCard(
+      label: context.l10n.postJobCustomDetailsLabel,
+      status: context.l10n.postJobCustomOptional,
+      statusColor: _textSecondary(context),
+      controller: _descriptionCtrl,
+      hint: context.l10n.postJobCustomDetailsHint,
+      maxLength: 1000,
+      minLines: 3,
+      maxLines: 5,
+      textInputAction: TextInputAction.done,
+    );
+  }
+
   // ── Step 1: Service address ────────────────────────────────────────────────
   Widget _buildStep1() {
     // Entry points like "Book Urgently" push here with no preselected
@@ -3395,6 +3654,10 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
   // Shown only after a lane has been committed to on step 2.1 — one lane's
   // fields at a time, on their own page.
   Widget _buildLaneDetailsStep() {
+    if (_laneChoice == BookingLane.bidding) {
+      return _buildCustomRequestStep();
+    }
+
     final categoriesAsync = ref.watch(clientBookingCategoriesProvider);
     final inspectionFee = categoriesAsync.maybeWhen(
       data: (categories) => _resolveCategory(categories)?.inspectionFee,
@@ -3423,19 +3686,47 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
               context.l10n.postJobInspectionRateNote,
               color: _primary(context),
             ),
-          ] else if (_laneChoice == BookingLane.bidding) ...[
-            _buildTitleSection(),
-            const SizedBox(height: 16),
-            _buildAttachInspectionSection(),
-            const SizedBox(height: 16),
-            _buildMediaSection(),
-            const SizedBox(height: 12),
-            _infoNote(
-              context.l10n.postJobBiddingRateNote,
-              color: _primary(context),
-            ),
           ],
           const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCustomRequestStep() {
+    final colors = context.semanticColors;
+    return SingleChildScrollView(
+      key: const ValueKey('custom-request-step'),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildCustomTitleSection(),
+          const SizedBox(height: 10),
+          _buildCustomDetailsSection(),
+          const SizedBox(height: 10),
+          _buildAttachInspectionSection(),
+          const SizedBox(height: 10),
+          _buildCustomMediaSection(),
+          const SizedBox(height: 10),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: colors.surfaceSubtle,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              context.l10n.postJobCustomHelperNote,
+              style: TextStyle(
+                fontSize: 11.5,
+                height: 1.4,
+                color: colors.textSecondary,
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
         ],
       ),
     );
@@ -3654,24 +3945,45 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
   /// the client explicitly picks one.
   Widget _buildAttachInspectionSection() {
     final selected = _attachedInspection;
+    final colors = context.semanticColors;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: _surface(context),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _border(context)),
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colors.border),
+        boxShadow: [
+          BoxShadow(
+            color: colors.textPrimary.withValues(alpha: 0.035),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            context.l10n.postJobInspectionReportSectionTitle,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: _textPrimary(context),
+          Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: context.l10n.postJobCustomReportLabel,
+                  style: TextStyle(
+                    color: colors.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                TextSpan(
+                  text: ' · ${context.l10n.postJobCustomOptional}',
+                  style: TextStyle(
+                    color: colors.textSecondary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ),
+            style: const TextStyle(fontSize: 12, height: 1.2),
           ),
           const SizedBox(height: 4),
           Text(
@@ -3685,12 +3997,13 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
           const SizedBox(height: 10),
           if (selected == null)
             OutlinedButton.icon(
+              key: const ValueKey('attach-inspection-report'),
               onPressed: _openInspectionReportSelector,
               icon: Icon(Icons.attach_file_rounded, size: 16),
-              label: Text(context.l10n.postJobAttachInspectionReport),
+              label: Text(context.l10n.postJobCustomAttachReport),
               style: OutlinedButton.styleFrom(
-                foregroundColor: _primary(context),
-                side: BorderSide(color: _primary(context)),
+                foregroundColor: colors.primary,
+                side: BorderSide(color: colors.controlBorder),
                 minimumSize: const Size(double.infinity, 42),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(11),
@@ -4709,6 +5022,9 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     if (_currentStep == 1 && !_hideLaneCardsForEdit) {
       return _buildLaneSelectionCta();
     }
+    if (_currentStep == 2 && _laneChoice == BookingLane.bidding) {
+      return _buildCustomRequestCta();
+    }
 
     final isLast = _currentStep == 3;
     final isFirst = _currentStep == 0;
@@ -4798,6 +5114,34 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     );
   }
 
+  Widget _buildCustomRequestCta() {
+    final colors = context.semanticColors;
+    return Container(
+      color: colors.surfaceSubtle,
+      padding: const EdgeInsets.fromLTRB(20, 10, 20, 14),
+      child: SizedBox(
+        width: double.infinity,
+        height: 48,
+        child: ElevatedButton(
+          key: const ValueKey('custom-request-next'),
+          onPressed: _nextStep,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: colors.primary,
+            foregroundColor: colors.onPrimary,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          child: Text(
+            context.l10n.postJobNext,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildLaneSelectionCta() {
     final lane = _laneChoice;
     final label = switch (lane) {
@@ -4838,14 +5182,23 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
 
   Widget _buildBookingHeader(List<String> stepTitles) {
     final isLaneStep = _currentStep == 1 && !_hideLaneCardsForEdit;
-    final title = isLaneStep
+    final isCustomRequestStep =
+        _currentStep == 2 && _laneChoice == BookingLane.bidding;
+    final isCompactHeader = isLaneStep || isCustomRequestStep;
+    final title = isCustomRequestStep
+        ? context.l10n.postJobCustomRequestTitle
+        : isLaneStep
         ? context.l10n.postJobLanePageTitle
         : _isEditMode
         ? context.l10n.postJobEditBooking
         : _currentStep == 0
         ? context.l10n.postJobStepAddress
         : context.l10n.postJobBookAService;
-    final subtitle = isLaneStep
+    final subtitle = isCustomRequestStep
+        ? context.l10n.postJobCustomRequestStepIndicator(
+            _selectedService ?? context.l10n.postJobService,
+          )
+        : isLaneStep
         ? context.l10n.postJobLaneStepIndicator(
             _selectedService ?? context.l10n.postJobService,
           )
@@ -4858,7 +5211,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
           );
 
     return Padding(
-      padding: isLaneStep
+      padding: isCompactHeader
           ? const EdgeInsets.fromLTRB(20, 10, 20, 8)
           : const EdgeInsets.fromLTRB(20, 20, 20, 16),
       child: Row(
@@ -4866,9 +5219,9 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
           GestureDetector(
             onTap: _prevStep,
             child: Container(
-              width: isLaneStep ? 32 : 40,
+              width: isCompactHeader ? 32 : 40,
               height: 40,
-              decoration: isLaneStep
+              decoration: isCompactHeader
                   ? null
                   : BoxDecoration(
                       color: _surface(context),
@@ -4882,12 +5235,12 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                     ),
               child: Icon(
                 Icons.arrow_back_rounded,
-                size: isLaneStep ? 21 : 18,
+                size: isCompactHeader ? 21 : 18,
                 color: _textPrimary(context),
               ),
             ),
           ),
-          SizedBox(width: isLaneStep ? 8 : 14),
+          SizedBox(width: isCompactHeader ? 8 : 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -4895,7 +5248,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                 Text(
                   title,
                   style: TextStyle(
-                    fontSize: isLaneStep ? 16 : 20,
+                    fontSize: isCompactHeader ? 16 : 20,
                     height: 1.15,
                     fontWeight: FontWeight.w700,
                     color: _textPrimary(context),
@@ -4905,7 +5258,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                 Text(
                   subtitle,
                   style: TextStyle(
-                    fontSize: isLaneStep ? 11 : 12,
+                    fontSize: isCompactHeader ? 11 : 12,
                     color: _textSecondary(context),
                     fontWeight: FontWeight.w500,
                   ),
@@ -4944,6 +5297,8 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                 ? _buildAddressProgressIndicator()
                 : _currentStep == 1 && !_hideLaneCardsForEdit
                 ? _buildLaneProgressIndicator()
+                : _currentStep == 2 && _laneChoice == BookingLane.bidding
+                ? _buildCustomRequestProgressIndicator()
                 : _buildStepIndicator(),
             const SizedBox(height: 12),
 
@@ -5083,13 +5438,15 @@ class _AttachedInspectionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final summary = inspection.summary;
+    final colors = context.semanticColors;
     return Container(
+      key: const ValueKey('inspection-report-attached'),
       width: double.infinity,
       padding: const EdgeInsets.all(11),
       decoration: BoxDecoration(
-        color: _warningSurface(context),
+        color: colors.successSoft,
         borderRadius: BorderRadius.circular(11),
-        border: Border.all(color: _primary(context).withValues(alpha: 0.35)),
+        border: Border.all(color: colors.success.withValues(alpha: 0.35)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -5097,16 +5454,21 @@ class _AttachedInspectionCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(
-                Icons.fact_check_outlined,
-                size: 16,
-                color: _primary(context),
-              ),
+              Icon(Icons.check_circle_rounded, size: 18, color: colors.success),
               const SizedBox(width: 7),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Text(
+                      context.l10n.postJobInspectionReportAttached,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: colors.success,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
                     Text(
                       inspection.categoryName,
                       style: TextStyle(

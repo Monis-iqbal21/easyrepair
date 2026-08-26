@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:handygo_app/core/l10n/app_locale.dart';
 import 'package:handygo_app/core/theme/app_theme.dart';
+import 'package:handygo_app/features/bookings/domain/entities/attachable_inspection_entity.dart';
 import 'package:handygo_app/features/bookings/domain/entities/booking_entity.dart';
 import 'package:handygo_app/features/bookings/presentation/providers/booking_providers.dart';
 import 'package:handygo_app/features/categories/domain/entities/service_category_entity.dart';
@@ -69,7 +70,7 @@ const _oldTaglineRomanUrdu =
 // Section-title markers unique to each lane's Page 2.2 content.
 const _standardMarker = 'Choose a standard service';
 const _inspectionMarker = 'How inspection works';
-const _biddingMarker = "What needs fixing?";
+const _biddingMarker = 'WHAT NEEDS TO BE DONE?';
 
 ProviderScope _wrap(
   Widget child, {
@@ -77,6 +78,7 @@ ProviderScope _wrap(
   BookingEntity? editBooking,
   LatLng? previewPosition,
   ThemeData? theme,
+  List<AttachableInspectionEntity> attachableInspections = const [],
 }) {
   return ProviderScope(
     overrides: [
@@ -87,6 +89,9 @@ ProviderScope _wrap(
       savedAddressesProvider.overrideWith(_FakeSavedAddressesNotifier.new),
       bookingMapPreviewPositionProvider.overrideWith(
         (ref) async => previewPosition,
+      ),
+      attachableInspectionsProvider.overrideWith(
+        (ref, categoryId) async => attachableInspections,
       ),
       if (editBooking != null)
         bookingDetailProvider.overrideWith(
@@ -149,11 +154,13 @@ BookingEntity _editableBooking({
 Future<void> _goToLaneSelectStep(
   WidgetTester tester, {
   AppLocale locale = AppLocale.english,
+  List<AttachableInspectionEntity> attachableInspections = const [],
 }) async {
   await tester.pumpWidget(
     _wrap(
       const BookServicePage(preselectedService: 'Electrician'),
       locale: locale,
+      attachableInspections: attachableInspections,
     ),
   );
   await tester.pumpAndSettle();
@@ -183,8 +190,13 @@ Future<void> _goToLaneDetailsStep(
   WidgetTester tester, {
   AppLocale locale = AppLocale.english,
   String? laneOptionTitle,
+  List<AttachableInspectionEntity> attachableInspections = const [],
 }) async {
-  await _goToLaneSelectStep(tester, locale: locale);
+  await _goToLaneSelectStep(
+    tester,
+    locale: locale,
+    attachableInspections: attachableInspections,
+  );
   await _selectLane(tester, laneOptionTitle ?? _inspectionOption[locale]!);
   await tester.tap(find.byType(ElevatedButton).last);
   await tester.pumpAndSettle();
@@ -613,7 +625,7 @@ void main() {
 
       expect(find.text(_standardMarker), findsNothing);
       expect(find.text(_inspectionMarker), findsNothing);
-      expect(find.text(_biddingMarker), findsNothing);
+      expect(find.textContaining(_biddingMarker), findsNothing);
     });
 
     testWidgets('does not show attachment controls', (tester) async {
@@ -657,7 +669,7 @@ void main() {
 
       expect(find.text(_standardMarker), findsOneWidget);
       expect(find.text(_inspectionMarker), findsNothing);
-      expect(find.text(_biddingMarker), findsNothing);
+      expect(find.textContaining(_biddingMarker), findsNothing);
     });
 
     testWidgets('selecting INSPECTION opens only INSPECTION details', (
@@ -667,7 +679,7 @@ void main() {
 
       expect(find.text(_inspectionMarker), findsOneWidget);
       expect(find.text(_standardMarker), findsNothing);
-      expect(find.text(_biddingMarker), findsNothing);
+      expect(find.textContaining(_biddingMarker), findsNothing);
     });
 
     testWidgets('selecting BIDDING opens only BIDDING details', (tester) async {
@@ -676,12 +688,12 @@ void main() {
         laneOptionTitle: _customOption[AppLocale.english]!,
       );
 
-      expect(find.text(_biddingMarker), findsOneWidget);
+      expect(find.textContaining(_biddingMarker), findsOneWidget);
       expect(find.text(_standardMarker), findsNothing);
       expect(find.text(_inspectionMarker), findsNothing);
     });
 
-    testWidgets('BIDDING details exposes the existing optional report picker', (
+    testWidgets('BIDDING details exposes the optional report picker', (
       tester,
     ) async {
       await _goToLaneDetailsStep(
@@ -689,9 +701,82 @@ void main() {
         laneOptionTitle: _customOption[AppLocale.english]!,
       );
 
-      expect(find.text('Inspection Report (Optional)'), findsOneWidget);
-      expect(find.text('Attach previous inspection report'), findsOneWidget);
+      expect(find.textContaining('Previous inspection report'), findsOneWidget);
+      expect(find.text('Attach report'), findsOneWidget);
       expect(find.textContaining('optional'), findsWidgets);
+    });
+
+    testWidgets('BIDDING details matches the English reference hierarchy', (
+      tester,
+    ) async {
+      await _goToLaneDetailsStep(
+        tester,
+        laneOptionTitle: _customOption[AppLocale.english]!,
+      );
+
+      expect(find.text('Your request'), findsOneWidget);
+      expect(find.text('Step 3 / 4 · Electrician'), findsOneWidget);
+      expect(find.textContaining('WHAT NEEDS TO BE DONE?'), findsOneWidget);
+      expect(find.textContaining('Tell us the details'), findsOneWidget);
+      expect(find.textContaining('Voice note'), findsWidgets);
+      expect(find.text('Add photos'), findsOneWidget);
+      expect(find.text('Camera'), findsOneWidget);
+      expect(
+        find.text(
+          'Photos and a voice note help the Ustaad understand best. '
+          'No technical details needed.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.byKey(const ValueKey('custom-request-next')), findsOneWidget);
+      expect(find.text('Back'), findsNothing);
+    });
+
+    testWidgets('BIDDING details uses Roman Urdu reference wording', (
+      tester,
+    ) async {
+      await _goToLaneDetailsStep(
+        tester,
+        locale: AppLocale.romanUrdu,
+        laneOptionTitle: _customOption[AppLocale.romanUrdu]!,
+      );
+
+      expect(find.text('Aap ki request'), findsOneWidget);
+      expect(find.text('Step 3 / 4 · Electrician'), findsOneWidget);
+      expect(find.textContaining('KYA KARWANA HAI?'), findsOneWidget);
+      expect(find.textContaining('Details se batayein'), findsOneWidget);
+      expect(find.text('Photo dalain'), findsOneWidget);
+      expect(find.text('Report lagayen'), findsOneWidget);
+    });
+
+    testWidgets('attached report changes to a green checked attached state', (
+      tester,
+    ) async {
+      final report = AttachableInspectionEntity(
+        bookingId: 'inspection-1',
+        categoryId: 'cat-1',
+        categoryName: 'Electrician',
+        inspectionDate: DateTime(2026, 7, 1),
+        issueFound: 'Loose neutral wire',
+      );
+      await _goToLaneDetailsStep(
+        tester,
+        laneOptionTitle: _customOption[AppLocale.english]!,
+        attachableInspections: [report],
+      );
+
+      await tester.tap(find.byKey(const ValueKey('attach-inspection-report')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Loose neutral wire'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const ValueKey('inspection-report-attached')),
+        findsOneWidget,
+      );
+      expect(find.byIcon(Icons.check_circle_rounded), findsOneWidget);
+      expect(find.text('Report attached'), findsOneWidget);
+      expect(find.text('Attach report'), findsNothing);
     });
 
     testWidgets('the lane cards themselves are gone on this page', (
@@ -724,16 +809,16 @@ void main() {
         tester,
         laneOptionTitle: _customOption[AppLocale.english]!,
       );
-      expect(find.text(_biddingMarker), findsOneWidget);
+      expect(find.textContaining(_biddingMarker), findsOneWidget);
 
-      await tester.tap(find.text(_backLabel[AppLocale.english]!));
+      await tester.tap(find.byIcon(Icons.arrow_back_rounded).first);
       await tester.pumpAndSettle();
 
       // No re-selection here — BIDDING must still be the remembered choice.
       await tester.tap(find.byType(ElevatedButton).last);
       await tester.pumpAndSettle();
 
-      expect(find.text(_biddingMarker), findsOneWidget);
+      expect(find.textContaining(_biddingMarker), findsOneWidget);
     });
 
     testWidgets('entered BIDDING details text survives Back then Next', (
@@ -750,7 +835,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text(_backLabel[AppLocale.english]!));
+      await tester.tap(find.byIcon(Icons.arrow_back_rounded).first);
       await tester.pumpAndSettle();
       await tester.tap(find.byType(ElevatedButton).last);
       await tester.pumpAndSettle();
@@ -796,7 +881,7 @@ void main() {
       await tester.tap(find.byType(ElevatedButton).last);
       await tester.pumpAndSettle();
 
-      expect(find.text(_biddingMarker), findsOneWidget);
+      expect(find.textContaining(_biddingMarker), findsOneWidget);
       expect(find.text(_standardMarker), findsNothing);
       expect(find.text(_inspectionMarker), findsNothing);
     });
@@ -814,7 +899,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Still on the BIDDING details step — validation blocked the advance.
-      expect(find.text(_biddingMarker), findsOneWidget);
+      expect(find.textContaining(_biddingMarker), findsOneWidget);
     });
   });
 
@@ -985,7 +1070,10 @@ void main() {
       await tester.pumpAndSettle();
 
       // 1 photo + 2 videos = 3 total, never "0 photos" or a photos-only count.
-      expect(find.text('3/4 attachments added'), findsOneWidget);
+      expect(
+        find.text('3 / 4 photos · Voice note not attached'),
+        findsOneWidget,
+      );
       expect(find.textContaining('0 photo'), findsNothing);
     });
   });

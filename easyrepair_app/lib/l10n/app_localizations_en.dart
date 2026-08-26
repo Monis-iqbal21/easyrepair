@@ -3908,6 +3908,61 @@ class AppLocalizationsEn extends AppLocalizations {
   String get postJobLaneChooseCta => 'Choose a booking option';
 
   @override
+  String get postJobCustomRequestTitle => 'Your request';
+
+  @override
+  String postJobCustomRequestStepIndicator(String service) {
+    return 'Step 3 / 4 · $service';
+  }
+
+  @override
+  String get postJobCustomWorkTitleLabel => 'WHAT NEEDS TO BE DONE?';
+
+  @override
+  String get postJobCustomRequired => 'required';
+
+  @override
+  String get postJobCustomWorkTitleHint => 'e.g. Install a ceiling fan';
+
+  @override
+  String get postJobCustomDetailsLabel => 'Tell us the details';
+
+  @override
+  String get postJobCustomOptional => 'optional';
+
+  @override
+  String get postJobCustomDetailsHint => 'Add anything else that may help';
+
+  @override
+  String get postJobCustomVoiceLabel => 'Voice note';
+
+  @override
+  String get postJobCustomAddPhotos => 'Add photos';
+
+  @override
+  String postJobCustomMediaAttached(int count) {
+    return '$count / 4 photos · Voice note attached';
+  }
+
+  @override
+  String postJobCustomMediaPending(int count) {
+    return '$count / 4 photos · Voice note not attached';
+  }
+
+  @override
+  String get postJobCustomHelperNote =>
+      'Photos and a voice note help the Ustaad understand best. No technical details needed.';
+
+  @override
+  String get postJobCustomReportLabel => 'Previous inspection report';
+
+  @override
+  String get postJobCustomAttachReport => 'Attach report';
+
+  @override
+  String get postJobInspectionReportAttached => 'Report attached';
+
+  @override
   String aboutVersionValue(String version, String build) {
     return 'Version $version ($build)';
   }

@@ -2455,6 +2455,43 @@
   "postJobLaneCustomCta": "Add job details",
   "postJobLanePriceNote": "The price can only change after a new quote is sent through the app — not after the Ustaad reaches your home.",
   "postJobLaneChooseCta": "Choose a booking option",
+  "postJobCustomRequestTitle": "Your request",
+  "postJobCustomRequestStepIndicator": "Step 3 / 4 · {service}",
+  "@postJobCustomRequestStepIndicator": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  },
+  "postJobCustomWorkTitleLabel": "WHAT NEEDS TO BE DONE?",
+  "postJobCustomRequired": "required",
+  "postJobCustomWorkTitleHint": "e.g. Install a ceiling fan",
+  "postJobCustomDetailsLabel": "Tell us the details",
+  "postJobCustomOptional": "optional",
+  "postJobCustomDetailsHint": "Add anything else that may help",
+  "postJobCustomVoiceLabel": "Voice note",
+  "postJobCustomAddPhotos": "Add photos",
+  "postJobCustomMediaAttached": "{count} / 4 photos · Voice note attached",
+  "@postJobCustomMediaAttached": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "postJobCustomMediaPending": "{count} / 4 photos · Voice note not attached",
+  "@postJobCustomMediaPending": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "postJobCustomHelperNote": "Photos and a voice note help the Ustaad understand best. No technical details needed.",
+  "postJobCustomReportLabel": "Previous inspection report",
+  "postJobCustomAttachReport": "Attach report",
+  "postJobInspectionReportAttached": "Report attached",
   "aboutVersionValue": "Version {version} ({build})",
   "@aboutVersionValue": {
     "description": "Runtime app version/build shown on the About page and Settings row",
