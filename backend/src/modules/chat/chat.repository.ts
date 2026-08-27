@@ -147,7 +147,9 @@ export class ChatRepository {
               clientUser: {
                 clientProfile: {
                   OR: [
-                    { firstName: { contains: nameFilter, mode: 'insensitive' } },
+                    {
+                      firstName: { contains: nameFilter, mode: 'insensitive' },
+                    },
                     { lastName: { contains: nameFilter, mode: 'insensitive' } },
                   ],
                 },
@@ -157,7 +159,9 @@ export class ChatRepository {
               workerUser: {
                 workerProfile: {
                   OR: [
-                    { firstName: { contains: nameFilter, mode: 'insensitive' } },
+                    {
+                      firstName: { contains: nameFilter, mode: 'insensitive' },
+                    },
                     { lastName: { contains: nameFilter, mode: 'insensitive' } },
                   ],
                 },
@@ -187,9 +191,7 @@ export class ChatRepository {
         { createdAt: 'desc' },
       ],
       take: options.take ?? 50,
-      ...(options.cursor
-        ? { cursor: { id: options.cursor }, skip: 1 }
-        : {}),
+      ...(options.cursor ? { cursor: { id: options.cursor }, skip: 1 } : {}),
     });
   }
 
@@ -309,6 +311,34 @@ export class ChatRepository {
       orderBy: { createdAt: 'desc' },
       take: limit,
     });
+  }
+
+  /**
+   * Unread counts for MANY conversations in ONE query.
+   *
+   * The support inbox lists up to 100 threads at a time; counting per row
+   * would issue one COUNT per conversation (N+1). `groupBy` collapses that
+   * into a single aggregate. Conversations with nothing unread are simply
+   * absent from the result — callers default them to 0.
+   */
+  async countUnreadByConversation(
+    conversationIds: string[],
+    readerUserId: string,
+  ): Promise<Map<string, number>> {
+    if (conversationIds.length === 0) return new Map();
+
+    const rows = await this.prisma.message.groupBy({
+      by: ['conversationId'],
+      where: {
+        conversationId: { in: conversationIds },
+        senderUserId: { not: readerUserId },
+        seenAt: null,
+        deletedAt: null,
+      },
+      _count: { _all: true },
+    });
+
+    return new Map(rows.map((r) => [r.conversationId, r._count._all]));
   }
 
   /**

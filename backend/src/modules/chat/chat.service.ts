@@ -206,7 +206,8 @@ export class ChatService {
       conversations.map(async (c) => {
         const unreadCount = await this.chatRepository.countUnread(c.id, userId);
         const isSupport =
-          supportUserId != null && this._isSupportConversation(c, supportUserId);
+          supportUserId != null &&
+          this._isSupportConversation(c, supportUserId);
         return this._toConversationDto(c, userId, role, unreadCount, isSupport);
       }),
     );
@@ -271,9 +272,7 @@ export class ChatService {
     c: ConversationWithParticipants,
     supportUserId: string,
   ): boolean {
-    return (
-      c.clientUserId === supportUserId || c.workerUserId === supportUserId
-    );
+    return c.clientUserId === supportUserId || c.workerUserId === supportUserId;
   }
 
   // ── Admin support inbox ───────────────────────────────────────────────────
@@ -293,37 +292,44 @@ export class ChatService {
       options,
     );
 
-    return Promise.all(
-      conversations.map(async (c) => {
-        // The requester is whichever side ISN'T support.
-        const requesterUserId =
-          c.clientUserId === supportUserId ? c.workerUserId : c.clientUserId;
-        const isWorkerRequester = c.clientUserId === supportUserId;
-        const profile = isWorkerRequester
-          ? c.workerUser.workerProfile
-          : c.clientUser.clientProfile;
+    // ONE aggregate for the whole page rather than a COUNT per row — the
+    // inbox loads up to 100 threads and must not fan out into 100 queries.
+    const unreadByConversation =
+      await this.chatRepository.countUnreadByConversation(
+        conversations.map((c) => c.id),
+        supportUserId,
+      );
 
-        return {
-          id: c.id,
-          requesterUserId,
-          // Lets the inbox show "Client" vs "Ustaad" at a glance.
-          requesterType: isWorkerRequester ? Role.WORKER : Role.CLIENT,
-          requesterName:
-            [profile?.firstName, profile?.lastName]
-              .filter(Boolean)
-              .join(' ') || 'User',
-          requesterAvatarUrl: profile?.avatarUrl ?? null,
-          lastMessageAt: c.lastMessageAt?.toISOString() ?? null,
-          lastMessagePreview: c.lastMessagePreview ?? null,
-          // Unread from the SUPPORT side — i.e. what the admin still owes.
-          unreadCount: await this.chatRepository.countUnread(
-            c.id,
-            supportUserId,
-          ),
-          createdAt: c.createdAt.toISOString(),
-        };
-      }),
-    );
+    return conversations.map((c) => {
+      // The requester is whichever side ISN'T support.
+      const requesterUserId =
+        c.clientUserId === supportUserId ? c.workerUserId : c.clientUserId;
+      const isWorkerRequester = c.clientUserId === supportUserId;
+      const requesterUser = isWorkerRequester ? c.workerUser : c.clientUser;
+      const profile = isWorkerRequester
+        ? c.workerUser.workerProfile
+        : c.clientUser.clientProfile;
+
+      return {
+        id: c.id,
+        requesterUserId,
+        // Lets the inbox show "Client" vs "Ustaad" at a glance.
+        requesterType: isWorkerRequester ? Role.WORKER : Role.CLIENT,
+        requesterName:
+          [profile?.firstName, profile?.lastName].filter(Boolean).join(' ') ||
+          'User',
+        // Already loaded by CONVERSATION_INCLUDE, and the same User.phone the
+        // per-thread requester-info endpoint already shows an admin — so the
+        // inbox can dial a caller back without a second round trip.
+        requesterPhone: requesterUser.phone,
+        requesterAvatarUrl: profile?.avatarUrl ?? null,
+        lastMessageAt: c.lastMessageAt?.toISOString() ?? null,
+        lastMessagePreview: c.lastMessagePreview ?? null,
+        // Unread from the SUPPORT side — i.e. what the admin still owes.
+        unreadCount: unreadByConversation.get(c.id) ?? 0,
+        createdAt: c.createdAt.toISOString(),
+      };
+    });
   }
 
   /** Messages in a support thread, for the inbox. */
@@ -351,15 +357,38 @@ export class ChatService {
     text: string,
   ): Promise<MessageResponseDto> {
     if (!text?.trim()) throw new BadRequestException('Message cannot be empty');
-    await this._assertSupportConversation(conversationId);
+    const conversation = await this._assertSupportConversation(conversationId);
 
     const supportUserId = await this.supportUserService.getSupportUserId();
+    const body = text.trim();
     const message = await this.chatRepository.createMessage({
       conversationId,
       senderUserId: supportUserId,
       senderRole: Role.ADMIN,
-      text: text.trim(),
+      text: body,
     });
+
+    // Same notification path an ordinary chat message takes (see sendMessage)
+    // — a support reply must reach the user's phone exactly like any other
+    // incoming message, and must not invent a parallel delivery mechanism.
+    const receiverId =
+      conversation.clientUserId === supportUserId
+        ? conversation.workerUserId
+        : conversation.clientUserId;
+    const receiverIsWorker = conversation.workerUserId === receiverId;
+    void this.notificationsService.notify({
+      userId: receiverId,
+      eventKey: 'chat.message',
+      // The shared support identity, never the individual admin.
+      title: this.supportUserService.displayName,
+      body: body.length > 100 ? body.slice(0, 100) + '…' : body,
+      entityType: 'conversation',
+      entityId: conversationId,
+      route: receiverIsWorker
+        ? `/worker/chat/${conversationId}`
+        : `/client/chat/${conversationId}`,
+    });
+
     return this._toMessageDto(message);
   }
 
@@ -753,8 +782,7 @@ export class ChatService {
     // instead; the app renders the bundled HandyGo logo for the avatar.
     const otherParticipant = isSupport
       ? {
-          userId:
-            c.clientUserId === callerId ? c.workerUserId : c.clientUserId,
+          userId: c.clientUserId === callerId ? c.workerUserId : c.clientUserId,
           firstName: this.supportUserService.displayName,
           lastName: '',
           avatarUrl: null,
@@ -764,7 +792,7 @@ export class ChatService {
           phone: null,
         }
       : // Build otherParticipant from the opposite side's user record
-      callerRole === Role.CLIENT
+        callerRole === Role.CLIENT
         ? {
             userId: c.workerUserId,
             firstName: c.workerUser.workerProfile?.firstName ?? '',

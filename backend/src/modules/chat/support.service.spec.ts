@@ -1,4 +1,4 @@
-import { ForbiddenException } from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { ChatService } from './chat.service';
 
@@ -14,8 +14,9 @@ function makeConversation(overrides: Partial<any> = {}) {
     lastMessagePreview: null,
     createdAt: new Date(),
     updatedAt: new Date(),
-    workerUser: { workerProfile: null },
+    workerUser: { phone: '+920000000000', workerProfile: null },
     clientUser: {
+      phone: '+923001234567',
       clientProfile: { firstName: 'Sara', lastName: 'Ahmed', avatarUrl: null },
     },
     ...overrides,
@@ -25,6 +26,7 @@ function makeConversation(overrides: Partial<any> = {}) {
 describe('ChatService — HandyGo Support', () => {
   let chatRepository: any;
   let supportUserService: any;
+  let notificationsService: any;
   let service: ChatService;
 
   beforeEach(() => {
@@ -35,6 +37,7 @@ describe('ChatService — HandyGo Support', () => {
       findConversationsByUserId: jest.fn().mockResolvedValue([]),
       findSupportConversations: jest.fn().mockResolvedValue([]),
       countUnread: jest.fn().mockResolvedValue(0),
+      countUnreadByConversation: jest.fn().mockResolvedValue(new Map()),
       createMessage: jest.fn().mockResolvedValue({
         id: 'msg-1',
         conversationId: 'conv-1',
@@ -63,10 +66,11 @@ describe('ChatService — HandyGo Support', () => {
       getSupportUserId: jest.fn().mockResolvedValue(SUPPORT_USER_ID),
       displayName: 'HandyGo Support',
     };
+    notificationsService = { notify: jest.fn().mockResolvedValue(undefined) };
     service = new ChatService(
       chatRepository,
       {} as any,
-      {} as any,
+      notificationsService,
       {} as any,
       supportUserService,
     );
@@ -228,8 +232,9 @@ describe('ChatService — HandyGo Support', () => {
           id: 'conv-2',
           clientUserId: SUPPORT_USER_ID,
           workerUserId: 'worker-user-1',
-          clientUser: { clientProfile: null },
+          clientUser: { phone: '+920000000000', clientProfile: null },
           workerUser: {
+            phone: '+923009876543',
             workerProfile: {
               firstName: 'Ali',
               lastName: 'Khan',
@@ -255,14 +260,56 @@ describe('ChatService — HandyGo Support', () => {
       chatRepository.findSupportConversations.mockResolvedValue([
         makeConversation(),
       ]);
-      chatRepository.countUnread.mockResolvedValue(4);
+      chatRepository.countUnreadByConversation.mockResolvedValue(
+        new Map([['conv-1', 4]]),
+      );
 
       const [row] = await service.listSupportConversations({});
 
       expect(row.unreadCount).toBe(4);
-      expect(chatRepository.countUnread).toHaveBeenCalledWith(
-        'conv-1',
+      expect(chatRepository.countUnreadByConversation).toHaveBeenCalledWith(
+        ['conv-1'],
         SUPPORT_USER_ID,
+      );
+    });
+
+    it('counts unread for the whole page in ONE query, not one per row', async () => {
+      chatRepository.findSupportConversations.mockResolvedValue([
+        makeConversation({ id: 'conv-a' }),
+        makeConversation({ id: 'conv-b' }),
+        makeConversation({ id: 'conv-c' }),
+      ]);
+      chatRepository.countUnreadByConversation.mockResolvedValue(
+        new Map([['conv-b', 2]]),
+      );
+
+      const rows = await service.listSupportConversations({});
+
+      // One aggregate for all three, and no per-row COUNT fallback.
+      expect(chatRepository.countUnreadByConversation).toHaveBeenCalledTimes(1);
+      expect(chatRepository.countUnread).not.toHaveBeenCalled();
+      // Threads absent from the aggregate mean "nothing unread", not undefined.
+      expect(rows.map((r) => r.unreadCount)).toEqual([0, 2, 0]);
+    });
+
+    it('carries the requester phone so an admin can call back', async () => {
+      chatRepository.findSupportConversations.mockResolvedValue([
+        makeConversation(),
+      ]);
+
+      const [row] = await service.listSupportConversations({});
+
+      expect(row.requesterPhone).toBe('+923001234567');
+    });
+
+    it('asks only for threads the support account is part of, newest first', async () => {
+      await service.listSupportConversations({ take: 25, cursor: 'conv-5' });
+
+      // The support-only filter and the ordering are the repository's job —
+      // assert the service delegates with the support id, unmodified options.
+      expect(chatRepository.findSupportConversations).toHaveBeenCalledWith(
+        SUPPORT_USER_ID,
+        { take: 25, cursor: 'conv-5' },
       );
     });
 
@@ -275,6 +322,51 @@ describe('ChatService — HandyGo Support', () => {
         senderRole: Role.ADMIN,
         text: 'Assalam o alaikum',
       });
+    });
+
+    it('notifies the user through the ordinary chat notification path', async () => {
+      await service.sendSupportReply('conv-1', 'Assalam o alaikum');
+
+      // Same eventKey and route shape sendMessage uses — no parallel
+      // delivery mechanism for support.
+      expect(notificationsService.notify).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 'client-user-1',
+          eventKey: 'chat.message',
+          title: 'HandyGo Support',
+          body: 'Assalam o alaikum',
+          entityType: 'conversation',
+          entityId: 'conv-1',
+          route: '/client/chat/conv-1',
+        }),
+      );
+    });
+
+    it('routes the reply to the worker app when the requester is an Ustaad', async () => {
+      chatRepository.findConversationById.mockResolvedValue(
+        makeConversation({
+          clientUserId: SUPPORT_USER_ID,
+          workerUserId: 'worker-user-1',
+        }),
+      );
+
+      await service.sendSupportReply('conv-1', 'Ji farmaiye');
+
+      expect(notificationsService.notify).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 'worker-user-1',
+          route: '/worker/chat/conv-1',
+        }),
+      );
+    });
+
+    it('replies into the existing thread — never opens a second one', async () => {
+      await service.sendSupportReply('conv-1', 'Assalam o alaikum');
+
+      expect(chatRepository.createConversation).not.toHaveBeenCalled();
+      expect(chatRepository.createMessage).toHaveBeenCalledWith(
+        expect.objectContaining({ conversationId: 'conv-1' }),
+      );
     });
 
     it('marks the requester messages seen when a thread is opened', async () => {
@@ -313,8 +405,14 @@ describe('ChatService — HandyGo Support', () => {
     it.each([
       ['read messages', (s: ChatService) => s.getSupportMessages('conv-9')],
       ['reply', (s: ChatService) => s.sendSupportReply('conv-9', 'hi')],
-      ['mark read', (s: ChatService) => s.markSupportConversationRead('conv-9')],
-      ['requester info', (s: ChatService) => s.getSupportRequesterInfo('conv-9')],
+      [
+        'mark read',
+        (s: ChatService) => s.markSupportConversationRead('conv-9'),
+      ],
+      [
+        'requester info',
+        (s: ChatService) => s.getSupportRequesterInfo('conv-9'),
+      ],
     ])(
       'refuses to %s on an ordinary booking conversation',
       async (_label, call) => {
@@ -328,6 +426,20 @@ describe('ChatService — HandyGo Support', () => {
         );
 
         await expect(call(service)).rejects.toThrow(ForbiddenException);
+      },
+    );
+
+    it.each([
+      ['read messages', (s: ChatService) => s.getSupportMessages('nope')],
+      ['reply', (s: ChatService) => s.sendSupportReply('nope', 'hi')],
+      ['mark read', (s: ChatService) => s.markSupportConversationRead('nope')],
+      ['requester info', (s: ChatService) => s.getSupportRequesterInfo('nope')],
+    ])(
+      '404s rather than 403s when asked to %s on a missing conversation',
+      async (_label, call) => {
+        chatRepository.findConversationById.mockResolvedValue(null);
+
+        await expect(call(service)).rejects.toThrow(NotFoundException);
       },
     );
   });

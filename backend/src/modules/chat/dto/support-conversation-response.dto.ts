@@ -3,9 +3,10 @@ import { Role } from '@prisma/client';
 /**
  * One row of the admin Support Inbox.
  *
- * Deliberately minimal: name, avatar, and whether the requester is a Client
- * or an Ustaad. No booking history, no email, no address — an admin working
- * the inbox needs to know who they are talking to, not everything about them.
+ * Deliberately minimal: name, phone, avatar, and whether the requester is a
+ * Client or an Ustaad. No booking history, no email, no address — an admin
+ * working the inbox needs to know who they are talking to, not everything
+ * about them.
  */
 export class SupportConversationDto {
   id: string;
@@ -13,6 +14,8 @@ export class SupportConversationDto {
   /** CLIENT or WORKER — never ADMIN (support never messages itself). */
   requesterType: Role;
   requesterName: string;
+  /** Same User.phone the requester-info endpoint exposes — for callbacks. */
+  requesterPhone: string;
   requesterAvatarUrl: string | null;
   lastMessageAt: string | null;
   lastMessagePreview: string | null;
