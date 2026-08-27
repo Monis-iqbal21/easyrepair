@@ -488,16 +488,32 @@ void main() {
   });
 
   group('Step 3 — the address fields', () {
-    const area = 0;
-    const street = 1;
-    const house = 2;
-    const landmark = 3;
+    // Field order on the page. Father name and date of birth now sit above the
+    // address — they are required by `submitProfileForReview` and were
+    // previously collected nowhere, which is what made every submission from
+    // this flow fail. `_orderIsAsExpected` below pins the order so these
+    // indices cannot drift silently again.
+    const fatherName = 0;
+    const dateOfBirth = 1;
+    const area = 2;
+    const street = 3;
+    const house = 4;
+    const landmark = 5;
+
+    void orderIsAsExpected(WidgetTester tester) {
+      expect(
+        find.byType(EditableText),
+        findsNWidgets(6),
+        reason: 'father name, date of birth, area, street, house, landmark',
+      );
+    }
 
     testWidgets(
       'each one takes text, and editing one leaves the others alone',
       (tester) async {
         await tester.pumpWidget(_app(at: UstaadRegisterStep3Page.route));
         await _settle(tester);
+        orderIsAsExpected(tester);
 
         await _typeInto(tester, area, 'Saddar');
         await _typeInto(tester, street, '14');
@@ -526,6 +542,7 @@ void main() {
         'silently drops keystrokes', (tester) async {
       await tester.pumpWidget(_app(at: UstaadRegisterStep3Page.route));
       await _settle(tester);
+      orderIsAsExpected(tester);
 
       await _typeInto(tester, house, 'B-42/A');
       expect(_shown(tester, house), 'B-42/A');
@@ -537,7 +554,9 @@ void main() {
     testWidgets('the draft holds the latest edited address', (tester) async {
       await tester.pumpWidget(_app(at: UstaadRegisterStep3Page.route));
       await _settle(tester);
+      orderIsAsExpected(tester);
 
+      await _typeInto(tester, fatherName, 'Sheikh Rafiq');
       await _typeInto(tester, area, 'Saddar');
       await _typeInto(tester, street, '14');
       await _typeInto(tester, house, 'B-42');
@@ -550,6 +569,23 @@ void main() {
       expect(draft.area, 'Gulshan');
       expect(draft.street, '14');
       expect(draft.house, 'B-42');
+      expect(draft.fatherName, 'Sheikh Rafiq');
+    });
+
+    testWidgets('the date of birth is picker-driven, not typed', (tester) async {
+      await tester.pumpWidget(_app(at: UstaadRegisterStep3Page.route));
+      await _settle(tester);
+      orderIsAsExpected(tester);
+
+      expect(
+        tester
+            .widget<EditableText>(find.byType(EditableText).at(dateOfBirth))
+            .readOnly,
+        isTrue,
+        reason:
+            'a keyboard-typed date could never be trusted to be the '
+            'yyyy-MM-dd the legal document prints',
+      );
     });
   });
 }

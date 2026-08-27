@@ -33,8 +33,11 @@ class UstaadRegistrationDraft {
     this.registrationToken,
     this.registrationTokenExpiresAt,
     this.photo,
-    this.categoryIds = const <String>[],
+    this.categoryId,
     this.experienceYears,
+    this.fatherName = '',
+    this.dateOfBirth,
+    this.legalNameConfirmed = false,
     this.area = '',
     this.street = '',
     this.house = '',
@@ -61,12 +64,33 @@ class UstaadRegistrationDraft {
   // ── Step 3 ──────────────────────────────────────────────────────────────
   final File? photo;
 
-  /// The trades selected from the live category list. The first is sent as the
-  /// account's main `categoryId`; all of them are saved through `updateSkills`.
-  final List<String> categoryIds;
+  /// The ONE trade selected from the live category list.
+  ///
+  /// Singular by type, because the backend is singular: `updateSkills` throws
+  /// "Only one main skill is allowed." for anything longer, `UpdateSkillsDto`
+  /// carries `@ArrayMaxSize(1)`, and `profileCompleted` — the flag every
+  /// discovery query filters on — is literally defined as "has exactly one
+  /// WorkerSkill". This used to be a list, and picking a second trade sent the
+  /// one request the backend rejects.
+  final String? categoryId;
 
   /// Lower bound of the selected experience band — see [experienceBands].
   final int? experienceYears;
+
+  /// Father's name as per CNIC. Required: the Background Verification / EVS
+  /// Consent document has a blank for it that cannot be generated without it,
+  /// and `submitProfileForReview` refuses the whole submission when it is
+  /// absent.
+  final String fatherName;
+
+  /// Date of birth as the ISO calendar date (yyyy-MM-dd) the backend stores
+  /// and the legal document prints — the same representation the legacy
+  /// profile-completion form uses, so no timezone can shift it by a day.
+  final String? dateOfBirth;
+
+  /// "I confirm my legal name matches my CNIC." Sent as `legalNameConfirmed`,
+  /// which is what makes the backend stamp `legalNameConfirmedAt`.
+  final bool legalNameConfirmed;
 
   final String area;
   final String street;
@@ -98,8 +122,11 @@ class UstaadRegistrationDraft {
     String? registrationToken,
     DateTime? registrationTokenExpiresAt,
     File? photo,
-    List<String>? categoryIds,
+    String? categoryId,
     int? experienceYears,
+    String? fatherName,
+    String? dateOfBirth,
+    bool? legalNameConfirmed,
     String? area,
     String? street,
     String? house,
@@ -115,8 +142,11 @@ class UstaadRegistrationDraft {
       registrationTokenExpiresAt:
           registrationTokenExpiresAt ?? this.registrationTokenExpiresAt,
       photo: photo ?? this.photo,
-      categoryIds: categoryIds ?? this.categoryIds,
+      categoryId: categoryId ?? this.categoryId,
       experienceYears: experienceYears ?? this.experienceYears,
+      fatherName: fatherName ?? this.fatherName,
+      dateOfBirth: dateOfBirth ?? this.dateOfBirth,
+      legalNameConfirmed: legalNameConfirmed ?? this.legalNameConfirmed,
       area: area ?? this.area,
       street: street ?? this.street,
       house: house ?? this.house,

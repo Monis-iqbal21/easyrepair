@@ -4156,4 +4156,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reportBackToBooking => 'Back to booking';
+
+  @override
+  String get ustaadIdentityTitle => 'Identity details';
+
+  @override
+  String get ustaadLiveSelfieSubtitle =>
+      'Take it now — your face must be clearly visible';
 }

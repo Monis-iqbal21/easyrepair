@@ -7400,6 +7400,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Back to booking'**
   String get reportBackToBooking;
+
+  /// Ustaad registration step 3 identity section heading
+  ///
+  /// In en, this message translates to:
+  /// **'Identity details'**
+  String get ustaadIdentityTitle;
+
+  /// Ustaad registration step 4 live selfie card subtitle
+  ///
+  /// In en, this message translates to:
+  /// **'Take it now — your face must be clearly visible'**
+  String get ustaadLiveSelfieSubtitle;
 }
 
 class _AppLocalizationsDelegate

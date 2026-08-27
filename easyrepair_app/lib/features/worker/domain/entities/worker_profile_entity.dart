@@ -142,16 +142,28 @@ class WorkerProfileEntity {
   bool get isOnboardingApproved => onboardingStatus == 'APPROVED';
 
   /// True when the profile already carries everything the 4-step registration
-  /// collects, so an unfinished registration can be resumed at its last step
-  /// instead of being restarted in the legacy full form.
+  /// collects BEFORE Step 4, so an unfinished registration can be resumed at
+  /// its last step instead of being restarted in the legacy full form.
   ///
   /// Deliberately conservative: a legacy DRAFT profile that predates the new
   /// flow will be missing at least one of these and correctly falls back.
+  ///
+  /// This is precisely the set `submitProfileForReview` requires MINUS what
+  /// Step 4 itself collects (CNIC front/back, live selfie, agreements). Every
+  /// entry here is one Step 4 has no input for, so resuming there with any of
+  /// them absent would strand the Ustaad in a loop: Worker Home → Step 4 →
+  /// submit rejected with MISSING_PROFILE_DATA → Worker Home. Anything this
+  /// returns false for goes to the legacy form, which can fix all of it.
   bool get hasRegistrationProfileData =>
       (fullLegalName?.trim().isNotEmpty ?? false) &&
+      (fatherName?.trim().isNotEmpty ?? false) &&
+      (dateOfBirth?.trim().isNotEmpty ?? false) &&
       (cnicNumber?.trim().isNotEmpty ?? false) &&
       (residentialAddress?.trim().isNotEmpty ?? false) &&
-      skills.isNotEmpty;
+      legalNameConfirmedAt != null &&
+      // Exactly one — the backend's own definition of a complete main skill,
+      // and what `profileCompleted` mirrors.
+      skills.length == 1;
 
   WorkerProfileEntity copyWith({
     AvailabilityStatus? availabilityStatus,

@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../../core/errors/failure_messages.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
+import '../../../../core/permissions/media_permission_helper.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../core/theme/app_semantic_colors.dart';
 import '../../../worker/domain/entities/agreement_template_entity.dart';
@@ -16,10 +17,21 @@ import '../providers/ustaad_registration_draft.dart';
 import '../widgets/client_auth_widgets.dart';
 import '../widgets/ustaad_register_widgets.dart';
 
-/// Ustaad registration, Step 4 of 4 — CNIC and the agreements.
+/// Ustaad registration, Step 4 of 4 — identity evidence and the agreements.
 ///
 /// ONE scrolling page; the two reference screenshots are two scroll positions
 /// of it.
+///
+/// ## Live selfie is not the profile photo
+///
+/// Step 3's photo is the customer-facing avatar: it goes to
+/// `PATCH /workers/avatar` and sets `avatarUrl`. `submitProfileForReview`
+/// requires `liveSelfieUrl`, which only
+/// `POST /workers/profile-completion/selfie` writes — a camera-taken
+/// verification image the customer never sees. The two were being conflated,
+/// which is why every submission from this flow was rejected. They are now
+/// separate captures with separate purposes, matching the legacy
+/// profile-completion form (which also forces the camera for this one).
 ///
 /// ## The legal model is untouched
 ///
@@ -62,6 +74,7 @@ class _UstaadRegisterStep4PageState
 
   bool _uploadingFront = false;
   bool _uploadingBack = false;
+  bool _uploadingSelfie = false;
   bool _submitting = false;
 
   /// Per-document proof that THIS exact agreement was opened, plus whether the
@@ -96,25 +109,58 @@ class _UstaadRegisterStep4PageState
   }
 
   Future<void> _pickCnic({required bool front}) async {
-    final picked = await _picker.pickImage(
+    await _capture(
+      setBusy: (v) => front ? _uploadingFront = v : _uploadingBack = v,
+      upload: (notifier, file) => front
+          // The existing document endpoints — same storage, same validation.
+          ? notifier.uploadCnicFront(file)
+          : notifier.uploadCnicBack(file),
+    );
+  }
+
+  /// The verification selfie. Camera only, exactly as the legacy
+  /// profile-completion form forces it — a gallery image would defeat the
+  /// point of a *live* selfie.
+  Future<void> _pickSelfie() async {
+    await _capture(
+      setBusy: (v) => _uploadingSelfie = v,
+      upload: (notifier, file) => notifier.uploadLiveSelfie(file),
+    );
+  }
+
+  /// Shared capture-and-upload. A failed upload surfaces through the
+  /// `AsyncError` listener in [build] and leaves the tile "pending", so Submit
+  /// stays blocked rather than the Ustaad reaching a submission the backend
+  /// will refuse.
+  Future<void> _capture({
+    required void Function(bool) setBusy,
+    required Future<String?> Function(
+      ProfileCompletionNotifier notifier,
+      File file,
+    ) upload,
+  }) async {
+    final picked = await pickImageWithRecovery(
+      context,
+      picker: _picker,
       source: ImageSource.camera,
       maxWidth: 1600,
       imageQuality: 85,
     );
     if (picked == null || !mounted) return;
 
-    setState(() => front ? _uploadingFront = true : _uploadingBack = true);
+    setState(() => setBusy(true));
     try {
       final notifier = ref.read(profileCompletionNotifierProvider.notifier);
-      final file = File(picked.path);
-      // The existing document endpoints — same storage, same validation.
-      await (front
-          ? notifier.uploadCnicFront(file)
-          : notifier.uploadCnicBack(file));
-    } finally {
-      if (mounted) {
-        setState(() => front ? _uploadingFront = false : _uploadingBack = false);
+      final url = await upload(notifier, File(picked.path));
+      if (url == null && mounted) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(content: Text(context.l10n.workerUploadFailed)),
+          );
       }
+    } finally {
+      if (mounted) setState(() => setBusy(false));
     }
   }
 
@@ -160,9 +206,12 @@ class _UstaadRegisterStep4PageState
 
     final hasFront = profile?.cnicFrontUrl != null;
     final hasBack = profile?.cnicBackUrl != null;
+    // `submitProfileForReview` lists `liveSelfie` among its required fields;
+    // the Step 3 avatar does not satisfy it.
+    final hasSelfie = profile?.liveSelfieUrl != null;
     final allAccepted =
         templates.isNotEmpty && templates.every(_isAccepted);
-    final canSubmit = hasFront && hasBack && allAccepted;
+    final canSubmit = hasFront && hasBack && hasSelfie && allAccepted;
 
     return UstaadStepScaffold(
       cta: ClientPrimaryButton(
@@ -194,7 +243,15 @@ class _UstaadRegisterStep4PageState
             ),
           ),
           const SizedBox(height: 18),
-          _CnicCard(
+          _EvidenceCard(
+            title: l10n.workerLiveSelfie,
+            subtitle: l10n.ustaadLiveSelfieSubtitle,
+            done: hasSelfie,
+            busy: _uploadingSelfie,
+            onTap: _pickSelfie,
+          ),
+          const SizedBox(height: 12),
+          _EvidenceCard(
             title: l10n.ustaadCnicFrontTitle,
             subtitle: l10n.ustaadCnicFrontSubtitle,
             done: hasFront,
@@ -202,7 +259,7 @@ class _UstaadRegisterStep4PageState
             onTap: () => _pickCnic(front: true),
           ),
           const SizedBox(height: 12),
-          _CnicCard(
+          _EvidenceCard(
             title: l10n.ustaadCnicBackTitle,
             subtitle: l10n.ustaadCnicBackSubtitle,
             done: hasBack,
@@ -282,8 +339,10 @@ class _UstaadRegisterStep4PageState
   }
 }
 
-class _CnicCard extends StatelessWidget {
-  const _CnicCard({
+/// One capture tile: a thumbnail slot, a title/subtitle and a status
+/// badge. Used for the live selfie and both CNIC sides.
+class _EvidenceCard extends StatelessWidget {
+  const _EvidenceCard({
     required this.title,
     required this.subtitle,
     required this.done,

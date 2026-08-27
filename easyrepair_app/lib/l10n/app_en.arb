@@ -2586,5 +2586,13 @@
   "reportStatusInReview": "Under review",
   "reportStatusResolved": "Resolved",
   "reportAlreadyExists": "A report already exists for this booking.",
-  "reportBackToBooking": "Back to booking"
+  "reportBackToBooking": "Back to booking",
+  "ustaadIdentityTitle": "Identity details",
+  "@ustaadIdentityTitle": {
+    "description": "Ustaad registration step 3 identity section heading"
+  },
+  "ustaadLiveSelfieSubtitle": "Take it now — your face must be clearly visible",
+  "@ustaadLiveSelfieSubtitle": {
+    "description": "Ustaad registration step 4 live selfie card subtitle"
+  }
 }

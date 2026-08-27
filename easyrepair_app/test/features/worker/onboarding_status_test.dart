@@ -18,6 +18,12 @@ WorkerProfileEntity _profile({
   String? fullLegalName = 'Kamran Sheikh',
   String? cnicNumber = '42101-1234567-1',
   String? residentialAddress = 'B-42, Street 14, Saddar',
+  // Collected by Step 3 and required by `submitProfileForReview`. Step 4 has
+  // no input for any of them, so a profile missing one cannot be completed
+  // there — see the resume group below.
+  String? fatherName = 'Sheikh Rafiq',
+  String? dateOfBirth = '1995-04-02',
+  bool legalNameConfirmed = true,
   List<WorkerSkillEntity> skills = const [
     WorkerSkillEntity(
       id: 's1',
@@ -43,6 +49,10 @@ WorkerProfileEntity _profile({
     fullLegalName: fullLegalName,
     cnicNumber: cnicNumber,
     residentialAddress: residentialAddress,
+    fatherName: fatherName,
+    dateOfBirth: dateOfBirth,
+    legalNameConfirmedAt:
+        legalNameConfirmed ? DateTime(2026, 8, 1) : null,
   );
 }
 
@@ -101,8 +111,9 @@ void main() {
 
   group('where an unfinished registration resumes', () {
     test('a DRAFT that already carries the Step 3 data resumes at Step 4', () {
-      // The account was created at the end of Step 3, so name, CNIC, address
-      // and trade are already stored; only the documents and agreements are
+      // The account was created at the end of Step 3, so name, father's name,
+      // date of birth, CNIC, address, the legal-name confirmation and the one
+      // trade are already stored; only the documents and agreements are
       // missing, and Step 4 reads both from the backend.
       final p = _profile(onboardingStatus: 'DRAFT');
       expect(p.hasRegistrationProfileData, isTrue);
@@ -116,6 +127,28 @@ void main() {
         _profile(onboardingStatus: 'DRAFT', cnicNumber: ''),
         _profile(onboardingStatus: 'DRAFT', residentialAddress: null),
         _profile(onboardingStatus: 'DRAFT', skills: const []),
+        // Step 4 collects none of these, so resuming there would be a loop:
+        // Worker Home -> Step 4 -> MISSING_PROFILE_DATA -> Worker Home.
+        _profile(onboardingStatus: 'DRAFT', fatherName: null),
+        _profile(onboardingStatus: 'DRAFT', dateOfBirth: ''),
+        _profile(onboardingStatus: 'DRAFT', legalNameConfirmed: false),
+        _profile(
+          onboardingStatus: 'DRAFT',
+          skills: const [
+            WorkerSkillEntity(
+              id: 's1',
+              categoryId: 'c1',
+              categoryName: 'Electrician',
+              yearsExperience: 3,
+            ),
+            WorkerSkillEntity(
+              id: 's2',
+              categoryId: 'c2',
+              categoryName: 'Plumber',
+              yearsExperience: 1,
+            ),
+          ],
+        ),
       ]) {
         expect(p.hasRegistrationProfileData, isFalse);
         expect(resumeOnboardingRoute(p), legacyProfileCompletionRoute,

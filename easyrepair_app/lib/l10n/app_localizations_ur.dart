@@ -4078,6 +4078,12 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get reportBackToBooking => 'بکنگ پر واپس';
+
+  @override
+  String get ustaadIdentityTitle => 'شناختی تفصیلات';
+
+  @override
+  String get ustaadLiveSelfieSubtitle => 'ابھی لیں — چہرہ صاف نظر آنا چاہیے';
 }
 
 /// The translations for Urdu, using the Latin script (`ur_Latn`).
@@ -8208,4 +8214,11 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get reportBackToBooking => 'Booking par wapas';
+
+  @override
+  String get ustaadIdentityTitle => 'Shanakhti tafseelat';
+
+  @override
+  String get ustaadLiveSelfieSubtitle =>
+      'Abhi lein — chehra saaf nazar aana chahiye';
 }

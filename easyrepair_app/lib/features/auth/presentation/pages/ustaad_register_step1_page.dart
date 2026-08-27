@@ -135,7 +135,12 @@ class _UstaadRegisterStep1PageState
       ),
       child: Form(
         key: _formKey,
-        child: Column(
+        // The name and phone fields carry autofill hints; without a group they
+        // sit in separate implicit autofill scopes, which is what lets the
+        // platform text-input connection follow the wrong client when focus
+        // moves between them. One group per form is the supported shape.
+        child: AutofillGroup(
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             UstaadStepHeader(title: l10n.ustaadRegisterHeader, step: 1),
@@ -215,6 +220,7 @@ class _UstaadRegisterStep1PageState
             ),
             const SizedBox(height: 12),
           ],
+          ),
         ),
       ),
     );

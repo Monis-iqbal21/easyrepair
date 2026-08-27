@@ -25,7 +25,13 @@ class UstaadStepHeader extends StatelessWidget {
     required this.title,
     required this.step,
     this.totalSteps = 4,
+    this.onBack,
   });
+
+  /// Replaces the default `maybePop()` when a step needs to leave somewhere
+  /// other than the route underneath it — Step 3 after the account exists,
+  /// where popping would land on a spent OTP screen.
+  final VoidCallback? onBack;
 
   final String title;
 
@@ -47,7 +53,7 @@ class UstaadStepHeader extends StatelessWidget {
               button: true,
               label: MaterialLocalizations.of(context).backButtonTooltip,
               child: InkResponse(
-                onTap: () => Navigator.of(context).maybePop(),
+                onTap: onBack ?? () => Navigator.of(context).maybePop(),
                 radius: 24,
                 child: Padding(
                   padding: const EdgeInsets.all(8),
@@ -103,6 +109,28 @@ class UstaadStepHeader extends StatelessWidget {
 /// which is what the design shows — the content slides under a fixed bottom
 /// bar rather than the button drifting far below the fold. Short steps get the
 /// same bar, so the CTA is always in the same place.
+///
+/// ## Why the Scaffold resizes for the keyboard
+///
+/// This used to set `resizeToAvoidBottomInset: false` and hand-roll the inset
+/// as bottom padding on the scroll view. Two things broke:
+///
+///  * The scroll VIEWPORT stayed full-screen height, so Flutter's automatic
+///    "scroll the focused field into view" (`RenderEditable.showOnScreen`)
+///    measured against a viewport that extends behind the keyboard and
+///    concluded a field sitting under the IME was already visible. The lower
+///    fields on Steps 1 and 3 were therefore unreachable: tapping where the
+///    field appeared to be landed on whatever was actually there.
+///  * The CTA was deleted from the tree whenever `viewInsets.bottom > 0` — and
+///    because it lives outside the scroll view there was no way to scroll to
+///    it either. Since every field on Step 1 needs the keyboard, "Aage" was
+///    invisible for the entire time the form was being filled in.
+///
+/// Letting the Scaffold do what it does by default fixes both at once: the
+/// body is genuinely shortened to the space above the keyboard, so the
+/// viewport is honest and the fixed bottom bar sits directly above the IME
+/// instead of behind it. The layout is unchanged — same scrolling content,
+/// same bottom CTA bar, same spacing.
 class UstaadStepScaffold extends StatelessWidget {
   const UstaadStepScaffold({
     super.key,
@@ -119,29 +147,25 @@ class UstaadStepScaffold extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: colors.background,
-      // The scroll view owns the keyboard inset, so the Scaffold must not also
-      // resize or the content would be shortened twice.
-      resizeToAvoidBottomInset: false,
+      // Default behaviour, stated explicitly because the previous opt-out is
+      // exactly what made the focused field unreachable. See the class doc.
+      resizeToAvoidBottomInset: true,
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final keyboard = MediaQuery.viewInsetsOf(context).bottom;
             final horizontal = constraints.maxWidth < 360 ? 18.0 : 24.0;
 
             return Column(
               children: [
                 Expanded(
                   child: SingleChildScrollView(
+                    // Deliberately NOT `onDrag`: the CTA is always on screen
+                    // now, so there is nothing the user needs to dismiss the
+                    // keyboard to reach, and dismissing it mid-scroll made
+                    // moving between fields flap the layout.
                     keyboardDismissBehavior:
-                        ScrollViewKeyboardDismissBehavior.onDrag,
-                    padding: EdgeInsets.fromLTRB(
-                      horizontal,
-                      12,
-                      horizontal,
-                      // Clears the keyboard so the focused field is always
-                      // reachable, whatever is on screen.
-                      16 + keyboard,
-                    ),
+                        ScrollViewKeyboardDismissBehavior.manual,
+                    padding: EdgeInsets.fromLTRB(horizontal, 12, horizontal, 16),
                     child: Center(
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 520),
@@ -150,18 +174,17 @@ class UstaadStepScaffold extends StatelessWidget {
                     ),
                   ),
                 ),
-                // Hidden while the keyboard is up: the CTA would otherwise sit
-                // on top of it, and the field being typed into matters more.
-                if (keyboard == 0)
-                  Padding(
-                    padding: EdgeInsets.fromLTRB(horizontal, 8, horizontal, 12),
-                    child: Center(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 520),
-                        child: cta,
-                      ),
+                // Always in the tree. With the Scaffold resizing, this bar sits
+                // immediately above the keyboard rather than underneath it.
+                Padding(
+                  padding: EdgeInsets.fromLTRB(horizontal, 8, horizontal, 12),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 520),
+                      child: cta,
                     ),
                   ),
+                ),
               ],
             );
           },
@@ -234,6 +257,34 @@ class UstaadSectionTitle extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+/// The one-line rejection message under a control that has no `TextFormField`
+/// of its own — the photo card, the trade chips, the experience bands, the
+/// legal-name checkbox, a document tile.
+///
+/// Deliberately the same size and colour as [ClientTextField]'s own
+/// `errorStyle`, so a missing photo and a missing house number read as the
+/// same kind of message rather than two different ones.
+class UstaadFieldError extends StatelessWidget {
+  const UstaadFieldError(this.text, {super.key});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 12.5,
+          height: 1.35,
+          color: context.semanticColors.error,
+        ),
+      ),
     );
   }
 }

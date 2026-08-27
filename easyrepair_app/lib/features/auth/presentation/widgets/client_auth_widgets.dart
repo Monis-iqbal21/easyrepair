@@ -220,7 +220,18 @@ class ClientTextField extends StatefulWidget {
     this.autofillHints,
     this.forceError = false,
     this.focusNode,
+    this.readOnly = false,
+    this.onTap,
   });
+
+  /// For a field whose value comes from a picker rather than the keyboard —
+  /// the registration date of birth. `readOnly` keeps the IME closed while
+  /// leaving the field fully enabled, so it keeps the normal (not the muted
+  /// disabled) treatment and still shows its validation message.
+  final bool readOnly;
+
+  /// Paired with [readOnly] to open the picker.
+  final VoidCallback? onTap;
 
   /// Set by the page after a rejected submit: shows this field's error even
   /// if it was never focused. Independent of whether the CTA is enabled —
@@ -330,6 +341,8 @@ class _ClientTextFieldState extends State<ClientTextField> {
       controller: widget.controller,
       focusNode: _focusNode,
       enabled: widget.enabled,
+      readOnly: widget.readOnly,
+      onTap: widget.onTap,
       obscureText: widget.obscureText,
       keyboardType: widget.keyboardType,
       textInputAction: widget.textInputAction,

@@ -428,11 +428,26 @@ String? resolveAuthRedirect({
   final user = authState.valueOrNull;
   final isLoggedIn = user != null;
 
+  // The ONE `/auth` location a logged-in user may stay on, and only a WORKER.
+  //
+  // Step 3 of Ustaad registration is entered logged-out and is where the
+  // account is created, so the session goes live while the Ustaad is still
+  // standing on it — and Step 4's Back returns here so they can correct their
+  // profile before submitting. Without this exception that Back popped into
+  // `/auth/...`, this redirect fired, and the Ustaad was ejected to Worker
+  // Home mid-registration with no way back in.
+  //
+  // Deliberately one exact path and one role: every other `/auth` location,
+  // and every Client, still dispatches exactly as before.
+  final isUstaadProfileStep =
+      matchedLocation == UstaadRegisterStep3Page.route &&
+      (user?.isWorker ?? false);
+
   // Workers always land on Home regardless of onboarding/approval status —
   // the profile-completion modal/banner and action-level gating (Go Online,
   // bid, apply) handle the "not approved yet" case there, rather than
   // hard-blocking the whole app on a dead-end page.
-  if (isSplash || (isLoggedIn && isLoggedOutRoute)) {
+  if (isSplash || (isLoggedIn && isLoggedOutRoute && !isUstaadProfileStep)) {
     if (user == null) return '/welcome';
     return user.isWorker ? '/worker/home' : '/client/home';
   }

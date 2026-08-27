@@ -1221,5 +1221,7 @@
   "reportStatusInReview": "Review mein",
   "reportStatusResolved": "Resolved",
   "reportAlreadyExists": "Is booking ka report pehle se mojood hai.",
-  "reportBackToBooking": "Booking par wapas"
+  "reportBackToBooking": "Booking par wapas",
+  "ustaadIdentityTitle": "Shanakhti tafseelat",
+  "ustaadLiveSelfieSubtitle": "Abhi lein — chehra saaf nazar aana chahiye"
 }
