@@ -4,22 +4,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../features/auth/presentation/providers/auth_providers.dart';
+import '../../../../core/errors/failure_messages.dart';
+import '../../../../core/l10n/l10n_extensions.dart';
+import '../../../../core/network/offline_banner.dart';
+import '../../../../core/network/reconnect_refresh.dart';
+import '../../../../core/theme/app_semantic_colors.dart';
 import '../../domain/entities/booking_entity.dart';
 import '../providers/booking_providers.dart';
+import '../utils/booking_labels.dart';
 import '../widgets/booking_card.dart';
-import '../widgets/booking_filter_sheet.dart';
-import '../widgets/booking_search_bar.dart';
 import '../widgets/booking_skeleton.dart';
 import '../widgets/client_cancel_reason_sheet.dart';
 import 'choose_ustaad_page.dart';
 import 'track_worker_page.dart';
 import 'worker_discovery_map_page.dart';
-import '../../../../core/l10n/l10n_extensions.dart';
-import '../../../../core/network/reconnect_refresh.dart';
-import '../../../../core/network/offline_banner.dart';
-import '../utils/booking_labels.dart';
-import '../../../../core/errors/failure_messages.dart';
 
 class MyBookingsPage extends ConsumerStatefulWidget {
   const MyBookingsPage({super.key});
@@ -47,13 +45,11 @@ class _MyBookingsPageState extends ConsumerState<MyBookingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Reconnect refreshes this list IN PLACE. It only invalidates a data
-    // provider — never auth state, never the router — so the user stays on
-    // My Bookings and the previous list stays visible while it refetches.
     refreshOnReconnect(
       ref,
       () => ref.read(bookingsNotifierProvider.notifier).refresh(),
     );
+    final colors = context.semanticColors;
     final bookingsAsync = ref.watch(bookingsNotifierProvider);
     final filter = ref.watch(bookingFilterProvider);
     final filtered = ref.watch(filteredBookingsProvider);
@@ -61,13 +57,15 @@ class _MyBookingsPageState extends ConsumerState<MyBookingsPage> {
         ref.watch(bookingsIsOfflineProvider) && bookingsAsync.hasValue;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
+      backgroundColor: colors.background,
       body: SafeArea(
         bottom: false,
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _Header(filter: filter),
+            const _Header(),
             _StatusTabs(activeTab: filter.activeTab),
+            const SizedBox(height: 10),
             if (isShowingCachedData) const OfflineDataBanner(),
             if (bookingsAsync.hasError && bookingsAsync.hasValue)
               const _RefreshFailedBanner(),
@@ -78,20 +76,25 @@ class _MyBookingsPageState extends ConsumerState<MyBookingsPage> {
                   padding: EdgeInsets.fromLTRB(16, 4, 16, 0),
                   child: BookingSkeleton(),
                 ),
-                error: (err, _) => _ErrorState(
-                  message: failureMessage(context.l10n, err, fallback: context.l10n.myBookingsLoadFailed),
+                error: (error, _) => _ErrorState(
+                  message: failureMessage(
+                    context.l10n,
+                    error,
+                    fallback: context.l10n.myBookingsLoadFailed,
+                  ),
                   onRetry: () =>
                       ref.read(bookingsNotifierProvider.notifier).refresh(),
                 ),
                 data: (_) => filtered.isEmpty
                     ? _EmptyState(
-                        isFiltered: filter.searchQuery.isNotEmpty ||
-                            filter.activeTab != BookingTab.all ||
+                        activeTab: filter.activeTab,
+                        hasExtraFilters:
+                            filter.searchQuery.isNotEmpty ||
                             filter.hasActiveFilters,
                       )
                     : RefreshIndicator(
-                        color: const Color(0xFFDB6234),
-                        backgroundColor: Colors.white,
+                        color: colors.primary,
+                        backgroundColor: colors.surface,
                         onRefresh: () => ref
                             .read(bookingsNotifierProvider.notifier)
                             .refresh(),
@@ -106,45 +109,40 @@ class _MyBookingsPageState extends ConsumerState<MyBookingsPage> {
                               onTap: () =>
                                   context.push('/client/booking/${booking.id}'),
                               onCancel: booking.canClientCancel
-                                  ? () => _confirmCancel(
-                                        context,
-                                        ref,
-                                        booking,
-                                      )
+                                  ? () => _confirmCancel(context, ref, booking)
                                   : null,
                               onChat: booking.assignedWorker != null
                                   ? () => context.push('/client/chat')
                                   : null,
-                              onEdit: booking.status == BookingStatus.pending &&
+                              onEdit:
+                                  booking.status == BookingStatus.pending &&
                                       booking.assignedWorker == null
                                   ? () => context.push(
-                                        '/client/post-job?editId=${booking.id}',
-                                      )
+                                      '/client/post-job?editId=${booking.id}',
+                                    )
                                   : null,
-                              onFindWorkers: () =>
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (_) =>
-                                          booking.lane == BookingLane.bidding
-                                              ? WorkerDiscoveryMapPage(
-                                                  booking: booking,
-                                                )
-                                              : ChooseUstaadPage(
-                                                  booking: booking,
-                                                ),
-                                    ),
-                                  ),
-                              onTrackWorker: booking.assignedWorker != null &&
-                                      booking.status != BookingStatus.completed &&
-                                      booking.status != BookingStatus.cancelled &&
+                              onFindWorkers: () => Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      booking.lane == BookingLane.bidding
+                                      ? WorkerDiscoveryMapPage(booking: booking)
+                                      : ChooseUstaadPage(booking: booking),
+                                ),
+                              ),
+                              onTrackWorker:
+                                  booking.assignedWorker != null &&
+                                      booking.status !=
+                                          BookingStatus.completed &&
+                                      booking.status !=
+                                          BookingStatus.cancelled &&
                                       booking.status != BookingStatus.rejected
                                   ? () => Navigator.of(context).push(
-                                        MaterialPageRoute<void>(
-                                          builder: (_) => TrackWorkerPage(
-                                            bookingId: booking.id,
-                                          ),
+                                      MaterialPageRoute<void>(
+                                        builder: (_) => TrackWorkerPage(
+                                          bookingId: booking.id,
                                         ),
-                                      )
+                                      ),
+                                    )
                                   : null,
                             );
                           },
@@ -158,11 +156,6 @@ class _MyBookingsPageState extends ConsumerState<MyBookingsPage> {
     );
   }
 
-  /// Opens the shared Roman Urdu cancellation-reason modal — the same widget
-  /// the booking-detail page uses, so the two can never drift.
-  ///
-  /// Cancellation ELIGIBILITY is unchanged and already decided by the caller
-  /// (`booking.canClientCancel`); this only collects the reason.
   Future<void> _confirmCancel(
     BuildContext context,
     WidgetRef ref,
@@ -176,17 +169,16 @@ class _MyBookingsPageState extends ConsumerState<MyBookingsPage> {
             .read(bookingsNotifierProvider.notifier)
             .cancelBooking(booking.id, reason),
       );
-    } catch (e) {
+    } catch (error) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              failureMessage(context.l10n, e, fallback: context.l10n.bookingCancelFailed),
-            ),
-            backgroundColor: const Color(0xFFDC2626),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              failureMessage(
+                context.l10n,
+                error,
+                fallback: context.l10n.bookingCancelFailed,
+              ),
             ),
           ),
         );
@@ -195,200 +187,132 @@ class _MyBookingsPageState extends ConsumerState<MyBookingsPage> {
   }
 }
 
-// ── Header ────────────────────────────────────────────────────────────────────
-
-class _Header extends ConsumerWidget {
-  final BookingFilter filter;
-
-  const _Header({required this.filter});
+class _Header extends StatelessWidget {
+  const _Header();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final user = ref.watch(authStateProvider).valueOrNull;
-
+  Widget build(BuildContext context) {
+    final colors = context.semanticColors;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 18, 16, 14),
+      padding: const EdgeInsets.fromLTRB(16, 22, 16, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      context.l10n.myBookingsTitle,
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFF1A1A1A),
-                        letterSpacing: -0.3,
-                      ),
-                    ),
-                    if (user != null) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        '${user.firstName} ${user.lastName}',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF94A3B8),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              // Total count badge
-              Consumer(
-                builder: (_, ref, _) {
-                  final all = ref
-                          .watch(bookingsNotifierProvider)
-                          .valueOrNull
-                          ?.length ??
-                      0;
-                  if (all == 0) return const SizedBox.shrink();
-                  return Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFDB6234),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      context.l10n.myBookingsTotalCount(all),
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ],
+          Text(
+            context.l10n.navBookings,
+            style: TextStyle(
+              color: colors.textPrimary,
+              fontSize: 26,
+              height: 1.15,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.4,
+            ),
           ),
-          const SizedBox(height: 14),
-          BookingSearchBar(
-            initialValue: filter.searchQuery,
-            hasActiveFilters: filter.hasActiveFilters,
-            onChanged: (q) => ref
-                .read(bookingFilterProvider.notifier)
-                .setSearchQuery(q),
-            onFilterTap: () => _showFilterSheet(context, ref, filter),
+          const SizedBox(height: 5),
+          Text(
+            context.l10n.myBookingsSubtitle,
+            style: TextStyle(
+              color: colors.textSecondary,
+              fontSize: 13,
+              height: 1.3,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ],
       ),
     );
   }
-
-  void _showFilterSheet(
-      BuildContext context, WidgetRef ref, BookingFilter current) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => BookingFilterSheet(
-        currentFilter: current,
-        onApply: (updated) {
-          ref.read(bookingFilterProvider.notifier).applyFilters(
-                urgency: updated.urgency,
-                sortOrder: updated.sortOrder,
-                hasWorker: updated.hasWorker,
-              );
-        },
-        onReset: () => ref.read(bookingFilterProvider.notifier).resetFilters(),
-      ),
-    );
-  }
 }
-
-// ── Status Tabs ───────────────────────────────────────────────────────────────
 
 class _StatusTabs extends ConsumerWidget {
   final BookingTab activeTab;
 
   const _StatusTabs({required this.activeTab});
 
-  static const _tabs = BookingTab.values;
+  static const _tabs = [
+    BookingTab.all,
+    BookingTab.live,
+    BookingTab.completed,
+    BookingTab.cancelled,
+  ];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final allBookings =
-        ref.watch(bookingsNotifierProvider).valueOrNull ?? [];
-
+    final colors = context.semanticColors;
+    final allBookings = ref.watch(bookingsNotifierProvider).valueOrNull ?? [];
     return SizedBox(
-      height: 38,
+      height: 44,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         itemCount: _tabs.length,
         separatorBuilder: (_, _) => const SizedBox(width: 8),
-        itemBuilder: (_, i) {
-          final tab = _tabs[i];
-          final isActive = tab == activeTab;
-          final count = tab == BookingTab.all
-              ? allBookings.length
-              : allBookings
-                  .where((b) => b.status.tab == tab)
-                  .length;
-
-          return GestureDetector(
-            onTap: () =>
-                ref.read(bookingFilterProvider.notifier).setTab(tab),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              decoration: BoxDecoration(
-                color: isActive
-                    ? const Color(0xFFDB6234)
-                    : Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: isActive
-                      ? const Color(0xFFDB6234)
-                      : const Color(0xFFE2E8F0),
-                ),
+        itemBuilder: (context, index) {
+          final tab = _tabs[index];
+          final selected = tab == activeTab;
+          final count = allBookings
+              .where((booking) => bookingMatchesClientTab(booking, tab))
+              .length;
+          return Material(
+            color: selected ? colors.primary : colors.surface,
+            shape: StadiumBorder(
+              side: BorderSide(
+                color: selected ? colors.primary : colors.border,
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    bookingTabLabel(context.l10n, tab),
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w600,
-                      color: isActive
-                          ? Colors.white
-                          : const Color(0xFF6B7280),
-                    ),
-                  ),
-                  if (count > 0) ...[
-                    const SizedBox(width: 5),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 5, vertical: 1),
-                      decoration: BoxDecoration(
-                        color: isActive
-                            ? Colors.white.withValues(alpha: 0.2)
-                            : const Color(0xFFF1F5F9),
-                        borderRadius: BorderRadius.circular(10),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: () => ref.read(bookingFilterProvider.notifier).setTab(tab),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      bookingTabLabel(
+                        context.l10n,
+                        tab,
+                        romanUrdu:
+                            Localizations.localeOf(context).scriptCode ==
+                            'Latn',
                       ),
-                      child: Text(
-                        '$count',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          color: isActive
-                              ? Colors.white
-                              : const Color(0xFF6B7280),
+                      style: TextStyle(
+                        color: selected
+                            ? colors.onPrimary
+                            : colors.textSecondary,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    if (count > 0) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        constraints: const BoxConstraints(minWidth: 18),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 5,
+                          vertical: 1,
+                        ),
+                        decoration: BoxDecoration(
+                          color: selected
+                              ? colors.onPrimary.withValues(alpha: 0.18)
+                              : colors.surfaceSubtle,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          '$count',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: selected
+                                ? colors.onPrimary
+                                : colors.textSecondary,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
                       ),
-                    ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
           );
@@ -398,75 +322,71 @@ class _StatusTabs extends ConsumerWidget {
   }
 }
 
-// ── Empty state ───────────────────────────────────────────────────────────────
-
 class _EmptyState extends StatelessWidget {
-  final bool isFiltered;
-  const _EmptyState({required this.isFiltered});
+  final BookingTab activeTab;
+  final bool hasExtraFilters;
+
+  const _EmptyState({required this.activeTab, required this.hasExtraFilters});
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.semanticColors;
+    final (title, helper) = _copy(context);
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 40),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(32, 24, 32, 110),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 80,
-              height: 80,
+              width: 72,
+              height: 72,
               decoration: BoxDecoration(
-                color: const Color(0xFFFFF0EB),
+                color: colors.softTeal,
                 shape: BoxShape.circle,
               ),
-              child: const Center(
-                child: Text('📋', style: TextStyle(fontSize: 36)),
+              child: Icon(
+                Icons.receipt_long_outlined,
+                size: 32,
+                color: colors.primary,
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 18),
             Text(
-              isFiltered ? context.l10n.myBookingsNoResults : context.l10n.myBookingsEmptyTitle,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF1A1A1A),
+              title,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: colors.textPrimary,
+                fontSize: 17,
+                fontWeight: FontWeight.w800,
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              isFiltered
-                  ? context.l10n.myBookingsAdjustFilters
-                  : context.l10n.myBookingsBookFirst,
+              helper,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
+                color: colors.textSecondary,
                 fontSize: 13,
-                color: Color(0xFF94A3B8),
-                height: 1.4,
+                height: 1.45,
               ),
             ),
-            if (!isFiltered) ...[
-              const SizedBox(height: 24),
-              GestureDetector(
-                onTap: () {
-                  // Navigate to home to pick a service
-                  // Using context.go('/client/home') — handled via bottom nav
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 24, vertical: 13),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFDB6234),
+            if (!hasExtraFilters &&
+                (activeTab == BookingTab.all ||
+                    activeTab == BookingTab.live)) ...[
+              const SizedBox(height: 22),
+              FilledButton(
+                onPressed: () => context.go('/client/home'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: colors.primary,
+                  foregroundColor: colors.onPrimary,
+                  minimumSize: const Size(0, 48),
+                  padding: const EdgeInsets.symmetric(horizontal: 22),
+                  shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),
-                  child: Text(
-                    context.l10n.postJobBookAService,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13.5,
-                    ),
-                  ),
                 ),
+                child: Text(context.l10n.myBookingsEmptyCta),
               ),
             ],
           ],
@@ -474,30 +394,52 @@ class _EmptyState extends StatelessWidget {
       ),
     );
   }
+
+  (String, String) _copy(BuildContext context) {
+    if (hasExtraFilters) {
+      return (
+        context.l10n.myBookingsNoResults,
+        context.l10n.myBookingsAdjustFilters,
+      );
+    }
+    return switch (activeTab) {
+      BookingTab.live => (
+        context.l10n.myBookingsEmptyActiveTitle,
+        context.l10n.myBookingsEmptyActiveHelper,
+      ),
+      BookingTab.completed => (
+        context.l10n.myBookingsEmptyCompletedTitle,
+        context.l10n.myBookingsEmptyHistoryHelper,
+      ),
+      BookingTab.cancelled => (
+        context.l10n.myBookingsEmptyCancelledTitle,
+        context.l10n.myBookingsEmptyHistoryHelper,
+      ),
+      BookingTab.all || BookingTab.assigned => (
+        context.l10n.myBookingsEmptyTitle,
+        context.l10n.myBookingsEmptyHistoryHelper,
+      ),
+    };
+  }
 }
 
-// ── Non-blocking background-refresh-failed banner ─────────────────────────────
-
-/// Shown above the list only when a background poll failed but previous
-/// bookings are still cached/visible — never replaces the list itself.
 class _RefreshFailedBanner extends StatelessWidget {
   const _RefreshFailedBanner();
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.semanticColors;
     return Container(
       width: double.infinity,
-      color: const Color(0xFFFEF3C7),
+      color: colors.warningSurface,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Text(
         context.l10n.myBookingsRefreshFailed,
-        style: TextStyle(fontSize: 12, color: Color(0xFF92400E)),
+        style: TextStyle(color: colors.warning, fontSize: 12),
       ),
     );
   }
 }
-
-// ── Error state ───────────────────────────────────────────────────────────────
 
 class _ErrorState extends StatelessWidget {
   final String message;
@@ -507,63 +449,33 @@ class _ErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.semanticColors;
     return Center(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 40),
+        padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 70,
-              height: 70,
-              decoration: const BoxDecoration(
-                color: Color(0xFFFFF1F2),
-                shape: BoxShape.circle,
-              ),
-              child: const Center(
-                child: Text('⚠️', style: TextStyle(fontSize: 30)),
-              ),
-            ),
-            const SizedBox(height: 16),
+            Icon(Icons.error_outline_rounded, size: 42, color: colors.error),
+            const SizedBox(height: 14),
             Text(
               context.l10n.myBookingsSomethingWrong,
               style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF1A1A1A),
+                color: colors.textPrimary,
+                fontSize: 17,
+                fontWeight: FontWeight.w800,
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 8),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 12.5,
-                color: Color(0xFF94A3B8),
-                height: 1.4,
-              ),
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: colors.textSecondary, height: 1.4),
             ),
-            const SizedBox(height: 20),
-            GestureDetector(
-              onTap: onRetry,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 24, vertical: 12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFDB6234),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  context.l10n.commonRetry,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                  ),
-                ),
-              ),
+            const SizedBox(height: 18),
+            OutlinedButton(
+              onPressed: onRetry,
+              child: Text(context.l10n.commonRetry),
             ),
           ],
         ),

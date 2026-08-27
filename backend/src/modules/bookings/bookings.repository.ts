@@ -206,6 +206,13 @@ export const BOOKING_INCLUDE = {
       },
     },
   },
+  // The one authoritative client-payment record. Only client-safe aggregate
+  // amounts are selected; commission/munafa allocation never leaves here.
+  settlements: {
+    where: { isCurrent: true },
+    select: { expectedTotal: true, received: true },
+    take: 1,
+  },
 } satisfies Prisma.BookingInclude;
 
 // Derive the exact return type from the include so every caller is

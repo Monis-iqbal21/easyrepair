@@ -1925,6 +1925,29 @@ class AppLocalizationsEn extends AppLocalizations {
   String get myBookingsTitle => 'My Bookings';
 
   @override
+  String get myBookingsSubtitle => 'All your bookings in one place';
+
+  @override
+  String get myBookingsEmptyActiveTitle => 'No work in progress';
+
+  @override
+  String get myBookingsEmptyCompletedTitle => 'No completed work yet';
+
+  @override
+  String get myBookingsEmptyCancelledTitle => 'No cancelled bookings';
+
+  @override
+  String get myBookingsEmptyActiveHelper =>
+      'Book a new job to see its live status here.';
+
+  @override
+  String get myBookingsEmptyHistoryHelper =>
+      'Every job you book will stay here as a complete record.';
+
+  @override
+  String get myBookingsEmptyCta => 'Book a new job';
+
+  @override
   String get myBookingsEmptyTitle => 'No bookings yet';
 
   @override
@@ -1968,6 +1991,47 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get cardEdit => 'Edit';
+
+  @override
+  String get bookingCardLaneBidding => 'Bidding';
+
+  @override
+  String get bookingCardDetails => 'Details →';
+
+  @override
+  String get bookingCardPaymentAfterWork => 'Cash — after work';
+
+  @override
+  String get bookingCardPaymentPending => 'Payment pending';
+
+  @override
+  String get bookingCardNothingPaid => 'Nothing paid';
+
+  @override
+  String bookingCardPartialPayment(String received, String remaining) {
+    return '$received paid · $remaining remaining';
+  }
+
+  @override
+  String get bookingCardNoPaymentTaken => 'No payment taken';
+
+  @override
+  String get bookingCardStatusOnTheWay => 'On the way';
+
+  @override
+  String get bookingCardStatusWaitingQuote => 'Waiting for quote';
+
+  @override
+  String get bookingCardRomanActiveFilter => 'Currently active';
+
+  @override
+  String get bookingCardRomanAssigned => 'Ustaad assigned';
+
+  @override
+  String get bookingCardRomanWorkInProgress => 'Job underway';
+
+  @override
+  String get bookingCardRomanRejected => 'Booking rejected';
 
   @override
   String get filterTitle => 'Filter Bookings';

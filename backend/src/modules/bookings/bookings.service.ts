@@ -40,6 +40,7 @@ import {
   NearbyWorkersResponseDto,
   WorkerSummaryDto,
 } from './dto/booking-response.dto';
+import { derivePaymentDisplay } from './payment-display.util';
 import { UpdateBookingDto } from './dto/update-booking.dto';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { StorageService } from '../storage/storage.service';
@@ -156,9 +157,10 @@ export class BookingsService {
     // validation/lookups and return the already-created booking as-is,
     // rather than creating a second identical booking.
     if (dto.idempotencyKey) {
-      const existing = await this.bookingsRepository.findBookingByIdempotencyKey(
-        dto.idempotencyKey,
-      );
+      const existing =
+        await this.bookingsRepository.findBookingByIdempotencyKey(
+          dto.idempotencyKey,
+        );
       if (existing) {
         if (existing.clientProfileId !== profile.id) {
           throw new ForbiddenException('Client profile not found');
@@ -2084,6 +2086,7 @@ export class BookingsService {
     const lastWorkerCancellationReason = workerExclusions[0]?.reason ?? null;
     const lastWorkerCancellationWorkerName =
       workerExclusions[0]?.workerName ?? null;
+    const paymentDisplay = derivePaymentDisplay(booking.settlements?.[0]);
 
     return {
       id: booking.id,
@@ -2136,14 +2139,13 @@ export class BookingsService {
       inspectionReportSubmittedAt:
         booking.inspectionReport?.createdAt.toISOString() ?? null,
       sourceInspectionBookingId: booking.sourceInspectionBookingId ?? null,
-      attachedInspectionBookingId:
-        booking.attachedInspectionBookingId ?? null,
+      attachedInspectionBookingId: booking.attachedInspectionBookingId ?? null,
       linkedRepairBookingId: booking.repairBooking?.id ?? null,
       // Derived from the ORIGINAL inspection work unit reaching COMPLETED â€”
       // never from paymentStatus (a dead column), the existence of a report,
       // or the linked repair's own status. See inspection-fee.util.ts.
       inspectionFeePaid: deriveInspectionFeePaid(booking),
+      ...paymentDisplay,
     };
   }
 }
-

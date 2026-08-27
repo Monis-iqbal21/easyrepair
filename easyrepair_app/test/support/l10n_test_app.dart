@@ -12,10 +12,12 @@ import 'package:handygo_app/core/theme/app_theme.dart';
 MaterialApp localizedApp(
   Widget home, {
   AppLocale locale = AppLocale.english,
+  ThemeData? theme,
   NavigatorObserver? navigatorObserver,
   Map<String, WidgetBuilder> routes = const {},
 }) {
   return MaterialApp(
+    theme: theme,
     locale: locale.locale,
     supportedLocales: appSupportedLocales,
     localizationsDelegates: appLocalizationsDelegates,

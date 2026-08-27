@@ -3543,6 +3543,48 @@ abstract class AppLocalizations {
   /// **'My Bookings'**
   String get myBookingsTitle;
 
+  /// No description provided for @myBookingsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'All your bookings in one place'**
+  String get myBookingsSubtitle;
+
+  /// No description provided for @myBookingsEmptyActiveTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No work in progress'**
+  String get myBookingsEmptyActiveTitle;
+
+  /// No description provided for @myBookingsEmptyCompletedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No completed work yet'**
+  String get myBookingsEmptyCompletedTitle;
+
+  /// No description provided for @myBookingsEmptyCancelledTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No cancelled bookings'**
+  String get myBookingsEmptyCancelledTitle;
+
+  /// No description provided for @myBookingsEmptyActiveHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'Book a new job to see its live status here.'**
+  String get myBookingsEmptyActiveHelper;
+
+  /// No description provided for @myBookingsEmptyHistoryHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'Every job you book will stay here as a complete record.'**
+  String get myBookingsEmptyHistoryHelper;
+
+  /// No description provided for @myBookingsEmptyCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Book a new job'**
+  String get myBookingsEmptyCta;
+
   /// No description provided for @myBookingsEmptyTitle.
   ///
   /// In en, this message translates to:
@@ -3626,6 +3668,84 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Edit'**
   String get cardEdit;
+
+  /// No description provided for @bookingCardLaneBidding.
+  ///
+  /// In en, this message translates to:
+  /// **'Bidding'**
+  String get bookingCardLaneBidding;
+
+  /// No description provided for @bookingCardDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Details →'**
+  String get bookingCardDetails;
+
+  /// No description provided for @bookingCardPaymentAfterWork.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash — after work'**
+  String get bookingCardPaymentAfterWork;
+
+  /// No description provided for @bookingCardPaymentPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment pending'**
+  String get bookingCardPaymentPending;
+
+  /// No description provided for @bookingCardNothingPaid.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing paid'**
+  String get bookingCardNothingPaid;
+
+  /// No description provided for @bookingCardPartialPayment.
+  ///
+  /// In en, this message translates to:
+  /// **'{received} paid · {remaining} remaining'**
+  String bookingCardPartialPayment(String received, String remaining);
+
+  /// No description provided for @bookingCardNoPaymentTaken.
+  ///
+  /// In en, this message translates to:
+  /// **'No payment taken'**
+  String get bookingCardNoPaymentTaken;
+
+  /// No description provided for @bookingCardStatusOnTheWay.
+  ///
+  /// In en, this message translates to:
+  /// **'On the way'**
+  String get bookingCardStatusOnTheWay;
+
+  /// No description provided for @bookingCardStatusWaitingQuote.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for quote'**
+  String get bookingCardStatusWaitingQuote;
+
+  /// No description provided for @bookingCardRomanActiveFilter.
+  ///
+  /// In en, this message translates to:
+  /// **'Currently active'**
+  String get bookingCardRomanActiveFilter;
+
+  /// No description provided for @bookingCardRomanAssigned.
+  ///
+  /// In en, this message translates to:
+  /// **'Ustaad assigned'**
+  String get bookingCardRomanAssigned;
+
+  /// No description provided for @bookingCardRomanWorkInProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Job underway'**
+  String get bookingCardRomanWorkInProgress;
+
+  /// No description provided for @bookingCardRomanRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking rejected'**
+  String get bookingCardRomanRejected;
 
   /// No description provided for @filterTitle.
   ///

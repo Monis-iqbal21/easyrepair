@@ -19,7 +19,43 @@ String bookingStatusLabel(AppLocalizations l10n, BookingStatus status) {
     BookingStatus.arrived => l10n.bookingStatusAssigned,
     BookingStatus.inProgress => l10n.bookingStatusLive,
     BookingStatus.completed => l10n.bookingStatusCompleted,
+    // Settlement bookkeeping is not a client-facing lifecycle step: the job
+    // is done. Cash nuance is carried by the payment chip, not the status.
+    BookingStatus.awaitingConfirmation => l10n.bookingStatusCompleted,
+    BookingStatus.settled => l10n.bookingStatusCompleted,
     BookingStatus.rejected => l10n.workerFilterCancelled,
+    BookingStatus.cancelled => l10n.workerFilterCancelled,
+    BookingStatus.expired => l10n.bookingStatusExpired,
+  };
+}
+
+/// Client Bookings card wording keeps every backend status distinct while
+/// leaving the booking lifecycle and the older detail/timeline labels alone.
+String bookingCardStatusLabel(
+  AppLocalizations l10n,
+  BookingStatus status, {
+  bool waitingForQuote = false,
+  bool romanUrdu = false,
+}) {
+  if (waitingForQuote) return l10n.bookingCardStatusWaitingQuote;
+  return switch (status) {
+    BookingStatus.pending => l10n.bookingStatusLive,
+    BookingStatus.accepted =>
+      romanUrdu ? l10n.bookingCardRomanAssigned : l10n.bookingStatusAssigned,
+    BookingStatus.enRoute => l10n.bookingCardStatusOnTheWay,
+    BookingStatus.arrived => l10n.workerActionArrived,
+    BookingStatus.inProgress =>
+      romanUrdu
+          ? l10n.bookingCardRomanWorkInProgress
+          : l10n.trackStepWorkInProgress,
+    BookingStatus.completed =>
+      romanUrdu ? l10n.workerComplete : l10n.bookingStatusCompleted,
+    BookingStatus.awaitingConfirmation =>
+      romanUrdu ? l10n.workerComplete : l10n.bookingStatusCompleted,
+    BookingStatus.settled =>
+      romanUrdu ? l10n.workerComplete : l10n.bookingStatusCompleted,
+    BookingStatus.rejected =>
+      romanUrdu ? l10n.bookingCardRomanRejected : l10n.bidStatusRejected,
     BookingStatus.cancelled => l10n.workerFilterCancelled,
     BookingStatus.expired => l10n.bookingStatusExpired,
   };
@@ -49,6 +85,8 @@ String workerJobStatusLabel(AppLocalizations l10n, BookingStatus status) {
     BookingStatus.arrived => l10n.workerActionArrived,
     BookingStatus.inProgress => l10n.jobStatusInProgress,
     BookingStatus.completed => l10n.bookingStatusCompleted,
+    BookingStatus.awaitingConfirmation => l10n.bookingStatusCompleted,
+    BookingStatus.settled => l10n.bookingStatusCompleted,
     BookingStatus.rejected => l10n.bidStatusRejected,
     BookingStatus.cancelled => l10n.workerFilterCancelled,
     BookingStatus.expired => l10n.bookingStatusExpired,

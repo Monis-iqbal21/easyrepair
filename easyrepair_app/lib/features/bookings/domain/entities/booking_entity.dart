@@ -8,27 +8,26 @@ enum BookingStatus {
   rejected,
   cancelled,
   expired,
+
+  /// Work is finished and the money is still being reconciled: HandyGo has
+  /// not yet confirmed what the Ustaad collected. Backend groups this with
+  /// COMPLETED as a settleable state (admin-operations.service.ts), never as
+  /// a live one, so the client reads it as a finished job.
+  awaitingConfirmation,
+
+  /// Work finished and the BookingSettlement is recorded. Backend counts it
+  /// alongside COMPLETED in earnings/commission queries
+  /// (admin-operations.repository.ts).
+  settled,
 }
 
-enum BookingUrgency {
-  urgent,
-  normal,
-}
+enum BookingUrgency { urgent, normal }
 
-enum TimeSlot {
-  morning,
-  afternoon,
-  evening,
-  night,
-}
+enum TimeSlot { morning, afternoon, evening, night }
 
 /// Client-selected arrival window for an URGENT booking. Null for
 /// scheduled (NORMAL) bookings.
-enum UrgentWindow {
-  within1Hour,
-  within2Hours,
-  within4Hours,
-}
+enum UrgentWindow { within1Hour, within2Hours, within4Hours }
 
 enum AttachmentType { image, video, audio }
 
@@ -53,6 +52,21 @@ extension CancelledByRoleX on CancelledByRole {
 /// known-problem flow). Older bookings created before this concept existed
 /// always come back as BIDDING from the backend.
 enum BookingLane { standard, inspection, bidding }
+
+/// Client → USTAAD cash state derived by the backend from the current
+/// immutable BookingSettlement. This is display data only; Flutter never
+/// derives settlement from commission or booking prices.
+enum PaymentDisplayStatus { unpaid, partial, paid }
+
+extension PaymentDisplayStatusX on PaymentDisplayStatus {
+  static PaymentDisplayStatus fromRaw(String? raw) {
+    return switch (raw?.toUpperCase()) {
+      'PARTIAL' => PaymentDisplayStatus.partial,
+      'PAID' => PaymentDisplayStatus.paid,
+      _ => PaymentDisplayStatus.unpaid,
+    };
+  }
+}
 
 extension BookingLaneX on BookingLane {
   String get raw {
@@ -153,6 +167,7 @@ enum InspectionDecisionStatus {
   pendingClientDecision,
   acceptedRepair,
   closedAfterInspection,
+
   /// Customer paid the inspection fee and opted to find a different Ustaad —
   /// the booking is reopened for bidding while the original report/quote and
   /// inspecting worker stay preserved untouched.
@@ -161,17 +176,19 @@ enum InspectionDecisionStatus {
 
 extension InspectionDecisionStatusX on InspectionDecisionStatus {
   String get raw => switch (this) {
-        InspectionDecisionStatus.pendingClientDecision => 'PENDING_CLIENT_DECISION',
-        InspectionDecisionStatus.acceptedRepair => 'ACCEPTED_REPAIR',
-        InspectionDecisionStatus.closedAfterInspection => 'CLOSED_AFTER_INSPECTION',
-        InspectionDecisionStatus.findOtherUstaad => 'FIND_OTHER_USTAAD',
-      };
+    InspectionDecisionStatus.pendingClientDecision => 'PENDING_CLIENT_DECISION',
+    InspectionDecisionStatus.acceptedRepair => 'ACCEPTED_REPAIR',
+    InspectionDecisionStatus.closedAfterInspection => 'CLOSED_AFTER_INSPECTION',
+    InspectionDecisionStatus.findOtherUstaad => 'FIND_OTHER_USTAAD',
+  };
 
   static InspectionDecisionStatus? fromRaw(String? raw) {
     return switch (raw?.toUpperCase()) {
-      'PENDING_CLIENT_DECISION' => InspectionDecisionStatus.pendingClientDecision,
+      'PENDING_CLIENT_DECISION' =>
+        InspectionDecisionStatus.pendingClientDecision,
       'ACCEPTED_REPAIR' => InspectionDecisionStatus.acceptedRepair,
-      'CLOSED_AFTER_INSPECTION' => InspectionDecisionStatus.closedAfterInspection,
+      'CLOSED_AFTER_INSPECTION' =>
+        InspectionDecisionStatus.closedAfterInspection,
       'FIND_OTHER_USTAAD' => InspectionDecisionStatus.findOtherUstaad,
       _ => null,
     };
@@ -275,15 +292,18 @@ extension BookingInspectionLifecycleX on BookingEntity {
     return switch (status) {
       BookingStatus.accepted => InspectionWorkerAction.onMyWay,
       BookingStatus.enRoute => InspectionWorkerAction.arrived,
-      BookingStatus.arrived => differentWorker
-          ? InspectionWorkerAction.startWork
-          : InspectionWorkerAction.startInspection,
-      BookingStatus.inProgress => !inspectionReportSubmitted
-          ? InspectionWorkerAction.fillReport
-          : (inspectionDecisionStatus == InspectionDecisionStatus.acceptedRepair ||
+      BookingStatus.arrived =>
+        differentWorker
+            ? InspectionWorkerAction.startWork
+            : InspectionWorkerAction.startInspection,
+      BookingStatus.inProgress =>
+        !inspectionReportSubmitted
+            ? InspectionWorkerAction.fillReport
+            : (inspectionDecisionStatus ==
+                      InspectionDecisionStatus.acceptedRepair ||
                   differentWorker)
-              ? InspectionWorkerAction.complete
-              : InspectionWorkerAction.waitingForDecision,
+            ? InspectionWorkerAction.complete
+            : InspectionWorkerAction.waitingForDecision,
       _ => null,
     };
   }
@@ -296,7 +316,8 @@ extension BookingInspectionLifecycleX on BookingEntity {
   /// worker's New Jobs bid-actionable state, same as a normal BIDDING job.
   bool get isOpenForFindOtherUstaadBidding =>
       (lane == BookingLane.inspection &&
-          inspectionDecisionStatus == InspectionDecisionStatus.findOtherUstaad) ||
+          inspectionDecisionStatus ==
+              InspectionDecisionStatus.findOtherUstaad) ||
       (lane == BookingLane.bidding && sourceInspectionBookingId != null);
 
   /// The single canonical price for this booking's own work unit — see
@@ -307,13 +328,13 @@ extension BookingInspectionLifecycleX on BookingEntity {
   /// yet" (an open BIDDING job) — callers must hide their price UI entirely,
   /// never show Rs 0.
   double? get canonicalPrice => canonicalWorkPrice(
-        lane: lane,
-        inspectionDecisionStatus: inspectionDecisionStatus,
-        standardServicesTotal: standardServicesTotal,
-        inspectionFeeSnapshot: inspectionFeeSnapshot,
-        acceptedBidAmount: acceptedBidAmount,
-        finalPrice: finalPrice,
-      );
+    lane: lane,
+    inspectionDecisionStatus: inspectionDecisionStatus,
+    standardServicesTotal: standardServicesTotal,
+    inspectionFeeSnapshot: inspectionFeeSnapshot,
+    acceptedBidAmount: acceptedBidAmount,
+    finalPrice: finalPrice,
+  );
 
   /// The single canonical (label, amount) pair for the "Qeemat" card on
   /// Booking Details — [canonicalPrice] plus which wording to use. A
@@ -327,11 +348,13 @@ extension BookingInspectionLifecycleX on BookingEntity {
   /// this can never disagree with Track Worker or any other screen reading
   /// that getter directly.
   (DisplayPriceLabel, double?) get displayPrice {
-    final isInspectionFeeOnly = status == BookingStatus.completed &&
+    final isInspectionFeeOnly =
+        status == BookingStatus.completed &&
         lane == BookingLane.inspection &&
         (inspectionDecisionStatus ==
                 InspectionDecisionStatus.closedAfterInspection ||
-            inspectionDecisionStatus == InspectionDecisionStatus.findOtherUstaad);
+            inspectionDecisionStatus ==
+                InspectionDecisionStatus.findOtherUstaad);
     if (isInspectionFeeOnly) {
       return (
         DisplayPriceLabel.inspectionFee,
@@ -404,6 +427,8 @@ extension BookingStatusX on BookingStatus {
       BookingStatus.arrived => BookingTab.assigned,
       BookingStatus.inProgress => BookingTab.live,
       BookingStatus.completed => BookingTab.completed,
+      BookingStatus.awaitingConfirmation => BookingTab.completed,
+      BookingStatus.settled => BookingTab.completed,
       BookingStatus.rejected => BookingTab.cancelled,
       BookingStatus.cancelled => BookingTab.cancelled,
       BookingStatus.expired => BookingTab.cancelled,
@@ -421,6 +446,8 @@ extension BookingStatusX on BookingStatus {
       BookingStatus.rejected => 'REJECTED',
       BookingStatus.cancelled => 'CANCELLED',
       BookingStatus.expired => 'EXPIRED',
+      BookingStatus.awaitingConfirmation => 'AWAITING_CONFIRMATION',
+      BookingStatus.settled => 'SETTLED',
     };
   }
 
@@ -435,6 +462,11 @@ extension BookingStatusX on BookingStatus {
       'REJECTED' => BookingStatus.rejected,
       'CANCELLED' => BookingStatus.cancelled,
       'EXPIRED' => BookingStatus.expired,
+      'AWAITING_CONFIRMATION' => BookingStatus.awaitingConfirmation,
+      'SETTLED' => BookingStatus.settled,
+      // Defensive only: a genuinely unknown future value degrades to the
+      // safest non-terminal state. Every value the backend enum defines
+      // today is mapped explicitly above.
       _ => BookingStatus.pending,
     };
   }
@@ -443,8 +475,9 @@ extension BookingStatusX on BookingStatus {
 extension BookingUrgencyX on BookingUrgency {
   String get raw => this == BookingUrgency.urgent ? 'URGENT' : 'NORMAL';
 
-  static BookingUrgency fromRaw(String raw) =>
-      raw.toUpperCase() == 'URGENT' ? BookingUrgency.urgent : BookingUrgency.normal;
+  static BookingUrgency fromRaw(String raw) => raw.toUpperCase() == 'URGENT'
+      ? BookingUrgency.urgent
+      : BookingUrgency.normal;
 }
 
 extension TimeSlotX on TimeSlot {
@@ -638,11 +671,11 @@ extension BidOutcomeX on BidOutcome {
   /// absent on every non-Applied response) stays null rather than
   /// defaulting to a status this worker never actually has.
   static BidOutcome? fromRaw(String? raw) => switch (raw?.toUpperCase()) {
-        'PENDING' => BidOutcome.pending,
-        'ACCEPTED' => BidOutcome.accepted,
-        'REJECTED' => BidOutcome.rejected,
-        _ => null,
-      };
+    'PENDING' => BidOutcome.pending,
+    'ACCEPTED' => BidOutcome.accepted,
+    'REJECTED' => BidOutcome.rejected,
+    _ => null,
+  };
 }
 
 /// One entry from the booking_status_history table.
@@ -679,12 +712,14 @@ class BookingEntity {
   final DateTime? startedAt;
   final double? estimatedPrice;
   final double? finalPrice;
+
   /// Null when this booking isn't yet assigned to the viewing worker —
   /// exact address is only ever sent to the assigned Ustaad.
   final String? address;
   final String city;
   final double latitude;
   final double longitude;
+
   /// Whether the API actually sent coordinates for this booking — captured
   /// from the raw JSON before any defaulting (see BookingModel.hasLocation).
   ///
@@ -692,6 +727,7 @@ class BookingEntity {
   /// coordinates for viewers who may not see the exact address, and `0` is
   /// also a legal coordinate.
   final bool hasLocation;
+
   /// Server-computed distance in km — only populated on worker-facing
   /// responses for a not-yet-assigned booking (see WorkersService._toJobDto).
   final double? distanceKm;
@@ -702,6 +738,7 @@ class BookingEntity {
   final DateTime? liveStartedAt;
   final DateTime? relistedAt;
   final AssignedWorkerEntity? assignedWorker;
+
   /// INSPECTION lane: the worker who performed the inspection — permanent,
   /// independent of [assignedWorker]. Usually the same person; differs once
   /// "Find Other Ustaad" results in a different worker being hired for the
@@ -712,9 +749,11 @@ class BookingEntity {
   final List<BookingAttachmentEntity> attachments;
   final BookingReviewEntity? review;
   final List<BookingStatusHistoryEntry> statusHistory;
+
   /// Full name of the client who created the booking.
   /// Populated on worker-facing responses; null on client-facing responses.
   final String? clientName;
+
   /// Client's phone number — populated on worker-facing responses only,
   /// powers the worker's "Call" button once hired.
   final String? clientPhone;
@@ -728,11 +767,14 @@ class BookingEntity {
   final List<BookingWorkerExclusionEntity> workerExclusions;
   final String? lastWorkerCancellationReason;
   final String? lastWorkerCancellationWorkerName;
+
   /// INSPECTION lane: true once the assigned worker has submitted their report.
   final bool inspectionReportSubmitted;
+
   /// INSPECTION lane: null until a report exists, then tracks the client's decision.
   final InspectionDecisionStatus? inspectionDecisionStatus;
   final DateTime? inspectionReportSubmittedAt;
+
   /// Worker-job-detail only: true when the caller's work on this booking was
   /// the inspection only ("Find Other Ustaad" chosen for the repair) —
   /// finalPrice above is the inspection fee they earned, never a repair
@@ -771,6 +813,13 @@ class BookingEntity {
   /// the existence of a report or from the linked repair's own status.
   /// Null when no inspection is involved in this booking.
   final bool? inspectionFeePaid;
+
+  /// Server-derived client payment display fields from the current
+  /// BookingSettlement. Amounts are null until a settlement exists.
+  final PaymentDisplayStatus paymentDisplayStatus;
+  final double? receivedAmount;
+  final double? expectedAmount;
+  final double? remainingAmount;
 
   /// My Jobs → Applied/Bids only: this worker's OWN bid outcome, which is
   /// deliberately independent of [status]. A REJECTED bid on an ACCEPTED
@@ -843,6 +892,10 @@ class BookingEntity {
     this.linkedRepairBookingId,
     this.attachedInspectionBookingId,
     this.inspectionFeePaid,
+    this.paymentDisplayStatus = PaymentDisplayStatus.unpaid,
+    this.receivedAmount,
+    this.expectedAmount,
+    this.remainingAmount,
     this.myBidStatus,
     this.myBidAmount,
   });
@@ -935,7 +988,8 @@ class BookingEntity {
       relistedAt: relistedAt,
       assignedWorker: assignedWorker ?? this.assignedWorker,
       inspectingWorker: inspectingWorker ?? this.inspectingWorker,
-      availableWorkersCount: availableWorkersCount ?? this.availableWorkersCount,
+      availableWorkersCount:
+          availableWorkersCount ?? this.availableWorkersCount,
       acceptedBidAmount: acceptedBidAmount ?? this.acceptedBidAmount,
       attachments: attachments ?? this.attachments,
       review: review ?? this.review,

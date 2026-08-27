@@ -166,4 +166,12 @@ export class BookingResponseDto {
    * InspectionReport, or from the linked repair booking's own status.
    */
   inspectionFeePaid: boolean | null;
+  /** Server-derived CLIENT → USTAAD cash state from the current settlement. */
+  paymentDisplayStatus: 'UNPAID' | 'PARTIAL' | 'PAID';
+  /** Null until an authoritative current settlement exists. */
+  receivedAmount: number | null;
+  /** Null until an authoritative current settlement exists. */
+  expectedAmount: number | null;
+  /** Null until an authoritative current settlement exists. */
+  remainingAmount: number | null;
 }

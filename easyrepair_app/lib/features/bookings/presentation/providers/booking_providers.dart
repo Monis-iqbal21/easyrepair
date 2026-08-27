@@ -68,11 +68,11 @@ final cancelBookingUseCaseProvider = Provider<CancelBookingUseCase>((ref) {
 /// report the backend would then reject.
 final attachableInspectionsProvider = FutureProvider.autoDispose
     .family<List<AttachableInspectionEntity>, String?>((ref, categoryId) async {
-  final result = await ref
-      .read(bookingRepositoryProvider)
-      .getAttachableInspections(categoryId: categoryId);
-  return result.fold((f) => throw f, (list) => list);
-});
+      final result = await ref
+          .read(bookingRepositoryProvider)
+          .getAttachableInspections(categoryId: categoryId);
+      return result.fold((f) => throw f, (list) => list);
+    });
 
 // ── Bookings list notifier ────────────────────────────────────────────────────
 
@@ -116,7 +116,9 @@ class BookingsNotifier extends AsyncNotifier<List<BookingEntity>> {
     final current = state.valueOrNull;
     if (current == null) return;
     final idx = current.indexWhere((b) => b.id == updated.id);
-    if (idx == -1) return; // not in list yet — ignore (create flow handles this)
+    if (idx == -1) {
+      return; // not in list yet — ignore (create flow handles this)
+    }
     final next = List<BookingEntity>.from(current);
     next[idx] = updated;
     state = AsyncData(next);
@@ -133,8 +135,9 @@ class BookingsNotifier extends AsyncNotifier<List<BookingEntity>> {
   Future<void> cancelBooking(String bookingId, String reason) async {
     final offline = offlineActionGuard();
     if (offline != null) throw offline;
-    final result =
-        await ref.read(cancelBookingUseCaseProvider).call(bookingId, reason);
+    final result = await ref
+        .read(cancelBookingUseCaseProvider)
+        .call(bookingId, reason);
     result.fold((failure) => throw failure, (updated) {
       patchBooking(updated);
       // Sync detail page if it is alive.
@@ -160,15 +163,16 @@ final bookingsNotifierProvider =
 
 /// True while [bookingDetailProvider] for a given booking id is showing the
 /// last cached detail because the live fetch failed.
-final bookingDetailIsOfflineProvider =
-    StateProvider.family<bool, String>((ref, bookingId) => false);
+final bookingDetailIsOfflineProvider = StateProvider.family<bool, String>(
+  (ref, bookingId) => false,
+);
 
-class BookingDetailNotifier
-    extends FamilyAsyncNotifier<BookingEntity, String> {
+class BookingDetailNotifier extends FamilyAsyncNotifier<BookingEntity, String> {
   @override
   Future<BookingEntity> build(String arg) async {
-    final result =
-        await ref.read(bookingRepositoryProvider).getBookingById(arg);
+    final result = await ref
+        .read(bookingRepositoryProvider)
+        .getBookingById(arg);
     return result.fold((f) => throw f, (cached) {
       ref.read(bookingDetailIsOfflineProvider(arg).notifier).state =
           cached.isStale;
@@ -186,8 +190,8 @@ class BookingDetailNotifier
 
 final bookingDetailProvider =
     AsyncNotifierProvider.family<BookingDetailNotifier, BookingEntity, String>(
-  BookingDetailNotifier.new,
-);
+      BookingDetailNotifier.new,
+    );
 
 // ── Create booking notifier ───────────────────────────────────────────────────
 
@@ -407,7 +411,7 @@ final reviewNotifierProvider = AsyncNotifierProvider<ReviewNotifier, void>(
 class CashPaymentConfirmationNotifier
     extends StateNotifier<AsyncValue<CashPaymentConfirmationEntity?>> {
   CashPaymentConfirmationNotifier(this._repository, this.bookingId)
-      : super(const AsyncData(null));
+    : super(const AsyncData(null));
 
   final BookingRepository _repository;
   final String bookingId;
@@ -415,8 +419,10 @@ class CashPaymentConfirmationNotifier
   Future<CashPaymentConfirmationEntity> confirm(int receivedCashTotal) async {
     if (state.isLoading) throw const ValidationFailure('');
     state = const AsyncLoading();
-    final result =
-        await _repository.confirmCashPayment(bookingId, receivedCashTotal);
+    final result = await _repository.confirmCashPayment(
+      bookingId,
+      receivedCashTotal,
+    );
     return result.fold(
       (failure) {
         state = AsyncError(failure, StackTrace.current);
@@ -430,15 +436,34 @@ class CashPaymentConfirmationNotifier
   }
 }
 
-final cashPaymentConfirmationProvider = StateNotifierProvider.autoDispose.family<
-    CashPaymentConfirmationNotifier,
-    AsyncValue<CashPaymentConfirmationEntity?>,
-    String>((ref, bookingId) => CashPaymentConfirmationNotifier(
-      ref.watch(bookingRepositoryProvider),
-      bookingId,
-    ));
+final cashPaymentConfirmationProvider = StateNotifierProvider.autoDispose
+    .family<
+      CashPaymentConfirmationNotifier,
+      AsyncValue<CashPaymentConfirmationEntity?>,
+      String
+    >(
+      (ref, bookingId) => CashPaymentConfirmationNotifier(
+        ref.watch(bookingRepositoryProvider),
+        bookingId,
+      ),
+    );
 
 // ── Filtered + searched bookings ─────────────────────────────────────────────
+
+/// The four Client Bookings chips reuse the existing status classification.
+/// "Active" is the presentation union of the existing live + assigned
+/// groups; terminal groups remain unchanged.
+bool bookingMatchesClientTab(BookingEntity booking, BookingTab tab) {
+  return switch (tab) {
+    BookingTab.all => true,
+    BookingTab.live =>
+      booking.status.tab == BookingTab.live ||
+          booking.status.tab == BookingTab.assigned,
+    BookingTab.assigned => booking.status.tab == BookingTab.assigned,
+    BookingTab.completed => booking.status.tab == BookingTab.completed,
+    BookingTab.cancelled => booking.status.tab == BookingTab.cancelled,
+  };
+}
 
 final filteredBookingsProvider = Provider<List<BookingEntity>>((ref) {
   final bookingsAsync = ref.watch(bookingsNotifierProvider);
@@ -447,8 +472,7 @@ final filteredBookingsProvider = Provider<List<BookingEntity>>((ref) {
   final all = bookingsAsync.valueOrNull ?? [];
 
   var result = all.where((b) {
-    if (filter.activeTab != BookingTab.all &&
-        b.status.tab != filter.activeTab) {
+    if (!bookingMatchesClientTab(b, filter.activeTab)) {
       return false;
     }
     if (filter.urgency != null && b.urgency != filter.urgency) return false;
@@ -927,8 +951,9 @@ class RelistBookingNotifier extends AsyncNotifier<void> {
 
   Future<void> relist(String bookingId) async {
     state = const AsyncLoading();
-    final result =
-        await ref.read(bookingRepositoryProvider).relistBooking(bookingId);
+    final result = await ref
+        .read(bookingRepositoryProvider)
+        .relistBooking(bookingId);
     result.fold(
       (failure) {
         state = AsyncError(failure, StackTrace.current);
@@ -974,10 +999,10 @@ class ReopenAfterWorkerCancellationNotifier extends AsyncNotifier<void> {
   }
 }
 
-final reopenAfterWorkerCancellationNotifierProvider = AsyncNotifierProvider<
-    ReopenAfterWorkerCancellationNotifier, void>(
-  ReopenAfterWorkerCancellationNotifier.new,
-);
+final reopenAfterWorkerCancellationNotifierProvider =
+    AsyncNotifierProvider<ReopenAfterWorkerCancellationNotifier, void>(
+      ReopenAfterWorkerCancellationNotifier.new,
+    );
 
 // ── Worker lifecycle notifier (on-my-way / arrived / start / complete / cancel) ─
 
@@ -1018,32 +1043,31 @@ class WorkerLifecycleNotifier extends AsyncNotifier<void> {
   }
 
   Future<void> onMyWay(String bookingId) => _run(
-        bookingId,
-        () => ref.read(bookingRepositoryProvider).markOnMyWay(bookingId),
-      );
+    bookingId,
+    () => ref.read(bookingRepositoryProvider).markOnMyWay(bookingId),
+  );
 
   Future<void> arrived(String bookingId) => _run(
-        bookingId,
-        () => ref.read(bookingRepositoryProvider).markArrived(bookingId),
-      );
+    bookingId,
+    () => ref.read(bookingRepositoryProvider).markArrived(bookingId),
+  );
 
   Future<void> start(String bookingId) => _run(
-        bookingId,
-        () => ref.read(bookingRepositoryProvider).startJob(bookingId),
-      );
+    bookingId,
+    () => ref.read(bookingRepositoryProvider).startJob(bookingId),
+  );
 
   Future<void> complete(String bookingId) => _run(
-        bookingId,
-        () =>
-            ref.read(bookingRepositoryProvider).completeJobLifecycle(bookingId),
-      );
+    bookingId,
+    () => ref.read(bookingRepositoryProvider).completeJobLifecycle(bookingId),
+  );
 
   Future<void> cancel(String bookingId, String reason) => _run(
-        bookingId,
-        () => ref
-            .read(bookingRepositoryProvider)
-            .workerCancelBooking(bookingId, reason),
-      );
+    bookingId,
+    () => ref
+        .read(bookingRepositoryProvider)
+        .workerCancelBooking(bookingId, reason),
+  );
 }
 
 final workerLifecycleNotifierProvider =
@@ -1082,8 +1106,9 @@ extension InspectionWorkerActionDispatchX on InspectionWorkerAction {
       InspectionWorkerAction.startWork => notifier.start(bookingId),
       InspectionWorkerAction.complete => notifier.complete(bookingId),
       InspectionWorkerAction.fillReport ||
-      InspectionWorkerAction.waitingForDecision =>
-        throw StateError('$this is not an API-dispatchable action.'),
+      InspectionWorkerAction.waitingForDecision => throw StateError(
+        '$this is not an API-dispatchable action.',
+      ),
     };
   }
 }
@@ -1094,14 +1119,13 @@ extension InspectionWorkerActionDispatchX on InspectionWorkerAction {
 /// [AsyncError] with a [NotFoundFailure]-like error until a report exists —
 /// callers (client report card, worker post-submit confirmation) should
 /// treat any error as "no report yet" unless they just submitted one.
-final inspectionReportProvider =
-    FutureProvider.autoDispose.family<InspectionReportEntity, String>(
-  (ref, bookingId) async {
-    final result =
-        await ref.read(bookingRepositoryProvider).getInspectionReport(bookingId);
-    return result.fold((f) => throw f, (r) => r);
-  },
-);
+final inspectionReportProvider = FutureProvider.autoDispose
+    .family<InspectionReportEntity, String>((ref, bookingId) async {
+      final result = await ref
+          .read(bookingRepositoryProvider)
+          .getInspectionReport(bookingId);
+      return result.fold((f) => throw f, (r) => r);
+    });
 
 class InspectionReportSubmitNotifier extends AsyncNotifier<void> {
   @override
@@ -1125,7 +1149,9 @@ class InspectionReportSubmitNotifier extends AsyncNotifier<void> {
       throw offline;
     }
     state = const AsyncLoading();
-    final result = await ref.read(bookingRepositoryProvider).submitInspectionReport(
+    final result = await ref
+        .read(bookingRepositoryProvider)
+        .submitInspectionReport(
           bookingId,
           issueFound: issueFound,
           recommendedRepair: recommendedRepair,
@@ -1155,8 +1181,8 @@ class InspectionReportSubmitNotifier extends AsyncNotifier<void> {
 
 final inspectionReportSubmitNotifierProvider =
     AsyncNotifierProvider<InspectionReportSubmitNotifier, void>(
-  InspectionReportSubmitNotifier.new,
-);
+      InspectionReportSubmitNotifier.new,
+    );
 
 /// Client's "Accept Quote & Continue Repair" / "Close After Inspection".
 class InspectionDecisionNotifier extends AsyncNotifier<void> {
@@ -1191,27 +1217,27 @@ class InspectionDecisionNotifier extends AsyncNotifier<void> {
   }
 
   Future<void> acceptQuote(String bookingId) => _run(
-        bookingId,
-        () => ref.read(bookingRepositoryProvider).acceptInspectionQuote(bookingId),
-      );
+    bookingId,
+    () => ref.read(bookingRepositoryProvider).acceptInspectionQuote(bookingId),
+  );
 
   Future<void> closeAfterInspection(String bookingId) => _run(
-        bookingId,
-        () => ref.read(bookingRepositoryProvider).closeAfterInspection(bookingId),
-      );
+    bookingId,
+    () => ref.read(bookingRepositoryProvider).closeAfterInspection(bookingId),
+  );
 
   Future<void> findOtherUstaad(String bookingId) => _run(
-        bookingId,
-        () => ref.read(bookingRepositoryProvider).findOtherUstaad(bookingId),
-      );
+    bookingId,
+    () => ref.read(bookingRepositoryProvider).findOtherUstaad(bookingId),
+  );
 
   Future<void> hireInspectingWorker(String bookingId) => _run(
-        bookingId,
-        () => ref.read(bookingRepositoryProvider).hireInspectingWorker(bookingId),
-      );
+    bookingId,
+    () => ref.read(bookingRepositoryProvider).hireInspectingWorker(bookingId),
+  );
 }
 
 final inspectionDecisionNotifierProvider =
     AsyncNotifierProvider<InspectionDecisionNotifier, void>(
-  InspectionDecisionNotifier.new,
-);
+      InspectionDecisionNotifier.new,
+    );

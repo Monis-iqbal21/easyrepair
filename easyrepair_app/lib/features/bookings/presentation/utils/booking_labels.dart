@@ -8,11 +8,11 @@ import '../../domain/entities/booking_entity.dart';
 /// here, because those depend on the selected language.
 
 String timeSlotLabel(AppLocalizations l10n, TimeSlot slot) => switch (slot) {
-      TimeSlot.morning => l10n.slotMorning,
-      TimeSlot.afternoon => l10n.slotAfternoon,
-      TimeSlot.evening => l10n.slotEvening,
-      TimeSlot.night => l10n.slotNight,
-    };
+  TimeSlot.morning => l10n.slotMorning,
+  TimeSlot.afternoon => l10n.slotAfternoon,
+  TimeSlot.evening => l10n.slotEvening,
+  TimeSlot.night => l10n.slotNight,
+};
 
 String urgentWindowLabel(AppLocalizations l10n, UrgentWindow window) =>
     switch (window) {
@@ -21,13 +21,19 @@ String urgentWindowLabel(AppLocalizations l10n, UrgentWindow window) =>
       UrgentWindow.within4Hours => l10n.urgentWithin4Hours,
     };
 
-String bookingTabLabel(AppLocalizations l10n, BookingTab tab) => switch (tab) {
-      BookingTab.all => l10n.filterAll,
-      BookingTab.live => l10n.bookingStatusLive,
-      BookingTab.assigned => l10n.bookingStatusAssigned,
-      BookingTab.completed => l10n.bookingStatusCompleted,
-      BookingTab.cancelled => l10n.workerFilterCancelled,
-    };
+String bookingTabLabel(
+  AppLocalizations l10n,
+  BookingTab tab, {
+  bool romanUrdu = false,
+}) => switch (tab) {
+  BookingTab.all => l10n.filterAll,
+  BookingTab.live =>
+    romanUrdu ? l10n.bookingCardRomanActiveFilter : l10n.workerActive,
+  BookingTab.assigned => l10n.bookingStatusAssigned,
+  BookingTab.completed =>
+    romanUrdu ? l10n.workerComplete : l10n.bookingStatusCompleted,
+  BookingTab.cancelled => l10n.workerFilterCancelled,
+};
 
 /// Badge derived from how many jobs an Ustaad has completed.
 String workerLevelBadge(AppLocalizations l10n, int completedJobs) {

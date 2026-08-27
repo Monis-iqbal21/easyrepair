@@ -1898,7 +1898,30 @@ class AppLocalizationsUr extends AppLocalizations {
       'آپ کی بکنگز لوڈ نہیں ہو سکیں۔ دوبارہ کوشش کریں۔';
 
   @override
-  String get myBookingsTitle => 'میری بکنگز';
+  String get myBookingsTitle => 'بکنگز';
+
+  @override
+  String get myBookingsSubtitle => 'تمام بکنگز ایک جگہ';
+
+  @override
+  String get myBookingsEmptyActiveTitle => 'کوئی کام جاری نہیں';
+
+  @override
+  String get myBookingsEmptyCompletedTitle => 'ابھی کوئی کام مکمل نہیں ہوا';
+
+  @override
+  String get myBookingsEmptyCancelledTitle => 'کوئی منسوخ بکنگ نہیں';
+
+  @override
+  String get myBookingsEmptyActiveHelper =>
+      'نیا کام بک کریں تو یہاں لائیو اسٹیٹس ملے گا۔';
+
+  @override
+  String get myBookingsEmptyHistoryHelper =>
+      'آپ جب بھی کام کروائیں گے، مکمل ریکارڈ یہاں رہے گا۔';
+
+  @override
+  String get myBookingsEmptyCta => 'نیا کام بک کریں';
 
   @override
   String get myBookingsEmptyTitle => 'ابھی کوئی بکنگ نہیں';
@@ -1945,6 +1968,47 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get cardEdit => 'تبدیلی';
+
+  @override
+  String get bookingCardLaneBidding => 'بولی';
+
+  @override
+  String get bookingCardDetails => 'تفصیل ←';
+
+  @override
+  String get bookingCardPaymentAfterWork => 'نقد — کام کے بعد';
+
+  @override
+  String get bookingCardPaymentPending => 'ادائیگی باقی ہے';
+
+  @override
+  String get bookingCardNothingPaid => 'کچھ ادا نہیں کیا';
+
+  @override
+  String bookingCardPartialPayment(String received, String remaining) {
+    return '$received ادا · $remaining باقی';
+  }
+
+  @override
+  String get bookingCardNoPaymentTaken => 'کوئی ادائیگی نہیں لی گئی';
+
+  @override
+  String get bookingCardStatusOnTheWay => 'راستے میں';
+
+  @override
+  String get bookingCardStatusWaitingQuote => 'قیمت کا انتظار';
+
+  @override
+  String get bookingCardRomanActiveFilter => 'کام جاری';
+
+  @override
+  String get bookingCardRomanAssigned => 'استاد مقرر ہو گیا';
+
+  @override
+  String get bookingCardRomanWorkInProgress => 'کام جاری ہے';
+
+  @override
+  String get bookingCardRomanRejected => 'بکنگ مسترد';
 
   @override
   String get filterTitle => 'بکنگز فلٹر کریں';
@@ -5848,7 +5912,30 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
       'Aap ki bookings load nahi ho sakin. Dobara koshish karein.';
 
   @override
-  String get myBookingsTitle => 'Meri Bookings';
+  String get myBookingsTitle => 'Bookings';
+
+  @override
+  String get myBookingsSubtitle => 'Sab booking aik jagah';
+
+  @override
+  String get myBookingsEmptyActiveTitle => 'Koi kaam chal nahi raha';
+
+  @override
+  String get myBookingsEmptyCompletedTitle => 'Abhi koi kaam complete nahi hua';
+
+  @override
+  String get myBookingsEmptyCancelledTitle => 'Koi cancel booking nahi';
+
+  @override
+  String get myBookingsEmptyActiveHelper =>
+      'Naya kaam book karein to yahan live status milega.';
+
+  @override
+  String get myBookingsEmptyHistoryHelper =>
+      'Jab bhi kaam karwayenge, poora record yahan rahega.';
+
+  @override
+  String get myBookingsEmptyCta => 'Naya kaam book karein';
 
   @override
   String get myBookingsEmptyTitle => 'Abhi koi booking nahi';
@@ -5896,6 +5983,47 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get cardEdit => 'Edit';
+
+  @override
+  String get bookingCardLaneBidding => 'Bidding';
+
+  @override
+  String get bookingCardDetails => 'Details →';
+
+  @override
+  String get bookingCardPaymentAfterWork => 'Cash — kaam ke baad';
+
+  @override
+  String get bookingCardPaymentPending => 'Payment baqi';
+
+  @override
+  String get bookingCardNothingPaid => 'Kuch nahi diya';
+
+  @override
+  String bookingCardPartialPayment(String received, String remaining) {
+    return '$received diya · $remaining baqi';
+  }
+
+  @override
+  String get bookingCardNoPaymentTaken => 'Kuch nahi liya gaya';
+
+  @override
+  String get bookingCardStatusOnTheWay => 'Raaste mein';
+
+  @override
+  String get bookingCardStatusWaitingQuote => 'Quote ka intezar';
+
+  @override
+  String get bookingCardRomanActiveFilter => 'Chal raha';
+
+  @override
+  String get bookingCardRomanAssigned => 'Assign hua';
+
+  @override
+  String get bookingCardRomanWorkInProgress => 'Kaam chal raha';
+
+  @override
+  String get bookingCardRomanRejected => 'Reject hua';
 
   @override
   String get filterTitle => 'Bookings filter karein';

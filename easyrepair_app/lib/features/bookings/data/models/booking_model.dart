@@ -37,30 +37,31 @@ class BookingAttachmentModel {
       sizeBytes: (json['sizeBytes'] as num?)?.toInt(),
       durationSeconds: (json['durationSeconds'] as num?)?.toDouble(),
       thumbnailUrl: json['thumbnailUrl'] as String?,
-      createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ?? DateTime.now(),
+      createdAt:
+          DateTime.tryParse(json['createdAt'] as String? ?? '') ??
+          DateTime.now(),
     );
   }
 
   BookingAttachmentEntity toEntity() => BookingAttachmentEntity(
-        id: id,
-        type: AttachmentTypeX.fromRaw(type),
-        url: _resolveUrl(url),
-        storageKey: storageKey,
-        fileName: fileName,
-        mimeType: mimeType,
-        sizeBytes: sizeBytes,
-        durationSeconds: durationSeconds,
-        thumbnailUrl: thumbnailUrl,
-        createdAt: createdAt,
-      );
+    id: id,
+    type: AttachmentTypeX.fromRaw(type),
+    url: _resolveUrl(url),
+    storageKey: storageKey,
+    fileName: fileName,
+    mimeType: mimeType,
+    sizeBytes: sizeBytes,
+    durationSeconds: durationSeconds,
+    thumbnailUrl: thumbnailUrl,
+    createdAt: createdAt,
+  );
 
   /// Returns the URL as-is when it's already absolute.
   /// For relative paths (e.g. /uploads/...) prepends the backend origin so
   /// the audio player, image network, and video player all receive a full URL.
   static String _resolveUrl(String raw) {
     if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
-    final base =
-        AppConfig.apiBaseUrl.replaceAll(RegExp(r'/api/v\d+/?$'), '');
+    final base = AppConfig.apiBaseUrl.replaceAll(RegExp(r'/api/v\d+/?$'), '');
     return raw.startsWith('/') ? '$base$raw' : '$base/$raw';
   }
 }
@@ -90,7 +91,8 @@ class BookingStandardServiceItemModel {
     );
   }
 
-  BookingStandardServiceItemEntity toEntity() => BookingStandardServiceItemEntity(
+  BookingStandardServiceItemEntity toEntity() =>
+      BookingStandardServiceItemEntity(
         id: id,
         standardServiceId: standardServiceId,
         nameSnapshot: nameSnapshot,
@@ -118,16 +120,17 @@ class BookingWorkerExclusionModel {
       workerName: json['workerName'] as String?,
       reason: json['reason'] as String?,
       createdAt:
-          DateTime.tryParse(json['createdAt'] as String? ?? '') ?? DateTime.now(),
+          DateTime.tryParse(json['createdAt'] as String? ?? '') ??
+          DateTime.now(),
     );
   }
 
   BookingWorkerExclusionEntity toEntity() => BookingWorkerExclusionEntity(
-        workerProfileId: workerProfileId,
-        workerName: workerName,
-        reason: reason,
-        createdAt: createdAt,
-      );
+    workerProfileId: workerProfileId,
+    workerName: workerName,
+    reason: reason,
+    createdAt: createdAt,
+  );
 }
 
 class BookingReviewModel {
@@ -148,16 +151,18 @@ class BookingReviewModel {
       id: json['id'] as String,
       rating: json['rating'] as int,
       comment: json['comment'] as String?,
-      createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ?? DateTime.now(),
+      createdAt:
+          DateTime.tryParse(json['createdAt'] as String? ?? '') ??
+          DateTime.now(),
     );
   }
 
   BookingReviewEntity toEntity() => BookingReviewEntity(
-        id: id,
-        rating: rating,
-        comment: comment,
-        createdAt: createdAt,
-      );
+    id: id,
+    rating: rating,
+    comment: comment,
+    createdAt: createdAt,
+  );
 }
 
 class AssignedWorkerModel {
@@ -195,15 +200,15 @@ class AssignedWorkerModel {
   }
 
   AssignedWorkerEntity toEntity() => AssignedWorkerEntity(
-        id: id,
-        firstName: firstName,
-        lastName: lastName,
-        rating: rating,
-        avatarUrl: avatarUrl,
-        currentLat: currentLat,
-        currentLng: currentLng,
-        phone: phone,
-      );
+    id: id,
+    firstName: firstName,
+    lastName: lastName,
+    rating: rating,
+    avatarUrl: avatarUrl,
+    currentLat: currentLat,
+    currentLng: currentLng,
+    phone: phone,
+  );
 }
 
 /// Maps the raw API response to [BookingEntity].
@@ -231,6 +236,7 @@ class BookingModel {
   final String city;
   final double latitude;
   final double longitude;
+
   /// Whether the API actually sent coordinates for this booking.
   ///
   /// Captured from the RAW JSON before any defaulting, because the backend
@@ -272,9 +278,15 @@ class BookingModel {
   final bool isInspectionOnlyForCaller;
   final String? sourceInspectionBookingId;
   final String? linkedRepairBookingId;
+
   /// See BookingEntity.attachedInspectionBookingId — informational only.
   final String? attachedInspectionBookingId;
   final bool? inspectionFeePaid;
+  final String paymentDisplayStatus;
+  final double? receivedAmount;
+  final double? expectedAmount;
+  final double? remainingAmount;
+
   /// My Jobs → Applied/Bids only — this worker's OWN bid outcome on the job,
   /// which is independent of the booking's status (a REJECTED bid on an
   /// ACCEPTED booking means someone else was hired). Null on every other
@@ -338,6 +350,10 @@ class BookingModel {
     this.linkedRepairBookingId,
     this.attachedInspectionBookingId,
     this.inspectionFeePaid,
+    this.paymentDisplayStatus = 'UNPAID',
+    this.receivedAmount,
+    this.expectedAmount,
+    this.remainingAmount,
     this.myBidStatus,
     this.myBidAmount,
   });
@@ -365,7 +381,8 @@ class BookingModel {
       scheduledDate: json['scheduledDate'] != null
           ? DateTime.tryParse(json['scheduledDate'] as String)
           : null,
-      createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ??
+      createdAt:
+          DateTime.tryParse(json['createdAt'] as String? ?? '') ??
           DateTime.now(),
       acceptedAt: json['acceptedAt'] != null
           ? DateTime.tryParse(json['acceptedAt'] as String)
@@ -402,19 +419,27 @@ class BookingModel {
       relistedAt: json['relistedAt'] != null
           ? DateTime.tryParse(json['relistedAt'] as String)
           : null,
-      assignedWorker:
-          workerJson != null ? AssignedWorkerModel.fromJson(workerJson) : null,
+      assignedWorker: workerJson != null
+          ? AssignedWorkerModel.fromJson(workerJson)
+          : null,
       inspectingWorker: inspectingWorkerJson != null
           ? AssignedWorkerModel.fromJson(inspectingWorkerJson)
           : null,
       availableWorkersCount: json['availableWorkersCount'] as int?,
       acceptedBidAmount: (json['acceptedBidAmount'] as num?)?.toDouble(),
       attachments: attachmentsJson
-          .map((e) => BookingAttachmentModel.fromJson(e as Map<String, dynamic>))
+          .map(
+            (e) => BookingAttachmentModel.fromJson(e as Map<String, dynamic>),
+          )
           .toList(),
-      review: reviewJson != null ? BookingReviewModel.fromJson(reviewJson) : null,
+      review: reviewJson != null
+          ? BookingReviewModel.fromJson(reviewJson)
+          : null,
       statusHistory: historyJson
-          .map((e) => BookingStatusHistoryModel.fromJson(e as Map<String, dynamic>))
+          .map(
+            (e) =>
+                BookingStatusHistoryModel.fromJson(e as Map<String, dynamic>),
+          )
           .toList(),
       clientName: json['clientName'] as String?,
       clientPhone: json['clientPhone'] as String?,
@@ -426,14 +451,19 @@ class BookingModel {
       standardServicePriceSnapshot:
           (json['standardServicePriceSnapshot'] as num?)?.toDouble(),
       standardServiceItems: standardServiceItemsJson
-          .map((e) => BookingStandardServiceItemModel.fromJson(
-              e as Map<String, dynamic>))
+          .map(
+            (e) => BookingStandardServiceItemModel.fromJson(
+              e as Map<String, dynamic>,
+            ),
+          )
           .toList(),
-      inspectionFeeSnapshot:
-          (json['inspectionFeeSnapshot'] as num?)?.toDouble(),
+      inspectionFeeSnapshot: (json['inspectionFeeSnapshot'] as num?)
+          ?.toDouble(),
       workerExclusions: workerExclusionsJson
-          .map((e) =>
-              BookingWorkerExclusionModel.fromJson(e as Map<String, dynamic>))
+          .map(
+            (e) =>
+                BookingWorkerExclusionModel.fromJson(e as Map<String, dynamic>),
+          )
           .toList(),
       lastWorkerCancellationReason:
           json['lastWorkerCancellationReason'] as String?,
@@ -452,6 +482,10 @@ class BookingModel {
       attachedInspectionBookingId:
           json['attachedInspectionBookingId'] as String?,
       inspectionFeePaid: json['inspectionFeePaid'] as bool?,
+      paymentDisplayStatus: json['paymentDisplayStatus'] as String? ?? 'UNPAID',
+      receivedAmount: (json['receivedAmount'] as num?)?.toDouble(),
+      expectedAmount: (json['expectedAmount'] as num?)?.toDouble(),
+      remainingAmount: (json['remainingAmount'] as num?)?.toDouble(),
       myBidStatus: json['myBidStatus'] as String?,
       myBidAmount: (json['myBidAmount'] as num?)?.toDouble(),
     );
@@ -522,21 +556,27 @@ class BookingModel {
       standardServiceId: standardServiceId,
       standardServiceNameSnapshot: standardServiceNameSnapshot,
       standardServicePriceSnapshot: standardServicePriceSnapshot,
-      standardServiceItems:
-          standardServiceItems.map((i) => i.toEntity()).toList(),
+      standardServiceItems: standardServiceItems
+          .map((i) => i.toEntity())
+          .toList(),
       inspectionFeeSnapshot: inspectionFeeSnapshot,
       workerExclusions: workerExclusions.map((e) => e.toEntity()).toList(),
       lastWorkerCancellationReason: lastWorkerCancellationReason,
       lastWorkerCancellationWorkerName: lastWorkerCancellationWorkerName,
       inspectionReportSubmitted: inspectionReportSubmitted,
-      inspectionDecisionStatus:
-          InspectionDecisionStatusX.fromRaw(inspectionDecisionStatus),
+      inspectionDecisionStatus: InspectionDecisionStatusX.fromRaw(
+        inspectionDecisionStatus,
+      ),
       inspectionReportSubmittedAt: inspectionReportSubmittedAt,
       isInspectionOnlyForCaller: isInspectionOnlyForCaller,
       sourceInspectionBookingId: sourceInspectionBookingId,
       linkedRepairBookingId: linkedRepairBookingId,
       attachedInspectionBookingId: attachedInspectionBookingId,
       inspectionFeePaid: inspectionFeePaid,
+      paymentDisplayStatus: PaymentDisplayStatusX.fromRaw(paymentDisplayStatus),
+      receivedAmount: receivedAmount,
+      expectedAmount: expectedAmount,
+      remainingAmount: remainingAmount,
       myBidStatus: BidOutcomeX.fromRaw(myBidStatus),
       myBidAmount: myBidAmount,
     );
@@ -564,14 +604,15 @@ class BookingStatusHistoryModel {
       status: json['status'] as String? ?? 'PENDING',
       note: json['note'] as String?,
       createdAt:
-          DateTime.tryParse(json['createdAt'] as String? ?? '') ?? DateTime.now(),
+          DateTime.tryParse(json['createdAt'] as String? ?? '') ??
+          DateTime.now(),
     );
   }
 
   BookingStatusHistoryEntry toEntity() => BookingStatusHistoryEntry(
-        id: id,
-        status: BookingStatusX.fromRaw(status),
-        note: note,
-        createdAt: createdAt,
-      );
+    id: id,
+    status: BookingStatusX.fromRaw(status),
+    note: note,
+    createdAt: createdAt,
+  );
 }
