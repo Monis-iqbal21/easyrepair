@@ -1,3 +1,5 @@
+import 'package:intl/intl.dart';
+
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/entities/booking_entity.dart';
 
@@ -13,6 +15,54 @@ String timeSlotLabel(AppLocalizations l10n, TimeSlot slot) => switch (slot) {
   TimeSlot.evening => l10n.slotEvening,
   TimeSlot.night => l10n.slotNight,
 };
+
+/// Client-facing lane name. Shared by the Bookings card and Booking Detail so
+/// a booking is never called "Bidding" on one screen and something else on
+/// the other.
+String bookingLaneLabel(AppLocalizations l10n, BookingLane lane) =>
+    switch (lane) {
+      BookingLane.standard => l10n.workerLevelStandard,
+      BookingLane.inspection => l10n.postJobLaneInspectionTitle,
+      BookingLane.bidding => l10n.bookingCardLaneBidding,
+    };
+
+/// THE schedule sentence for a booking — one rule, two verbosities.
+///
+/// URGENT bookings are described by their arrival window and never by a date;
+/// NORMAL bookings by their date plus time slot. Booking Detail shows the full
+/// weekday-and-year form, the Bookings card a compact one, but both take the
+/// same branch for the same booking, so they can never tell different stories
+/// about when the Ustaad is coming.
+///
+/// Returns null only when a NORMAL booking has no date at all — callers show
+/// their own "not scheduled yet" wording.
+String? bookingScheduleLabel(
+  AppLocalizations l10n,
+  BookingEntity booking, {
+  bool compact = false,
+}) {
+  if (booking.urgency == BookingUrgency.urgent) {
+    final window = booking.urgentWindow;
+    return window == null
+        ? l10n.postJobUrgent
+        : urgentWindowLabel(l10n, window);
+  }
+
+  final date = booking.scheduledDate;
+  if (date == null) return null;
+
+  final now = DateTime.now();
+  final isToday =
+      date.year == now.year && date.month == now.month && date.day == now.day;
+  final datePart = compact
+      ? (isToday ? l10n.commonToday : DateFormat('d MMM').format(date))
+      : DateFormat('EEE, d MMM yyyy').format(date);
+
+  // Same separator the Bookings card has always used, so the compact form is
+  // byte-identical to what that card rendered before this helper existed.
+  final slot = booking.timeSlot;
+  return slot == null ? datePart : '$datePart · ${timeSlotLabel(l10n, slot)}';
+}
 
 String urgentWindowLabel(AppLocalizations l10n, UrgentWindow window) =>
     switch (window) {

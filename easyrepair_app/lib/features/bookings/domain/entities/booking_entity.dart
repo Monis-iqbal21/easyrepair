@@ -406,6 +406,60 @@ extension BookingInspectionLifecycleX on BookingEntity {
   // finished.
 }
 
+/// Client-facing action eligibility — the single source of truth shared by
+/// the Bookings tab cards and the Booking Detail page, so the two surfaces
+/// can never offer (or withhold) an action differently for the same booking.
+///
+/// Every rule here mirrors a backend guard exactly. Nothing in this extension
+/// may depend on transient UI/session state: an action the client is entitled
+/// to must survive closing and reopening the app.
+extension BookingClientActionsX on BookingEntity {
+  /// The job is finished as far as the client is concerned. Deliberately
+  /// reads [BookingStatusX.tab], which already folds AWAITING_CONFIRMATION
+  /// and SETTLED into the completed family — settlement bookkeeping is not a
+  /// live lifecycle step.
+  bool get isClientTerminal =>
+      status.tab == BookingTab.completed || status.tab == BookingTab.cancelled;
+
+  /// Live tracking is offered only while an Ustaad is hired AND the job is
+  /// still running. AWAITING_CONFIRMATION/SETTLED are terminal, so they never
+  /// qualify — there is nobody left to track.
+  bool get canClientTrackWorker => assignedWorker != null && !isClientTerminal;
+
+  /// Mirrors BookingsService.submitReview: COMPLETED, no review yet, and an
+  /// Ustaad to review. Never gated on a cash confirmation held in memory —
+  /// the backend does not require one, so neither may the UI.
+  bool get canClientReview =>
+      status == BookingStatus.completed &&
+      review == null &&
+      assignedWorker != null;
+
+  /// Mirrors ComplaintsService.createForBooking: COMPLETED only. Whether a
+  /// complaint already exists is answered by the complaint lookup, not here.
+  bool get canClientReportProblem => status == BookingStatus.completed;
+
+  /// A settlement exists on the server for this booking. `receivedAmount` is
+  /// null exactly when `derivePaymentDisplay` saw no settlement row, so this
+  /// distinguishes "nothing recorded yet" from a recorded zero-cash payment.
+  bool get hasSettlementRecord => receivedAmount != null;
+
+  /// The client still owes a cash confirmation: the job is done and no
+  /// settlement has been recorded by anyone yet. Mirrors
+  /// AdminOperationsService.confirmClientCashPayment, which requires
+  /// COMPLETED and returns the existing settlement when one is already there.
+  bool get canClientConfirmCash =>
+      status == BookingStatus.completed && !hasSettlementRecord;
+
+  /// This booking IS the original inspection whose report the client may
+  /// still act on. A linked repair booking or a booking with a historical
+  /// report merely *attached* renders the same report READ-ONLY: acting from
+  /// there would mutate a different booking's inspection.
+  bool get ownsLiveInspectionReport =>
+      lane == BookingLane.inspection &&
+      sourceInspectionBookingId == null &&
+      attachedInspectionBookingId == null;
+}
+
 extension BookingStatusX on BookingStatus {
   // Display labels deliberately live in the presentation layer
   // (bookings/presentation/utils/status_labels.dart) — they depend on the

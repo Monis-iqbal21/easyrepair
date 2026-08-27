@@ -4065,19 +4065,87 @@ class AppLocalizationsUr extends AppLocalizations {
       'سپورٹ ٹیم کو اطلاع دے دی گئی ہے۔';
 
   @override
-  String get reportStatusPending => 'Pending';
+  String get reportStatusPending => 'زیرِ التوا';
 
   @override
-  String get reportStatusInReview => 'Review mein';
+  String get reportStatusInReview => 'زیرِ جائزہ';
 
   @override
-  String get reportStatusResolved => 'Resolved';
+  String get reportStatusResolved => 'حل شدہ';
 
   @override
   String get reportAlreadyExists => 'اس بکنگ کے لیے رپورٹ پہلے سے موجود ہے۔';
 
   @override
   String get reportBackToBooking => 'بکنگ پر واپس';
+
+  @override
+  String get bookingSchedule => 'شیڈول';
+
+  @override
+  String get bookingPrice => 'قیمت';
+
+  @override
+  String get bookingPaymentTitle => 'ادائیگی';
+
+  @override
+  String get bookingPaymentUnpaid => 'ادائیگی باقی';
+
+  @override
+  String get bookingPaymentPartial => 'کچھ ادا شدہ';
+
+  @override
+  String get bookingStatusSectionLabel => 'بکنگ';
+
+  @override
+  String get bookingHireNewUstaad => 'نیا استاد منتخب کریں';
+
+  @override
+  String get bookingJobClosedTitle => 'کام مکمل ہو گیا';
+
+  @override
+  String get bookingJobClosedBody =>
+      'یہ کام بند ہو چکا ہے۔ آپ اب بھی استاد کو ریویو دے سکتے ہیں یا مسئلہ رپورٹ کر سکتے ہیں۔';
+
+  @override
+  String get bookingReportLabel => 'رپورٹ';
+
+  @override
+  String get bookingPaymentReceived => 'وصول شدہ رقم';
+
+  @override
+  String get bookingPaymentRemaining => 'باقی';
+
+  @override
+  String get bookingPaymentExpected => 'متوقع رقم';
+
+  @override
+  String get timelineStepWorkConfirmed => 'کام کنفرم ہو گیا';
+
+  @override
+  String get timelineStepInspectionConfirmed => 'انسپیکشن کنفرم ہو گئی';
+
+  @override
+  String get timelineStepUstaadHired => 'استاد ہائر ہو گیا';
+
+  @override
+  String get timelineStepWorkStarted => 'کام شروع';
+
+  @override
+  String get timelineStepInspectionStarted => 'انسپیکشن شروع';
+
+  @override
+  String get timelineStepWorkCompleted => 'کام مکمل';
+
+  @override
+  String get timelineStepInspectionCompleted => 'انسپیکشن مکمل';
+
+  @override
+  String get timelineWaitingForUstaadTitle => 'استاد کا انتظار';
+
+  @override
+  String get timelineWaitingForUstaadBody =>
+      'جیسے ہی آپ اس کام کے لیے استاد ہائر کریں گے، کام شروع ہو جائے گا۔';
 
   @override
   String get ustaadIdentityTitle => 'شناختی تفصیلات';
@@ -8214,6 +8282,74 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get reportBackToBooking => 'Booking par wapas';
+
+  @override
+  String get bookingSchedule => 'Schedule';
+
+  @override
+  String get bookingPrice => 'Qeemat';
+
+  @override
+  String get bookingPaymentTitle => 'Payment';
+
+  @override
+  String get bookingPaymentUnpaid => 'Payment baqi';
+
+  @override
+  String get bookingPaymentPartial => 'Thora diya';
+
+  @override
+  String get bookingStatusSectionLabel => 'Booking';
+
+  @override
+  String get bookingHireNewUstaad => 'Naya Ustaad hire karein';
+
+  @override
+  String get bookingJobClosedTitle => 'Kaam mukammal ho gaya';
+
+  @override
+  String get bookingJobClosedBody =>
+      'Ye kaam band ho chuka hai. Aap ab bhi Ustaad ko review de sakte hain ya masla report kar sakte hain.';
+
+  @override
+  String get bookingReportLabel => 'Report';
+
+  @override
+  String get bookingPaymentReceived => 'Cash mila';
+
+  @override
+  String get bookingPaymentRemaining => 'Baqi';
+
+  @override
+  String get bookingPaymentExpected => 'Expected';
+
+  @override
+  String get timelineStepWorkConfirmed => 'Kaam confirm hua';
+
+  @override
+  String get timelineStepInspectionConfirmed => 'Inspection confirm hui';
+
+  @override
+  String get timelineStepUstaadHired => 'Ustaad hire hua';
+
+  @override
+  String get timelineStepWorkStarted => 'Kaam shuru';
+
+  @override
+  String get timelineStepInspectionStarted => 'Inspection shuru';
+
+  @override
+  String get timelineStepWorkCompleted => 'Kaam complete';
+
+  @override
+  String get timelineStepInspectionCompleted => 'Inspection complete';
+
+  @override
+  String get timelineWaitingForUstaadTitle => 'Ustaad ka intezaar';
+
+  @override
+  String get timelineWaitingForUstaadBody =>
+      'Jaise hi aap is kaam ke liye Ustaad hire karenge, kaam shuru ho jayega.';
 
   @override
   String get ustaadIdentityTitle => 'Shanakhti tafseelat';

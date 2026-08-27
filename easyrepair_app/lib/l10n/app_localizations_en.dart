@@ -4158,6 +4158,74 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportBackToBooking => 'Back to booking';
 
   @override
+  String get bookingSchedule => 'Schedule';
+
+  @override
+  String get bookingPrice => 'Price';
+
+  @override
+  String get bookingPaymentTitle => 'Payment';
+
+  @override
+  String get bookingPaymentUnpaid => 'Unpaid';
+
+  @override
+  String get bookingPaymentPartial => 'Partial';
+
+  @override
+  String get bookingStatusSectionLabel => 'Booking';
+
+  @override
+  String get bookingHireNewUstaad => 'Hire New Ustaad';
+
+  @override
+  String get bookingJobClosedTitle => 'Job completed';
+
+  @override
+  String get bookingJobClosedBody =>
+      'This job is closed. You can still review your Ustaad or report a problem.';
+
+  @override
+  String get bookingReportLabel => 'Report';
+
+  @override
+  String get bookingPaymentReceived => 'Cash received';
+
+  @override
+  String get bookingPaymentRemaining => 'Remaining';
+
+  @override
+  String get bookingPaymentExpected => 'Expected';
+
+  @override
+  String get timelineStepWorkConfirmed => 'Work confirmed';
+
+  @override
+  String get timelineStepInspectionConfirmed => 'Inspection confirmed';
+
+  @override
+  String get timelineStepUstaadHired => 'Ustaad hired';
+
+  @override
+  String get timelineStepWorkStarted => 'Work started';
+
+  @override
+  String get timelineStepInspectionStarted => 'Inspection started';
+
+  @override
+  String get timelineStepWorkCompleted => 'Work completed';
+
+  @override
+  String get timelineStepInspectionCompleted => 'Inspection completed';
+
+  @override
+  String get timelineWaitingForUstaadTitle => 'Waiting for an Ustaad';
+
+  @override
+  String get timelineWaitingForUstaadBody =>
+      'Work starts once you hire an Ustaad for this job.';
+
+  @override
   String get ustaadIdentityTitle => 'Identity details';
 
   @override

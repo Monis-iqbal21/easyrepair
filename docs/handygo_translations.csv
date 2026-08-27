@@ -1089,3 +1089,25 @@ ustaadResetSuccessTitle,Ustaad authentication,Password changed,پاس ورڈ ت�
 ustaadResetSuccessBody,Ustaad authentication,You can now login with your new password.,اب اپنے نئے پاس ورڈ سے لاگ ان کریں۔,Ab apne naye password se Login karein.,Ustaad password-reset success body
 ustaadGoToLoginButton,Ustaad authentication,Go to Login,لاگ ان پر جائیں,Login par jayein,Returns to the login screen after a successful password reset
 ustaadNewPasswordLabel,Ustaad authentication,New Password,نیا پاس ورڈ,New Password,"Ustaad password-reset new-password field label. The Roman Urdu deliberately keeps the English words, unlike the settings screen."
+bookingSchedule,Client / Booking Detail summary,Schedule,شیڈول,Schedule,"One combined schedule line (date + time slot, or the urgent window)"
+bookingPrice,Client / Booking Detail summary,Price,قیمت,Qeemat,Neutral price label used when a bidding job has no accepted bid yet
+bookingPaymentTitle,Client / Booking Detail payment,Payment,ادائیگی,Payment,Payment section heading and the payment-status caption
+bookingPaymentUnpaid,Client / Booking Detail payment,Unpaid,ادائیگی باقی,Payment baqi,Server settlement state: nothing received yet
+bookingPaymentPartial,Client / Booking Detail payment,Partial,کچھ ادا شدہ,Thora diya,"Server settlement state: some cash received, some still due"
+bookingStatusSectionLabel,Client / Booking Detail payment,Booking,بکنگ,Booking,"Caption above the booking lifecycle status, shown beside the payment status"
+bookingHireNewUstaad,Client / Booking Detail,Hire New Ustaad,نیا استاد منتخب کریں,Naya Ustaad hire karein,CTA after the assigned Ustaad cancelled; that Ustaad is excluded server-side
+bookingJobClosedTitle,Client / Booking Detail,Job completed,کام مکمل ہو گیا,Kaam mukammal ho gaya,Banner shown as soon as the booking status is COMPLETED
+bookingJobClosedBody,Client / Booking Detail,This job is closed. You can still review your Ustaad or report a problem.,یہ کام بند ہو چکا ہے۔ آپ اب بھی استاد کو ریویو دے سکتے ہیں یا مسئلہ رپورٹ کر سکتے ہیں۔,Ye kaam band ho chuka hai. Aap ab bhi Ustaad ko review de sakte hain ya masla report kar sakte hain.,Explains that review and report remain available after the job closes
+bookingReportLabel,Client / Booking Detail,Report,رپورٹ,Report,"Prefix of the compact report banner, e.g. 'Report - Pending'"
+bookingPaymentReceived,Client / Booking Detail payment,Cash received,وصول شدہ رقم,Cash mila,Amount the server recorded as actually received
+bookingPaymentRemaining,Client / Booking Detail payment,Remaining,باقی,Baqi,Amount still outstanding on a partial settlement
+bookingPaymentExpected,Client / Booking Detail payment,Expected,متوقع رقم,Expected,Amount the settlement expected for the job
+timelineStepWorkConfirmed,Client / Booking Detail timeline,Work confirmed,کام کنفرم ہو گیا,Kaam confirm hua,STANDARD step 1 - the hired Ustaad confirmed the job
+timelineStepInspectionConfirmed,Client / Booking Detail timeline,Inspection confirmed,انسپیکشن کنفرم ہو گئی,Inspection confirm hui,INSPECTION step 1 - the inspection was confirmed
+timelineStepUstaadHired,Client / Booking Detail timeline,Ustaad hired,استاد ہائر ہو گیا,Ustaad hire hua,BIDDING step 1 - a bid was accepted and an Ustaad hired
+timelineStepWorkStarted,Client / Booking Detail timeline,Work started,کام شروع,Kaam shuru,STANDARD and BIDDING step 4 - work is under way
+timelineStepInspectionStarted,Client / Booking Detail timeline,Inspection started,انسپیکشن شروع,Inspection shuru,INSPECTION step 4 - the inspection is under way
+timelineStepWorkCompleted,Client / Booking Detail timeline,Work completed,کام مکمل,Kaam complete,STANDARD and BIDDING step 5 - the work is finished
+timelineStepInspectionCompleted,Client / Booking Detail timeline,Inspection completed,انسپیکشن مکمل,Inspection complete,INSPECTION step 5 - the inspection is finished
+timelineWaitingForUstaadTitle,Client / Booking Detail timeline,Waiting for an Ustaad,استاد کا انتظار,Ustaad ka intezaar,Shown instead of steps for a BIDDING job with nobody hired yet
+timelineWaitingForUstaadBody,Client / Booking Detail timeline,Work starts once you hire an Ustaad for this job.,جیسے ہی آپ اس کام کے لیے استاد ہائر کریں گے، کام شروع ہو جائے گا۔,"Jaise hi aap is kaam ke liye Ustaad hire karenge, kaam shuru ho jayega.",Explains that the timeline starts once an Ustaad is hired

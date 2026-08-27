@@ -275,9 +275,15 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/client/booking/:id/inspection-report',
+        // `?readOnly=1` opens a report the client may look at but not act on:
+        // one ATTACHED to a bidding job as context, or the source report of a
+        // linked repair booking. Accepting or closing from there would mutate
+        // a DIFFERENT booking's inspection, so the caller states read-only
+        // explicitly rather than relying on the report's decisionStatus.
         builder: (_, state) => InspectionReportPage(
           bookingId: state.pathParameters['id']!,
-          showDecisionButtons: true,
+          showDecisionButtons:
+              state.uri.queryParameters['readOnly'] != '1',
         ),
       ),
       GoRoute(

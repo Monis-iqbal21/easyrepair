@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 import '../../../../core/l10n/l10n_extensions.dart';
 import '../../../../core/theme/app_semantic_colors.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../domain/entities/booking_entity.dart';
 import '../utils/booking_labels.dart';
+import '../utils/booking_payment_presentation.dart';
 import 'status_badge.dart';
 
 /// One shared Client Bookings card shell for STANDARD, INSPECTION and BIDDING.
@@ -150,48 +150,21 @@ class BookingCard extends StatelessWidget {
     return booking.serviceCategory;
   }
 
+  /// Lane + schedule, both from the shared helpers Booking Detail also reads
+  /// ([bookingLaneLabel] / [bookingScheduleLabel]) — only the verbosity
+  /// differs, never the rule.
   String _laneAndSchedule(BuildContext context) {
-    final parts = <String>[_laneLabel(context)];
-    final scheduledDate = booking.scheduledDate;
-    if (scheduledDate != null) {
-      final now = DateTime.now();
-      final isToday =
-          scheduledDate.year == now.year &&
-          scheduledDate.month == now.month &&
-          scheduledDate.day == now.day;
-      parts.add(
-        isToday
-            ? context.l10n.commonToday
-            : DateFormat('d MMM').format(scheduledDate),
-      );
-    }
-    if (booking.urgency == BookingUrgency.urgent) {
-      parts.add(
-        booking.urgentWindow == null
-            ? context.l10n.filterUrgentOption.replaceFirst('⚡ ', '')
-            : urgentWindowLabel(context.l10n, booking.urgentWindow!),
-      );
-    } else if (booking.timeSlot != null) {
-      parts.add(timeSlotLabel(context.l10n, booking.timeSlot!));
-    }
+    final parts = <String>[bookingLaneLabel(context.l10n, booking.lane)];
+    final schedule = bookingScheduleLabel(
+      context.l10n,
+      booking,
+      compact: true,
+    );
+    if (schedule != null) parts.add(schedule);
     return parts.join(' · ');
   }
 
-  String _laneLabel(BuildContext context) => switch (booking.lane) {
-    BookingLane.standard => context.l10n.workerLevelStandard,
-    BookingLane.inspection => context.l10n.postJobLaneInspectionTitle,
-    BookingLane.bidding => context.l10n.bookingCardLaneBidding,
-  };
-
-  bool get _showPaymentRow {
-    final isPaymentFreeTerminal =
-        booking.status == BookingStatus.cancelled ||
-        booking.status == BookingStatus.rejected ||
-        booking.status == BookingStatus.expired;
-    return !isPaymentFreeTerminal ||
-        booking.receivedAmount != null ||
-        booking.expectedAmount != null;
-  }
+  bool get _showPaymentRow => shouldShowBookingPayment(booking);
 
   bool get _hasQuickActions {
     final canCancel = booking.canClientCancel;
@@ -208,11 +181,9 @@ class BookingCard extends StatelessWidget {
       booking.status != BookingStatus.cancelled &&
       booking.status != BookingStatus.rejected;
 
-  bool get _canTrackWorker =>
-      booking.assignedWorker != null &&
-      booking.status != BookingStatus.completed &&
-      booking.status != BookingStatus.cancelled &&
-      booking.status != BookingStatus.rejected;
+  /// Shared with Booking Detail — AWAITING_CONFIRMATION and SETTLED are
+  /// terminal, so neither surface offers tracking for them.
+  bool get _canTrackWorker => booking.canClientTrackWorker;
 
   bool get _hasActions =>
       _hasQuickActions ||
@@ -288,14 +259,17 @@ class _PaymentRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (icon, label, foreground) = _content(context);
+    // The wording, icon and emphasis all come from the one shared rule that
+    // Booking Detail also renders — see bookingPaymentPresentation().
+    final payment = bookingPaymentPresentation(context.l10n, booking);
+    final foreground = payment.color(context.semanticColors);
     return Row(
       children: [
-        Icon(icon, size: 15, color: foreground),
+        Icon(payment.icon, size: 15, color: foreground),
         const SizedBox(width: 6),
         Expanded(
           child: Text(
-            label,
+            payment.label,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
@@ -311,54 +285,6 @@ class _PaymentRow extends StatelessWidget {
         ),
       ],
     );
-  }
-
-  (IconData, String, Color) _content(BuildContext context) {
-    final colors = context.semanticColors;
-    switch (booking.paymentDisplayStatus) {
-      case PaymentDisplayStatus.paid:
-        return (
-          Icons.check_circle_rounded,
-          '✓ ${context.l10n.earningStatusPaid}',
-          colors.success,
-        );
-      case PaymentDisplayStatus.partial:
-        final received = booking.receivedAmount;
-        final remaining = booking.remainingAmount;
-        final label = received != null && remaining != null
-            ? context.l10n.bookingCardPartialPayment(
-                formatPkr(received),
-                formatPkr(remaining),
-              )
-            : context.l10n.bookingCardPaymentPending;
-        return (Icons.payments_outlined, label, colors.warning);
-      case PaymentDisplayStatus.unpaid:
-        final isCancelled =
-            booking.status == BookingStatus.cancelled ||
-            booking.status == BookingStatus.rejected ||
-            booking.status == BookingStatus.expired;
-        if (isCancelled && booking.receivedAmount == 0) {
-          return (
-            Icons.money_off_rounded,
-            context.l10n.bookingCardNoPaymentTaken,
-            colors.textSecondary,
-          );
-        }
-        if (booking.status != BookingStatus.completed) {
-          return (
-            Icons.payments_outlined,
-            context.l10n.bookingCardPaymentAfterWork,
-            colors.textSecondary,
-          );
-        }
-        return (
-          Icons.schedule_rounded,
-          booking.receivedAmount == 0
-              ? context.l10n.bookingCardNothingPaid
-              : context.l10n.bookingCardPaymentPending,
-          colors.warning,
-        );
-    }
   }
 }
 

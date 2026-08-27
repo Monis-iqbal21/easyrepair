@@ -10,6 +10,13 @@ import '../../domain/entities/complaint_entity.dart';
 import '../providers/complaint_providers.dart';
 import '../utils/complaint_labels.dart';
 
+/// Whether the "Report a problem" CREATE action may be offered.
+///
+/// Mirrors `ComplaintsService.createForBooking`, which accepts COMPLETED
+/// bookings only — so the button never appears for a status the API would
+/// reject. The complaint lookup must have resolved, and resolved to nothing:
+/// while it is still in flight the state is unknown and the button must not
+/// flash for a booking that already has a report.
 bool shouldShowReportCreateAction({
   required BookingStatus bookingStatus,
   required bool isClient,
@@ -23,6 +30,96 @@ bool shouldShowReportCreateAction({
       complaintState.valueOrNull == null;
 }
 
+/// Compact "Report · Pending / Under review / Resolved" strip for the TOP of
+/// Booking Detail.
+///
+/// Reads the same [bookingComplaintProvider] as [BookingComplaintSection], so
+/// there is one source of complaint truth on the page: this states it, the
+/// section below details it, and neither can contradict the other. Renders
+/// nothing until a complaint actually exists.
+class BookingComplaintStatusBanner extends ConsumerWidget {
+  const BookingComplaintStatusBanner({
+    super.key,
+    required this.bookingId,
+    required this.isClient,
+    required this.ownsBooking,
+  });
+
+  final String bookingId;
+  final bool isClient;
+  final bool ownsBooking;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (!isClient || !ownsBooking) return const SizedBox.shrink();
+
+    final complaint = ref
+        .watch(bookingComplaintProvider(bookingId))
+        .valueOrNull;
+    if (complaint == null) return const SizedBox.shrink();
+
+    final colors = context.semanticColors;
+    final (foreground, background, icon) = _tone(context, complaint.status);
+
+    return Container(
+      key: const Key('report-status-banner'),
+      width: double.infinity,
+      constraints: const BoxConstraints(minHeight: 44),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: colors.border),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 17, color: foreground),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              '${context.l10n.bookingReportLabel} · '
+              '${complaintStatusLabel(context.l10n, complaint.status)}',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w700,
+                color: foreground,
+                height: 1.3,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  (Color, Color, IconData) _tone(BuildContext context, ComplaintStatus status) {
+    final colors = context.semanticColors;
+    return switch (status) {
+      ComplaintStatus.open => (
+        colors.warning,
+        colors.warningSurface,
+        Icons.schedule_rounded,
+      ),
+      ComplaintStatus.inProgress || ComplaintStatus.waitingOnCustomer => (
+        colors.primary,
+        colors.softTeal,
+        Icons.manage_search_rounded,
+      ),
+      ComplaintStatus.resolved || ComplaintStatus.closed => (
+        colors.success,
+        colors.successSoft,
+        Icons.check_circle_rounded,
+      ),
+    };
+  }
+}
+
+/// The single full complaint surface: either the create CTA, or the submitted
+/// report with its issues, free text, timestamp, reference and support
+/// request. Never both, and never a second create button once a report
+/// exists — duplicate protection stays enforced by the backend too.
 class BookingComplaintSection extends ConsumerStatefulWidget {
   const BookingComplaintSection({
     super.key,
@@ -48,53 +145,66 @@ class _BookingComplaintSectionState
 
   @override
   Widget build(BuildContext context) {
-    if (widget.bookingStatus != BookingStatus.completed ||
-        !widget.isClient ||
-        !widget.ownsBooking) {
+    if (!widget.isClient || !widget.ownsBooking) {
       return const SizedBox.shrink();
     }
 
     final complaintState = ref.watch(
       bookingComplaintProvider(widget.bookingId),
     );
+
+    // An existing report stays visible for the whole completed family — a
+    // booking that moved on to AWAITING_CONFIRMATION/SETTLED must not lose
+    // the report the client already filed.
+    final complaint = complaintState.valueOrNull;
+    if (complaint != null) {
+      return _ExistingComplaintCard(
+        complaint: complaint,
+        requestingHuman: _requestingHuman,
+        onRequestHuman: complaint.humanRequested ? null : _requestHuman,
+      );
+    }
+
+    // No report yet: only a COMPLETED booking can create one.
+    if (widget.bookingStatus != BookingStatus.completed) {
+      return const SizedBox.shrink();
+    }
     if (complaintState.isLoading && !complaintState.hasValue) {
       return const _LookupPlaceholder();
     }
     if (complaintState.hasError && !complaintState.hasValue) {
       return _LookupError(
-        onRetry: () => ref.invalidate(
-          bookingComplaintProvider(widget.bookingId),
-        ),
+        onRetry: () =>
+            ref.invalidate(bookingComplaintProvider(widget.bookingId)),
       );
     }
+    if (!shouldShowReportCreateAction(
+      bookingStatus: widget.bookingStatus,
+      isClient: widget.isClient,
+      ownsBooking: widget.ownsBooking,
+      complaintState: complaintState,
+    )) {
+      return const SizedBox.shrink();
+    }
 
-    final complaint = complaintState.valueOrNull;
-    if (complaint == null) {
-      if (!shouldShowReportCreateAction(
-        bookingStatus: widget.bookingStatus,
-        isClient: widget.isClient,
-        ownsBooking: widget.ownsBooking,
-        complaintState: complaintState,
-      )) {
-        return const SizedBox.shrink();
-      }
-      return SizedBox(
-        width: double.infinity,
-        child: OutlinedButton.icon(
-          key: const Key('report-problem-button'),
-          onPressed: () => context.push(
-            '/client/booking/${widget.bookingId}/report',
+    return SizedBox(
+      width: double.infinity,
+      height: 52,
+      child: OutlinedButton.icon(
+        key: const Key('report-problem-button'),
+        onPressed: () =>
+            context.push('/client/booking/${widget.bookingId}/report'),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: context.semanticColors.primary,
+          side: BorderSide(color: context.semanticColors.border),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
           ),
-          icon: const Icon(Icons.flag_outlined),
-          label: Text(context.l10n.reportProblemAction),
+          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
         ),
-      );
-    }
-
-    return _ExistingComplaintCard(
-      complaint: complaint,
-      requestingHuman: _requestingHuman,
-      onRequestHuman: complaint.humanRequested ? null : _requestHuman,
+        icon: const Icon(Icons.flag_outlined, size: 18),
+        label: Text(context.l10n.reportProblemAction),
+      ),
     );
   }
 
@@ -213,12 +323,14 @@ class _ExistingComplaintCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   context.l10n.reportYourReportTitle,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: colors.textPrimary,
-                        fontWeight: FontWeight.w700,
-                      ),
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: colors.textPrimary,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
+              const SizedBox(width: 8),
               ComplaintStatusChip(status: complaint.status),
             ],
           ),
@@ -238,7 +350,11 @@ class _ExistingComplaintCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       complaintIssueLabel(context.l10n, issue),
-                      style: TextStyle(color: colors.textPrimary),
+                      style: TextStyle(
+                        fontSize: 14,
+                        height: 1.35,
+                        color: colors.textPrimary,
+                      ),
                     ),
                   ),
                 ],
@@ -249,28 +365,28 @@ class _ExistingComplaintCard extends StatelessWidget {
             Text(
               complaint.otherText!,
               key: const Key('report-other-text'),
-              style: TextStyle(color: colors.textSecondary),
+              style: TextStyle(
+                fontSize: 13.5,
+                height: 1.4,
+                color: colors.textSecondary,
+              ),
             ),
           ],
           const SizedBox(height: 12),
           Text(
             '${context.l10n.reportSubmittedAtLabel}: '
             '${DateFormat('d MMM yyyy, h:mm a').format(complaint.createdAt.toLocal())}',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: colors.textSecondary,
-                ),
+            style: TextStyle(fontSize: 12.5, color: colors.textSecondary),
           ),
           Text(
             '${context.l10n.reportReferenceLabel}: ${complaint.id}',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: colors.textSecondary,
-                ),
+            style: TextStyle(fontSize: 12.5, color: colors.textSecondary),
           ),
           const SizedBox(height: 6),
           if (complaint.humanRequested)
             Text(
               context.l10n.reportHumanRequestedConfirmation,
-              style: TextStyle(color: colors.success),
+              style: TextStyle(fontSize: 13.5, color: colors.success),
             )
           else
             TextButton.icon(
@@ -304,20 +420,20 @@ class ComplaintStatusChip extends StatelessWidget {
     final colors = context.semanticColors;
     final (foreground, background, icon) = switch (status) {
       ComplaintStatus.open => (
-          colors.warning,
-          colors.warningSurface,
-          Icons.schedule_rounded,
-        ),
+        colors.warning,
+        colors.warningSurface,
+        Icons.schedule_rounded,
+      ),
       ComplaintStatus.inProgress || ComplaintStatus.waitingOnCustomer => (
-          colors.primary,
-          colors.softTeal,
-          Icons.manage_search_rounded,
-        ),
+        colors.primary,
+        colors.softTeal,
+        Icons.manage_search_rounded,
+      ),
       ComplaintStatus.resolved || ComplaintStatus.closed => (
-          colors.success,
-          colors.successSoft,
-          Icons.check_circle_rounded,
-        ),
+        colors.success,
+        colors.successSoft,
+        Icons.check_circle_rounded,
+      ),
     };
     return Container(
       key: Key('complaint-status-${status.name}'),
@@ -333,10 +449,11 @@ class ComplaintStatusChip extends StatelessWidget {
           const SizedBox(width: 5),
           Text(
             complaintStatusLabel(context.l10n, status),
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: foreground,
-                  fontWeight: FontWeight.w700,
-                ),
+            style: TextStyle(
+              fontSize: 12.5,
+              color: foreground,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ],
       ),

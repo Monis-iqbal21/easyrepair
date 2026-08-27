@@ -7401,6 +7401,138 @@ abstract class AppLocalizations {
   /// **'Back to booking'**
   String get reportBackToBooking;
 
+  /// No description provided for @bookingSchedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule'**
+  String get bookingSchedule;
+
+  /// No description provided for @bookingPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Price'**
+  String get bookingPrice;
+
+  /// No description provided for @bookingPaymentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment'**
+  String get bookingPaymentTitle;
+
+  /// No description provided for @bookingPaymentUnpaid.
+  ///
+  /// In en, this message translates to:
+  /// **'Unpaid'**
+  String get bookingPaymentUnpaid;
+
+  /// No description provided for @bookingPaymentPartial.
+  ///
+  /// In en, this message translates to:
+  /// **'Partial'**
+  String get bookingPaymentPartial;
+
+  /// No description provided for @bookingStatusSectionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking'**
+  String get bookingStatusSectionLabel;
+
+  /// No description provided for @bookingHireNewUstaad.
+  ///
+  /// In en, this message translates to:
+  /// **'Hire New Ustaad'**
+  String get bookingHireNewUstaad;
+
+  /// No description provided for @bookingJobClosedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Job completed'**
+  String get bookingJobClosedTitle;
+
+  /// No description provided for @bookingJobClosedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This job is closed. You can still review your Ustaad or report a problem.'**
+  String get bookingJobClosedBody;
+
+  /// No description provided for @bookingReportLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Report'**
+  String get bookingReportLabel;
+
+  /// No description provided for @bookingPaymentReceived.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash received'**
+  String get bookingPaymentReceived;
+
+  /// No description provided for @bookingPaymentRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'Remaining'**
+  String get bookingPaymentRemaining;
+
+  /// No description provided for @bookingPaymentExpected.
+  ///
+  /// In en, this message translates to:
+  /// **'Expected'**
+  String get bookingPaymentExpected;
+
+  /// No description provided for @timelineStepWorkConfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Work confirmed'**
+  String get timelineStepWorkConfirmed;
+
+  /// No description provided for @timelineStepInspectionConfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Inspection confirmed'**
+  String get timelineStepInspectionConfirmed;
+
+  /// No description provided for @timelineStepUstaadHired.
+  ///
+  /// In en, this message translates to:
+  /// **'Ustaad hired'**
+  String get timelineStepUstaadHired;
+
+  /// No description provided for @timelineStepWorkStarted.
+  ///
+  /// In en, this message translates to:
+  /// **'Work started'**
+  String get timelineStepWorkStarted;
+
+  /// No description provided for @timelineStepInspectionStarted.
+  ///
+  /// In en, this message translates to:
+  /// **'Inspection started'**
+  String get timelineStepInspectionStarted;
+
+  /// No description provided for @timelineStepWorkCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Work completed'**
+  String get timelineStepWorkCompleted;
+
+  /// No description provided for @timelineStepInspectionCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Inspection completed'**
+  String get timelineStepInspectionCompleted;
+
+  /// No description provided for @timelineWaitingForUstaadTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for an Ustaad'**
+  String get timelineWaitingForUstaadTitle;
+
+  /// No description provided for @timelineWaitingForUstaadBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Work starts once you hire an Ustaad for this job.'**
+  String get timelineWaitingForUstaadBody;
+
   /// Ustaad registration step 3 identity section heading
   ///
   /// In en, this message translates to:

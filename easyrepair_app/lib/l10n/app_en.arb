@@ -175,13 +175,20 @@
   "ustaadStepIndicator": "Step {current} / {total}",
   "@ustaadStepIndicator": {
     "description": "Progress line under each Ustaad registration heading",
-    "placeholders": { "current": { "type": "int" }, "total": { "type": "int" } }
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
   },
   "ustaadStep1Heading": "Enter your details",
   "@ustaadStep1Heading": {
     "description": "Ustaad registration step 1 heading"
   },
-  "ustaadFullNameLabel": "Full Name \u00b7 As shown on CNIC",
+  "ustaadFullNameLabel": "Full Name · As shown on CNIC",
   "@ustaadFullNameLabel": {
     "description": "Ustaad registration full-name label"
   },
@@ -209,10 +216,14 @@
   "@ustaadStep2Heading": {
     "description": "Ustaad registration step 2 heading"
   },
-  "ustaadStep2Subtitle": "Code sent to +92 {phone} \u00b7 Step 2 / 4",
+  "ustaadStep2Subtitle": "Code sent to +92 {phone} · Step 2 / 4",
   "@ustaadStep2Subtitle": {
     "description": "Ustaad registration step 2 supporting line",
-    "placeholders": { "phone": { "type": "String" } }
+    "placeholders": {
+      "phone": {
+        "type": "String"
+      }
+    }
   },
   "ustaadVerifyButton": "Verify",
   "@ustaadVerifyButton": {
@@ -250,7 +261,7 @@
   "@ustaadAddressTitle": {
     "description": "Ustaad registration home-address section title"
   },
-  "ustaadAddressSubtitle": "Where you live \u2014 for verification. Customers never see this.",
+  "ustaadAddressSubtitle": "Where you live — for verification. Customers never see this.",
   "@ustaadAddressSubtitle": {
     "description": "Ustaad registration home-address privacy note"
   },
@@ -270,7 +281,7 @@
   "@ustaadHouseLabel": {
     "description": "Ustaad registration address house label"
   },
-  "ustaadLandmarkLabel": "Landmark \u00b7 optional",
+  "ustaadLandmarkLabel": "Landmark · optional",
   "@ustaadLandmarkLabel": {
     "description": "Ustaad registration address landmark label"
   },
@@ -282,7 +293,7 @@
   "@ustaadStep4Heading": {
     "description": "Ustaad registration step 4 heading"
   },
-  "ustaadStep4Subtitle": "Step 4 / 4 \u00b7 customers never see this",
+  "ustaadStep4Subtitle": "Step 4 / 4 · customers never see this",
   "@ustaadStep4Subtitle": {
     "description": "Ustaad registration step 4 supporting line"
   },
@@ -318,7 +329,7 @@
   "@ustaadAgreementsLabel": {
     "description": "Section label above the Ustaad agreement cards"
   },
-  "ustaadReadAction": "Read \u2192",
+  "ustaadReadAction": "Read →",
   "@ustaadReadAction": {
     "description": "Opens the full agreement document"
   },
@@ -349,7 +360,11 @@
   "ustaadForgotOtpBody": "A code was sent to +92 {phone}.",
   "@ustaadForgotOtpBody": {
     "description": "Ustaad password-reset OTP step supporting line",
-    "placeholders": { "phone": { "type": "String" } }
+    "placeholders": {
+      "phone": {
+        "type": "String"
+      }
+    }
   },
   "ustaadForgotNewPasswordHeading": "Create a New Password",
   "@ustaadForgotNewPasswordHeading": {
@@ -383,7 +398,7 @@
   "@ustaadAgreementGeneralSummary": {
     "description": "One-line summary under the Ustaad General Agreement card. The binding text is the backend document itself; this only says what it covers."
   },
-  "ustaadAgreementTradeSummary": "Matched to your trade \u2014 parts, grade and safety rules.",
+  "ustaadAgreementTradeSummary": "Matched to your trade — parts, grade and safety rules.",
   "@ustaadAgreementTradeSummary": {
     "description": "One-line summary under the Trade Specific Agreement card."
   },
@@ -479,8 +494,12 @@
   "@authClientVerifySentTo": {
     "description": "Client registration OTP screen supporting line. count is the OTP length the backend actually issues; phone is the national number, already grouped for reading.",
     "placeholders": {
-      "count": { "type": "int" },
-      "phone": { "type": "String" }
+      "count": {
+        "type": "int"
+      },
+      "phone": {
+        "type": "String"
+      }
     }
   },
   "commonCancel": "Cancel",
@@ -806,7 +825,13 @@
   "clientHomeBookUrgently": "Book Urgently",
   "clientHomeChooseServiceHelp": "Choose a service to get help right away.",
   "clientHomeHello": "Hello, {name}",
-  "@clientHomeHello": {"placeholders": {"name": {"type": "String"}}},
+  "@clientHomeHello": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "clientHomeGuest": "there",
   "clientHomeLocating": "Finding your location…",
   "clientHomeUrgentTitle": "Need help right now?",
@@ -1210,8 +1235,12 @@
   "bookingCardPartialPayment": "{received} paid · {remaining} remaining",
   "@bookingCardPartialPayment": {
     "placeholders": {
-      "received": { "type": "String" },
-      "remaining": { "type": "String" }
+      "received": {
+        "type": "String"
+      },
+      "remaining": {
+        "type": "String"
+      }
     }
   },
   "bookingCardNoPaymentTaken": "No payment taken",
@@ -2298,7 +2327,6 @@
   "@earningStatusPaid": {
     "description": "Commission settled by admin for this job"
   },
-
   "notificationsPermissionOffMessage": "Notifications are off. Allow notifications to receive booking and job updates.",
   "@notificationsPermissionOffMessage": {
     "description": "Shown as a non-blocking recovery row in Profile/Settings when notification permission is denied or permanently denied"
@@ -2307,7 +2335,6 @@
   "@notificationsAllowAction": {
     "description": "Button that (re)requests notification permission from the Profile/Settings recovery row"
   },
-
   "locationPermissionRequiredMessage": "Location permission is required.",
   "@locationPermissionRequiredMessage": {
     "description": "Shown when location permission was denied but can still be requested again"
@@ -2336,7 +2363,6 @@
   "@locationStaleMessage": {
     "description": "Shown when a cached worker location is too old to use for live job/discovery decisions"
   },
-
   "cameraPermissionDeniedMessage": "Allow camera permission to continue.",
   "@cameraPermissionDeniedMessage": {
     "description": "Shown when camera permission is denied or permanently denied"
@@ -2357,7 +2383,6 @@
   "@commonChooseAgain": {
     "description": "Button that reopens the file/photo picker after a failed selection"
   },
-
   "pageNotAvailableTitle": "Page Not Available",
   "@pageNotAvailableTitle": {
     "description": "Title of the global screen shown for an unknown/invalid route"
@@ -2370,7 +2395,6 @@
   "@commonGoHome": {
     "description": "Button that navigates back to the caller's role-appropriate home screen"
   },
-
   "resourceBookingUnavailable": "This booking is no longer available.",
   "@resourceBookingUnavailable": {
     "description": "Shown on the booking detail screen when the booking has been deleted, or is otherwise no longer accessible to this account (404/403 from the API)"
@@ -2456,15 +2480,27 @@
   "savedAddressDeleteTitle": "Delete saved address?",
   "savedAddressDeleteBody": "Delete {name} from your saved addresses?",
   "@savedAddressDeleteBody": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "savedAddressUpdateTitle": "Update {name}?",
   "@savedAddressUpdateTitle": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "savedAddressUpdateBody": "{name} is already saved. Update it with this address?",
   "@savedAddressUpdateBody": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "savedAddressUpdateAction": "Update address",
   "postJobAddressIntro": "First booking? Add the address once — you can save it for next time.",
@@ -2477,7 +2513,11 @@
   "postJobLanePageTitle": "Choose a booking option",
   "postJobLaneStepIndicator": "Step 2 / 4 · {service}",
   "@postJobLaneStepIndicator": {
-    "placeholders": { "service": { "type": "String" } }
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
   },
   "postJobLaneFixedTitle": "Fixed-price services",
   "postJobLaneFixedSubtitle": "Service and price are fixed in advance",
@@ -2488,18 +2528,30 @@
   "postJobFixedPriceStepIndicator": "Step 3 / 4 · {service}",
   "@postJobFixedPriceStepIndicator": {
     "description": "Fixed-price booking page subtitle with the selected service category",
-    "placeholders": { "service": { "type": "String" } }
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
   },
   "postJobLaneInspectionTitle": "Inspection",
   "postJobLaneInspectionSubtitle": "Not sure what the problem is?",
   "postJobLaneInspectionFeeBody": "{fee} inspection fee — paid after inspection, not now.",
   "@postJobLaneInspectionFeeBody": {
-    "placeholders": { "fee": { "type": "String" } }
+    "placeholders": {
+      "fee": {
+        "type": "String"
+      }
+    }
   },
   "postJobLaneInspectionReportBody": "The Ustaad checks the issue and sends the report and final quote in the app.",
   "postJobLaneInspectionWaiverBody": "If you proceed with the repair, the {fee} inspection fee is waived and you only pay the repair price.",
   "@postJobLaneInspectionWaiverBody": {
-    "placeholders": { "fee": { "type": "String" } }
+    "placeholders": {
+      "fee": {
+        "type": "String"
+      }
+    }
   },
   "postJobLaneInspectionAction": "Book inspection →",
   "postJobLaneInspectionCta": "Book inspection",
@@ -2587,6 +2639,28 @@
   "reportStatusResolved": "Resolved",
   "reportAlreadyExists": "A report already exists for this booking.",
   "reportBackToBooking": "Back to booking",
+  "bookingSchedule": "Schedule",
+  "bookingPrice": "Price",
+  "bookingPaymentTitle": "Payment",
+  "bookingPaymentUnpaid": "Unpaid",
+  "bookingPaymentPartial": "Partial",
+  "bookingStatusSectionLabel": "Booking",
+  "bookingHireNewUstaad": "Hire New Ustaad",
+  "bookingJobClosedTitle": "Job completed",
+  "bookingJobClosedBody": "This job is closed. You can still review your Ustaad or report a problem.",
+  "bookingReportLabel": "Report",
+  "bookingPaymentReceived": "Cash received",
+  "bookingPaymentRemaining": "Remaining",
+  "bookingPaymentExpected": "Expected",
+  "timelineStepWorkConfirmed": "Work confirmed",
+  "timelineStepInspectionConfirmed": "Inspection confirmed",
+  "timelineStepUstaadHired": "Ustaad hired",
+  "timelineStepWorkStarted": "Work started",
+  "timelineStepInspectionStarted": "Inspection started",
+  "timelineStepWorkCompleted": "Work completed",
+  "timelineStepInspectionCompleted": "Inspection completed",
+  "timelineWaitingForUstaadTitle": "Waiting for an Ustaad",
+  "timelineWaitingForUstaadBody": "Work starts once you hire an Ustaad for this job.",
   "ustaadIdentityTitle": "Identity details",
   "@ustaadIdentityTitle": {
     "description": "Ustaad registration step 3 identity section heading"
