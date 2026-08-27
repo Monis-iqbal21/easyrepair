@@ -1209,7 +1209,7 @@
   "reportSelectAtLeastOneError": "کم از کم ایک مسئلہ منتخب کریں۔",
   "reportOtherRequiredError": "دوسرے مسئلے کی تفصیل بتائیں۔",
   "reportSubmittedTitle": "رپورٹ جمع ہو گئی",
-  "reportSubmittedBody": "ہینڈی گو ٹیم اس کا جائزہ لے گی۔",
+  "reportSubmittedBody": "HandyGo ٹیم اس کا جائزہ لے گی۔",
   "reportYourReportTitle": "آپ کی رپورٹ",
   "reportSubmittedAtLabel": "جمع کرائی گئی",
   "reportReferenceLabel": "حوالہ",
@@ -1217,9 +1217,9 @@
   "reportActionFailed": "کچھ غلط ہو گیا۔ دوبارہ کوشش کریں۔",
   "reportTalkToSupport": "سپورٹ سے بات کریں",
   "reportHumanRequestedConfirmation": "سپورٹ ٹیم کو اطلاع دے دی گئی ہے۔",
-  "reportStatusPending": "Pending",
-  "reportStatusInReview": "Review mein",
-  "reportStatusResolved": "Resolved",
+  "reportStatusPending": "باقی",
+  "reportStatusInReview": "جائزے میں",
+  "reportStatusResolved": "حل ہو گیا",
   "reportAlreadyExists": "اس بکنگ کے لیے رپورٹ پہلے سے موجود ہے۔",
   "reportBackToBooking": "بکنگ پر واپس"
 }
