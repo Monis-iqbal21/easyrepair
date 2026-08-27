@@ -1,4 +1,4 @@
-{
+﻿{
   "@@locale": "ur",
   "languageSectionTitle": "سیٹنگز",
   "languageRowLabel": "زبان",
@@ -1210,7 +1210,7 @@
   "reportSelectAtLeastOneError": "کم از کم ایک مسئلہ منتخب کریں۔",
   "reportOtherRequiredError": "دوسرے مسئلے کی تفصیل بتائیں۔",
   "reportSubmittedTitle": "رپورٹ جمع ہو گئی",
-  "reportSubmittedBody": "ہینڈی گو ٹیم اس کا جائزہ لے گی۔",
+  "reportSubmittedBody": "HandyGo ٹیم اس کا جائزہ لے گی۔",
   "reportYourReportTitle": "آپ کی رپورٹ",
   "reportSubmittedAtLabel": "جمع کرائی گئی",
   "reportReferenceLabel": "حوالہ",

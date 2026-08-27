@@ -4040,7 +4040,7 @@ class AppLocalizationsUr extends AppLocalizations {
   String get reportSubmittedTitle => 'رپورٹ جمع ہو گئی';
 
   @override
-  String get reportSubmittedBody => 'ہینڈی گو ٹیم اس کا جائزہ لے گی۔';
+  String get reportSubmittedBody => 'HandyGo ٹیم اس کا جائزہ لے گی۔';
 
   @override
   String get reportYourReportTitle => 'آپ کی رپورٹ';
@@ -6567,7 +6567,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get workerCompleteProfileForNewJobs =>
-      'Apni profile complete karain. Approval ke baad aapko naye kaam nazar ayenge.';
+      'Apni profile complete karein. Approval ke baad aapko naye kaam nazar ayenge.';
 
   @override
   String get workerNewJobsLoadFailed => 'Naye kaam load nahi ho sake.';
@@ -6596,7 +6596,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get workerCompleteProfileForJobs =>
-      'Apni profile complete karain. Approval ke baad aap apni jobs manage kar sakenge.';
+      'Apni profile complete karein. Approval ke baad aap apni jobs manage kar sakenge.';
 
   @override
   String get workerJobsLoadFailed =>
@@ -6819,7 +6819,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get inspFormUstaadNotes => 'Ustaad ke notes';
 
   @override
-  String get inspFormSubmitReport => 'Report submit karain';
+  String get inspFormSubmitReport => 'Report submit karein';
 
   @override
   String inspFormIssuePhotos(int max) {
@@ -6883,7 +6883,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get workerCompleteProfileDetails =>
-      'Apni profile ki details complete karain.';
+      'Apni profile ki details complete karein.';
 
   @override
   String get workerCompleteProfileWhy =>
