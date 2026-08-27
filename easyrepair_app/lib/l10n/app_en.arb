@@ -1115,8 +1115,8 @@
     }
   },
   "discoveryInspectionFeeSeparate": "The inspection fee is paid separately.\nThe new Ustaad's offer is charged separately.",
-  "discoveryBidLabourOnlyNote": "This offer covers labour only. Parts and materials will be purchased or charged separately with your approval.",
-  "discoveryBidInspectionBasedNote": "This offer is based on the inspection report and includes labour and the parts or materials required for the reported work.",
+  "discoveryBidLabourOnlyNote": "This bid covers labour only. Parts and materials will be purchased or charged separately with your approval.",
+  "discoveryBidInspectionBasedNote": "This bid is based on the inspection report and includes labour and the parts or materials required for the reported work.",
   "discoveryWorkerHired": "Worker hired successfully",
   "discoveryHireFailed": "Failed to hire worker.",
   "discoveryInspectedThisJob": "INSPECTED THIS JOB",

@@ -3210,13 +3210,13 @@ abstract class AppLocalizations {
   /// No description provided for @discoveryBidLabourOnlyNote.
   ///
   /// In en, this message translates to:
-  /// **'This offer covers labour only. Parts and materials will be purchased or charged separately with your approval.'**
+  /// **'This bid covers labour only. Parts and materials will be purchased or charged separately with your approval.'**
   String get discoveryBidLabourOnlyNote;
 
   /// No description provided for @discoveryBidInspectionBasedNote.
   ///
   /// In en, this message translates to:
-  /// **'This offer is based on the inspection report and includes labour and the parts or materials required for the reported work.'**
+  /// **'This bid is based on the inspection report and includes labour and the parts or materials required for the reported work.'**
   String get discoveryBidInspectionBasedNote;
 
   /// No description provided for @discoveryWorkerHired.

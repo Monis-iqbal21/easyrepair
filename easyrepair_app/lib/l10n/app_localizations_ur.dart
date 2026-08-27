@@ -1705,11 +1705,11 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get discoveryBidLabourOnlyNote =>
-      'یہ آفر صرف مزدوری کے اخراجات کے لیے ہے۔ پرزے اور سامان آپ کی منظوری سے الگ خریدے یا چارج کیے جائیں گے۔';
+      'یہ بولی صرف مزدوری کے اخراجات کے لیے ہے۔ پرزے اور سامان آپ کی منظوری سے الگ خریدے یا چارج کیے جائیں گے۔';
 
   @override
   String get discoveryBidInspectionBasedNote =>
-      'یہ آفر معائنہ رپورٹ کے مطابق ہے اور اس میں مزدوری اور رپورٹ کیے گئے کام کے لیے درکار پرزے یا سامان شامل ہیں۔';
+      'یہ بولی انسپیکشن رپورٹ کے مطابق ہے اور اس میں مزدوری اور رپورٹ کیے گئے کام کے لیے درکار پرزے یا سامان شامل ہیں۔';
 
   @override
   String get discoveryWorkerHired => 'استاد کامیابی سے ہائر ہو گئے';
@@ -5874,11 +5874,11 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get discoveryBidLabourOnlyNote =>
-      'Yeh offer sirf labour charges ke liye hai. Parts aur material aap ki approval se alag khareede ya charge kiye jayenge.';
+      'Yeh bid sirf labour charges ke liye hai. Parts aur material aap ki approval se alag khareede ya charge kiye jayenge.';
 
   @override
   String get discoveryBidInspectionBasedNote =>
-      'Yeh offer Muaina report ke mutabiq hai aur is mein labour aur report ke kaam ke liye zaroori parts ya material shamil hain.';
+      'Yeh bid inspection report ke mutabiq hai aur is mein labour aur report ke kaam ke liye zaroori parts ya material shamil hain.';
 
   @override
   String get discoveryWorkerHired => 'Ustaad kamyabi se hire ho gaye';
@@ -5887,7 +5887,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get discoveryHireFailed => 'Ustaad hire nahi ho sake.';
 
   @override
-  String get discoveryInspectedThisJob => 'IS KAAM KA MUAINA KIYA';
+  String get discoveryInspectedThisJob => 'IS KAAM KI INSPECTION KI';
 
   @override
   String get discoveryTheirQuote => 'un ka quote';
@@ -5897,7 +5897,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
       'Muaina isi Ustaad ne mukammal kiya.';
 
   @override
-  String get discoveryViewInspectionReport => 'Muaina Report Dekhein';
+  String get discoveryViewInspectionReport => 'Inspection Report Dekhein';
 
   @override
   String get discoveryHireAgain => 'Dobara Hire Karein';

@@ -1729,11 +1729,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get discoveryBidLabourOnlyNote =>
-      'This offer covers labour only. Parts and materials will be purchased or charged separately with your approval.';
+      'This bid covers labour only. Parts and materials will be purchased or charged separately with your approval.';
 
   @override
   String get discoveryBidInspectionBasedNote =>
-      'This offer is based on the inspection report and includes labour and the parts or materials required for the reported work.';
+      'This bid is based on the inspection report and includes labour and the parts or materials required for the reported work.';
 
   @override
   String get discoveryWorkerHired => 'Worker hired successfully';

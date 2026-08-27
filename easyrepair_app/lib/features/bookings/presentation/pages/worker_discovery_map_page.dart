@@ -7,7 +7,6 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../../../core/errors/failures.dart';
 import '../../../../core/utils/currency_utils.dart';
-import 'inspection_report_page.dart';
 import 'track_worker_page.dart';
 import '../../../bids/domain/entities/bid_entity.dart';
 import '../../../bids/domain/repositories/bid_repository.dart';
@@ -345,7 +344,8 @@ class _BidsSheet extends ConsumerWidget {
         // Ustaad" flow only) — not a normal competing bid, shown once above
         // the bid list, with the option to re-hire them using their
         // original quote instead of a submitted Bid.
-        if (booking.inspectingWorker != null)
+        if (booking.isOpenForFindOtherUstaadBidding &&
+            booking.inspectingWorker != null)
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -392,7 +392,8 @@ class _BidsSheet extends ConsumerWidget {
                       key: ValueKey(pending[index].bid.id),
                       bidWorker: pending[index],
                       bookingId: booking.id,
-                      isPostInspectionReopen: booking.inspectingWorker != null,
+                      isPostInspectionReopen:
+                          booking.isOpenForFindOtherUstaadBidding,
                     );
                   },
                   childCount: pending.length * 2 - 1,
@@ -868,13 +869,8 @@ class _InspectingWorkerOfferCard extends ConsumerWidget {
           const SizedBox(height: 10),
           // Optional full technical report — never required before deciding.
           GestureDetector(
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => InspectionReportPage(
-                  bookingId: bookingId,
-                  showDecisionButtons: false,
-                ),
-              ),
+            onTap: () => context.push(
+              '/client/booking/$bookingId/inspection-report?readOnly=1',
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
