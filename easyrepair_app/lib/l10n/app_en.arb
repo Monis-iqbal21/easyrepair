@@ -2558,5 +2558,33 @@
         "type": "String"
       }
     }
-  }
+  },
+  "reportProblemTitle": "Report a problem",
+  "reportProblemHelper": "Select the issue you experienced.",
+  "reportProblemAction": "Report a problem",
+  "reportIssueWorkQuality": "Work quality issue",
+  "reportIssuePricePayment": "Price / payment issue",
+  "reportIssueUstaadBehaviour": "Ustaad behaviour",
+  "reportIssueDamage": "Something was damaged",
+  "reportIssuePartMaterial": "Part / material issue",
+  "reportIssueWarrantyRework": "Warranty / rework needed",
+  "reportIssueOther": "Something else",
+  "reportOtherLabel": "Tell us what happened",
+  "reportSubmit": "Submit report",
+  "reportSelectAtLeastOneError": "Select at least one issue.",
+  "reportOtherRequiredError": "Tell us what the other issue is.",
+  "reportSubmittedTitle": "Report submitted",
+  "reportSubmittedBody": "The HandyGo team will review it.",
+  "reportYourReportTitle": "Your report",
+  "reportSubmittedAtLabel": "Submitted",
+  "reportReferenceLabel": "Reference",
+  "reportLookupFailed": "We could not load the report right now.",
+  "reportActionFailed": "Something went wrong. Please try again.",
+  "reportTalkToSupport": "Talk to support",
+  "reportHumanRequestedConfirmation": "The support team has been notified.",
+  "reportStatusPending": "Pending",
+  "reportStatusInReview": "Under review",
+  "reportStatusResolved": "Resolved",
+  "reportAlreadyExists": "A report already exists for this booking.",
+  "reportBackToBooking": "Back to booking"
 }

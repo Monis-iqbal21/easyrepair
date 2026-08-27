@@ -161,6 +161,63 @@ void main() {
     });
   });
 
+  group('complaint notification routing', () {
+    // These are the exact eventKeys the backend emits - see
+    // COMPLAINT_NOTIFICATION_COPY in complaints.service.ts. A complaint
+    // payload always carries bookingId, so it resolves through the booking
+    // rule rather than the explicit-route fallback.
+    for (final eventKey in [
+      'complaint.created',
+      'complaint.status.in_progress',
+      'complaint.status.resolved',
+    ]) {
+      test('$eventKey opens the related Client Booking Detail', () {
+        final route = NotificationNavigator.resolveRoute(
+          {
+            'eventKey': eventKey,
+            'entityType': 'complaint',
+            'entityId': 'complaint-1',
+            'complaintId': 'complaint-1',
+            'bookingId': 'booking-1',
+            'route': '/client/booking/booking-1',
+          },
+          isWorker: false,
+        );
+        expect(route, '/client/booking/booking-1');
+      });
+
+      test('$eventKey never diverts a client to Track Worker', () {
+        final route = NotificationNavigator.resolveRoute(
+          {
+            'eventKey': eventKey,
+            'entityType': 'complaint',
+            'entityId': 'complaint-1',
+            'complaintId': 'complaint-1',
+            'bookingId': 'booking-1',
+          },
+          isWorker: false,
+        );
+        expect(route, isNot(startsWith('/client/track/')));
+        expect(route, '/client/booking/booking-1');
+      });
+    }
+
+    test('a complaint notification never opens report creation', () {
+      final route = NotificationNavigator.resolveRoute(
+        {
+          'eventKey': 'complaint.created',
+          'entityType': 'complaint',
+          'entityId': 'complaint-1',
+          'complaintId': 'complaint-1',
+          'bookingId': 'booking-1',
+          'route': '/client/booking/booking-1',
+        },
+        isWorker: false,
+      );
+      expect(route, isNot(contains('/report')));
+    });
+  });
+
   group('role safety', () {
     test('the SAME payload routes a Worker and a Client to their own namespace, never the other role\'s', () {
       final payload = {'bookingId': 'booking-1', 'eventKey': 'booking.assigned'};

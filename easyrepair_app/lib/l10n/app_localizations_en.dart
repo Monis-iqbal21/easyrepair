@@ -4071,4 +4071,89 @@ class AppLocalizationsEn extends AppLocalizations {
   String aboutVersionValue(String version, String build) {
     return 'Version $version ($build)';
   }
+
+  @override
+  String get reportProblemTitle => 'Report a problem';
+
+  @override
+  String get reportProblemHelper => 'Select the issue you experienced.';
+
+  @override
+  String get reportProblemAction => 'Report a problem';
+
+  @override
+  String get reportIssueWorkQuality => 'Work quality issue';
+
+  @override
+  String get reportIssuePricePayment => 'Price / payment issue';
+
+  @override
+  String get reportIssueUstaadBehaviour => 'Ustaad behaviour';
+
+  @override
+  String get reportIssueDamage => 'Something was damaged';
+
+  @override
+  String get reportIssuePartMaterial => 'Part / material issue';
+
+  @override
+  String get reportIssueWarrantyRework => 'Warranty / rework needed';
+
+  @override
+  String get reportIssueOther => 'Something else';
+
+  @override
+  String get reportOtherLabel => 'Tell us what happened';
+
+  @override
+  String get reportSubmit => 'Submit report';
+
+  @override
+  String get reportSelectAtLeastOneError => 'Select at least one issue.';
+
+  @override
+  String get reportOtherRequiredError => 'Tell us what the other issue is.';
+
+  @override
+  String get reportSubmittedTitle => 'Report submitted';
+
+  @override
+  String get reportSubmittedBody => 'The HandyGo team will review it.';
+
+  @override
+  String get reportYourReportTitle => 'Your report';
+
+  @override
+  String get reportSubmittedAtLabel => 'Submitted';
+
+  @override
+  String get reportReferenceLabel => 'Reference';
+
+  @override
+  String get reportLookupFailed => 'We could not load the report right now.';
+
+  @override
+  String get reportActionFailed => 'Something went wrong. Please try again.';
+
+  @override
+  String get reportTalkToSupport => 'Talk to support';
+
+  @override
+  String get reportHumanRequestedConfirmation =>
+      'The support team has been notified.';
+
+  @override
+  String get reportStatusPending => 'Pending';
+
+  @override
+  String get reportStatusInReview => 'Under review';
+
+  @override
+  String get reportStatusResolved => 'Resolved';
+
+  @override
+  String get reportAlreadyExists => 'A report already exists for this booking.';
+
+  @override
+  String get reportBackToBooking => 'Back to booking';
 }

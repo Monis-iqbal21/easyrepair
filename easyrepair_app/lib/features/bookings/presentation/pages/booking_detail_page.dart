@@ -31,6 +31,8 @@ import '../../../../core/errors/failure_messages.dart';
 import '../../../../core/network/reconnect_refresh.dart';
 import '../../../../core/network/offline_banner.dart';
 import '../../../../core/presentation/widgets/resource_unavailable_view.dart';
+import '../../../auth/presentation/providers/auth_providers.dart';
+import '../../../complaints/presentation/widgets/booking_complaint_section.dart';
 
 /// Statuses during which the client detail page polls GET /bookings/:id
 /// every few seconds to reflect the worker's live progress/location.
@@ -355,6 +357,8 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
     final cashConfirmation = ref
         .watch(cashPaymentConfirmationProvider(booking.id))
         .valueOrNull;
+    final signedInUser = ref.watch(authStateProvider).valueOrNull;
+    final isClient = signedInUser != null && !signedInUser.isWorker;
 
     return CustomScrollView(
       controller: _scrollCtrl,
@@ -634,6 +638,19 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
                 // not inline; this just displays it once submitted).
                 if (isCompleted && booking.review != null) ...[
                   _SubmittedReviewCard(review: booking.review!),
+                  const SizedBox(height: 16),
+                ],
+
+                // The booking endpoint already enforces ownership. Complaint
+                // state remains unresolved while its lookup runs, so the
+                // create action never flashes for an existing report.
+                if (isCompleted && isClient) ...[
+                  BookingComplaintSection(
+                    bookingId: booking.id,
+                    bookingStatus: booking.status,
+                    isClient: isClient,
+                    ownsBooking: true,
+                  ),
                   const SizedBox(height: 16),
                 ],
 

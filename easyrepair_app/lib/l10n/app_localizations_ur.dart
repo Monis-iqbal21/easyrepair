@@ -3993,6 +3993,91 @@ class AppLocalizationsUr extends AppLocalizations {
   String aboutVersionValue(String version, String build) {
     return 'ورژن $version ($build)';
   }
+
+  @override
+  String get reportProblemTitle => 'مسئلہ رپورٹ کریں';
+
+  @override
+  String get reportProblemHelper => 'جو مسئلہ ہوا ہے اسے منتخب کریں۔';
+
+  @override
+  String get reportProblemAction => 'مسئلہ رپورٹ کریں';
+
+  @override
+  String get reportIssueWorkQuality => 'کام کا معیار درست نہیں تھا';
+
+  @override
+  String get reportIssuePricePayment => 'قیمت یا ادائیگی کا مسئلہ';
+
+  @override
+  String get reportIssueUstaadBehaviour => 'استاد کا رویہ';
+
+  @override
+  String get reportIssueDamage => 'کسی چیز کو نقصان پہنچا';
+
+  @override
+  String get reportIssuePartMaterial => 'پرزے یا مواد کا مسئلہ';
+
+  @override
+  String get reportIssueWarrantyRework => 'وارنٹی یا دوبارہ کام درکار ہے';
+
+  @override
+  String get reportIssueOther => 'کچھ اور';
+
+  @override
+  String get reportOtherLabel => 'بتائیں کیا ہوا';
+
+  @override
+  String get reportSubmit => 'رپورٹ جمع کریں';
+
+  @override
+  String get reportSelectAtLeastOneError => 'کم از کم ایک مسئلہ منتخب کریں۔';
+
+  @override
+  String get reportOtherRequiredError => 'دوسرے مسئلے کی تفصیل بتائیں۔';
+
+  @override
+  String get reportSubmittedTitle => 'رپورٹ جمع ہو گئی';
+
+  @override
+  String get reportSubmittedBody => 'ہینڈی گو ٹیم اس کا جائزہ لے گی۔';
+
+  @override
+  String get reportYourReportTitle => 'آپ کی رپورٹ';
+
+  @override
+  String get reportSubmittedAtLabel => 'جمع کرائی گئی';
+
+  @override
+  String get reportReferenceLabel => 'حوالہ';
+
+  @override
+  String get reportLookupFailed => 'رپورٹ ابھی لوڈ نہیں ہو سکی۔';
+
+  @override
+  String get reportActionFailed => 'کچھ غلط ہو گیا۔ دوبارہ کوشش کریں۔';
+
+  @override
+  String get reportTalkToSupport => 'سپورٹ سے بات کریں';
+
+  @override
+  String get reportHumanRequestedConfirmation =>
+      'سپورٹ ٹیم کو اطلاع دے دی گئی ہے۔';
+
+  @override
+  String get reportStatusPending => 'Pending';
+
+  @override
+  String get reportStatusInReview => 'Review mein';
+
+  @override
+  String get reportStatusResolved => 'Resolved';
+
+  @override
+  String get reportAlreadyExists => 'اس بکنگ کے لیے رپورٹ پہلے سے موجود ہے۔';
+
+  @override
+  String get reportBackToBooking => 'بکنگ پر واپس';
 }
 
 /// The translations for Urdu, using the Latin script (`ur_Latn`).
@@ -8036,4 +8121,91 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String aboutVersionValue(String version, String build) {
     return 'Version $version ($build)';
   }
+
+  @override
+  String get reportProblemTitle => 'Masla report karein';
+
+  @override
+  String get reportProblemHelper => 'Jo masla hua hai select karein.';
+
+  @override
+  String get reportProblemAction => 'Masla report karein';
+
+  @override
+  String get reportIssueWorkQuality => 'Kaam theek nahi hua';
+
+  @override
+  String get reportIssuePricePayment => 'Price / payment ka masla';
+
+  @override
+  String get reportIssueUstaadBehaviour => 'Ustaad ka behaviour';
+
+  @override
+  String get reportIssueDamage => 'Damage hua';
+
+  @override
+  String get reportIssuePartMaterial => 'Part / material ka masla';
+
+  @override
+  String get reportIssueWarrantyRework => 'Warranty / dobara kaam chahiye';
+
+  @override
+  String get reportIssueOther => 'Kuch aur';
+
+  @override
+  String get reportOtherLabel => 'Masla bataein';
+
+  @override
+  String get reportSubmit => 'Report submit karein';
+
+  @override
+  String get reportSelectAtLeastOneError =>
+      'Kam az kam aik masla select karein.';
+
+  @override
+  String get reportOtherRequiredError => 'Kuch aur ka masla bataein.';
+
+  @override
+  String get reportSubmittedTitle => 'Report submit ho gaya';
+
+  @override
+  String get reportSubmittedBody => 'HandyGo team isay review karegi.';
+
+  @override
+  String get reportYourReportTitle => 'Aap ka report';
+
+  @override
+  String get reportSubmittedAtLabel => 'Submit hua';
+
+  @override
+  String get reportReferenceLabel => 'Reference';
+
+  @override
+  String get reportLookupFailed => 'Report abhi load nahi ho saka.';
+
+  @override
+  String get reportActionFailed =>
+      'Kuch ghalat ho gaya. Dobara koshish karein.';
+
+  @override
+  String get reportTalkToSupport => 'Support se baat karein';
+
+  @override
+  String get reportHumanRequestedConfirmation =>
+      'Support team ko bata diya gaya hai.';
+
+  @override
+  String get reportStatusPending => 'Pending';
+
+  @override
+  String get reportStatusInReview => 'Review mein';
+
+  @override
+  String get reportStatusResolved => 'Resolved';
+
+  @override
+  String get reportAlreadyExists => 'Is booking ka report pehle se mojood hai.';
+
+  @override
+  String get reportBackToBooking => 'Booking par wapas';
 }

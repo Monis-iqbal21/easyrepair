@@ -29,6 +29,7 @@ import '../../features/client/presentation/pages/client_chat_page.dart';
 import '../../features/client/presentation/pages/client_profile_page.dart';
 import '../../features/client/presentation/widgets/client_root_scaffold.dart';
 import '../../features/bookings/presentation/pages/booking_detail_page.dart';
+import '../../features/complaints/presentation/pages/report_problem_page.dart';
 import '../../features/bookings/presentation/pages/inspection_report_page.dart';
 import '../../features/client/presentation/pages/post_job_page.dart';
 import '../../features/worker/presentation/pages/worker_home_page.dart';
@@ -266,6 +267,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/client/booking/:id',
         builder: (_, state) =>
             BookingDetailPage(bookingId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/client/booking/:id/report',
+        builder: (_, state) =>
+            ReportProblemPage(bookingId: state.pathParameters['id']!),
       ),
       GoRoute(
         path: '/client/booking/:id/inspection-report',

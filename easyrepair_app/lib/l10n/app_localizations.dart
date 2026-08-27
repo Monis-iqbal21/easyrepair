@@ -7232,6 +7232,174 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Version {version} ({build})'**
   String aboutVersionValue(String version, String build);
+
+  /// No description provided for @reportProblemTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Report a problem'**
+  String get reportProblemTitle;
+
+  /// No description provided for @reportProblemHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'Select the issue you experienced.'**
+  String get reportProblemHelper;
+
+  /// No description provided for @reportProblemAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Report a problem'**
+  String get reportProblemAction;
+
+  /// No description provided for @reportIssueWorkQuality.
+  ///
+  /// In en, this message translates to:
+  /// **'Work quality issue'**
+  String get reportIssueWorkQuality;
+
+  /// No description provided for @reportIssuePricePayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Price / payment issue'**
+  String get reportIssuePricePayment;
+
+  /// No description provided for @reportIssueUstaadBehaviour.
+  ///
+  /// In en, this message translates to:
+  /// **'Ustaad behaviour'**
+  String get reportIssueUstaadBehaviour;
+
+  /// No description provided for @reportIssueDamage.
+  ///
+  /// In en, this message translates to:
+  /// **'Something was damaged'**
+  String get reportIssueDamage;
+
+  /// No description provided for @reportIssuePartMaterial.
+  ///
+  /// In en, this message translates to:
+  /// **'Part / material issue'**
+  String get reportIssuePartMaterial;
+
+  /// No description provided for @reportIssueWarrantyRework.
+  ///
+  /// In en, this message translates to:
+  /// **'Warranty / rework needed'**
+  String get reportIssueWarrantyRework;
+
+  /// No description provided for @reportIssueOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Something else'**
+  String get reportIssueOther;
+
+  /// No description provided for @reportOtherLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Tell us what happened'**
+  String get reportOtherLabel;
+
+  /// No description provided for @reportSubmit.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit report'**
+  String get reportSubmit;
+
+  /// No description provided for @reportSelectAtLeastOneError.
+  ///
+  /// In en, this message translates to:
+  /// **'Select at least one issue.'**
+  String get reportSelectAtLeastOneError;
+
+  /// No description provided for @reportOtherRequiredError.
+  ///
+  /// In en, this message translates to:
+  /// **'Tell us what the other issue is.'**
+  String get reportOtherRequiredError;
+
+  /// No description provided for @reportSubmittedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Report submitted'**
+  String get reportSubmittedTitle;
+
+  /// No description provided for @reportSubmittedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The HandyGo team will review it.'**
+  String get reportSubmittedBody;
+
+  /// No description provided for @reportYourReportTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your report'**
+  String get reportYourReportTitle;
+
+  /// No description provided for @reportSubmittedAtLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Submitted'**
+  String get reportSubmittedAtLabel;
+
+  /// No description provided for @reportReferenceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Reference'**
+  String get reportReferenceLabel;
+
+  /// No description provided for @reportLookupFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not load the report right now.'**
+  String get reportLookupFailed;
+
+  /// No description provided for @reportActionFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong. Please try again.'**
+  String get reportActionFailed;
+
+  /// No description provided for @reportTalkToSupport.
+  ///
+  /// In en, this message translates to:
+  /// **'Talk to support'**
+  String get reportTalkToSupport;
+
+  /// No description provided for @reportHumanRequestedConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'The support team has been notified.'**
+  String get reportHumanRequestedConfirmation;
+
+  /// No description provided for @reportStatusPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending'**
+  String get reportStatusPending;
+
+  /// No description provided for @reportStatusInReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Under review'**
+  String get reportStatusInReview;
+
+  /// No description provided for @reportStatusResolved.
+  ///
+  /// In en, this message translates to:
+  /// **'Resolved'**
+  String get reportStatusResolved;
+
+  /// No description provided for @reportAlreadyExists.
+  ///
+  /// In en, this message translates to:
+  /// **'A report already exists for this booking.'**
+  String get reportAlreadyExists;
+
+  /// No description provided for @reportBackToBooking.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to booking'**
+  String get reportBackToBooking;
 }
 
 class _AppLocalizationsDelegate
