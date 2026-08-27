@@ -26,6 +26,11 @@ dependencies:
   # Networking
   dio: ^5.9.0
   pretty_dio_logger: ^1.4.0
+  # MediaType, used for the multipart contentType on chat file and voice
+  # uploads (chat_remote_datasource.dart). It arrives transitively with dio,
+  # but code that imports a package must declare it — otherwise the day dio
+  # drops it, this build breaks for no reason anyone can see.
+  http_parser: ^4.1.2
 
   # Local storage
   flutter_secure_storage: ^9.2.4
