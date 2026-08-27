@@ -14,6 +14,7 @@ export interface CreateNotificationData {
   actorRole?: string;
   route?: string;
   payload?: Record<string, unknown>;
+  complaintEventId?: string;
 }
 
 @Injectable()
@@ -33,6 +34,7 @@ export class NotificationsRepository {
         actorUserId: data.actorUserId,
         actorRole: data.actorRole,
         route: data.route,
+        complaintEventId: data.complaintEventId,
         payload: data.payload
           ? (data.payload as Prisma.InputJsonValue)
           : undefined,

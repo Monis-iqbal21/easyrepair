@@ -1,5 +1,5 @@
 import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
-import { Notification } from '@prisma/client';
+import { Notification, Prisma } from '@prisma/client';
 import { FirebaseService } from '../../firebase/firebase.service';
 import { ChatGateway } from '../chat/chat.gateway';
 import {
@@ -19,6 +19,8 @@ export interface NotifyOptions {
   entityType?: string;
   entityId?: string;
   payload?: Record<string, unknown>;
+  /** Unique lifecycle event that caused this notification. */
+  complaintEventId?: string;
   /**
    * Set to false to suppress the in-app top-banner for this event (push +
    * DB persistence still happen). Defaults to true — most booking lifecycle
@@ -55,6 +57,7 @@ export class NotificationsService {
       entityType,
       entityId,
       payload,
+      complaintEventId,
     } = options;
 
     const data: CreateNotificationData = {
@@ -69,6 +72,7 @@ export class NotificationsService {
       actorRole,
       route,
       payload,
+      complaintEventId,
     };
 
     let notificationId: string | undefined;
@@ -76,6 +80,17 @@ export class NotificationsService {
       const saved = await this.notificationsRepository.create(data);
       notificationId = saved.id;
     } catch (err) {
+      if (
+        complaintEventId &&
+        ((err instanceof Prisma.PrismaClientKnownRequestError &&
+          err.code === 'P2002') ||
+          (err as { code?: string } | null)?.code === 'P2002')
+      ) {
+        this.logger.debug(
+          `Complaint notification already persisted for eventId=${complaintEventId}`,
+        );
+        return;
+      }
       this.logger.warn(
         `Failed to persist notification for userId=${userId}: ${err}`,
       );

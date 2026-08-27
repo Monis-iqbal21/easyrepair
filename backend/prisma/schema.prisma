@@ -205,6 +205,50 @@ enum SettlementCaseEventType {
   REOPENED
 }
 
+enum ComplaintIssueType {
+  WORK_QUALITY
+  PRICE_PAYMENT
+  USTAAD_BEHAVIOUR
+  DAMAGE
+  PART_MATERIAL
+  WARRANTY_REWORK
+  OTHER
+}
+
+enum ComplaintSource {
+  APP_CUSTOMER
+  APP_WORKER
+  WEBSITE_BOT
+  WHATSAPP_BOT
+  EMAIL
+  ADMIN
+}
+
+enum ComplaintStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_ON_CUSTOMER
+  RESOLVED
+  CLOSED
+}
+
+enum ComplaintPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum ComplaintEventType {
+  CREATED
+  STATUS_CHANGED
+  ASSIGNED
+  PRIORITY_CHANGED
+  HUMAN_REQUESTED
+  RESOLVED
+  REOPENED
+}
+
 enum ContactChannel {
   PHONE
   SMS
@@ -320,6 +364,9 @@ model User {
   settlementCaseNotes          SettlementCaseNote[]       @relation("SettlementCaseNoteAuthor")
   settlementContactAttempts    SettlementContactAttempt[] @relation("SettlementContactActor")
   commissionCollectionsCreated CommissionCollection[]     @relation("CommissionCollectionCreator")
+  complaintsReported           Complaint[]                @relation("ComplaintReporter")
+  complaintsAssigned           Complaint[]                @relation("ComplaintAssignee")
+  complaintEvents              ComplaintEvent[]           @relation("ComplaintEventActor")
 
   @@map("users")
 }
@@ -565,6 +612,7 @@ model WorkerProfile {
   bookingExclusions     BookingWorkerExclusion[]
   inspectionReports     InspectionReport[]
   agreementAcceptances  AgreementAcceptance[]
+  reportedComplaints    Complaint[]              @relation("ComplaintReportedWorker")
 
   /// Supports the stale-ONLINE cleanup scan (WHERE availabilityStatus =
   /// ONLINE AND lastSeenAt < cutoff) and the matching-time freshness check.
@@ -808,6 +856,7 @@ model Booking {
   inspectionReport     InspectionReport?
   settlements          BookingSettlement[]
   settlementCases      SettlementCase[]
+  complaint            Complaint?
 
   @@index([clientProfileId])
   @@index([workerProfileId])
@@ -928,6 +977,57 @@ model SettlementCaseEvent {
   @@index([caseId, createdAt])
   @@index([actorUserId])
   @@map("settlement_case_events")
+}
+
+/// Central support ticket used by every current and future complaint source.
+/// A booking report is this row itself; there is no intermediate Report model.
+model Complaint {
+  id                      String               @id @default(uuid())
+  /// Nullable for non-booking channels. PostgreSQL unique indexes allow many
+  /// NULL values while enforcing exactly one Complaint per non-null booking.
+  bookingId               String?              @unique
+  booking                 Booking?             @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+  /// Nullable so an unauthenticated bot/email report can be represented later.
+  reporterUserId          String?
+  reporter                User?                @relation("ComplaintReporter", fields: [reporterUserId], references: [id], onDelete: SetNull)
+  reportedWorkerProfileId String?
+  reportedWorker          WorkerProfile?       @relation("ComplaintReportedWorker", fields: [reportedWorkerProfileId], references: [id], onDelete: SetNull)
+  issueTypes              ComplaintIssueType[]
+  otherText               String?
+  source                  ComplaintSource
+  status                  ComplaintStatus      @default(OPEN)
+  priority                ComplaintPriority    @default(NORMAL)
+  assignedToUserId        String?
+  assignedTo              User?                @relation("ComplaintAssignee", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+  humanRequested          Boolean              @default(false)
+  humanRequestedAt        DateTime?            @db.Timestamptz(3)
+  resolvedAt              DateTime?            @db.Timestamptz(3)
+  createdAt               DateTime             @default(now()) @db.Timestamptz(3)
+  updatedAt               DateTime             @updatedAt @db.Timestamptz(3)
+  events                  ComplaintEvent[]
+
+  @@index([status, priority, createdAt])
+  @@index([reporterUserId])
+  @@index([reportedWorkerProfileId])
+  @@index([assignedToUserId])
+  @@map("complaints")
+}
+
+/// Append-only lifecycle audit trail. No update/delete API is exposed.
+model ComplaintEvent {
+  id           String             @id @default(uuid())
+  complaintId  String
+  complaint    Complaint          @relation(fields: [complaintId], references: [id], onDelete: Restrict)
+  type         ComplaintEventType
+  actorUserId  String?
+  actor        User?              @relation("ComplaintEventActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  metadata     Json?
+  createdAt    DateTime           @default(now()) @db.Timestamptz(3)
+  notification Notification?
+
+  @@index([complaintId, createdAt])
+  @@index([actorUserId])
+  @@map("complaint_events")
 }
 
 /// Append-only internal note; edits are intentionally unsupported.
@@ -1205,23 +1305,26 @@ model Message {
 }
 
 model Notification {
-  id          String    @id @default(uuid())
-  userId      String
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title       String
-  body        String
-  data        Json?
-  isRead      Boolean   @default(false)
-  readAt      DateTime?
-  eventKey    String?
-  entityType  String?
-  entityId    String?
-  bookingId   String?
-  actorUserId String?
-  actorRole   String?
-  route       String?
-  payload     Json?
-  createdAt   DateTime  @default(now())
+  id               String          @id @default(uuid())
+  userId           String
+  user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title            String
+  body             String
+  data             Json?
+  isRead           Boolean         @default(false)
+  readAt           DateTime?
+  eventKey         String?
+  entityType       String?
+  entityId         String?
+  bookingId        String?
+  actorUserId      String?
+  actorRole        String?
+  route            String?
+  payload          Json?
+  /// Exactly-once persistence key for Complaint lifecycle notifications.
+  complaintEventId String?         @unique
+  complaintEvent   ComplaintEvent? @relation(fields: [complaintEventId], references: [id], onDelete: SetNull)
+  createdAt        DateTime        @default(now())
 
   @@index([userId])
   @@index([userId, isRead])

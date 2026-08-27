@@ -18,6 +18,7 @@ import { BidsModule } from './modules/bids/bids.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { InspectionReportsModule } from './modules/inspection-reports/inspection-reports.module';
 import { ClientAddressesModule } from './modules/client-addresses/client-addresses.module';
+import { ComplaintsModule } from './modules/complaints/complaints.module';
 import {
   createRedisOptions,
   describeRedisEndpoint,
@@ -66,6 +67,7 @@ const bullRedisLogger = new Logger('BullRedisConfig');
     AdminModule,
     InspectionReportsModule,
     ClientAddressesModule,
+    ComplaintsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

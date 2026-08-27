@@ -35,6 +35,22 @@ describe('NotificationsService', () => {
     expect(firebase.sendPush).not.toHaveBeenCalled();
   });
 
+  it('deduplicates a repeated Complaint event before sending another push/banner', async () => {
+    notificationsRepository.create.mockRejectedValue({ code: 'P2002' });
+
+    await service.notify({
+      userId: 'client-1',
+      eventKey: 'complaint.status.resolved',
+      title: 'Your report has been resolved',
+      body: 'Aap ka report resolve ho gaya',
+      complaintEventId: 'event-resolved-1',
+      bookingId: 'booking-1',
+    });
+
+    expect(firebase.sendPush).not.toHaveBeenCalled();
+    expect(chatGateway.emitAppBanner).not.toHaveBeenCalled();
+  });
+
   describe('invalid-token cleanup', () => {
     it('clears the token when Firebase reports it permanently unregistered', async () => {
       firebase.sendPush.mockRejectedValue({
@@ -85,7 +101,9 @@ describe('NotificationsService', () => {
       });
       await new Promise((resolve) => setImmediate(resolve));
 
-      expect(notificationsRepository.clearFcmTokenByValue).not.toHaveBeenCalled();
+      expect(
+        notificationsRepository.clearFcmTokenByValue,
+      ).not.toHaveBeenCalled();
     });
 
     it('never uses the invalid-token signal to infer Worker availability — it only clears the token', async () => {
