@@ -3,7 +3,6 @@ import 'dart:io';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
@@ -21,6 +20,7 @@ import '../../../../core/network/offline_banner.dart';
 import '../../../../core/permissions/media_permission_helper.dart';
 import '../../../../core/presentation/widgets/resource_unavailable_view.dart';
 import '../../../../core/services/chat_socket_service.dart';
+import '../../../../core/theme/app_semantic_colors.dart';
 import '../../../../features/auth/presentation/providers/auth_providers.dart';
 import '../../../../features/notifications/presentation/providers/notification_providers.dart';
 import '../../domain/entities/chat_entities.dart';
@@ -102,8 +102,9 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
 
   void _markLastSeen() {
     if (!mounted) return;
-    final messages =
-        ref.read(chatMessagesProvider(widget.conversationId)).valueOrNull;
+    final messages = ref
+        .read(chatMessagesProvider(widget.conversationId))
+        .valueOrNull;
     if (messages == null || messages.isEmpty) return;
     final currentUserId = ref.read(authStateProvider).valueOrNull?.id ?? '';
     bool markedAny = false;
@@ -158,7 +159,7 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
   void _showAttachmentSheet() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.transparent,
+      backgroundColor: context.semanticColors.surface.withValues(alpha: 0),
       builder: (_) => _AttachmentSheet(
         onGalleryImage: () {
           Navigator.pop(context);
@@ -179,7 +180,7 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
   void _showCameraSheet() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.transparent,
+      backgroundColor: context.semanticColors.surface.withValues(alpha: 0),
       builder: (_) => _CameraSheet(
         onPhoto: () {
           Navigator.pop(context);
@@ -209,7 +210,8 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
       final mime = file.mimeType ?? _mimeFromPath(file.path);
       await _sendMediaFile(file.path, mime);
     } else {
-      final files = await runPickerWithRecovery(
+      final files =
+          await runPickerWithRecovery(
             context,
             MediaPermissionKind.gallery,
             () => _picker.pickMultiImage(),
@@ -265,7 +267,9 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
           ref
               .read(chatMessagesProvider(widget.conversationId).notifier)
               .append(message);
-          WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+          WidgetsBinding.instance.addPostFrameCallback(
+            (_) => _scrollToBottom(),
+          );
         },
       );
     } finally {
@@ -318,15 +322,15 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
     _amplitudeSub = _recorder!
         .onAmplitudeChanged(const Duration(milliseconds: 100))
         .listen((amp) {
-      if (!mounted) return;
-      final normalized = ((amp.current + 45) / 45).clamp(0.0, 1.0);
-      setState(() {
-        _amplitudeBars.add(normalized);
-        if (_amplitudeBars.length > 100) {
-          _amplitudeBars.removeAt(0);
-        }
-      });
-    });
+          if (!mounted) return;
+          final normalized = ((amp.current + 45) / 45).clamp(0.0, 1.0);
+          setState(() {
+            _amplitudeBars.add(normalized);
+            if (_amplitudeBars.length > 100) {
+              _amplitudeBars.removeAt(0);
+            }
+          });
+        });
   }
 
   Future<void> _togglePauseResumeRecording() async {
@@ -400,7 +404,9 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
           ref
               .read(chatMessagesProvider(widget.conversationId).notifier)
               .append(message);
-          WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+          WidgetsBinding.instance.addPostFrameCallback(
+            (_) => _scrollToBottom(),
+          );
         },
       );
     } finally {
@@ -442,7 +448,9 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
           ref
               .read(chatMessagesProvider(widget.conversationId).notifier)
               .append(message);
-          WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+          WidgetsBinding.instance.addPostFrameCallback(
+            (_) => _scrollToBottom(),
+          );
         },
       );
     } finally {
@@ -467,12 +475,13 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.transparent,
-      builder: (_) => Container(
+      backgroundColor: context.semanticColors.surface.withValues(alpha: 0),
+      builder: (sheetContext) => Container(
         margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: sheetContext.semanticColors.surface,
           borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: sheetContext.semanticColors.border),
         ),
         child: SafeArea(
           child: Column(
@@ -484,16 +493,16 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
                   width: 36,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFE2E8F0),
+                    color: sheetContext.semanticColors.controlBorder,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
               ),
               if (canEdit)
                 ListTile(
-                  leading: const Icon(
+                  leading: Icon(
                     Icons.edit_outlined,
-                    color: Color(0xFF1A1A1A),
+                    color: sheetContext.semanticColors.textPrimary,
                   ),
                   title: Text(context.l10n.chatEditMessage),
                   onTap: () {
@@ -502,13 +511,13 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
                   },
                 ),
               ListTile(
-                leading: const Icon(
+                leading: Icon(
                   Icons.delete_outline_rounded,
-                  color: Color(0xFFEF4444),
+                  color: sheetContext.semanticColors.error,
                 ),
                 title: Text(
                   context.l10n.chatDeleteMessage,
-                  style: TextStyle(color: Color(0xFFEF4444)),
+                  style: TextStyle(color: sheetContext.semanticColors.error),
                 ),
                 onTap: () {
                   Navigator.pop(context);
@@ -528,40 +537,47 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
 
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(context.l10n.chatEditMessage),
-        content: TextField(
-          controller: editController,
-          maxLines: 5,
-          minLines: 1,
-          autofocus: true,
-          decoration: InputDecoration(
-            hintText: context.l10n.chatEditHint,
-            border: OutlineInputBorder(),
+      builder: (dialogContext) {
+        final c = dialogContext.semanticColors;
+        return AlertDialog(
+          backgroundColor: c.surface,
+          title: Text(context.l10n.chatEditMessage),
+          content: TextField(
+            controller: editController,
+            maxLines: 5,
+            minLines: 1,
+            autofocus: true,
+            decoration: InputDecoration(
+              hintText: context.l10n.chatEditHint,
+              border: OutlineInputBorder(),
+            ),
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text(context.l10n.commonCancel,
-                style: TextStyle(color: Color(0xFF6B7280))),
-          ),
-          TextButton(
-            onPressed: () async {
-              final newText = editController.text.trim();
-              if (newText.isEmpty || newText == message.text) {
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(
+                context.l10n.commonCancel,
+                style: TextStyle(color: c.textSecondary),
+              ),
+            ),
+            TextButton(
+              onPressed: () async {
+                final newText = editController.text.trim();
+                if (newText.isEmpty || newText == message.text) {
+                  Navigator.pop(dialogContext);
+                  return;
+                }
                 Navigator.pop(dialogContext);
-                return;
-              }
-              Navigator.pop(dialogContext);
-              await _doEdit(message, newText);
-            },
-            child: Text(context.l10n.commonSave,
-                style: TextStyle(
-                    color: Color(0xFFDB6234), fontWeight: FontWeight.w600)),
-          ),
-        ],
-      ),
+                await _doEdit(message, newText);
+              },
+              child: Text(
+                context.l10n.commonSave,
+                style: TextStyle(color: c.primary, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        );
+      },
     ).then((_) => editController.dispose());
   }
 
@@ -582,24 +598,30 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
   void _confirmDelete(MessageEntity message) {
     showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
-        title: Text(context.l10n.chatDeleteMessage),
-        content:
-            Text(context.l10n.chatDeleteConfirm),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(context.l10n.commonCancel,
-                style: TextStyle(color: Color(0xFF6B7280))),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(context.l10n.commonDelete,
-                style: TextStyle(
-                    color: Color(0xFFEF4444), fontWeight: FontWeight.w600)),
-          ),
-        ],
-      ),
+      builder: (dialogContext) {
+        final c = dialogContext.semanticColors;
+        return AlertDialog(
+          backgroundColor: c.surface,
+          title: Text(context.l10n.chatDeleteMessage),
+          content: Text(context.l10n.chatDeleteConfirm),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(
+                context.l10n.commonCancel,
+                style: TextStyle(color: c.textSecondary),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(
+                context.l10n.commonDelete,
+                style: TextStyle(color: c.error, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        );
+      },
     ).then((confirmed) async {
       if (confirmed != true) return;
       final result = await ref
@@ -641,7 +663,7 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: const Color(0xFFEF4444),
+        backgroundColor: context.semanticColors.error,
       ),
     );
   }
@@ -701,7 +723,7 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
   ) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.transparent,
+      backgroundColor: context.semanticColors.surface.withValues(alpha: 0),
       isScrollControlled: true,
       builder: (_) => _ParticipantTray(participant: participant),
     );
@@ -711,13 +733,14 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    final messagesAsync =
-        ref.watch(chatMessagesProvider(widget.conversationId));
+    final c = context.semanticColors;
+    final messagesAsync = ref.watch(
+      chatMessagesProvider(widget.conversationId),
+    );
     final isShowingCachedData =
         ref.watch(chatMessagesIsOfflineProvider(widget.conversationId)) &&
-            messagesAsync.hasValue;
-    final currentUserId =
-        ref.watch(authStateProvider).valueOrNull?.id ?? '';
+        messagesAsync.hasValue;
+    final currentUserId = ref.watch(authStateProvider).valueOrNull?.id ?? '';
 
     ref.listen(chatMessagesProvider(widget.conversationId), (_, next) {
       if (next.hasValue) {
@@ -760,9 +783,8 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
     // invented here. A normal Client<->Worker conversation shows it only
     // once the other participant's registered phone number is known.
     final participantPhone = participant?.phone;
-    final showCall = !isSupport &&
-        participantPhone != null &&
-        participantPhone.isNotEmpty;
+    final showCall =
+        !isSupport && participantPhone != null && participantPhone.isNotEmpty;
 
     void handleBack() {
       if (canPop) {
@@ -781,209 +803,228 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
         if (!didPop) handleBack();
       },
       child: Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        surfaceTintColor: Colors.transparent,
-        titleSpacing: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded,
-              color: Color(0xFF1A1A1A), size: 20),
-          onPressed: handleBack,
-        ),
-        title: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          // The support account is a system user with no profile, rating or
-          // booking history — there is nothing to show in the tray.
-          onTap: !isSupport &&
-                  participant != null &&
-                  participant.userId.isNotEmpty
-              ? () => _showParticipantTray(context, participant)
-              : null,
-          child: Row(
-            children: [
-              _AppBarAvatar(
-                avatarUrl: participant?.avatarUrl,
-                initials: participant?.initials ?? '?',
-                isSupport: isSupport,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  participant?.fullName.isNotEmpty == true
-                      ? participant!.fullName
-                      : context.l10n.chatTitleFallback,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF1A1A1A),
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+        backgroundColor: c.background,
+        appBar: AppBar(
+          backgroundColor: c.surface,
+          elevation: 0,
+          surfaceTintColor: c.surface.withValues(alpha: 0),
+          titleSpacing: 0,
+          leading: IconButton(
+            icon: Icon(
+              Icons.arrow_back_ios_new_rounded,
+              color: c.textPrimary,
+              size: 20,
+            ),
+            onPressed: handleBack,
+          ),
+          title: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            // The support account is a system user with no profile, rating or
+            // booking history — there is nothing to show in the tray.
+            onTap:
+                !isSupport &&
+                    participant != null &&
+                    participant.userId.isNotEmpty
+                ? () => _showParticipantTray(context, participant)
+                : null,
+            child: Row(
+              children: [
+                _AppBarAvatar(
+                  avatarUrl: participant?.avatarUrl,
+                  initials: participant?.initials ?? '?',
+                  isSupport: isSupport,
                 ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    participant?.fullName.isNotEmpty == true
+                        ? participant!.fullName
+                        : context.l10n.chatTitleFallback,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: c.textPrimary,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            if (showCall)
+              IconButton(
+                icon: Icon(Icons.call_rounded, color: c.primary, size: 22),
+                tooltip: context.l10n.trackCall,
+                onPressed: () => _callParticipant(participantPhone),
               ),
-            ],
+          ],
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(1),
+            child: Divider(height: 1, color: c.border),
           ),
         ),
-        actions: [
-          if (showCall)
-            IconButton(
-              icon: const Icon(Icons.call_rounded,
-                  color: Color(0xFFDB6234), size: 22),
-              tooltip: context.l10n.trackCall,
-              onPressed: () => _callParticipant(participantPhone),
-            ),
-        ],
-        bottom: const PreferredSize(
-          preferredSize: Size.fromHeight(1),
-          child: Divider(height: 1, color: Color(0xFFE2E8F0)),
-        ),
-      ),
-      body: Column(
-        children: [
-          if (isSupport) const _SupportBanner(),
-          if (isShowingCachedData) const OfflineDataBanner(),
-          Expanded(
-            child: messagesAsync.when(
-              loading: () => const Center(
-                child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation(Color(0xFFDB6234)),
-                ),
-              ),
-              error: (err, _) => isResourceUnavailableFailure(err)
-                  ? ResourceUnavailableView(
-                      message: context.l10n.resourceConversationUnavailable,
-                      actionLabel: context.l10n.goToChatsAction,
-                      onAction: () => context.go(
-                        ref.read(authStateProvider).valueOrNull?.isWorker == true
-                            ? '/worker/chat'
-                            : '/client/chat',
-                      ),
-                    )
-                  : Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.error_outline,
-                          size: 48, color: Color(0xFFEF4444)),
-                      const SizedBox(height: 12),
-                      Text(failureMessage(context.l10n, err),
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(color: Color(0xFF6B7280))),
-                      const SizedBox(height: 16),
-                      TextButton(
-                        onPressed: () => ref
-                            .read(chatMessagesProvider(widget.conversationId)
-                                .notifier)
-                            .refresh(),
-                        child: Text(context.l10n.commonRetry,
-                            style: TextStyle(color: Color(0xFFDB6234))),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              data: (messages) {
-                if (messages.isEmpty) {
-                  return Center(
-                    child: Text(
-                      context.l10n.chatNoMessagesYet,
-                      style: TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
-                    ),
-                  );
-                }
-
-                int lastSeenSentIndex = -1;
-                for (int i = messages.length - 1; i >= 0; i--) {
-                  if (messages[i].senderUserId == currentUserId &&
-                      messages[i].seenAt != null) {
-                    lastSeenSentIndex = i;
-                    break;
-                  }
-                }
-
-                return ListView.builder(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 12),
-                  itemCount: messages.length,
-                  itemBuilder: (context, index) {
-                    final message = messages[index];
-                    final isMe = message.senderUserId == currentUserId;
-
-                    final showSeparator = index == 0 ||
-                        _differentDay(
-                          messages[index - 1].createdAt,
-                          message.createdAt,
-                        );
-
-                    return Column(
-                      children: [
-                        if (showSeparator)
-                          _DateSeparator(isoString: message.createdAt),
-                        message.type == ChatMessageType.system
-                            ? _SystemMessageBubble(message: message)
-                            : _MessageBubble(
-                                message: message,
-                                isMe: isMe,
-                                showSeen: isMe && index == lastSeenSentIndex,
-                                onLongPress: (msg) =>
-                                    _showMessageActions(msg, currentUserId),
+        body: Column(
+          children: [
+            if (isSupport) const _SupportBanner(),
+            if (isShowingCachedData) const OfflineDataBanner(),
+            Expanded(
+              child: messagesAsync.when(
+                loading: () =>
+                    Center(child: CircularProgressIndicator(color: c.primary)),
+                error: (err, _) => isResourceUnavailableFailure(err)
+                    ? ResourceUnavailableView(
+                        message: context.l10n.resourceConversationUnavailable,
+                        actionLabel: context.l10n.goToChatsAction,
+                        onAction: () => context.go(
+                          ref.read(authStateProvider).valueOrNull?.isWorker ==
+                                  true
+                              ? '/worker/chat'
+                              : '/client/chat',
+                        ),
+                      )
+                    : Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.error_outline,
+                                size: 48,
+                                color: c.error,
                               ),
-                      ],
+                              const SizedBox(height: 12),
+                              Text(
+                                failureMessage(context.l10n, err),
+                                textAlign: TextAlign.center,
+                                style: TextStyle(color: c.textSecondary),
+                              ),
+                              const SizedBox(height: 16),
+                              TextButton(
+                                onPressed: () => ref
+                                    .read(
+                                      chatMessagesProvider(
+                                        widget.conversationId,
+                                      ).notifier,
+                                    )
+                                    .refresh(),
+                                child: Text(
+                                  context.l10n.commonRetry,
+                                  style: TextStyle(color: c.primary),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                data: (messages) {
+                  if (messages.isEmpty) {
+                    return Center(
+                      child: Text(
+                        context.l10n.chatNoMessagesYet,
+                        style: TextStyle(color: c.textSecondary, fontSize: 14),
+                      ),
                     );
-                  },
-                );
-              },
-            ),
-          ),
-          // Upload loading banner
-          if (_isSendingAttachment)
-            Container(
-              color: Colors.white,
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              child: Row(
-                children: [
-                  SizedBox(
-                    width: 14,
-                    height: 14,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor:
-                          AlwaysStoppedAnimation(Color(0xFFDB6234)),
+                  }
+
+                  int lastSeenSentIndex = -1;
+                  for (int i = messages.length - 1; i >= 0; i--) {
+                    if (messages[i].senderUserId == currentUserId &&
+                        messages[i].seenAt != null) {
+                      lastSeenSentIndex = i;
+                      break;
+                    }
+                  }
+
+                  return ListView.builder(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
                     ),
-                  ),
-                  SizedBox(width: 10),
-                  Text(context.l10n.commonUploading,
-                      style: TextStyle(
-                          fontSize: 13, color: Color(0xFF6B7280))),
-                ],
+                    itemCount: messages.length,
+                    itemBuilder: (context, index) {
+                      final message = messages[index];
+                      final isMe = message.senderUserId == currentUserId;
+
+                      final showSeparator =
+                          index == 0 ||
+                          _differentDay(
+                            messages[index - 1].createdAt,
+                            message.createdAt,
+                          );
+
+                      return Column(
+                        children: [
+                          if (showSeparator)
+                            _DateSeparator(isoString: message.createdAt),
+                          message.type == ChatMessageType.system
+                              ? _SystemMessageBubble(message: message)
+                              : _MessageBubble(
+                                  message: message,
+                                  isMe: isMe,
+                                  showSeen: isMe && index == lastSeenSentIndex,
+                                  onLongPress: (msg) =>
+                                      _showMessageActions(msg, currentUserId),
+                                ),
+                        ],
+                      );
+                    },
+                  );
+                },
               ),
             ),
-          // WhatsApp-style input bar: text field <-> recording bar, mic <-> send.
-          _ChatInputBar(
-            controller: _controller,
-            isSending: _isSending,
-            isAttachmentBusy: _isSendingAttachment,
-            isRecording: _isRecording,
-            isPaused: _isPaused,
-            recordingDuration: _recordingDuration,
-            amplitudeBars: _amplitudeBars,
-            onSendText: _send,
-            onAttachmentTap: _showAttachmentSheet,
-            onCameraTap: _showCameraSheet,
-            onStartRecording: _startVoiceRecording,
-            onCancelRecording: _cancelVoiceRecording,
-            onSendRecording: _stopVoiceRecording,
-            onTogglePauseResume: _togglePauseResumeRecording,
-          ),
-        ],
+            // Upload loading banner
+            if (_isSendingAttachment)
+              Container(
+                decoration: BoxDecoration(
+                  color: c.surface,
+                  border: Border(top: BorderSide(color: c.border)),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 6,
+                ),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: c.primary,
+                      ),
+                    ),
+                    SizedBox(width: 10),
+                    Text(
+                      context.l10n.commonUploading,
+                      style: TextStyle(fontSize: 13, color: c.textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+            // WhatsApp-style input bar: text field <-> recording bar, mic <-> send.
+            _ChatInputBar(
+              controller: _controller,
+              isSending: _isSending,
+              isAttachmentBusy: _isSendingAttachment,
+              isRecording: _isRecording,
+              isPaused: _isPaused,
+              recordingDuration: _recordingDuration,
+              amplitudeBars: _amplitudeBars,
+              onSendText: _send,
+              onAttachmentTap: _showAttachmentSheet,
+              onCameraTap: _showCameraSheet,
+              onStartRecording: _startVoiceRecording,
+              onCancelRecording: _cancelVoiceRecording,
+              onSendRecording: _stopVoiceRecording,
+              onTogglePauseResume: _togglePauseResumeRecording,
+            ),
+          ],
+        ),
       ),
-    ),
     );
   }
 }
@@ -998,11 +1039,13 @@ class _ParticipantTray extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bottomPadding = MediaQuery.of(context).padding.bottom;
+    final c = context.semanticColors;
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: c.surface,
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: c.border),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -1013,7 +1056,7 @@ class _ParticipantTray extends StatelessWidget {
               width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: const Color(0xFFE2E8F0),
+                color: c.controlBorder,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -1028,10 +1071,10 @@ class _ParticipantTray extends StatelessWidget {
                   participant.fullName.isNotEmpty
                       ? participant.fullName
                       : context.l10n.commonUser,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF1A1A1A),
+                    color: c.textPrimary,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -1055,21 +1098,22 @@ class _TrayAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     final url = participant.avatarUrl;
     if (url != null && url.isNotEmpty) {
       return CircleAvatar(
         radius: 42,
         backgroundImage: NetworkImage(url),
-        backgroundColor: const Color(0xFFE2E8F0),
+        backgroundColor: c.surfaceSubtle,
       );
     }
     return CircleAvatar(
       radius: 42,
-      backgroundColor: const Color(0xFFDB6234),
+      backgroundColor: c.primary,
       child: Text(
         participant.initials.isNotEmpty ? participant.initials : '?',
-        style: const TextStyle(
-          color: Colors.white,
+        style: TextStyle(
+          color: c.onPrimary,
           fontWeight: FontWeight.w700,
           fontSize: 28,
         ),
@@ -1084,6 +1128,7 @@ class _RatingRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     final filled = rating.floor();
     final hasHalf = (rating - filled) >= 0.25;
     final empty = 5 - filled - (hasHalf ? 1 : 0);
@@ -1091,24 +1136,20 @@ class _RatingRow extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         for (int i = 0; i < filled; i++)
-          const Icon(Icons.star_rounded, size: 20, color: Color(0xFFF59E0B)),
-        if (hasHalf)
-          const Icon(Icons.star_half_rounded,
-              size: 20, color: Color(0xFFF59E0B)),
+          Icon(Icons.star_rounded, size: 20, color: c.warning),
+        if (hasHalf) Icon(Icons.star_half_rounded, size: 20, color: c.warning),
         for (int i = 0; i < empty; i++)
-          const Icon(Icons.star_outline_rounded,
-              size: 20, color: Color(0xFFD1D5DB)),
+          Icon(Icons.star_outline_rounded, size: 20, color: c.controlBorder),
         const SizedBox(width: 6),
         Text(
           rating.toStringAsFixed(1),
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF1A1A1A),
+            color: c.textPrimary,
           ),
         ),
-        const Text(' / 5',
-            style: TextStyle(fontSize: 13, color: Color(0xFF6B7280))),
+        Text(' / 5', style: TextStyle(fontSize: 13, color: c.textSecondary)),
       ],
     );
   }
@@ -1128,20 +1169,19 @@ class _AppBarAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     if (isSupport) {
-      return CircleAvatar(
-        radius: 18,
-        backgroundColor: Colors.white,
+      return Container(
+        width: 38,
+        height: 38,
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: c.surface,
+          shape: BoxShape.circle,
+          border: Border.all(color: c.border),
+        ),
         child: ClipOval(
-          child: Padding(
-            padding: const EdgeInsets.all(4),
-            child: Image.asset(
-              kSupportAvatarAsset,
-              width: 28,
-              height: 28,
-              fit: BoxFit.contain,
-            ),
-          ),
+          child: Image.asset(kSupportAvatarAsset, fit: BoxFit.contain),
         ),
       );
     }
@@ -1149,16 +1189,16 @@ class _AppBarAvatar extends StatelessWidget {
       return CircleAvatar(
         radius: 18,
         backgroundImage: NetworkImage(avatarUrl!),
-        backgroundColor: const Color(0xFFE2E8F0),
+        backgroundColor: c.surfaceSubtle,
       );
     }
     return CircleAvatar(
       radius: 18,
-      backgroundColor: const Color(0xFFDB6234),
+      backgroundColor: c.primary,
       child: Text(
         initials.isNotEmpty ? initials : '?',
-        style: const TextStyle(
-          color: Colors.white,
+        style: TextStyle(
+          color: c.onPrimary,
           fontWeight: FontWeight.w600,
           fontSize: 13,
         ),
@@ -1179,26 +1219,26 @@ class _SupportBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Container(
       width: double.infinity,
-      color: const Color(0xFFF5E8E0),
+      decoration: BoxDecoration(
+        color: c.softTeal,
+        border: Border(bottom: BorderSide(color: c.border)),
+      ),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            Icons.support_agent_rounded,
-            size: 18,
-            color: Color(0xFFC2541D),
-          ),
+          Icon(Icons.support_agent_rounded, size: 18, color: c.primary),
           SizedBox(width: 10),
           Expanded(
             child: Text(
-context.l10n.chatSupportBanner,
+              context.l10n.chatSupportBanner,
               style: TextStyle(
                 fontSize: 13,
                 height: 1.35,
-                color: Color(0xFF1A1A1A),
+                color: c.textPrimary,
               ),
             ),
           ),
@@ -1216,22 +1256,23 @@ class _DateSeparator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Row(
         children: [
-          const Expanded(child: Divider(color: Color(0xFFE2E8F0))),
+          Expanded(child: Divider(color: c.border)),
           const SizedBox(width: 10),
           Text(
             _formatDate(context, isoString),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
-              color: Color(0xFF94A3B8),
+              color: c.textSecondary,
               fontWeight: FontWeight.w500,
             ),
           ),
           const SizedBox(width: 10),
-          const Expanded(child: Divider(color: Color(0xFFE2E8F0))),
+          Expanded(child: Divider(color: c.border)),
         ],
       ),
     );
@@ -1247,9 +1288,18 @@ class _DateSeparator extends StatelessWidget {
       if (msgDay == today) return l10n.commonToday;
       if (today.difference(msgDay).inDays == 1) return l10n.commonYesterday;
       final months = [
-        l10n.monthJan, l10n.monthFeb, l10n.monthMar, l10n.monthApr,
-        l10n.monthMay, l10n.monthJun, l10n.monthJul, l10n.monthAug,
-        l10n.monthSep, l10n.monthOct, l10n.monthNov, l10n.monthDec,
+        l10n.monthJan,
+        l10n.monthFeb,
+        l10n.monthMar,
+        l10n.monthApr,
+        l10n.monthMay,
+        l10n.monthJun,
+        l10n.monthJul,
+        l10n.monthAug,
+        l10n.monthSep,
+        l10n.monthOct,
+        l10n.monthNov,
+        l10n.monthDec,
       ];
       return l10n.dateDayMonthYear(dt.day, months[dt.month - 1], dt.year);
     } catch (_) {
@@ -1266,17 +1316,19 @@ class _SystemMessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Center(
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 8),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
-          color: const Color(0xFFE2E8F0),
+          color: c.surfaceSubtle,
+          border: Border.all(color: c.border),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Text(
           message.text ?? '',
-          style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
+          style: TextStyle(fontSize: 12, color: c.textSecondary),
         ),
       ),
     );
@@ -1300,10 +1352,12 @@ class _MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     final timeStr = _fmt(message.createdAt);
 
     // Image/video/location content renders its own internal layout without inner padding
-    final isMediaFull = !message.isDeleted &&
+    final isMediaFull =
+        !message.isDeleted &&
         (message.type == ChatMessageType.image ||
             message.type == ChatMessageType.video ||
             message.type == ChatMessageType.location);
@@ -1322,26 +1376,31 @@ class _MessageBubble extends StatelessWidget {
             ? AlignmentDirectional.centerEnd
             : AlignmentDirectional.centerStart,
         child: Column(
-          crossAxisAlignment:
-              isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          crossAxisAlignment: isMe
+              ? CrossAxisAlignment.end
+              : CrossAxisAlignment.start,
           children: [
             Container(
-              margin: EdgeInsets.only(
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.sizeOf(context).width * 0.78,
+              ),
+              margin: EdgeInsetsDirectional.only(
                 top: 4,
                 bottom: showSeen ? 2 : 4,
-                left: isMe ? 64 : 0,
-                right: isMe ? 0 : 64,
+                start: isMe ? 48 : 0,
+                end: isMe ? 0 : 48,
               ),
               decoration: isMediaFull
                   ? null // media widgets provide their own decoration
                   : BoxDecoration(
-                      color: isMe ? const Color(0xFFDB6234) : Colors.white,
+                      color: isMe ? c.primary : c.surface,
                       borderRadius: borderRadius,
+                      border: Border.all(color: isMe ? c.primary : c.border),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.06),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
+                          color: c.scrim.withValues(alpha: 0.08),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
                         ),
                       ],
                     ),
@@ -1351,7 +1410,9 @@ class _MessageBubble extends StatelessWidget {
                       borderRadius: borderRadius,
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 10),
+                          horizontal: 14,
+                          vertical: 10,
+                        ),
                         child: _buildContent(context, timeStr),
                       ),
                     ),
@@ -1361,10 +1422,7 @@ class _MessageBubble extends StatelessWidget {
                 padding: const EdgeInsets.only(bottom: 4, right: 4),
                 child: Text(
                   context.l10n.chatSeen,
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: const Color(0xFF94A3B8).withValues(alpha: 0.85),
-                  ),
+                  style: TextStyle(fontSize: 11, color: c.textSecondary),
                 ),
               ),
           ],
@@ -1412,6 +1470,7 @@ class _DeletedContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
       mainAxisSize: MainAxisSize.min,
@@ -1423,8 +1482,8 @@ class _DeletedContent extends StatelessWidget {
               Icons.block_rounded,
               size: 14,
               color: isMe
-                  ? Colors.white.withValues(alpha: 0.7)
-                  : const Color(0xFF94A3B8),
+                  ? c.onPrimary.withValues(alpha: 0.75)
+                  : c.textSecondary,
             ),
             const SizedBox(width: 4),
             Text(
@@ -1433,8 +1492,8 @@ class _DeletedContent extends StatelessWidget {
                 fontSize: 13,
                 fontStyle: FontStyle.italic,
                 color: isMe
-                    ? Colors.white.withValues(alpha: 0.8)
-                    : const Color(0xFF6B7280),
+                    ? c.onPrimary.withValues(alpha: 0.82)
+                    : c.textSecondary,
               ),
             ),
           ],
@@ -1444,9 +1503,7 @@ class _DeletedContent extends StatelessWidget {
           timeStr,
           style: TextStyle(
             fontSize: 11,
-            color: isMe
-                ? Colors.white.withValues(alpha: 0.6)
-                : const Color(0xFF94A3B8),
+            color: isMe ? c.onPrimary.withValues(alpha: 0.65) : c.textSecondary,
           ),
         ),
       ],
@@ -1458,11 +1515,15 @@ class _TextContent extends StatelessWidget {
   final MessageEntity message;
   final bool isMe;
   final String timeStr;
-  const _TextContent(
-      {required this.message, required this.isMe, required this.timeStr});
+  const _TextContent({
+    required this.message,
+    required this.isMe,
+    required this.timeStr,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
       mainAxisSize: MainAxisSize.min,
@@ -1471,7 +1532,8 @@ class _TextContent extends StatelessWidget {
           message.text ?? '',
           style: TextStyle(
             fontSize: 14,
-            color: isMe ? Colors.white : const Color(0xFF1A1A1A),
+            height: 1.35,
+            color: isMe ? c.onPrimary : c.textPrimary,
           ),
         ),
         const SizedBox(height: 4),
@@ -1485,8 +1547,8 @@ class _TextContent extends StatelessWidget {
                   fontSize: 10,
                   fontStyle: FontStyle.italic,
                   color: isMe
-                      ? Colors.white.withValues(alpha: 0.65)
-                      : const Color(0xFF94A3B8),
+                      ? c.onPrimary.withValues(alpha: 0.68)
+                      : c.textSecondary,
                 ),
               ),
             Text(
@@ -1494,8 +1556,8 @@ class _TextContent extends StatelessWidget {
               style: TextStyle(
                 fontSize: 11,
                 color: isMe
-                    ? Colors.white.withValues(alpha: 0.75)
-                    : const Color(0xFF94A3B8),
+                    ? c.onPrimary.withValues(alpha: 0.75)
+                    : c.textSecondary,
               ),
             ),
           ],
@@ -1509,16 +1571,19 @@ class _ImageContent extends StatelessWidget {
   final MessageEntity message;
   final bool isMe;
   final String timeStr;
-  const _ImageContent(
-      {required this.message, required this.isMe, required this.timeStr});
+  const _ImageContent({
+    required this.message,
+    required this.isMe,
+    required this.timeStr,
+  });
 
   static const double _w = 200;
   static const double _h = 150;
   static const _radius = BorderRadius.all(Radius.circular(14));
-  static const _border = Color(0xFFDB6234);
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return GestureDetector(
       onTap: () => _showFullScreen(context, message.mediaUrl!),
       child: Container(
@@ -1526,10 +1591,7 @@ class _ImageContent extends StatelessWidget {
         height: _h,
         decoration: BoxDecoration(
           borderRadius: _radius,
-          border: Border.all(
-            color: _border.withValues(alpha: 0.35),
-            width: 1,
-          ),
+          border: Border.all(color: c.border, width: 1),
         ),
         child: ClipRRect(
           borderRadius: _radius,
@@ -1544,26 +1606,26 @@ class _ImageContent extends StatelessWidget {
                 loadingBuilder: (_, child, progress) {
                   if (progress == null) return child;
                   return Container(
-                    color: Colors.black12,
+                    color: c.surfaceSubtle,
                     child: Center(
                       child: CircularProgressIndicator(
                         value: progress.expectedTotalBytes != null
                             ? progress.cumulativeBytesLoaded /
-                                progress.expectedTotalBytes!
+                                  progress.expectedTotalBytes!
                             : null,
-                        color: _border,
+                        color: c.primary,
                         strokeWidth: 2,
                       ),
                     ),
                   );
                 },
                 errorBuilder: (context, e, s) => Container(
-                  color: Colors.black12,
-                  child: const Center(
+                  color: c.surfaceSubtle,
+                  child: Center(
                     child: Icon(
                       Icons.broken_image_rounded,
                       size: 36,
-                      color: Color(0xFF94A3B8),
+                      color: c.textSecondary,
                     ),
                   ),
                 ),
@@ -1573,18 +1635,17 @@ class _ImageContent extends StatelessWidget {
                 end: 6,
                 bottom: 4,
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 1,
+                  ),
                   decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.35),
+                    color: c.scrim.withValues(alpha: 0.55),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
                     timeStr,
-                    style: const TextStyle(
-                      fontSize: 10,
-                      color: Colors.white,
-                    ),
+                    style: TextStyle(fontSize: 10, color: c.onScrim),
                   ),
                 ),
               ),
@@ -1596,11 +1657,12 @@ class _ImageContent extends StatelessWidget {
   }
 
   void _showFullScreen(BuildContext context, String url) {
+    final c = context.semanticColors;
     showDialog(
       context: context,
-      barrierColor: Colors.black87,
+      barrierColor: c.scrim.withValues(alpha: 0.9),
       builder: (_) => Dialog(
-        backgroundColor: Colors.transparent,
+        backgroundColor: c.scrim.withValues(alpha: 0),
         insetPadding: EdgeInsets.zero,
         child: GestureDetector(
           onTap: () => Navigator.pop(context),
@@ -1617,16 +1679,19 @@ class _VideoContent extends StatelessWidget {
   final MessageEntity message;
   final bool isMe;
   final String timeStr;
-  const _VideoContent(
-      {required this.message, required this.isMe, required this.timeStr});
+  const _VideoContent({
+    required this.message,
+    required this.isMe,
+    required this.timeStr,
+  });
 
   static const double _w = 200;
   static const double _h = 150;
   static const _radius = BorderRadius.all(Radius.circular(14));
-  static const _border = Color(0xFFDB6234);
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     final thumb = message.thumbnailUrl;
     return GestureDetector(
       onTap: () => _openPlayer(context),
@@ -1635,10 +1700,7 @@ class _VideoContent extends StatelessWidget {
         height: _h,
         decoration: BoxDecoration(
           borderRadius: _radius,
-          border: Border.all(
-            color: _border.withValues(alpha: 0.35),
-            width: 1,
-          ),
+          border: Border.all(color: c.border, width: 1),
         ),
         child: ClipRRect(
           borderRadius: _radius,
@@ -1652,23 +1714,22 @@ class _VideoContent extends StatelessWidget {
                   width: _w,
                   height: _h,
                   fit: BoxFit.cover,
-                  errorBuilder: (context, e, s) =>
-                      const ColoredBox(color: Colors.black87),
+                  errorBuilder: (context, e, s) => ColoredBox(color: c.scrim),
                 )
               else
-                const ColoredBox(color: Colors.black87),
+                ColoredBox(color: c.scrim),
               // Centered play button
               Center(
                 child: Container(
                   width: 46,
                   height: 46,
                   decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.45),
+                    color: c.scrim.withValues(alpha: 0.55),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.play_arrow_rounded,
-                    color: Colors.white,
+                    color: c.onScrim,
                     size: 28,
                   ),
                 ),
@@ -1678,18 +1739,17 @@ class _VideoContent extends StatelessWidget {
                 end: 6,
                 bottom: 4,
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 1,
+                  ),
                   decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.35),
+                    color: c.scrim.withValues(alpha: 0.55),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
                     timeStr,
-                    style: const TextStyle(
-                      fontSize: 10,
-                      color: Colors.white,
-                    ),
+                    style: TextStyle(fontSize: 10, color: c.onScrim),
                   ),
                 ),
               ),
@@ -1705,7 +1765,7 @@ class _VideoContent extends StatelessWidget {
     if (url == null || url.isEmpty) return;
     showDialog(
       context: context,
-      barrierColor: Colors.black,
+      barrierColor: context.semanticColors.scrim,
       builder: (_) => _VideoPlayerDialog(url: url),
     );
   }
@@ -1747,8 +1807,9 @@ class _VideoPlayerDialogState extends State<_VideoPlayerDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Dialog(
-      backgroundColor: Colors.black,
+      backgroundColor: c.scrim,
       insetPadding: EdgeInsets.zero,
       child: SizedBox(
         width: double.infinity,
@@ -1759,7 +1820,7 @@ class _VideoPlayerDialogState extends State<_VideoPlayerDialog> {
             Align(
               alignment: AlignmentDirectional.centerEnd,
               child: IconButton(
-                icon: const Icon(Icons.close_rounded, color: Colors.white),
+                icon: Icon(Icons.close_rounded, color: c.onScrim),
                 onPressed: () => Navigator.pop(context),
               ),
             ),
@@ -1769,12 +1830,10 @@ class _VideoPlayerDialogState extends State<_VideoPlayerDialog> {
                     aspectRatio: _controller.value.aspectRatio,
                     child: VideoPlayer(_controller),
                   )
-                : const SizedBox(
+                : SizedBox(
                     height: 200,
                     child: Center(
-                      child: CircularProgressIndicator(
-                        color: Color(0xFFDB6234),
-                      ),
+                      child: CircularProgressIndicator(color: c.primary),
                     ),
                   ),
             const SizedBox(height: 8),
@@ -1785,10 +1844,10 @@ class _VideoPlayerDialogState extends State<_VideoPlayerDialog> {
                 child: VideoProgressIndicator(
                   _controller,
                   allowScrubbing: true,
-                  colors: const VideoProgressColors(
-                    playedColor: Color(0xFFDB6234),
-                    backgroundColor: Colors.white24,
-                    bufferedColor: Colors.white38,
+                  colors: VideoProgressColors(
+                    playedColor: c.primary,
+                    backgroundColor: c.onScrim.withValues(alpha: 0.24),
+                    bufferedColor: c.onScrim.withValues(alpha: 0.38),
                   ),
                 ),
               ),
@@ -1800,7 +1859,7 @@ class _VideoPlayerDialogState extends State<_VideoPlayerDialog> {
                   _controller.value.isPlaying
                       ? Icons.pause_circle_filled_rounded
                       : Icons.play_circle_filled_rounded,
-                  color: Colors.white,
+                  color: c.onScrim,
                   size: 44,
                 ),
                 onPressed: () {
@@ -1880,11 +1939,16 @@ class _VoiceContentState extends State<_VoiceContent> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     final isPlaying = _playerState == PlayerState.playing;
     final totalSecs = _total.inSeconds;
     final posSecs = _position.inSeconds;
-    final progress = totalSecs > 0 ? (posSecs / totalSecs).clamp(0.0, 1.0) : 0.0;
-    final durationLabel = _total > Duration.zero ? _fmtDuration(_total) : '--:--';
+    final progress = totalSecs > 0
+        ? (posSecs / totalSecs).clamp(0.0, 1.0)
+        : 0.0;
+    final durationLabel = _total > Duration.zero
+        ? _fmtDuration(_total)
+        : '--:--';
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
@@ -1908,7 +1972,7 @@ class _VoiceContentState extends State<_VoiceContent> {
                     ? Icons.pause_circle_filled_rounded
                     : Icons.play_circle_filled_rounded,
                 size: 36,
-                color: widget.isMe ? Colors.white : const Color(0xFFDB6234),
+                color: widget.isMe ? c.onPrimary : c.primary,
               ),
             ),
             const SizedBox(width: 8),
@@ -1920,10 +1984,10 @@ class _VoiceContentState extends State<_VoiceContent> {
                   LinearProgressIndicator(
                     value: progress,
                     backgroundColor: widget.isMe
-                        ? Colors.white.withValues(alpha: 0.3)
-                        : const Color(0xFFE2E8F0),
+                        ? c.onPrimary.withValues(alpha: 0.3)
+                        : c.surfaceSubtle,
                     valueColor: AlwaysStoppedAnimation(
-                      widget.isMe ? Colors.white : const Color(0xFFDB6234),
+                      widget.isMe ? c.onPrimary : c.primary,
                     ),
                     minHeight: 3,
                     borderRadius: BorderRadius.circular(2),
@@ -1937,8 +2001,8 @@ class _VoiceContentState extends State<_VoiceContent> {
                         style: TextStyle(
                           fontSize: 10,
                           color: widget.isMe
-                              ? Colors.white.withValues(alpha: 0.7)
-                              : const Color(0xFF94A3B8),
+                              ? c.onPrimary.withValues(alpha: 0.72)
+                              : c.textSecondary,
                         ),
                       ),
                       Text(
@@ -1946,8 +2010,8 @@ class _VoiceContentState extends State<_VoiceContent> {
                         style: TextStyle(
                           fontSize: 10,
                           color: widget.isMe
-                              ? Colors.white.withValues(alpha: 0.7)
-                              : const Color(0xFF94A3B8),
+                              ? c.onPrimary.withValues(alpha: 0.72)
+                              : c.textSecondary,
                         ),
                       ),
                     ],
@@ -1966,13 +2030,15 @@ class _LocationContent extends StatelessWidget {
   final MessageEntity message;
   final bool isMe;
   final String timeStr;
-  const _LocationContent(
-      {required this.message, required this.isMe, required this.timeStr});
+  const _LocationContent({
+    required this.message,
+    required this.isMe,
+    required this.timeStr,
+  });
 
   static const double _w = 220;
   static const double _mapH = 130;
   static const _radius = BorderRadius.all(Radius.circular(14));
-  static const _border = Color(0xFFDB6234);
 
   Future<void> _openMaps(BuildContext context) async {
     final lat = message.latitude;
@@ -1982,7 +2048,8 @@ class _LocationContent extends StatelessWidget {
     final uri = Platform.isIOS
         ? Uri.parse('https://maps.apple.com/?q=$lat,$lng')
         : Uri.parse(
-            'https://www.google.com/maps/search/?api=1&query=$lat,$lng');
+            'https://www.google.com/maps/search/?api=1&query=$lat,$lng',
+          );
 
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       if (context.mounted) {
@@ -1995,18 +2062,24 @@ class _LocationContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     final hasCoords = message.latitude != null && message.longitude != null;
     final googleMapsKey = const String.fromEnvironment('GOOGLE_MAPS_API_KEY');
     final lat = message.latitude;
     final lng = message.longitude;
+    final markerColor = c.primary
+        .toARGB32()
+        .toRadixString(16)
+        .padLeft(8, '0')
+        .substring(2);
 
     final staticMapUrl = (googleMapsKey.isNotEmpty && hasCoords)
         ? 'https://maps.googleapis.com/maps/api/staticmap'
-            '?center=$lat,$lng'
-            '&zoom=15'
-            '&size=440x260'
-            '&markers=color:0xDB6234%7C$lat,$lng'
-            '&key=$googleMapsKey'
+              '?center=$lat,$lng'
+              '&zoom=15'
+              '&size=440x260'
+              '&markers=color:0x$markerColor%7C$lat,$lng'
+              '&key=$googleMapsKey'
         : null;
 
     return GestureDetector(
@@ -2014,11 +2087,9 @@ class _LocationContent extends StatelessWidget {
       child: Container(
         width: _w,
         decoration: BoxDecoration(
+          color: isMe ? c.softTeal : c.surface,
           borderRadius: _radius,
-          border: Border.all(
-            color: _border.withValues(alpha: 0.35),
-            width: 1,
-          ),
+          border: Border.all(color: c.border, width: 1),
         ),
         child: ClipRRect(
           borderRadius: _radius,
@@ -2043,38 +2114,40 @@ class _LocationContent extends StatelessWidget {
               ),
               // Label strip — thin, no extra background
               Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.location_on_rounded,
-                          size: 13,
-                          color: _border,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          context.l10n.chatSharedLocation,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: isMe
-                                ? const Color(0xFF1A1A1A)
-                                : const Color(0xFF1A1A1A),
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.location_on_rounded,
+                            size: 13,
+                            color: c.primary,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              context.l10n.chatSharedLocation,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: c.textPrimary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
+                    const SizedBox(width: 8),
                     Text(
                       timeStr,
-                      style: const TextStyle(
-                        fontSize: 10,
-                        color: Color(0xFF94A3B8),
-                      ),
+                      style: TextStyle(fontSize: 10, color: c.textSecondary),
                     ),
                   ],
                 ),
@@ -2093,16 +2166,17 @@ class _MapPlaceholder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Container(
-      color: isMe
-          ? const Color(0xFFB85228)
-          : const Color(0xFFE2E8F0),
+      color: isMe ? c.primaryPressed : c.surfaceSubtle,
       child: Stack(
         children: [
           // Simple grid lines to suggest a map
           CustomPaint(
             size: const Size(double.infinity, double.infinity),
-            painter: _MapGridPainter(isMe: isMe),
+            painter: _MapGridPainter(
+              lineColor: isMe ? c.onPrimary : c.controlBorder,
+            ),
           ),
           // Pin icon centered
           Center(
@@ -2112,14 +2186,15 @@ class _MapPlaceholder extends StatelessWidget {
                 Icon(
                   Icons.location_on_rounded,
                   size: 36,
-                  color: isMe ? Colors.white : const Color(0xFFDB6234),
+                  color: isMe ? c.onPrimary : c.primary,
                 ),
                 Container(
                   width: 6,
                   height: 6,
                   decoration: BoxDecoration(
-                    color: (isMe ? Colors.white : const Color(0xFFDB6234))
-                        .withValues(alpha: 0.5),
+                    color: (isMe ? c.onPrimary : c.primary).withValues(
+                      alpha: 0.5,
+                    ),
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -2133,14 +2208,13 @@ class _MapPlaceholder extends StatelessWidget {
 }
 
 class _MapGridPainter extends CustomPainter {
-  final bool isMe;
-  const _MapGridPainter({required this.isMe});
+  final Color lineColor;
+  const _MapGridPainter({required this.lineColor});
 
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = (isMe ? Colors.white : const Color(0xFFCBD5E1))
-          .withValues(alpha: 0.25)
+      ..color = lineColor.withValues(alpha: 0.25)
       ..strokeWidth = 1;
 
     const step = 28.0;
@@ -2153,7 +2227,7 @@ class _MapGridPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_MapGridPainter old) => old.isMe != isMe;
+  bool shouldRepaint(_MapGridPainter old) => old.lineColor != lineColor;
 }
 
 // ── Chat input bar (WhatsApp-style: text/mic <-> recording/send) ──────────────
@@ -2207,12 +2281,13 @@ class _ChatInputBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final bottomPadding = MediaQuery.of(context).padding.bottom;
     final hasText = controller.text.trim().isNotEmpty;
+    final c = context.semanticColors;
 
     return Container(
       padding: EdgeInsets.fromLTRB(8, 10, 8, 10 + bottomPadding),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
+      decoration: BoxDecoration(
+        color: c.surface,
+        border: Border(top: BorderSide(color: c.border)),
       ),
       child: Row(
         children: [
@@ -2220,9 +2295,7 @@ class _ChatInputBar extends StatelessWidget {
             // Attachment (+) button
             _IconBtn(
               icon: Icons.add_rounded,
-              color: isAttachmentBusy
-                  ? const Color(0xFF94A3B8)
-                  : const Color(0xFF6B7280),
+              color: isAttachmentBusy ? c.disabled : c.textSecondary,
               onTap: isAttachmentBusy ? null : onAttachmentTap,
             ),
             const SizedBox(width: 4),
@@ -2238,9 +2311,9 @@ class _ChatInputBar extends StatelessWidget {
                   )
                 : Container(
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF9FAFB),
+                      color: c.background,
                       borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                      border: Border.all(color: c.controlBorder),
                     ),
                     child: Row(
                       children: [
@@ -2251,16 +2324,20 @@ class _ChatInputBar extends StatelessWidget {
                             onSubmitted: (_) => onSendText(),
                             maxLines: 5,
                             minLines: 1,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 14,
-                              color: Color(0xFF1A1A1A),
+                              color: c.textPrimary,
                             ),
                             decoration: InputDecoration(
                               hintText: context.l10n.chatComposerHint,
                               hintStyle: TextStyle(
-                                  color: Color(0xFF94A3B8), fontSize: 14),
-                              contentPadding: EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 10),
+                                color: c.textSecondary,
+                                fontSize: 14,
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 10,
+                              ),
                               border: InputBorder.none,
                             ),
                           ),
@@ -2269,8 +2346,8 @@ class _ChatInputBar extends StatelessWidget {
                         _IconBtn(
                           icon: Icons.camera_alt_rounded,
                           color: isAttachmentBusy
-                              ? const Color(0xFF94A3B8)
-                              : const Color(0xFF6B7280),
+                              ? c.disabled
+                              : c.textSecondary,
                           onTap: isAttachmentBusy ? null : onCameraTap,
                         ),
                       ],
@@ -2286,13 +2363,13 @@ class _ChatInputBar extends StatelessWidget {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF9FAFB),
+                  color: c.background,
                   shape: BoxShape.circle,
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  border: Border.all(color: c.controlBorder),
                 ),
                 child: Icon(
                   isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded,
-                  color: const Color(0xFFDB6234),
+                  color: c.primary,
                   size: 22,
                 ),
               ),
@@ -2306,24 +2383,22 @@ class _ChatInputBar extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: isSending
-                    ? const Color(0xFFDB6234).withValues(alpha: 0.5)
-                    : const Color(0xFFDB6234),
+                color: isSending ? c.primary.withValues(alpha: 0.5) : c.primary,
                 shape: BoxShape.circle,
               ),
               child: isSending
-                  ? const Padding(
-                      padding: EdgeInsets.all(12),
+                  ? Padding(
+                      padding: const EdgeInsets.all(12),
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation(Colors.white),
+                        color: c.onPrimary,
                       ),
                     )
                   : Icon(
                       isRecording || hasText
                           ? Icons.send_rounded
                           : Icons.mic_rounded,
-                      color: Colors.white,
+                      color: c.onPrimary,
                       size: 20,
                     ),
             ),
@@ -2376,27 +2451,26 @@ class _RecordingBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Container(
       height: 46,
       padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(
-        color: const Color(0xFFF9FAFB),
+        color: c.background,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: c.controlBorder),
       ),
       child: Row(
         children: [
-          isPaused
-              ? const SizedBox(width: 9, height: 9)
-              : const _BlinkingDot(),
+          isPaused ? const SizedBox(width: 9, height: 9) : const _BlinkingDot(),
           const SizedBox(width: 8),
           SizedBox(
             width: 34,
             child: Text(
               _fmt(duration),
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
-                color: Color(0xFF1A1A1A),
+                color: c.textPrimary,
                 fontFeatures: [FontFeature.tabularFigures()],
               ),
             ),
@@ -2413,10 +2487,13 @@ class _RecordingBar extends StatelessWidget {
           const SizedBox(width: 6),
           GestureDetector(
             onTap: onCancel,
-            child: const Padding(
-              padding: EdgeInsets.all(4),
-              child: Icon(Icons.delete_outline_rounded,
-                  color: Color(0xFFEF4444), size: 22),
+            child: Padding(
+              padding: const EdgeInsets.all(4),
+              child: Icon(
+                Icons.delete_outline_rounded,
+                color: c.error,
+                size: 22,
+              ),
             ),
           ),
         ],
@@ -2431,6 +2508,7 @@ class _Waveform extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Row(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -2441,7 +2519,7 @@ class _Waveform extends StatelessWidget {
             height: 4 + (v.clamp(0.0, 1.0) * 22),
             margin: const EdgeInsets.symmetric(horizontal: 1),
             decoration: BoxDecoration(
-              color: const Color(0xFFDB6234),
+              color: c.primary,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -2472,16 +2550,14 @@ class _BlinkingDotState extends State<_BlinkingDot>
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return FadeTransition(
       opacity: Tween<double>(begin: 1, end: 0.25).animate(_controller),
-      child: const SizedBox(
+      child: SizedBox(
         width: 9,
         height: 9,
         child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: Color(0xFFEF4444),
-            shape: BoxShape.circle,
-          ),
+          decoration: BoxDecoration(color: c.error, shape: BoxShape.circle),
         ),
       ),
     );
@@ -2504,11 +2580,13 @@ class _AttachmentSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bottomPadding = MediaQuery.of(context).padding.bottom;
+    final c = context.semanticColors;
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: c.surface,
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: c.border),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -2519,7 +2597,7 @@ class _AttachmentSheet extends StatelessWidget {
               width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: const Color(0xFFE2E8F0),
+                color: c.controlBorder,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -2536,19 +2614,19 @@ class _AttachmentSheet extends StatelessWidget {
                 _AttachOption(
                   icon: Icons.image_rounded,
                   label: context.l10n.chatAttachPhoto,
-                  color: const Color(0xFF3B82F6),
+                  color: c.primary,
                   onTap: onGalleryImage,
                 ),
                 _AttachOption(
                   icon: Icons.videocam_rounded,
                   label: context.l10n.chatAttachVideo,
-                  color: const Color(0xFF8B5CF6),
+                  color: c.urgent,
                   onTap: onGalleryVideo,
                 ),
                 _AttachOption(
                   icon: Icons.location_on_rounded,
                   label: context.l10n.chatAttachLocation,
-                  color: const Color(0xFFDB6234),
+                  color: c.success,
                   onTap: onLocation,
                 ),
               ],
@@ -2569,11 +2647,13 @@ class _CameraSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bottomPadding = MediaQuery.of(context).padding.bottom;
+    final c = context.semanticColors;
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: c.surface,
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: c.border),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -2584,7 +2664,7 @@ class _CameraSheet extends StatelessWidget {
               width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: const Color(0xFFE2E8F0),
+                color: c.controlBorder,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -2597,13 +2677,13 @@ class _CameraSheet extends StatelessWidget {
                 _AttachOption(
                   icon: Icons.camera_alt_rounded,
                   label: context.l10n.chatTakePhoto,
-                  color: const Color(0xFF1A1A1A),
+                  color: c.primary,
                   onTap: onPhoto,
                 ),
                 _AttachOption(
                   icon: Icons.videocam_rounded,
                   label: context.l10n.chatRecordVideo,
-                  color: const Color(0xFF8B5CF6),
+                  color: c.urgent,
                   onTap: onVideo,
                 ),
               ],
@@ -2630,6 +2710,7 @@ class _AttachOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return GestureDetector(
       onTap: onTap,
       child: Column(
@@ -2647,9 +2728,9 @@ class _AttachOption extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
-              color: Color(0xFF6B7280),
+              color: c.textSecondary,
               fontWeight: FontWeight.w500,
             ),
             textAlign: TextAlign.center,

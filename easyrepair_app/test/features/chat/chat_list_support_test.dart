@@ -5,6 +5,8 @@ import '../../support/l10n_test_app.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:handygo_app/core/data/cached_result.dart';
 import 'package:handygo_app/core/errors/failures.dart';
+import 'package:handygo_app/core/theme/app_semantic_colors.dart';
+import 'package:handygo_app/core/theme/app_theme.dart';
 import 'package:handygo_app/features/chat/domain/entities/chat_entities.dart';
 import 'package:handygo_app/features/chat/domain/repositories/chat_repository.dart';
 import 'package:handygo_app/features/chat/presentation/pages/chat_list_page.dart';
@@ -30,7 +32,7 @@ class _FakeChatRepository implements ChatRepository {
 
   @override
   Future<Either<Failure, CachedResult<List<ConversationEntity>>>>
-      getConversations() async {
+  getConversations() async {
     return Right(CachedResult(conversations));
   }
 
@@ -44,6 +46,8 @@ ConversationEntity _conversation({
   required String name,
   bool isSupport = false,
   String? lastMessageAt,
+  String? lastMessagePreview,
+  int unreadCount = 0,
   String userSlot = 'client',
 }) {
   return ConversationEntity(
@@ -53,7 +57,7 @@ ConversationEntity _conversation({
     workerUserId: userSlot == 'client' ? supportUserId : 'me',
     createdByUserId: 'me',
     lastMessageAt: lastMessageAt,
-    lastMessagePreview: null,
+    lastMessagePreview: lastMessagePreview,
     createdAt: '2026-07-01T10:00:00.000Z',
     updatedAt: '2026-07-01T10:00:00.000Z',
     otherParticipant: ConversationParticipantEntity(
@@ -62,6 +66,7 @@ ConversationEntity _conversation({
       lastName: isSupport ? '' : 'Khan',
     ),
     isSupport: isSupport,
+    unreadCount: unreadCount,
   );
 }
 
@@ -69,17 +74,23 @@ Future<_FakeChatRepository> _pumpList(
   WidgetTester tester,
   List<ConversationEntity> conversations, {
   bool ensureFails = false,
+  ThemeData? theme,
 }) async {
-  final repository =
-      _FakeChatRepository(conversations, ensureFails: ensureFails);
+  final repository = _FakeChatRepository(
+    conversations,
+    ensureFails: ensureFails,
+  );
   await tester.pumpWidget(
     ProviderScope(
       overrides: [chatRepositoryProvider.overrideWithValue(repository)],
       child: localizedApp(
-        const ChatListPage(
-          detailRoutePrefix: '/client/chat',
-          bottomNavigationBar: SizedBox.shrink(),
-          homeRoute: '/client/home',
+        Theme(
+          data: theme ?? AppTheme.lightTheme,
+          child: const ChatListPage(
+            detailRoutePrefix: '/client/chat',
+            bottomNavigationBar: SizedBox.shrink(),
+            homeRoute: '/client/home',
+          ),
         ),
       ),
     ),
@@ -98,6 +109,27 @@ List<String> _renderedNames(WidgetTester tester) {
 }
 
 void main() {
+  test('canonical order deduplicates ids and Support rows while preserving '
+      'ordinary conversation order', () {
+    final result = normalizeChatConversations([
+      _conversation(id: 'normal-1', name: 'Ali'),
+      _conversation(id: 'support-1', name: 'HandyGo Support', isSupport: true),
+      _conversation(id: 'normal-1', name: 'Ali duplicate'),
+      _conversation(id: 'support-2', name: 'HandyGo Support', isSupport: true),
+      _conversation(id: 'normal-2', name: 'Bilal'),
+    ]);
+
+    expect(result.map((conversation) => conversation.id), [
+      'support-1',
+      'normal-1',
+      'normal-2',
+    ]);
+    expect(
+      result.where((conversation) => conversation.isSupport),
+      hasLength(1),
+    );
+  });
+
   testWidgets('HandyGo Support is pinned first for a CLIENT, even when it is '
       'the least recently active conversation', (tester) async {
     await _pumpList(tester, [
@@ -152,7 +184,9 @@ void main() {
     final container = ProviderScope.containerOf(
       tester.element(find.byType(ChatListPage)),
     );
-    container.read(chatConversationsProvider.notifier).upsertConversation(
+    container
+        .read(chatConversationsProvider.notifier)
+        .upsertConversation(
           _conversation(
             id: 'c1',
             name: 'Ali',
@@ -164,11 +198,45 @@ void main() {
     expect(_renderedNames(tester).first, 'HandyGo Support');
   });
 
+  testWidgets('unread activity and a newly-created ordinary conversation '
+      'cannot displace Support in provider state or rendered order', (
+    tester,
+  ) async {
+    await _pumpList(tester, [
+      _conversation(id: 'support', name: 'HandyGo Support', isSupport: true),
+      _conversation(id: 'c1', name: 'Ali'),
+    ]);
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(ChatListPage)),
+    );
+    container
+        .read(chatConversationsProvider.notifier)
+        .upsertConversation(
+          _conversation(
+            id: 'brand-new',
+            name: 'Sara',
+            unreadCount: 8,
+            lastMessageAt: '2026-08-26T22:00:00.000Z',
+          ),
+        );
+    await tester.pumpAndSettle();
+
+    final state = container.read(chatConversationsProvider).requireValue;
+    expect(state.first.isSupport, isTrue);
+    expect(state.where((conversation) => conversation.isSupport), hasLength(1));
+    expect(_renderedNames(tester).first, 'HandyGo Support');
+  });
+
   testWidgets('renders exactly one Support row even if the list carries a '
       'duplicate', (tester) async {
     await _pumpList(tester, [
       _conversation(id: 'support', name: 'HandyGo Support', isSupport: true),
-      _conversation(id: 'support-dupe', name: 'HandyGo Support', isSupport: true),
+      _conversation(
+        id: 'support-dupe',
+        name: 'HandyGo Support',
+        isSupport: true,
+      ),
       _conversation(id: 'c1', name: 'Ali'),
     ]);
 
@@ -188,11 +256,9 @@ void main() {
   testWidgets('a failing ensure still renders the conversation list', (
     tester,
   ) async {
-    await _pumpList(
-      tester,
-      [_conversation(id: 'c1', name: 'Ali')],
-      ensureFails: true,
-    );
+    await _pumpList(tester, [
+      _conversation(id: 'c1', name: 'Ali'),
+    ], ensureFails: true);
 
     // Degrades to "no support row this refresh", never to a broken Chat tab.
     expect(find.text('Ali Khan'), findsOneWidget);
@@ -253,5 +319,49 @@ void main() {
 
       expect(find.text('No chats found'), findsOneWidget);
     });
+  });
+
+  testWidgets('the shared inbox has no overflow at every supported width', (
+    tester,
+  ) async {
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    for (final width in <double>[320, 360, 390, 430, 600]) {
+      await tester.binding.setSurfaceSize(Size(width, 800));
+      await _pumpList(tester, [
+        _conversation(
+          id: 'support',
+          name: 'HandyGo Support',
+          isSupport: true,
+          unreadCount: 125,
+          lastMessageAt: '2026-08-26T22:00:00.000Z',
+          lastMessagePreview:
+              'A deliberately long support preview that must stay on one line',
+        ),
+        _conversation(
+          id: 'normal',
+          name: 'A very long Ustaad participant name',
+          unreadCount: 7,
+          lastMessageAt: '2026-08-26T21:00:00.000Z',
+          lastMessagePreview:
+              'A deliberately long normal preview that must ellipsize cleanly',
+        ),
+      ]);
+
+      expect(tester.takeException(), isNull, reason: 'overflow at $width px');
+      expect(_renderedNames(tester).first, 'HandyGo Support');
+    }
+  });
+
+  testWidgets('the shared inbox reads the dark semantic palette', (
+    tester,
+  ) async {
+    await _pumpList(tester, [
+      _conversation(id: 'support', name: 'HandyGo Support', isSupport: true),
+    ], theme: AppTheme.darkTheme);
+
+    final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
+    expect(scaffold.backgroundColor, AppSemanticColors.dark.background);
+    expect(_renderedNames(tester).first, 'HandyGo Support');
+    expect(tester.takeException(), isNull);
   });
 }

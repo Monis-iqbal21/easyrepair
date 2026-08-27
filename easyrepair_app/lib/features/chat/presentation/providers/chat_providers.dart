@@ -32,6 +32,31 @@ final chatRepositoryProvider = Provider<ChatRepository>((ref) {
 /// because the live fetch failed.
 final chatConversationsIsOfflineProvider = StateProvider<bool>((ref) => false);
 
+/// Returns the canonical inbox order used by both Client and Ustaad chat.
+///
+/// The backend remains authoritative for which conversations exist and for
+/// the relative order of ordinary conversations. This presentation guard only
+/// removes duplicate ids, collapses duplicate Support rows, and permanently
+/// places the one real Support conversation at index 0.
+List<ConversationEntity> normalizeChatConversations(
+  Iterable<ConversationEntity> conversations,
+) {
+  ConversationEntity? support;
+  final normal = <ConversationEntity>[];
+  final seenIds = <String>{};
+
+  for (final conversation in conversations) {
+    if (!seenIds.add(conversation.id)) continue;
+    if (conversation.isSupport) {
+      support ??= conversation;
+    } else {
+      normal.add(conversation);
+    }
+  }
+
+  return <ConversationEntity>[?support, ...normal];
+}
+
 class ChatConversationsNotifier
     extends AsyncNotifier<List<ConversationEntity>> {
   StreamSubscription<Map<String, dynamic>>? _socketSub;
@@ -41,8 +66,9 @@ class ChatConversationsNotifier
     _socketSub?.cancel();
 
     // Listen for conversation_updated events (e.g. new message preview).
-    _socketSub =
-        ChatSocketService.instance.onConversationUpdated.listen((data) {
+    _socketSub = ChatSocketService.instance.onConversationUpdated.listen((
+      data,
+    ) {
       final conversationId = data['conversationId'] as String?;
       if (conversationId == null) return;
       final current = state.valueOrNull ?? [];
@@ -84,7 +110,7 @@ class ChatConversationsNotifier
     return result.fold((f) => throw f, (cached) {
       ref.read(chatConversationsIsOfflineProvider.notifier).state =
           cached.isStale;
-      return cached.data;
+      return normalizeChatConversations(cached.data);
     });
   }
 
@@ -93,32 +119,36 @@ class ChatConversationsNotifier
     state = await AsyncValue.guard(_fetch);
   }
 
-  /// Insert or update a conversation at the top of the list (most recent first).
+  /// Inserts or updates a conversation while preserving the canonical order.
+  ///
+  /// Ordinary updates retain the existing newest-first behavior. Support
+  /// updates replace any existing Support row and remain permanently pinned.
   void upsertConversation(ConversationEntity updated) {
     final current = state.valueOrNull ?? [];
-    final idx = current.indexWhere((c) => c.id == updated.id);
-    final next = List<ConversationEntity>.from(current);
-    if (idx == -1) {
-      next.insert(0, updated);
-    } else {
-      next.removeAt(idx);
-      next.insert(0, updated);
-    }
-    state = AsyncData(next);
+    final next = current
+        .where(
+          (conversation) =>
+              conversation.id != updated.id &&
+              !(updated.isSupport && conversation.isSupport),
+        )
+        .toList();
+    next.insert(0, updated);
+    state = AsyncData(normalizeChatConversations(next));
   }
 }
 
 final chatConversationsProvider =
     AsyncNotifierProvider<ChatConversationsNotifier, List<ConversationEntity>>(
-  ChatConversationsNotifier.new,
-);
+      ChatConversationsNotifier.new,
+    );
 
 // ── Messages notifier ──────────────────────────────────────────────────────────
 
 /// True while [chatMessagesProvider] for a given conversation is showing the
 /// last cached messages because the live fetch failed.
-final chatMessagesIsOfflineProvider =
-    StateProvider.family<bool, String>((ref, conversationId) => false);
+final chatMessagesIsOfflineProvider = StateProvider.family<bool, String>(
+  (ref, conversationId) => false,
+);
 
 class ChatMessagesNotifier
     extends FamilyAsyncNotifier<List<MessageEntity>, String> {
@@ -244,10 +274,11 @@ class ChatMessagesNotifier
 }
 
 final chatMessagesProvider =
-    AsyncNotifierProvider.family<ChatMessagesNotifier, List<MessageEntity>,
-        String>(
-  ChatMessagesNotifier.new,
-);
+    AsyncNotifierProvider.family<
+      ChatMessagesNotifier,
+      List<MessageEntity>,
+      String
+    >(ChatMessagesNotifier.new);
 
 // ── Send text message notifier ─────────────────────────────────────────────────
 
@@ -275,8 +306,9 @@ class SendMessageNotifier extends AsyncNotifier<void> {
   }
 }
 
-final sendMessageProvider =
-    AsyncNotifierProvider<SendMessageNotifier, void>(SendMessageNotifier.new);
+final sendMessageProvider = AsyncNotifierProvider<SendMessageNotifier, void>(
+  SendMessageNotifier.new,
+);
 
 // ── Get or create conversation notifier ───────────────────────────────────────
 
@@ -312,8 +344,8 @@ class GetOrCreateConversationNotifier
 
 final getOrCreateConversationProvider =
     AsyncNotifierProvider<GetOrCreateConversationNotifier, ConversationEntity?>(
-  GetOrCreateConversationNotifier.new,
-);
+      GetOrCreateConversationNotifier.new,
+    );
 
 // ── Get or create conversation for a booking (worker pre-bid chat) ────────────
 
@@ -344,7 +376,8 @@ class GetOrCreateConversationForBookingNotifier
   }
 }
 
-final getOrCreateConversationForBookingProvider = AsyncNotifierProvider<
-    GetOrCreateConversationForBookingNotifier, ConversationEntity?>(
-  GetOrCreateConversationForBookingNotifier.new,
-);
+final getOrCreateConversationForBookingProvider =
+    AsyncNotifierProvider<
+      GetOrCreateConversationForBookingNotifier,
+      ConversationEntity?
+    >(GetOrCreateConversationForBookingNotifier.new);

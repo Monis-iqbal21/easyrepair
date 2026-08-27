@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:handygo_app/core/data/cached_result.dart';
 import 'package:handygo_app/core/errors/failures.dart';
 import 'package:handygo_app/core/l10n/l10n_config.dart';
+import 'package:handygo_app/features/auth/domain/entities/user_entity.dart';
 import 'package:handygo_app/features/auth/presentation/providers/auth_providers.dart';
 import 'package:handygo_app/features/chat/domain/entities/chat_entities.dart';
 import 'package:handygo_app/features/chat/domain/repositories/chat_repository.dart';
@@ -19,6 +20,11 @@ import 'package:handygo_app/features/chat/presentation/providers/chat_providers.
 /// The routes below mirror the real ones in app_router.dart, including the
 /// `fallbackRoute` wiring, so a regression there fails here.
 
+class _SignedOutAuthStateNotifier extends AuthStateNotifier {
+  @override
+  Future<UserEntity?> build() async => null;
+}
+
 class _FakeChatRepository implements ChatRepository {
   _FakeChatRepository(this.conversations);
 
@@ -30,15 +36,14 @@ class _FakeChatRepository implements ChatRepository {
 
   @override
   Future<Either<Failure, CachedResult<List<ConversationEntity>>>>
-      getConversations() async => Right(CachedResult(conversations));
+  getConversations() async => Right(CachedResult(conversations));
 
   @override
   Future<Either<Failure, CachedResult<List<MessageEntity>>>> getMessages(
     String conversationId, {
     int limit = 30,
     String? before,
-  }) async =>
-      const Right(CachedResult(<MessageEntity>[]));
+  }) async => const Right(CachedResult(<MessageEntity>[]));
 
   @override
   dynamic noSuchMethod(Invocation invocation) =>
@@ -85,10 +90,8 @@ class _Origin extends StatelessWidget {
               // pushed imperatively rather than as GoRoutes.
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
-                  builder: (_) => _Origin(
-                    label: 'WORKERS LIST',
-                    chatRoute: chatRoute,
-                  ),
+                  builder: (_) =>
+                      _Origin(label: 'WORKERS LIST', chatRoute: chatRoute),
                 ),
               ),
               child: const Text('OPEN WORKERS LIST'),
@@ -122,10 +125,8 @@ GoRouter _buildRouter(String initialLocation) {
       ),
       GoRoute(
         path: '/client/booking/:id',
-        builder: (_, _) => _Origin(
-          label: 'BOOKING DETAIL',
-          chatRoute: '/client/chat/conv-1',
-        ),
+        builder: (_, _) =>
+            _Origin(label: 'BOOKING DETAIL', chatRoute: '/client/chat/conv-1'),
       ),
       GoRoute(
         path: '/worker/chat',
@@ -143,10 +144,8 @@ GoRouter _buildRouter(String initialLocation) {
       ),
       GoRoute(
         path: '/worker/job/:id',
-        builder: (_, _) => _Origin(
-          label: 'JOB DETAIL',
-          chatRoute: '/worker/chat/conv-1',
-        ),
+        builder: (_, _) =>
+            _Origin(label: 'JOB DETAIL', chatRoute: '/worker/chat/conv-1'),
       ),
       GoRoute(path: '/deep-link-target', builder: (_, _) => _stub('UNUSED')),
     ],
@@ -158,9 +157,10 @@ Future<GoRouter> _pump(WidgetTester tester, String initialLocation) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
-        chatRepositoryProvider
-            .overrideWithValue(_FakeChatRepository([_conversation])),
-        authStateProvider.overrideWith((ref) async => null),
+        chatRepositoryProvider.overrideWithValue(
+          _FakeChatRepository([_conversation]),
+        ),
+        authStateProvider.overrideWith(_SignedOutAuthStateNotifier.new),
       ],
       child: MaterialApp.router(
         routerConfig: router,
@@ -207,24 +207,23 @@ void main() {
       });
     }
 
-    testWidgets(
-      'an imperatively pushed workers list is returned to as well',
-      (tester) async {
-        // ChooseUstaadPage and WorkerDiscoveryMapPage are pushed with
-        // MaterialPageRoute, so they are invisible to GoRouter's own match
-        // list. Back must still land on them.
-        await _pump(tester, '/client/booking/b1');
-        await tester.tap(find.text('OPEN WORKERS LIST'));
-        await tester.pumpAndSettle();
-        expect(find.text('WORKERS LIST'), findsOneWidget);
+    testWidgets('an imperatively pushed workers list is returned to as well', (
+      tester,
+    ) async {
+      // ChooseUstaadPage and WorkerDiscoveryMapPage are pushed with
+      // MaterialPageRoute, so they are invisible to GoRouter's own match
+      // list. Back must still land on them.
+      await _pump(tester, '/client/booking/b1');
+      await tester.tap(find.text('OPEN WORKERS LIST'));
+      await tester.pumpAndSettle();
+      expect(find.text('WORKERS LIST'), findsOneWidget);
 
-        await _openChat(tester);
-        await _systemBack(tester);
+      await _openChat(tester);
+      await _systemBack(tester);
 
-        expect(find.text('WORKERS LIST'), findsOneWidget);
-        expect(find.text('CLIENT CHAT LIST'), findsNothing);
-      },
-    );
+      expect(find.text('WORKERS LIST'), findsOneWidget);
+      expect(find.text('CLIENT CHAT LIST'), findsNothing);
+    });
   });
 
   group('the Chats tab is still where back leads when it is the origin', () {
@@ -245,25 +244,28 @@ void main() {
     }
   });
 
-  group('a conversation opened with no history falls back to the chat list', () {
-    for (final (role, deepLink, list) in [
-      ('client', '/client/chat/conv-1', 'CLIENT CHAT LIST'),
-      ('worker', '/worker/chat/conv-1', 'WORKER CHAT LIST'),
-    ]) {
-      testWidgets('$role: notification cold start → back → $list', (
-        tester,
-      ) async {
-        // A notification tap can start the app straight in a conversation.
-        // There is nothing to pop, so back must not close the app.
-        await _pump(tester, deepLink);
-        expect(find.text('Ali Khan'), findsOneWidget);
+  group(
+    'a conversation opened with no history falls back to the chat list',
+    () {
+      for (final (role, deepLink, list) in [
+        ('client', '/client/chat/conv-1', 'CLIENT CHAT LIST'),
+        ('worker', '/worker/chat/conv-1', 'WORKER CHAT LIST'),
+      ]) {
+        testWidgets('$role: notification cold start → back → $list', (
+          tester,
+        ) async {
+          // A notification tap can start the app straight in a conversation.
+          // There is nothing to pop, so back must not close the app.
+          await _pump(tester, deepLink);
+          expect(find.text('Ali Khan'), findsOneWidget);
 
-        await _systemBack(tester);
+          await _systemBack(tester);
 
-        expect(find.text(list), findsOneWidget);
-      });
-    }
-  });
+          expect(find.text(list), findsOneWidget);
+        });
+      }
+    },
+  );
 
   testWidgets('back is not intercepted when there is real history', (
     tester,
