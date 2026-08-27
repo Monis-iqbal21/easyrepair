@@ -11,12 +11,12 @@ import '../../domain/entities/notification_entity.dart';
 /// the notification list.
 final notificationsIsOfflineProvider = StateProvider<bool>((ref) => false);
 
-class NotificationsNotifier
-    extends AsyncNotifier<List<NotificationEntity>> {
+class NotificationsNotifier extends AsyncNotifier<List<NotificationEntity>> {
   @override
   Future<List<NotificationEntity>> build() async {
-    final result =
-        await ref.read(notificationRepositoryProvider).getNotifications();
+    final result = await ref
+        .read(notificationRepositoryProvider)
+        .getNotifications();
     return result.fold((f) => throw f, (cached) {
       ref.read(notificationsIsOfflineProvider.notifier).state = cached.isStale;
       return cached.data;
@@ -40,76 +40,72 @@ class NotificationsNotifier
     // applied locally and replayed later — there is deliberately no offline
     // write queue in HandyGo, and the server owns read state.
     if (offlineActionGuard() != null) return;
-    final result =
-        await ref.read(notificationRepositoryProvider).markRead(id);
-    result.fold((_) => null, (_) {
-      final current = state.valueOrNull;
-      if (current == null) return;
-      state = AsyncData(
-        current
-            .map((n) => n.id == id
-                ? NotificationEntity(
-                    id: n.id,
-                    title: n.title,
-                    body: n.body,
-                    isRead: true,
-                    readAt: DateTime.now(),
-                    eventKey: n.eventKey,
-                    entityType: n.entityType,
-                    entityId: n.entityId,
-                    bookingId: n.bookingId,
-                    route: n.route,
-                    payload: n.payload,
-                    createdAt: n.createdAt,
-                  )
-                : n)
-            .toList(),
-      );
-    });
+    final current = state.valueOrNull;
+    if (current == null || !current.any((n) => n.id == id && !n.isRead)) {
+      return;
+    }
+
+    // Apply the intended optimistic update immediately. The previous code's
+    // comment promised this behaviour but only changed state after the PATCH
+    // completed, leaving the unread presentation visible during navigation.
+    final now = DateTime.now();
+    state = AsyncData(
+      current.map((n) => n.id == id ? _asRead(n, now) : n).toList(),
+    );
+
+    final result = await ref.read(notificationRepositoryProvider).markRead(id);
+    await result.fold(
+      (_) => refresh(),
+      (_) async => ref.invalidate(unreadNotificationCountProvider),
+    );
   }
 
   Future<void> markAllRead() async {
     // Same rule as markRead — never mutate read state from a stale cache.
     if (offlineActionGuard() != null) return;
-    final result =
-        await ref.read(notificationRepositoryProvider).markAllRead();
-    result.fold((_) => null, (_) {
-      final current = state.valueOrNull;
-      if (current == null) return;
-      final now = DateTime.now();
-      state = AsyncData(
-        current
-            .map((n) => n.isRead
-                ? n
-                : NotificationEntity(
-                    id: n.id,
-                    title: n.title,
-                    body: n.body,
-                    isRead: true,
-                    readAt: now,
-                    eventKey: n.eventKey,
-                    entityType: n.entityType,
-                    entityId: n.entityId,
-                    bookingId: n.bookingId,
-                    route: n.route,
-                    payload: n.payload,
-                    createdAt: n.createdAt,
-                  ))
-            .toList(),
-      );
-    });
+    final current = state.valueOrNull;
+    if (current == null || !current.any((n) => !n.isRead)) return;
+
+    final now = DateTime.now();
+    state = AsyncData(
+      current.map((n) => n.isRead ? n : _asRead(n, now)).toList(),
+    );
+
+    final result = await ref.read(notificationRepositoryProvider).markAllRead();
+    await result.fold(
+      (_) => refresh(),
+      (_) async => ref.invalidate(unreadNotificationCountProvider),
+    );
+  }
+
+  NotificationEntity _asRead(NotificationEntity notification, DateTime readAt) {
+    return NotificationEntity(
+      id: notification.id,
+      title: notification.title,
+      body: notification.body,
+      isRead: true,
+      readAt: readAt,
+      eventKey: notification.eventKey,
+      entityType: notification.entityType,
+      entityId: notification.entityId,
+      bookingId: notification.bookingId,
+      route: notification.route,
+      payload: notification.payload,
+      createdAt: notification.createdAt,
+    );
   }
 }
 
 final notificationsProvider =
     AsyncNotifierProvider<NotificationsNotifier, List<NotificationEntity>>(
-  NotificationsNotifier.new,
-);
+      NotificationsNotifier.new,
+    );
 
 // ── Unread count ──────────────────────────────────────────────────────────────
 
 final unreadNotificationCountProvider = FutureProvider<int>((ref) async {
-  final result =
-      await ref.read(notificationRepositoryProvider).getUnreadCount();
+  final result = await ref
+      .read(notificationRepositoryProvider)
+      .getUnreadCount();
   return result.fold((_) => 0, (count) => count);
 });
