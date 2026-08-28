@@ -8,25 +8,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../../core/theme/app_semantic_colors.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../../../core/utils/distance_utils.dart';
 import '../../domain/entities/booking_entity.dart';
 import 'full_screen_map_page.dart';
+import '../utils/booking_timeline.dart';
 import '../providers/booking_providers.dart';
 import '../widgets/inspection_report_card.dart';
 import '../../../chat/presentation/providers/chat_providers.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
 import '../../../../core/errors/failure_messages.dart';
-
-// ── Palette ───────────────────────────────────────────────────────────────────
-const _kGreen  = Color(0xFFDB6234);
-const _kDark   = Color(0xFF1A1A1A);
-const _kLight  = Color(0xFF94A3B8);
-const _kBorder = Color(0xFFE2E8F0);
-const _kBg     = Color(0xFFF9FAFB);
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
@@ -53,9 +47,12 @@ class _TrackWorkerPageState extends ConsumerState<TrackWorkerPage> {
       if (!mounted) return;
       // Stop polling once the job is no longer live/trackable (e.g. the
       // worker cancelled mid-job) — there's nothing left to track live.
-      final status =
-          ref.read(bookingDetailProvider(widget.bookingId)).valueOrNull?.status;
-      final isTerminal = status == BookingStatus.completed ||
+      final status = ref
+          .read(bookingDetailProvider(widget.bookingId))
+          .valueOrNull
+          ?.status;
+      final isTerminal =
+          status == BookingStatus.completed ||
           status == BookingStatus.cancelled ||
           status == BookingStatus.rejected ||
           status == BookingStatus.expired;
@@ -84,17 +81,26 @@ class _TrackWorkerPageState extends ConsumerState<TrackWorkerPage> {
   @override
   Widget build(BuildContext context) {
     final bookingAsync = ref.watch(bookingDetailProvider(widget.bookingId));
+    final colors = context.semanticColors;
     return Scaffold(
-      backgroundColor: _kBg,
+      backgroundColor: colors.background,
       body: SafeArea(
         child: bookingAsync.when(
           skipError: true,
-          loading: () => const Center(
-            child: CircularProgressIndicator(color: _kGreen, strokeWidth: 2),
+          loading: () => Center(
+            child: CircularProgressIndicator(
+              color: colors.primary,
+              strokeWidth: 2,
+            ),
           ),
           error: (err, _) => _ErrorBody(
-            message: failureMessage(context.l10n, err, fallback: context.l10n.trackLoadFailed),
-            onRetry: () => ref.invalidate(bookingDetailProvider(widget.bookingId)),
+            message: failureMessage(
+              context.l10n,
+              err,
+              fallback: context.l10n.trackLoadFailed,
+            ),
+            onRetry: () =>
+                ref.invalidate(bookingDetailProvider(widget.bookingId)),
             onBack: _goBack,
           ),
           data: (booking) => _TrackBody(booking: booking, onBack: _goBack),
@@ -118,15 +124,15 @@ class _TrackBody extends StatelessWidget {
 
     final double? distanceM =
         (worker?.currentLat != null &&
-                worker?.currentLng != null &&
-                booking.hasLocation)
-            ? haversineDistanceMeters(
-                worker!.currentLat!,
-                worker.currentLng!,
-                booking.latitude,
-                booking.longitude,
-              )
-            : null;
+            worker?.currentLng != null &&
+            booking.hasLocation)
+        ? haversineDistanceMeters(
+            worker!.currentLat!,
+            worker.currentLng!,
+            booking.latitude,
+            booking.longitude,
+          )
+        : null;
 
     final double? distanceKm = distanceM != null ? distanceM / 1000 : null;
     final int? etaMin = distanceKm != null
@@ -174,21 +180,25 @@ class _TopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.semanticColors;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
       child: Row(
         children: [
           Material(
-            color: Colors.white,
+            color: colors.surface,
             shape: const CircleBorder(),
             elevation: 1,
             child: InkWell(
               customBorder: const CircleBorder(),
               onTap: onBack,
-              child: const Padding(
-                padding: EdgeInsets.all(10),
-                child:
-                    Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: _kDark),
+              child: Padding(
+                padding: const EdgeInsets.all(10),
+                child: Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  size: 16,
+                  color: colors.textPrimary,
+                ),
               ),
             ),
           ),
@@ -202,15 +212,15 @@ class _TopBar extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
-                    color: _kDark,
+                    color: colors.textPrimary,
                     letterSpacing: -0.4,
                   ),
                 ),
                 Text(
                   booking.referenceId,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
-                    color: _kLight,
+                    color: colors.textSecondary,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -263,14 +273,13 @@ class _TrackingMapState extends State<_TrackingMap> {
   /// keeps receiving live Ustaad position updates while open.
   final _fullScreenMarkers = ValueNotifier<Set<Marker>>(<Marker>{});
 
-  bool get _hasJobLoc =>
-      widget.booking.hasLocation;
+  bool get _hasJobLoc => widget.booking.hasLocation;
   LatLng get _jobLatLng =>
       LatLng(widget.booking.latitude, widget.booking.longitude);
 
   @override
-  void initState() {
-    super.initState();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
     _maybeLoadWorkerIcon();
   }
 
@@ -296,7 +305,8 @@ class _TrackingMapState extends State<_TrackingMap> {
     // the wrong scale. The key check is also what stops the icon being
     // rebuilt (and appearing to grow) on every map refresh.
     final dpr = MediaQuery.maybeDevicePixelRatioOf(context) ?? 1.0;
-    final key = '${worker.avatarUrl}|${worker.firstName}|$dpr';
+    final brightness = Theme.of(context).brightness.name;
+    final key = '${worker.avatarUrl}|${worker.firstName}|$dpr|$brightness';
     if (key == _iconLoadedForKey) return;
     _iconLoadedForKey = key;
     _buildWorkerMarkerIcon(worker.firstName, worker.avatarUrl, dpr).then((
@@ -321,6 +331,7 @@ class _TrackingMapState extends State<_TrackingMap> {
     String? avatarUrl,
     double devicePixelRatio,
   ) async {
+    final colors = context.semanticColors;
     try {
       // ── Sizing is in LOGICAL dp, then rasterised at [devicePixelRatio] ──
       //
@@ -355,11 +366,15 @@ class _TrackingMapState extends State<_TrackingMap> {
       // output physical-pixel crisp without changing any of the geometry.
       canvas.scale(devicePixelRatio);
 
-      canvas.drawCircle(avatarCenter, avatarRadius, Paint()..color = _kGreen);
+      canvas.drawCircle(
+        avatarCenter,
+        avatarRadius,
+        Paint()..color = colors.primary,
+      );
       canvas.drawCircle(
         avatarCenter,
         avatarRadius - ringDp,
-        Paint()..color = Colors.white,
+        Paint()..color = colors.surface,
       );
       if (avatarImage != null) {
         canvas.save();
@@ -392,8 +407,8 @@ class _TrackingMapState extends State<_TrackingMap> {
         final initialsPainter = TextPainter(
           text: TextSpan(
             text: initials,
-            style: const TextStyle(
-              color: _kGreen,
+            style: TextStyle(
+              color: colors.primary,
               fontSize: 18,
               fontWeight: FontWeight.w800,
             ),
@@ -410,8 +425,8 @@ class _TrackingMapState extends State<_TrackingMap> {
       final namePainter = TextPainter(
         text: TextSpan(
           text: name,
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: colors.onPrimary,
             fontSize: 10,
             fontWeight: FontWeight.w700,
           ),
@@ -432,7 +447,7 @@ class _TrackingMapState extends State<_TrackingMap> {
           labelRect,
           const Radius.circular(labelHeightDp / 2),
         ),
-        Paint()..color = _kDark,
+        Paint()..color = colors.textPrimary,
       );
       namePainter.paint(
         canvas,
@@ -445,9 +460,9 @@ class _TrackingMapState extends State<_TrackingMap> {
       // Raster dimensions are dp * ratio; imagePixelRatio below converts them
       // back to the intended dp footprint on screen.
       final rendered = await recorder.endRecording().toImage(
-            (canvasWidthDp * devicePixelRatio).round(),
-            (canvasHeightDp * devicePixelRatio).round(),
-          );
+        (canvasWidthDp * devicePixelRatio).round(),
+        (canvasHeightDp * devicePixelRatio).round(),
+      );
       final bytes = await rendered.toByteData(format: ui.ImageByteFormat.png);
       if (bytes == null) return null;
       return (
@@ -485,10 +500,15 @@ class _TrackingMapState extends State<_TrackingMap> {
     // yanking the camera back to a fit bounds view once they've taken over.
     if (_userInteracted) return;
     final worker = widget.booking.assignedWorker;
-    if (worker?.currentLat == null || worker?.currentLng == null || !_hasJobLoc) {
+    if (worker?.currentLat == null ||
+        worker?.currentLng == null ||
+        !_hasJobLoc) {
       return;
     }
-    final points = [_jobLatLng, LatLng(worker!.currentLat!, worker.currentLng!)];
+    final points = [
+      _jobLatLng,
+      LatLng(worker!.currentLat!, worker.currentLng!),
+    ];
     var minLat = points.first.latitude, maxLat = points.first.latitude;
     var minLng = points.first.longitude, maxLng = points.first.longitude;
     for (final p in points) {
@@ -566,7 +586,8 @@ class _TrackingMapState extends State<_TrackingMap> {
         Marker(
           markerId: const MarkerId('worker'),
           position: LatLng(worker!.currentLat!, worker.currentLng!),
-          icon: _workerIcon ??
+          icon:
+              _workerIcon ??
               BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
           // The composited icon has the name label below the avatar circle,
           // so the anchor must point at the circle's center, not the image
@@ -581,14 +602,15 @@ class _TrackingMapState extends State<_TrackingMap> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.semanticColors;
     if (!_hasJobLoc) {
       return Container(
         width: double.infinity,
         height: 140,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: colors.surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: _kBorder),
+          border: Border.all(color: colors.border),
         ),
         child: Center(
           child: Padding(
@@ -596,12 +618,19 @@ class _TrackingMapState extends State<_TrackingMap> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.location_off_outlined, size: 16, color: _kLight),
+                Icon(
+                  Icons.location_off_outlined,
+                  size: 16,
+                  color: colors.textSecondary,
+                ),
                 SizedBox(width: 8),
                 Flexible(
                   child: Text(
                     context.l10n.trackNoLocationForBooking,
-                    style: TextStyle(fontSize: 12.5, color: _kLight),
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: colors.textSecondary,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                 ),
@@ -612,7 +641,8 @@ class _TrackingMapState extends State<_TrackingMap> {
       );
     }
     final worker = widget.booking.assignedWorker;
-    final hasWorkerLoc = worker?.currentLat != null && worker?.currentLng != null;
+    final hasWorkerLoc =
+        worker?.currentLat != null && worker?.currentLng != null;
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
@@ -621,7 +651,10 @@ class _TrackingMapState extends State<_TrackingMap> {
           SizedBox(
             height: 200,
             child: GoogleMap(
-              initialCameraPosition: CameraPosition(target: _jobLatLng, zoom: 14),
+              initialCameraPosition: CameraPosition(
+                target: _jobLatLng,
+                zoom: 14,
+              ),
               markers: _syncedMarkers(),
               onMapCreated: (c) {
                 _mapCtrl = c;
@@ -657,13 +690,16 @@ class _TrackingMapState extends State<_TrackingMap> {
               right: 10,
               bottom: 10,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: colors.surface,
                   borderRadius: BorderRadius.circular(10),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.1),
+                      color: colors.scrim.withValues(alpha: 0.1),
                       blurRadius: 6,
                     ),
                   ],
@@ -671,12 +707,19 @@ class _TrackingMapState extends State<_TrackingMap> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.location_off_outlined, size: 14, color: _kLight),
+                    Icon(
+                      Icons.location_off_outlined,
+                      size: 14,
+                      color: colors.textSecondary,
+                    ),
                     const SizedBox(width: 6),
                     Flexible(
                       child: Text(
                         context.l10n.trackUstaadLocationUnavailable,
-                        style: const TextStyle(fontSize: 11.5, color: Color(0xFF6B7280)),
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: colors.textSecondary,
+                        ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -712,17 +755,21 @@ class _StatusCard extends StatelessWidget {
   // wording is identical regardless of whether the hire came from direct
   // assignment or an accepted bid. INSPECTION keeps its richer branching.
   String _headlineFor(BuildContext context) {
-    if (booking.status == BookingStatus.completed) return context.l10n.trackJobCompleted;
+    if (booking.status == BookingStatus.completed) {
+      return context.l10n.trackJobCompleted;
+    }
     if (_isInspection) {
-      if (booking.inspectionDecisionStatus == InspectionDecisionStatus.acceptedRepair) {
+      if (booking.inspectionDecisionStatus ==
+          InspectionDecisionStatus.acceptedRepair) {
         return context.l10n.trackQuoteAcceptedRepairInProgress;
       }
       return switch (booking.status) {
         BookingStatus.enRoute => context.l10n.trackHeadlineUstaadOnTheWay,
         BookingStatus.arrived => context.l10n.trackHeadlineUstaadArrived,
-        BookingStatus.inProgress => booking.inspectionReportSubmitted
-            ? context.l10n.trackReportSubmitted
-            : context.l10n.trackInspectionInProgress,
+        BookingStatus.inProgress =>
+          booking.inspectionReportSubmitted
+              ? context.l10n.trackReportSubmitted
+              : context.l10n.trackInspectionInProgress,
         _ => context.l10n.trackHeadlineHired,
       };
     }
@@ -739,15 +786,17 @@ class _StatusCard extends StatelessWidget {
       return context.l10n.trackSubtextCompleted(firstName);
     }
     if (_isInspection) {
-      if (booking.inspectionDecisionStatus == InspectionDecisionStatus.acceptedRepair) {
+      if (booking.inspectionDecisionStatus ==
+          InspectionDecisionStatus.acceptedRepair) {
         return context.l10n.trackSubtextContinuingRepair(firstName);
       }
       return switch (booking.status) {
         BookingStatus.enRoute => context.l10n.trackSubtextOnTheWay(firstName),
         BookingStatus.arrived => context.l10n.trackSubtextArrived(firstName),
-        BookingStatus.inProgress => booking.inspectionReportSubmitted
-            ? context.l10n.trackReviewReportAndDecide
-            : context.l10n.trackSubtextInspecting(firstName),
+        BookingStatus.inProgress =>
+          booking.inspectionReportSubmitted
+              ? context.l10n.trackReviewReportAndDecide
+              : context.l10n.trackSubtextInspecting(firstName),
         _ => context.l10n.trackSubtextHiredForInspection(firstName),
       };
     }
@@ -761,6 +810,7 @@ class _StatusCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.semanticColors;
     final worker = booking.assignedWorker;
     final firstName = worker?.firstName ?? context.l10n.trackWorkerLabel;
     // Shared with Booking Details' "Qeemat" row — see
@@ -772,10 +822,10 @@ class _StatusCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF8B3010), Color(0xFFDB6234)],
+          colors: [colors.primaryPressed, colors.primary],
         ),
         borderRadius: BorderRadius.circular(18),
       ),
@@ -788,10 +838,10 @@ class _StatusCard extends StatelessWidget {
                 width: 42,
                 height: 42,
                 decoration: BoxDecoration(
-                  color: _kGreen,
+                  color: colors.primary,
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.3),
+                    color: colors.onPrimary.withValues(alpha: 0.3),
                     width: 2,
                   ),
                 ),
@@ -799,7 +849,7 @@ class _StatusCard extends StatelessWidget {
                   booking.status == BookingStatus.completed
                       ? Icons.check_circle_rounded
                       : Icons.check_rounded,
-                  color: Colors.white,
+                  color: colors.onPrimary,
                   size: 22,
                 ),
               ),
@@ -807,10 +857,10 @@ class _StatusCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   _headlineFor(context),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w700,
-                    color: Colors.white,
+                    color: colors.onPrimary,
                     letterSpacing: -0.4,
                   ),
                 ),
@@ -822,7 +872,7 @@ class _StatusCard extends StatelessWidget {
             _subtext(context, firstName),
             style: TextStyle(
               fontSize: 14,
-              color: Colors.white.withValues(alpha: 0.85),
+              color: colors.onPrimaryMuted,
               fontWeight: FontWeight.w400,
               height: 1.4,
             ),
@@ -830,20 +880,20 @@ class _StatusCard extends StatelessWidget {
           if (price != null) ...[
             const SizedBox(height: 10),
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.12),
+                color: colors.onPrimary.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.2)),
+                  color: colors.onPrimary.withValues(alpha: 0.2),
+                ),
               ),
               child: Text(
                 context.l10n.trackHiredAt(formatPkr(price)),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: Colors.white,
+                  color: colors.onPrimary,
                 ),
               ),
             ),
@@ -884,10 +934,11 @@ class _WorkerCardState extends ConsumerState<_WorkerCard> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(failureMessage(context.l10n, e)),
-            backgroundColor: const Color(0xFFEF4444),
+            backgroundColor: context.semanticColors.error,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10)),
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
         );
       }
@@ -922,16 +973,17 @@ class _WorkerCardState extends ConsumerState<_WorkerCard> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.semanticColors;
     final worker = widget.worker;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _kBorder),
+        border: Border.all(color: colors.border),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: colors.scrim.withValues(alpha: 0.04),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -945,7 +997,7 @@ class _WorkerCardState extends ConsumerState<_WorkerCard> {
             style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w700,
-              color: _kLight,
+              color: colors.textSecondary,
               letterSpacing: 1.2,
             ),
           ),
@@ -955,8 +1007,8 @@ class _WorkerCardState extends ConsumerState<_WorkerCard> {
               Container(
                 width: 52,
                 height: 52,
-                decoration: const BoxDecoration(
-                  color: _kGreen,
+                decoration: BoxDecoration(
+                  color: colors.primary,
                   shape: BoxShape.circle,
                 ),
                 child: worker.avatarUrl != null
@@ -977,24 +1029,29 @@ class _WorkerCardState extends ConsumerState<_WorkerCard> {
                   children: [
                     Text(
                       worker.fullName,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
-                        color: _kDark,
+                        color: colors.textPrimary,
                       ),
                     ),
                     if (worker.rating != null) ...[
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          const Icon(Icons.star_rounded,
-                              size: 14, color: Color(0xFFF59E0B)),
+                          Icon(
+                            Icons.star_rounded,
+                            size: 14,
+                            color: colors.warning,
+                          ),
                           const SizedBox(width: 3),
                           Text(
-                            context.l10n.trackRatingOutOfFive(worker.rating!.toStringAsFixed(1)),
-                            style: const TextStyle(
+                            context.l10n.trackRatingOutOfFive(
+                              worker.rating!.toStringAsFixed(1),
+                            ),
+                            style: TextStyle(
                               fontSize: 12,
-                              color: Color(0xFF6B7280),
+                              color: colors.textSecondary,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -1008,7 +1065,9 @@ class _WorkerCardState extends ConsumerState<_WorkerCard> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   _ActionCircle(
-                    icon: _chatLoading ? null : Icons.chat_bubble_outline_rounded,
+                    icon: _chatLoading
+                        ? null
+                        : Icons.chat_bubble_outline_rounded,
                     loading: _chatLoading,
                     onTap: _openChat,
                     tooltip: context.l10n.chatTitleFallback,
@@ -1036,11 +1095,12 @@ class _InitialsText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.semanticColors;
     return Center(
       child: Text(
         initials,
-        style: const TextStyle(
-          color: Colors.white,
+        style: TextStyle(
+          color: colors.onPrimary,
           fontSize: 18,
           fontWeight: FontWeight.w700,
         ),
@@ -1064,6 +1124,7 @@ class _ActionCircle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.semanticColors;
     return Tooltip(
       message: tooltip,
       child: GestureDetector(
@@ -1072,18 +1133,19 @@ class _ActionCircle extends StatelessWidget {
           width: 42,
           height: 42,
           decoration: BoxDecoration(
-            color: _kGreen.withValues(alpha: 0.10),
+            color: colors.softTeal,
             shape: BoxShape.circle,
-            border:
-                Border.all(color: _kGreen.withValues(alpha: 0.25)),
+            border: Border.all(color: colors.primary.withValues(alpha: 0.25)),
           ),
           child: loading
-              ? const Padding(
-                  padding: EdgeInsets.all(11),
+              ? Padding(
+                  padding: const EdgeInsets.all(11),
                   child: CircularProgressIndicator(
-                      strokeWidth: 2, color: _kGreen),
+                    strokeWidth: 2,
+                    color: colors.primary,
+                  ),
                 )
-              : Icon(icon, size: 18, color: _kGreen),
+              : Icon(icon, size: 18, color: colors.primary),
         ),
       ),
     );
@@ -1101,6 +1163,11 @@ class _DistanceEtaCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasDistance = distanceM != null;
+    final colors = context.semanticColors;
+    final foreground = hasDistance ? colors.onPrimary : colors.onScrim;
+    final mutedForeground = hasDistance
+        ? colors.onPrimaryMuted
+        : colors.onScrim.withValues(alpha: 0.85);
 
     return Container(
       width: double.infinity,
@@ -1110,8 +1177,8 @@ class _DistanceEtaCard extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: hasDistance
-              ? [_kGreen, const Color(0xFFB84E25)]
-              : [const Color(0xFF64748B), const Color(0xFF475569)],
+              ? [colors.primary, colors.primaryPressed]
+              : [colors.textSecondary, colors.controlBorder],
         ),
         borderRadius: BorderRadius.circular(18),
       ),
@@ -1122,14 +1189,14 @@ class _DistanceEtaCard extends StatelessWidget {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
+              color: foreground.withValues(alpha: 0.2),
               shape: BoxShape.circle,
             ),
             child: Icon(
               hasDistance
                   ? Icons.directions_car_rounded
                   : Icons.location_off_outlined,
-              color: Colors.white,
+              color: foreground,
               size: 24,
             ),
           ),
@@ -1142,10 +1209,10 @@ class _DistanceEtaCard extends StatelessWidget {
                   hasDistance
                       ? formatDistanceLabel(context.l10n, distanceM!)
                       : context.l10n.trackLocationUnavailable,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w700,
-                    color: Colors.white,
+                    color: foreground,
                     letterSpacing: -0.5,
                   ),
                 ),
@@ -1156,7 +1223,7 @@ class _DistanceEtaCard extends StatelessWidget {
                       : context.l10n.trackEtaUnavailable,
                   style: TextStyle(
                     fontSize: 13,
-                    color: Colors.white.withValues(alpha: 0.85),
+                    color: mutedForeground,
                     fontWeight: FontWeight.w400,
                   ),
                 ),
@@ -1173,12 +1240,13 @@ class _DistanceEtaCard extends StatelessWidget {
 class _LiveDotBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final colors = context.semanticColors;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.2),
+        color: colors.onPrimary.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+        border: Border.all(color: colors.onPrimary.withValues(alpha: 0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1186,18 +1254,18 @@ class _LiveDotBadge extends StatelessWidget {
           Container(
             width: 6,
             height: 6,
-            decoration: const BoxDecoration(
-              color: Colors.white,
+            decoration: BoxDecoration(
+              color: colors.onPrimary,
               shape: BoxShape.circle,
             ),
           ),
           const SizedBox(width: 5),
           Text(
             context.l10n.trackLiveBadge,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w700,
-              color: Colors.white,
+              color: colors.onPrimary,
               letterSpacing: 0.5,
             ),
           ),
@@ -1214,113 +1282,21 @@ class _ProgressTimeline extends StatelessWidget {
 
   const _ProgressTimeline({required this.booking});
 
-  // Once a DIFFERENT worker than the original inspector has been hired via
-  // "Find Other Ustaad", they're performing WORK, not inspecting — even
-  // though booking.lane stays INSPECTION and decisionStatus stays
-  // FIND_OTHER_USTAAD forever. Falling through to the STANDARD/BIDDING
-  // branch below gives correct "Work In Progress" wording with zero
-  // duplication.
-  bool get _isInspection =>
-      booking.lane == BookingLane.inspection &&
-      !booking.isDifferentWorkerPerformingWork;
-
-  // INSPECTION lane: Hired -> Ustaad on the way -> Arrived -> Inspection in
-  // progress -> Report submitted -> Quote accepted/Closed after inspection ->
-  // Completed. Never shows "Bid Accepted"/"Offer Accepted" wording.
-  int _inspectionRank() {
-    if (booking.status == BookingStatus.completed) return 7;
-    if (booking.inspectionDecisionStatus == InspectionDecisionStatus.acceptedRepair ||
-        booking.inspectionDecisionStatus == InspectionDecisionStatus.closedAfterInspection) {
-      return 6;
-    }
-    if (booking.status == BookingStatus.inProgress) {
-      return booking.inspectionReportSubmitted ? 5 : 4;
-    }
-    return switch (booking.status) {
-      BookingStatus.enRoute => 2,
-      BookingStatus.arrived => 3,
-      _ => 1,
-    };
-  }
-
-  List<_StepData> _inspectionSteps(BuildContext context, DateFormat fmt) {
-    return [
-      _StepData(label: context.l10n.trackStepHired, requiredRank: 1, timestamp: booking.acceptedAt, fmt: fmt),
-      _StepData(label: context.l10n.trackStepUstaadOnTheWay, requiredRank: 2, timestamp: booking.enRouteAt, fmt: fmt),
-      _StepData(label: context.l10n.workerActionArrived, requiredRank: 3, timestamp: booking.arrivedAt, fmt: fmt),
-      _StepData(label: context.l10n.trackStepInspectionInProgress, requiredRank: 4, timestamp: booking.startedAt, fmt: fmt),
-      _StepData(
-        label: context.l10n.trackStepReportSubmitted,
-        requiredRank: 5,
-        timestamp: booking.inspectionReportSubmittedAt,
-        fmt: fmt,
-      ),
-      _StepData(
-        label: booking.inspectionDecisionStatus == InspectionDecisionStatus.closedAfterInspection
-            ? context.l10n.trackStepClosedAfterInspection
-            : context.l10n.trackStepQuoteAccepted,
-        requiredRank: 6,
-        timestamp: null,
-        fmt: fmt,
-      ),
-      _StepData(
-        label: booking.review != null ? context.l10n.trackStepReviewed : context.l10n.bookingStatusCompleted,
-        requiredRank: 7,
-        timestamp: booking.completedAt,
-        fmt: fmt,
-      ),
-    ];
-  }
-
-  // STANDARD and BIDDING share this ladder: Hired -> Ustaad on the way ->
-  // Arrived -> Work in progress -> Completed -> Review. Rank 6 only once a
-  // review has actually been submitted. Driven entirely by real booking
-  // status/timestamps — BIDDING no longer infers "arrived" from GPS
-  // proximity now that its worker actions call the same lifecycle endpoints.
-  int _standardRank() {
-    return switch (booking.status) {
-      BookingStatus.enRoute => 2,
-      BookingStatus.arrived => 3,
-      BookingStatus.inProgress => 4,
-      BookingStatus.completed => booking.review != null ? 6 : 5,
-      _ => 1, // accepted (or anything else — a worker shouldn't land here otherwise)
-    };
-  }
-
-  List<_StepData> _standardSteps(BuildContext context, DateFormat fmt) {
-    return [
-      _StepData(label: context.l10n.trackStepHired, requiredRank: 1, timestamp: booking.acceptedAt, fmt: fmt),
-      _StepData(label: context.l10n.trackStepUstaadOnTheWay, requiredRank: 2, timestamp: booking.enRouteAt, fmt: fmt),
-      _StepData(label: context.l10n.workerActionArrived, requiredRank: 3, timestamp: booking.arrivedAt, fmt: fmt),
-      _StepData(label: context.l10n.trackStepWorkInProgress, requiredRank: 4, timestamp: booking.startedAt, fmt: fmt),
-      _StepData(label: context.l10n.bookingStatusCompleted, requiredRank: 5, timestamp: booking.completedAt, fmt: fmt),
-      _StepData(
-        label: booking.review != null ? context.l10n.trackStepReviewed : context.l10n.trackStepReviewPending,
-        requiredRank: 6,
-        timestamp: booking.review?.createdAt,
-        fmt: fmt,
-      ),
-    ];
-  }
-
   @override
   Widget build(BuildContext context) {
-    final fmt = DateFormat('h:mm a');
-    // STANDARD and BIDDING share _standardRank/_standardSteps.
-    final rank = _isInspection ? _inspectionRank() : _standardRank();
-    final steps = _isInspection
-        ? _inspectionSteps(context, fmt)
-        : _standardSteps(context, fmt);
+    final colors = context.semanticColors;
+    final steps = bookingTimelineSteps(context.l10n, booking);
 
     return Container(
+      key: const Key('track-worker-timeline'),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _kBorder),
+        border: Border.all(color: colors.border),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: colors.scrim.withValues(alpha: 0.04),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -1336,7 +1312,7 @@ class _ProgressTimeline extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
-                  color: _kDark,
+                  color: colors.textPrimary,
                 ),
               ),
               const SizedBox(width: 10),
@@ -1345,49 +1321,25 @@ class _ProgressTimeline extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           for (int i = 0; i < steps.length; i++)
-            _TimelineStep(
-              data: steps[i],
-              rank: rank,
-              isLast: i == steps.length - 1,
-            ),
+            _TimelineStep(step: steps[i], isLast: i == steps.length - 1),
         ],
       ),
     );
   }
 }
 
-class _StepData {
-  final String label;
-  final int requiredRank;
-  final DateTime? timestamp;
-  final DateFormat fmt;
-  final String? subtext;
-
-  const _StepData({
-    required this.label,
-    required this.requiredRank,
-    required this.timestamp,
-    required this.fmt,
-    this.subtext,
-  });
-}
-
 class _TimelineStep extends StatelessWidget {
-  final _StepData data;
-  final int rank;
+  final BookingTimelineStep step;
   final bool isLast;
 
-  const _TimelineStep({
-    required this.data,
-    required this.rank,
-    required this.isLast,
-  });
+  const _TimelineStep({required this.step, required this.isLast});
 
   @override
   Widget build(BuildContext context) {
-    final isDone    = rank > data.requiredRank;
-    final isActive  = rank == data.requiredRank;
-    final isPending = !isDone && !isActive;
+    final colors = context.semanticColors;
+    final isDone = step.state == BookingTimelineStepState.complete;
+    final isActive = step.state == BookingTimelineStepState.current;
+    final isPending = step.state == BookingTimelineStepState.pending;
 
     return IntrinsicHeight(
       child: Row(
@@ -1403,27 +1355,33 @@ class _TimelineStep extends StatelessWidget {
                   height: 22,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: isDone ? _kGreen : Colors.white,
+                    color: isDone ? colors.primary : colors.surface,
                     border: Border.all(
-                      color: (isDone || isActive) ? _kGreen : _kBorder,
+                      color: (isDone || isActive)
+                          ? colors.primary
+                          : colors.controlBorder,
                       width: isDone ? 0 : 2,
                     ),
                   ),
                   child: isDone
-                      ? const Icon(Icons.check_rounded,
-                          size: 13, color: Colors.white)
+                      ? Icon(
+                          Icons.check_rounded,
+                          size: 13,
+                          color: colors.onPrimary,
+                        )
                       : isActive
-                          ? Center(
-                              child: Container(
-                                width: 8,
-                                height: 8,
-                                decoration: const BoxDecoration(
-                                  color: _kGreen,
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                            )
-                          : null,
+                      ? Center(
+                          child: Container(
+                            key: const Key('track-worker-timeline-current'),
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: colors.primary,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        )
+                      : null,
                 ),
                 if (!isLast)
                   Expanded(
@@ -1431,7 +1389,7 @@ class _TimelineStep extends StatelessWidget {
                       width: 2,
                       margin: const EdgeInsets.symmetric(vertical: 3),
                       decoration: BoxDecoration(
-                        color: isDone ? _kGreen : _kBorder,
+                        color: isDone ? colors.primary : colors.border,
                         borderRadius: BorderRadius.circular(1),
                       ),
                     ),
@@ -1440,49 +1398,20 @@ class _TimelineStep extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          // Right: label + timestamp / subtext
+          // Right: label only. Lifecycle stamps drive terminal freeze logic
+          // in the shared helper but are never rendered on either page.
           Expanded(
             child: Padding(
               padding: EdgeInsets.only(bottom: isLast ? 0 : 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    data.label,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight:
-                          isActive ? FontWeight.w700 : FontWeight.w500,
-                      color: isPending ? _kLight : _kDark,
-                    ),
-                  ),
-                  if (data.subtext != null) ...[
-                    const SizedBox(height: 3),
-                    Text(
-                      data.subtext!,
-                      style: const TextStyle(
-                        fontSize: 11.5,
-                        color: _kGreen,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ] else if (data.timestamp != null &&
-                      (isDone || isActive)) ...[
-                    const SizedBox(height: 3),
-                    Text(
-                      data.fmt.format(data.timestamp!),
-                      style:
-                          const TextStyle(fontSize: 11.5, color: _kLight),
-                    ),
-                  ] else ...[
-                    const SizedBox(height: 3),
-                    const Text(
-                      '—',
-                      style: TextStyle(
-                          fontSize: 11.5, color: _kBorder),
-                    ),
-                  ],
-                ],
+              child: Text(
+                step.label,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: isActive || isDone
+                      ? FontWeight.w700
+                      : FontWeight.w500,
+                  color: isPending ? colors.textSecondary : colors.textPrimary,
+                ),
               ),
             ),
           ),
@@ -1495,12 +1424,13 @@ class _TimelineStep extends StatelessWidget {
 class _GreenLiveBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final colors = context.semanticColors;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF0EB),
+        color: colors.softTeal,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFFFD0B5)),
+        border: Border.all(color: colors.border),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1508,8 +1438,8 @@ class _GreenLiveBadge extends StatelessWidget {
           Container(
             width: 5,
             height: 5,
-            decoration: const BoxDecoration(
-              color: _kGreen,
+            decoration: BoxDecoration(
+              color: colors.primary,
               shape: BoxShape.circle,
             ),
           ),
@@ -1519,7 +1449,7 @@ class _GreenLiveBadge extends StatelessWidget {
             style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w600,
-              color: _kGreen,
+              color: colors.primary,
             ),
           ),
         ],
@@ -1543,22 +1473,26 @@ class _ErrorBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.semanticColors;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
           child: Material(
-            color: Colors.white,
+            color: colors.surface,
             shape: const CircleBorder(),
             elevation: 1,
             child: InkWell(
               customBorder: const CircleBorder(),
               onTap: onBack,
-              child: const Padding(
-                padding: EdgeInsets.all(10),
-                child: Icon(Icons.arrow_back_ios_new_rounded,
-                    size: 16, color: _kDark),
+              child: Padding(
+                padding: const EdgeInsets.all(10),
+                child: Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  size: 16,
+                  color: colors.textPrimary,
+                ),
               ),
             ),
           ),
@@ -1577,30 +1511,35 @@ class _ErrorBody extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
-                      color: _kDark,
+                      color: colors.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     message,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                        fontSize: 13, color: _kLight, height: 1.4),
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: colors.textSecondary,
+                      height: 1.4,
+                    ),
                   ),
                   const SizedBox(height: 20),
                   GestureDetector(
                     onTap: onRetry,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 12),
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
                       decoration: BoxDecoration(
-                        color: _kGreen,
+                        color: colors.primary,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
                         context.l10n.commonRetry,
                         style: TextStyle(
-                          color: Colors.white,
+                          color: colors.onPrimary,
                           fontWeight: FontWeight.w700,
                           fontSize: 13,
                         ),
