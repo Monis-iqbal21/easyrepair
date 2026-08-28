@@ -41,6 +41,13 @@ enum FailureCode {
   /// A resend was attempted before the backend's 60-second cooldown elapsed.
   otpResendTooSoon,
 
+  /// The CODE ITSELF was rejected — wrong, expired, or too many wrong
+  /// guesses. Distinct from every other way an OTP screen's submit can fail
+  /// (a network drop, an already-registered number, a server error), because
+  /// only this one means the digits on screen are the problem: it is what
+  /// tells an OTP field to mark itself, and what tells it not to.
+  otpRejected,
+
   /// Rehire attempted while the original inspecting Ustaad is on another job.
   inspectorBusy,
 
@@ -167,6 +174,21 @@ class PhoneAlreadyRegisteredFailure extends Failure {
   const PhoneAlreadyRegisteredFailure(
     super.message, {
     super.code = FailureCode.phoneAlreadyRegistered,
+    super.diagnostic,
+  });
+}
+
+/// The one-time code was rejected: `OTP_INVALID`, `OTP_EXPIRED` or
+/// `OTP_ATTEMPTS_EXCEEDED`.
+///
+/// The backend writes a specific sentence for all three, so this carries no
+/// wording of its own — it exists so a screen can tell "the digits are wrong"
+/// apart from every other reason a submit failed, and mark the code field for
+/// this case only.
+class OtpRejectedFailure extends Failure {
+  const OtpRejectedFailure(
+    super.message, {
+    super.code = FailureCode.otpRejected,
     super.diagnostic,
   });
 }

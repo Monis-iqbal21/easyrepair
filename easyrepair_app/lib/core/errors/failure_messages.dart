@@ -43,6 +43,11 @@ String failureCodeMessage(
     FailureCode.server => l10n.errorServer,
     FailureCode.smsSendFailed => l10n.errorSmsSendFailed,
     FailureCode.otpResendTooSoon => l10n.errorOtpResendTooSoon,
+    // The backend always writes the specific sentence for a rejected code
+    // ("OTP ghalat hai.", "Code expire ho gaya hai…"), so `failureMessage`
+    // returns that before it ever reaches this switch. This branch is the
+    // safety net for a code with no message at all.
+    FailureCode.otpRejected => fallback ?? l10n.errorUnknown,
     FailureCode.inspectorBusy => l10n.errorInspectorBusy,
     FailureCode.phoneNotRegistered => l10n.errorPhoneNotRegistered,
     FailureCode.phoneAlreadyRegistered => l10n.errorPhoneAlreadyRegistered,

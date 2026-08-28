@@ -76,6 +76,17 @@ Failure dioExceptionToFailure(
         );
       }
 
+      if (errorCode == 'OTP_INVALID' ||
+          errorCode == 'OTP_EXPIRED' ||
+          errorCode == 'OTP_ATTEMPTS_EXCEEDED') {
+        // All three are 400s carrying the backend's own sentence, so the
+        // message still passes straight through. The separate failure exists
+        // so an OTP screen can mark its code field for these and ONLY these —
+        // a timeout or an already-registered number is not the code's fault
+        // and must not be drawn as if it were.
+        return OtpRejectedFailure(message ?? '', diagnostic: diagnostic);
+      }
+
       if (statusCode == 400) {
         return ValidationFailure(message ?? '', diagnostic: diagnostic);
       } else if (statusCode == 401) {

@@ -113,6 +113,7 @@ bool _mayServeCache(Failure failure) {
     case FailureCode.requestCancelled: // caller walked away; show nothing
     case FailureCode.smsSendFailed:
     case FailureCode.otpResendTooSoon:
+    case FailureCode.otpRejected: // 400 — the code itself was refused
     case FailureCode.inspectorBusy:
     case FailureCode.phoneNotRegistered:
     case FailureCode.phoneAlreadyRegistered:

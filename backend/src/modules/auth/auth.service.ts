@@ -1152,10 +1152,18 @@ export class AuthService {
     const existing =
       await this.authRepository.findUserByPhoneVariants(variants);
     if (existing) {
-      // Same rejection regardless of which role already owns the number —
-      // User.phone is globally unique, so this is the only outcome that
-      // never reveals whether the existing account is a Client or a Worker.
-      throw this._phoneAlreadyRegisteredError();
+      // The number already has an account. That is USUALLY a genuine
+      // duplicate registration — but it is also exactly what an earlier
+      // attempt by this same Client looks like when its response never
+      // arrived: the code was verified, the account was created and the
+      // tokens were issued, and the app never heard any of it.
+      //
+      // Refusing outright made that unrecoverable: every retry spends a fresh
+      // code on the way to the same rejection, so the number was locked out
+      // of registration for good. Recovery hands back a session for the
+      // account that already exists — but ONLY on the existing account's own
+      // password. See _recoverExistingClientRegistration.
+      return this._recoverExistingClientRegistration(existing, password);
     }
 
     const { firstName, lastName } = this._splitFullName(fullName);
@@ -1174,10 +1182,15 @@ export class AuthService {
         ...(otp !== undefined ? { phoneVerified: true } : {}),
       });
     } catch (err) {
-      // Same concurrent-registration race the OTP login path used to carry: the
-      // loser logs into whichever account won the insert instead of
-      // failing, so two near-simultaneous registrations never produce a
-      // duplicate account or a user-facing error.
+      // The concurrent-registration race: two near-simultaneous attempts on
+      // the same number, one of which loses the unique insert. The loser
+      // recovers into the winner's account rather than failing, so a
+      // double-submit never produces a duplicate user or a user-facing error.
+      //
+      // Routed through the same recovery as the pre-check above, so the loser
+      // still has to present the winning account's password. It used to build
+      // a session unconditionally, which authenticated an existing account on
+      // nothing but a valid code.
       if (
         err instanceof Prisma.PrismaClientKnownRequestError &&
         err.code === 'P2002'
@@ -1185,17 +1198,7 @@ export class AuthService {
         const winner =
           await this.authRepository.findUserByPhoneVariants(variants);
         if (winner) {
-          const profile = await this._getProfileName(winner.id, winner.role);
-          return this._buildAuthResponse(
-            winner.id,
-            winner.phone,
-            winner.role,
-            profile.firstName,
-            profile.lastName,
-            profile.verificationStatus,
-            profile.workerStatus,
-            winner.accountStatus,
-          );
+          return this._recoverExistingClientRegistration(winner, password);
         }
       }
       throw err;
@@ -1207,6 +1210,72 @@ export class AuthService {
       user.role,
       firstName,
       lastName,
+    );
+  }
+
+  /**
+   * Client registration reached a number that already has an account.
+   *
+   * The one case this exists for: the Client's OWN earlier attempt succeeded
+   * on the server and its response never arrived. Everything it needs is
+   * already in the request being handled — the same phone, the same password —
+   * so the account can be handed back as a session instead of the Client being
+   * told to go away by an account they just created and cannot see.
+   *
+   * What it will NOT do:
+   *
+   *  * **Authenticate on the strength of the code.** A valid OTP proves the
+   *    caller holds the SIM; it does not prove they own an account that
+   *    already existed. The existing account's password is compared with the
+   *    same bcrypt check `clientPasswordLogin` uses, and a mismatch is refused.
+   *  * **Touch the account.** Nothing is written here — no password reset, no
+   *    name overwrite, no `phoneVerified` change. It reads and signs in.
+   *  * **Return a Worker.** A Worker-owned number is refused, and refused with
+   *    the SAME error as a wrong password and a deactivated account, so
+   *    registration still never reveals which role owns a number.
+   *
+   * The refusal is `PHONE_ALREADY_REGISTERED` in every failing case — exactly
+   * what this endpoint returned before recovery existed — so no caller sees a
+   * new outcome and nothing new is disclosed.
+   */
+  private async _recoverExistingClientRegistration(
+    existing: {
+      id: string;
+      phone: string;
+      role: Role;
+      isActive: boolean;
+      deletedAt: Date | null;
+      passwordHash: string | null;
+      accountStatus?: string;
+    },
+    password: string,
+  ): Promise<AuthResponseDto> {
+    if (
+      existing.deletedAt !== null ||
+      existing.role !== Role.CLIENT ||
+      !existing.isActive
+    ) {
+      throw this._phoneAlreadyRegisteredError();
+    }
+
+    const passwordMatch = await bcrypt.compare(
+      password,
+      existing.passwordHash ?? '',
+    );
+    if (!passwordMatch) {
+      throw this._phoneAlreadyRegisteredError();
+    }
+
+    const profile = await this._getProfileName(existing.id, existing.role);
+    return this._buildAuthResponse(
+      existing.id,
+      existing.phone,
+      existing.role,
+      profile.firstName,
+      profile.lastName,
+      profile.verificationStatus,
+      profile.workerStatus,
+      existing.accountStatus,
     );
   }
 

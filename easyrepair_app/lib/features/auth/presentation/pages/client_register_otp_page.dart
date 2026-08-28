@@ -142,26 +142,86 @@ class _ClientRegisterOtpPageState extends ConsumerState<ClientRegisterOtpPage> {
             password: widget.draft.password,
             otp: _otp,
           );
+      if (!mounted) return;
       if (!created) {
-        if (mounted) setState(() => _hasError = true);
+        await _handleRegistrationFailure(
+          ref.read(clientPasswordRegisterNotifierProvider).error,
+        );
         return;
       }
-      if (!mounted) return;
-      // Navigated immediately, before the refreshed session resolves, so the
-      // router's "logged-in user on an /auth route" rule never gets the chance
-      // to bounce this flow to Home ahead of the success screen. The success
-      // route lives under /client, where an authenticated Client is allowed to
-      // be — no redirect rule was changed to make this work.
-      context.go(
-        ClientAccountReadyPage.route,
-        extra: ClientAccountSummary(
-          fullName: widget.draft.fullName,
-          phone: widget.draft.phone,
-        ),
-      );
+      _goToAccountReady();
     } finally {
       if (mounted) setState(() => _verifyInFlight = false);
     }
+  }
+
+  /// Decides what a rejected registration actually means.
+  ///
+  /// Three outcomes, and the distinction matters because the old code had only
+  /// one: mark the boxes red, whatever went wrong.
+  ///
+  ///  1. **The code was rejected.** The digits on screen are the problem, so
+  ///     the field says so.
+  ///  2. **The answer may have been lost.** A transport failure, or a number
+  ///     that already has an account. Either can mean this Client's OWN
+  ///     earlier attempt succeeded on the server and the app never heard it —
+  ///     the code was spent, the account was created, the tokens were issued.
+  ///     Retrying registration cannot work (the code is gone), so the session
+  ///     is recovered instead, with the credentials already in hand. Exactly
+  ///     one attempt; a failed recovery falls through to the original error.
+  ///  3. **Anything else.** Shown as-is, with the code field left alone.
+  Future<void> _handleRegistrationFailure(Object? failure) async {
+    if (failure is Failure && failure.code == FailureCode.otpRejected) {
+      setState(() => _hasError = true);
+      _showError(failure);
+      return;
+    }
+
+    if (_mayHaveSucceededOnTheServer(failure)) {
+      // The existing Client password-login path, unchanged: it verifies the
+      // password on the backend and stores the tokens through the same
+      // repository every other login uses. Nothing about authentication is
+      // reimplemented here.
+      final recovered = await ref
+          .read(clientPasswordLoginNotifierProvider.notifier)
+          .login(widget.draft.phone, widget.draft.password);
+      if (!mounted) return;
+      if (recovered) {
+        _goToAccountReady();
+        return;
+      }
+      // One attempt, then stop. The registration error is what the Client
+      // needs to see — a login failure here says nothing they can act on.
+    }
+
+    _showError(failure);
+  }
+
+  /// Whether this failure leaves it genuinely unknown whether the backend
+  /// completed the registration.
+  ///
+  /// `PHONE_ALREADY_REGISTERED` is included because that is precisely what a
+  /// lost success looks like on the next attempt. A wrong password behind that
+  /// number simply fails the recovery login and the original message stands.
+  bool _mayHaveSucceededOnTheServer(Object? failure) =>
+      failure is Failure &&
+      (failure.code == FailureCode.timeout ||
+          failure.code == FailureCode.noInternet ||
+          failure.code == FailureCode.phoneAlreadyRegistered);
+
+  void _goToAccountReady() {
+    // Navigated immediately, before the refreshed session resolves, so the
+    // router's "logged-in user on an /auth route" rule never gets the chance
+    // to bounce this flow to Home ahead of the success screen. The success
+    // route lives under /client, where an authenticated Client is allowed to
+    // be — no redirect rule was changed to make this work.
+    context.go(
+      ClientAccountReadyPage.route,
+      extra: ClientAccountSummary(
+        fullName: widget.draft.fullName,
+        phone: widget.draft.phone,
+      ),
+    );
   }
 
   /// The remaining validity as MM:SS, for the expiry line.
@@ -195,9 +255,12 @@ class _ClientRegisterOtpPageState extends ConsumerState<ClientRegisterOtpPage> {
     ref.listen(otpRequestNotifierProvider, (_, state) {
       if (state is AsyncError) _showError(state.error);
     });
-    ref.listen(clientPasswordRegisterNotifierProvider, (_, state) {
-      if (state is AsyncError) _showError(state.error);
-    });
+    // Registration failures are deliberately NOT surfaced from a listener.
+    // _handleRegistrationFailure decides between "the code was rejected",
+    // "recover the session that may already exist" and "show this error" —
+    // and a listener firing the moment the notifier goes to AsyncError would
+    // flash the wrong message before that decision, including on the path
+    // that ends in a successful recovery.
     ref.listen(clientOtpAuthNotifierProvider, (_, state) {
       if (state is AsyncError) _showError(state.error);
     });

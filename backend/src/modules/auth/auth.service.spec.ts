@@ -1112,10 +1112,10 @@ describe('AuthService — SMS OTP login/registration', () => {
       expect(repository.createUserWithProfile).not.toHaveBeenCalled();
     });
 
-    it('gracefully logs in instead of erroring when two concurrent registrations race (P2002)', async () => {
+    function raceLostToP2002(winner: unknown) {
       repository.findUserByPhoneVariants
         .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce(CLIENT_USER);
+        .mockResolvedValueOnce(winner);
       const p2002 = Object.assign(new Error('Unique constraint failed'), {
         code: 'P2002',
         name: 'PrismaClientKnownRequestError',
@@ -1125,13 +1125,37 @@ describe('AuthService — SMS OTP login/registration', () => {
         require('@prisma/client').Prisma.PrismaClientKnownRequestError.prototype,
       );
       repository.createUserWithProfile.mockRejectedValue(p2002);
+    }
 
-      const result = await service.clientPasswordRegister(
-        'Ali Khan',
-        PHONE_RAW,
-        'password123',
-      );
-      expect(result.user.firstName).toBe('Existing');
+    it('gracefully logs in instead of erroring when two concurrent '
+      + 'registrations race (P2002) — on the winning account password',
+      async () => {
+        raceLostToP2002({
+          ...CLIENT_USER,
+          passwordHash: await bcrypt.hash('password123', 10),
+        });
+
+        const result = await service.clientPasswordRegister(
+          'Ali Khan',
+          PHONE_RAW,
+          'password123',
+        );
+        expect(result.user.firstName).toBe('Existing');
+      });
+
+    it('but the race loser is refused when it does not know the winning '
+      + 'account password — a valid code alone never authenticates an '
+      + 'account that already existed', async () => {
+      raceLostToP2002({
+        ...CLIENT_USER,
+        passwordHash: await bcrypt.hash('somebody-elses-password', 10),
+      });
+
+      await expect(
+        service.clientPasswordRegister('Ali Khan', PHONE_RAW, 'password123'),
+      ).rejects.toMatchObject({
+        response: { error: 'PHONE_ALREADY_REGISTERED' },
+      });
     });
   });
 
