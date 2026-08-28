@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../l10n/l10n_extensions.dart';
+import '../../theme/app_semantic_colors.dart';
 import '../widgets/legal_english_only_notice.dart';
 
 /// The page chrome here (app bar, back button, the English-only notice) is
@@ -8,46 +9,56 @@ import '../widgets/legal_english_only_notice.dart';
 /// approved Terms and Conditions text stays in English until professionally
 /// translated Urdu and Roman Urdu versions are supplied. See
 /// `docs/legal_translation_exclusions.md`.
+///
+/// SHARED SCREEN: reached from BOTH the Client and the Ustaad profile, and
+/// presented identically to both. Only colour and type moved here — the
+/// approved wording below is byte-for-byte what it was.
 class TermsConditionsPage extends StatelessWidget {
   const TermsConditionsPage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
+      backgroundColor: c.background,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.transparent,
+        backgroundColor: c.background,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded,
-              size: 18, color: Color(0xFF1A1A1A)),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+        scrolledUnderElevation: 0,
         title: Text(
           context.l10n.settingsTermsConditions,
-          style: const TextStyle(
-            fontSize: 16,
+          style: TextStyle(
+            fontSize: 18,
             fontWeight: FontWeight.w700,
-            color: Color(0xFF1A1A1A),
+            color: c.textPrimary,
           ),
         ),
-        centerTitle: true,
       ),
-      body: const SingleChildScrollView(
-        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            LegalEnglishOnlyNotice(),
-            SizedBox(height: 16),
-            // The document is English, so it reads left-to-right even when
-            // the rest of the app is mirrored for Urdu.
-            Directionality(
-              textDirection: TextDirection.ltr,
-              child: _TermsContent(),
-            ),
-          ],
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const LegalEnglishOnlyNotice(),
+              const SizedBox(height: 16),
+              // The document is English, so it reads left-to-right whatever
+              // the app's language is.
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
+                decoration: BoxDecoration(
+                  color: c.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: c.border),
+                ),
+                child: const Directionality(
+                  textDirection: TextDirection.ltr,
+                  child: _TermsContent(),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -233,7 +244,6 @@ class _TermsContent extends StatelessWidget {
           'arising from these Terms shall be subject to the exclusive '
           'jurisdiction of the courts in that jurisdiction.',
         ),
-        SizedBox(height: 40),
       ],
     );
   }
@@ -250,9 +260,9 @@ class _LastUpdated extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       'Last updated: $date',
-      style: const TextStyle(
-        fontSize: 12,
-        color: Color(0xFF6B7280),
+      style: TextStyle(
+        fontSize: 12.5,
+        color: context.semanticColors.textSecondary,
         fontStyle: FontStyle.italic,
       ),
     );
@@ -270,10 +280,11 @@ class _Heading extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8),
       child: Text(
         text,
-        style: const TextStyle(
-          fontSize: 15,
+        style: TextStyle(
+          fontSize: 16,
           fontWeight: FontWeight.w700,
-          color: Color(0xFF1A1A1A),
+          height: 1.35,
+          color: context.semanticColors.textPrimary,
         ),
       ),
     );
@@ -289,10 +300,10 @@ class _BodyText extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       text,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 14,
         height: 1.6,
-        color: Color(0xFF374151),
+        color: context.semanticColors.textSecondary,
       ),
     );
   }
@@ -305,26 +316,31 @@ class _BulletPoint extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10, left: 4),
+      padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding: EdgeInsets.only(top: 6),
-            child: CircleAvatar(
-              radius: 3,
-              backgroundColor: Color(0xFF1D9E75),
+          Padding(
+            padding: const EdgeInsets.only(top: 7),
+            child: Container(
+              width: 5,
+              height: 5,
+              decoration: BoxDecoration(
+                color: c.primary,
+                shape: BoxShape.circle,
+              ),
             ),
           ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               body,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
                 height: 1.6,
-                color: Color(0xFF374151),
+                color: c.textSecondary,
               ),
             ),
           ),

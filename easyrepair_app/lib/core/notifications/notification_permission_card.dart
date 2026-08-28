@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart' show openAppSettings;
 
 import '../l10n/l10n_extensions.dart';
+import '../theme/app_semantic_colors.dart';
 import 'notification_permission_service.dart';
 
 /// Non-blocking Profile/Settings row shown only when notification
@@ -10,11 +11,18 @@ import 'notification_permission_service.dart';
 /// never shown as a startup modal (it only appears when the user is already
 /// on the page that hosts it, and is re-checked on every visit rather than
 /// polled).
+///
+/// SHARED: sits at the top of both the Client and the Ustaad profile
+/// settings list, identically. The #FFF7ED / #FED7AA / #B45309 / #92400E
+/// amber it used to hardcode is the `warning` pairing the design system
+/// already names; the action is now a real button-sized tap target rather
+/// than bare text.
 class NotificationPermissionCard extends ConsumerWidget {
   const NotificationPermissionCard({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.semanticColors;
     final stateAsync = ref.watch(notificationPermissionStateProvider);
     final state = stateAsync.valueOrNull;
     if (state == null || state == NotificationPermissionState.granted) {
@@ -29,15 +37,14 @@ class NotificationPermissionCard extends ConsumerWidget {
       margin: const EdgeInsets.only(bottom: 24),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF7ED),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFFED7AA)),
+        color: c.warningSurface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: c.border),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.notifications_off_outlined,
-              size: 20, color: Color(0xFFB45309)),
+          Icon(Icons.notifications_off_outlined, size: 20, color: c.warning),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -45,14 +52,14 @@ class NotificationPermissionCard extends ConsumerWidget {
               children: [
                 Text(
                   l10n.notificationsPermissionOffMessage,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12.5,
-                    color: Color(0xFF92400E),
+                    color: c.textPrimary,
                     height: 1.4,
                   ),
                 ),
-                const SizedBox(height: 8),
-                GestureDetector(
+                const SizedBox(height: 4),
+                InkWell(
                   onTap: () async {
                     if (isPermanentlyDenied) {
                       await openAppSettings();
@@ -61,14 +68,21 @@ class NotificationPermissionCard extends ConsumerWidget {
                     }
                     ref.invalidate(notificationPermissionStateProvider);
                   },
-                  child: Text(
-                    isPermanentlyDenied
-                        ? l10n.commonOpenSettings
-                        : l10n.notificationsAllowAction,
-                    style: const TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFFB45309),
+                  borderRadius: BorderRadius.circular(8),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 10,
+                    ),
+                    child: Text(
+                      isPermanentlyDenied
+                          ? l10n.commonOpenSettings
+                          : l10n.notificationsAllowAction,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: c.warning,
+                      ),
                     ),
                   ),
                 ),

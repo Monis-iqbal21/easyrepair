@@ -9,15 +9,20 @@ import '../../domain/entities/customer_agreement_entity.dart';
 import '../providers/customer_agreement_providers.dart';
 import '../../../../core/errors/failure_messages.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
+import '../../../../core/theme/app_semantic_colors.dart';
 import '../../../../l10n/app_localizations.dart';
 
-// ── Palette (matches the rest of the client app) ────────────────────────────
-const _kOrange = Color(0xFFDB6234);
-const _kDark = Color(0xFF1A1A1A);
-const _kGray = Color(0xFF6B7280);
-const _kBorder = Color(0xFFE2E8F0);
-const _kBg = Color(0xFFF9FAFB);
-const _kRed = Color(0xFFDC2626);
+// ── Palette ───────────────────────────────────────────────────────────────────
+//
+// There isn't one. The six page-local constants that used to sit here —
+// _kOrange #DB6234 (EasyRepair's, on every action and spinner), _kDark,
+// _kGray, _kBorder, _kBg and _kRed — are primary / textPrimary /
+// textSecondary / border / background / error.
+//
+// CLIENT-ONLY screen. Colour, type, spacing and the empty/error states moved;
+// no provider, endpoint, download path or navigation target was touched.
+
+const double _rCard = 16;
 
 /// The Client's own legal history — read-only, under Client Profile ›
 /// "Accepted Agreements". Mirrors WorkerAgreementsPage's download pattern.
@@ -96,10 +101,12 @@ class _ClientAgreementsPageState extends ConsumerState<ClientAgreementsPage> {
   }
 
   void _snack(String message, {bool isError = false}) {
+    final c = context.semanticColors;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: isError ? _kRed : _kDark,
+        // Anything but an error keeps the themed SnackBar background.
+        backgroundColor: isError ? c.error : null,
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -108,7 +115,7 @@ class _ClientAgreementsPageState extends ConsumerState<ClientAgreementsPage> {
   void _view(AcceptedCustomerAgreementEntity record) {
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: context.semanticColors.surface,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -125,86 +132,118 @@ class _ClientAgreementsPageState extends ConsumerState<ClientAgreementsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     final recordsAsync = ref.watch(customerAgreementHistoryProvider);
 
     return Scaffold(
-      backgroundColor: _kBg,
+      backgroundColor: c.background,
       appBar: AppBar(
-        backgroundColor: _kBg,
+        backgroundColor: c.background,
         elevation: 0,
         scrolledUnderElevation: 0,
         title: Text(
           context.l10n.customerAgreementHistoryTitle,
-          style: const TextStyle(
-            color: _kDark,
+          style: TextStyle(
+            color: c.textPrimary,
             fontWeight: FontWeight.w700,
             fontSize: 18,
           ),
         ),
       ),
-      body: recordsAsync.when(
-        loading: () =>
-            const Center(child: CircularProgressIndicator(color: _kOrange)),
-        error: (err, _) => Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  failureMessage(
-                    context.l10n,
-                    err,
-                    fallback: context.l10n.agreementsLoadFailed,
-                  ),
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 13.5, color: _kGray),
-                ),
-                const SizedBox(height: 12),
-                TextButton(
-                  onPressed: () =>
-                      ref.invalidate(customerAgreementHistoryProvider),
-                  child: Text(context.l10n.commonRetry),
-                ),
-              ],
+      body: SafeArea(
+        child: recordsAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (err, _) => _StateView(
+            icon: Icons.error_outline_rounded,
+            message: failureMessage(
+              context.l10n,
+              err,
+              fallback: context.l10n.agreementsLoadFailed,
+            ),
+            action: OutlinedButton(
+              onPressed: () =>
+                  ref.invalidate(customerAgreementHistoryProvider),
+              child: Text(context.l10n.commonRetry),
             ),
           ),
-        ),
-        data: (records) {
-          if (records.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text(
-                  context.l10n.workerAcceptedAgreementsEmpty,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 13.5, color: _kGray),
-                ),
+          data: (records) {
+            if (records.isEmpty) {
+              return _StateView(
+                icon: Icons.gavel_rounded,
+                message: context.l10n.workerAcceptedAgreementsEmpty,
+              );
+            }
+            return ListView.separated(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+              itemCount: records.length,
+              separatorBuilder: (_, _) => const SizedBox(height: 12),
+              itemBuilder: (_, i) => _AcceptedAgreementCard(
+                record: records[i],
+                downloading: _downloading == records[i].downloadId,
+                onView: () => _view(records[i]),
+                onDownload: () => _download(records[i]),
               ),
             );
-          }
-          return ListView.builder(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-            itemCount: records.length,
-            itemBuilder: (_, i) => _AcceptedAgreementCard(
-              record: records[i],
-              downloading: _downloading == records[i].downloadId,
-              onView: () => _view(records[i]),
-              onDownload: () => _download(records[i]),
+          },
+        ),
+      ),
+    );
+  }
+}
+
+/// One shape for "nothing here" and "that failed" — same icon-over-text
+/// rhythm, so the page never changes layout language between its states.
+class _StateView extends StatelessWidget {
+  const _StateView({
+    required this.icon,
+    required this.message,
+    this.action,
+  });
+
+  final IconData icon;
+  final String message;
+  final Widget? action;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.semanticColors;
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: c.softTeal,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, size: 26, color: c.primary),
             ),
-          );
-        },
+            const SizedBox(height: 16),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                height: 1.5,
+                color: c.textSecondary,
+              ),
+            ),
+            if (action != null) ...[
+              const SizedBox(height: 16),
+              action!,
+            ],
+          ],
+        ),
       ),
     );
   }
 }
 
 class _AcceptedAgreementCard extends StatelessWidget {
-  final AcceptedCustomerAgreementEntity record;
-  final bool downloading;
-  final VoidCallback onView;
-  final VoidCallback onDownload;
-
   const _AcceptedAgreementCard({
     required this.record,
     required this.downloading,
@@ -212,63 +251,76 @@ class _AcceptedAgreementCard extends StatelessWidget {
     required this.onDownload,
   });
 
+  final AcceptedCustomerAgreementEntity record;
+  final bool downloading;
+  final VoidCallback onView;
+  final VoidCallback onDownload;
+
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     final l10n = context.l10n;
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: _kBorder),
+        color: c.surface,
+        borderRadius: BorderRadius.circular(_rCard),
+        border: Border.all(color: c.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Backend-authored title, frozen at acceptance time.
+          // Backend-authored title, frozen at acceptance time — shown
+          // verbatim, never translated.
           Text(
             record.title,
-            style: const TextStyle(
-              fontSize: 13.5,
+            style: TextStyle(
+              fontSize: 16,
               fontWeight: FontWeight.w700,
-              color: _kDark,
+              color: c.textPrimary,
               height: 1.35,
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           Text(
             l10n.workerAgreementVersion(record.version),
-            style: const TextStyle(fontSize: 11.5, color: _kGray),
+            style: TextStyle(fontSize: 12.5, height: 1.45, color: c.textSecondary),
           ),
           Text(
-            l10n.agreementAcceptedOn(_formatAgreementDate(l10n, record.acceptedAt)),
-            style: const TextStyle(fontSize: 11.5, color: _kGray),
+            l10n.agreementAcceptedOn(
+              _formatAgreementDate(l10n, record.acceptedAt),
+            ),
+            style: TextStyle(fontSize: 12.5, height: 1.45, color: c.textSecondary),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
+          Divider(height: 1, color: c.border),
+          const SizedBox(height: 4),
           Row(
             children: [
-              _Action(
-                icon: Icons.visibility_outlined,
-                label: l10n.workerViewAgreement,
-                onTap: onView,
-              ),
-              const SizedBox(width: 18),
-              if (downloading)
-                const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: _kOrange,
-                  ),
-                )
-              else
-                _Action(
-                  icon: Icons.download_outlined,
-                  label: l10n.agreementDownload,
-                  onTap: onDownload,
+              Expanded(
+                child: _Action(
+                  icon: Icons.visibility_outlined,
+                  label: l10n.workerViewAgreement,
+                  onTap: onView,
                 ),
+              ),
+              Expanded(
+                child: downloading
+                    ? const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        child: Center(
+                          child: SizedBox.square(
+                            dimension: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        ),
+                      )
+                    : _Action(
+                        icon: Icons.download_outlined,
+                        label: l10n.agreementDownload,
+                        onTap: onDownload,
+                      ),
+              ),
             ],
           ),
         ],
@@ -278,99 +330,37 @@ class _AcceptedAgreementCard extends StatelessWidget {
 }
 
 class _Action extends StatelessWidget {
+  const _Action({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
   final IconData icon;
   final String label;
   final VoidCallback onTap;
-  const _Action({required this.icon, required this.label, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    final c = context.semanticColors;
+    return InkWell(
       onTap: onTap,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 15, color: _kOrange),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 12.5,
-              fontWeight: FontWeight.w700,
-              color: _kOrange,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Read-only detail of one sealed acceptance. Shows what was accepted and
-/// when — and offers the sealed PDF, which is the document itself.
-class _AcceptedAgreementSheet extends StatelessWidget {
-  final AcceptedCustomerAgreementEntity record;
-  final VoidCallback onDownload;
-
-  const _AcceptedAgreementSheet({
-    required this.record,
-    required this.onDownload,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    return SafeArea(
+      borderRadius: BorderRadius.circular(12),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-        child: Column(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+        child: Row(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: _kBorder,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              record.title,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                color: _kDark,
-                height: 1.35,
-              ),
-            ),
-            const SizedBox(height: 12),
-            _Row(label: l10n.workerAgreementVersion(record.version)),
-            _Row(
-              label: l10n.agreementAcceptedOn(
-                _formatAgreementDate(l10n, record.acceptedAt),
-              ),
-            ),
-            if (record.acceptanceId != null)
-              _Row(label: l10n.agreementAcceptanceId(record.acceptanceId!)),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: onDownload,
-                icon: const Icon(Icons.download_outlined, size: 18),
-                label: Text(l10n.agreementDownload),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _kOrange,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+            Icon(icon, size: 16, color: c.primary),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: c.primary,
                 ),
               ),
             ),
@@ -381,9 +371,76 @@ class _AcceptedAgreementSheet extends StatelessWidget {
   }
 }
 
-class _Row extends StatelessWidget {
+/// Read-only detail of one sealed acceptance. Shows what was accepted and
+/// when — and offers the sealed PDF, which is the document itself.
+class _AcceptedAgreementSheet extends StatelessWidget {
+  const _AcceptedAgreementSheet({
+    required this.record,
+    required this.onDownload,
+  });
+
+  final AcceptedCustomerAgreementEntity record;
+  final VoidCallback onDownload;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.semanticColors;
+    final l10n = context.l10n;
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: c.border,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                record.title,
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                  color: c.textPrimary,
+                  height: 1.35,
+                ),
+              ),
+              const SizedBox(height: 12),
+              _MetaRow(label: l10n.workerAgreementVersion(record.version)),
+              _MetaRow(
+                label: l10n.agreementAcceptedOn(
+                  _formatAgreementDate(l10n, record.acceptedAt),
+                ),
+              ),
+              if (record.acceptanceId != null)
+                _MetaRow(label: l10n.agreementAcceptanceId(record.acceptanceId!)),
+              const SizedBox(height: 20),
+              ElevatedButton.icon(
+                onPressed: onDownload,
+                icon: const Icon(Icons.download_outlined, size: 18),
+                label: Text(l10n.agreementDownload),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MetaRow extends StatelessWidget {
+  const _MetaRow({required this.label});
+
   final String label;
-  const _Row({required this.label});
 
   @override
   Widget build(BuildContext context) {
@@ -391,7 +448,11 @@ class _Row extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 4),
       child: Text(
         label,
-        style: const TextStyle(fontSize: 12.5, color: _kGray, height: 1.45),
+        style: TextStyle(
+          fontSize: 12.5,
+          color: context.semanticColors.textSecondary,
+          height: 1.45,
+        ),
       ),
     );
   }
