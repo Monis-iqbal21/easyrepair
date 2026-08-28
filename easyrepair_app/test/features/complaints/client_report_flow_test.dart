@@ -25,8 +25,9 @@ Future<void> _useTallSurface(WidgetTester tester) async {
 }
 
 void main() {
-  testWidgets('completed booking creates one report and immediately shows it',
-      (tester) async {
+  testWidgets('completed booking creates one report and immediately shows it', (
+    tester,
+  ) async {
     await _useTallSurface(tester);
     final repository = _FakeComplaintRepository();
     final router = _router();
@@ -73,8 +74,9 @@ void main() {
     expect(find.byKey(const Key('report-problem-button')), findsNothing);
   });
 
-  testWidgets('OTHER is conditional, required, cleared, and persisted',
-      (tester) async {
+  testWidgets('OTHER is conditional, required, cleared, and persisted', (
+    tester,
+  ) async {
     await _useTallSurface(tester);
     final repository = _FakeComplaintRepository();
     final router = _router(initialLocation: '/client/booking/booking-1/report');
@@ -118,8 +120,9 @@ void main() {
     await tester.pumpAndSettle();
   });
 
-  testWidgets('duplicate 409 fetches existing report without generic failure',
-      (tester) async {
+  testWidgets('duplicate 409 fetches existing report without generic failure', (
+    tester,
+  ) async {
     await _useTallSurface(tester);
     final repository = _FakeComplaintRepository(conflictOnCreate: true);
     final router = _router(initialLocation: '/client/booking/booking-1/report');
@@ -146,35 +149,37 @@ void main() {
     expect(repository.createCalls, 1);
   });
 
-  testWidgets('reopening Booking Detail shows the same report, never a new button',
-      (tester) async {
-    final repository = _FakeComplaintRepository();
-    repository.stored = _complaint();
-    final router = _router();
-    await tester.pumpWidget(_app(repository: repository, router: router));
-    await tester.pumpAndSettle();
+  testWidgets(
+    'reopening Booking Detail shows the same report, never a new button',
+    (tester) async {
+      final repository = _FakeComplaintRepository();
+      repository.stored = _complaint();
+      final router = _router();
+      await tester.pumpWidget(_app(repository: repository, router: router));
+      await tester.pumpAndSettle();
 
-    // A booking that already carries a report opens straight into the
-    // existing-report state - the create action never appears.
-    expect(find.byKey(const Key('existing-report-section')), findsOneWidget);
-    expect(find.byKey(const Key('report-problem-button')), findsNothing);
-    expect(find.text('Your report'), findsOneWidget);
-    expect(find.text('Pending'), findsOneWidget);
-    expect(repository.createCalls, 0);
+      // A booking that already carries a report opens straight into the
+      // existing-report state - the create action never appears.
+      expect(find.byKey(const Key('existing-report-section')), findsOneWidget);
+      expect(find.byKey(const Key('report-problem-button')), findsNothing);
+      expect(find.text('Your report'), findsOneWidget);
+      expect(find.text('Pending'), findsOneWidget);
+      expect(repository.createCalls, 0);
 
-    // Navigate away and come back: same single complaint, still no button.
-    router.go('/client/booking/booking-1/report');
-    await tester.pumpAndSettle();
-    expect(find.byKey(const Key('report-already-submitted')), findsOneWidget);
-    expect(find.byKey(const Key('report-form')), findsNothing);
+      // Navigate away and come back: same single complaint, still no button.
+      router.go('/client/booking/booking-1/report');
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('report-already-submitted')), findsOneWidget);
+      expect(find.byKey(const Key('report-form')), findsNothing);
 
-    router.go('/client/booking/booking-1');
-    await tester.pumpAndSettle();
-    expect(find.byKey(const Key('existing-report-section')), findsOneWidget);
-    expect(find.byKey(const Key('report-problem-button')), findsNothing);
-    expect(repository.rows, 1);
-    expect(repository.createCalls, 0);
-  });
+      router.go('/client/booking/booking-1');
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('existing-report-section')), findsOneWidget);
+      expect(find.byKey(const Key('report-problem-button')), findsNothing);
+      expect(repository.rows, 1);
+      expect(repository.createCalls, 0);
+    },
+  );
 
   test('report action is absent for every non-completed booking status', () {
     for (final status in BookingStatus.values) {
@@ -215,8 +220,45 @@ void main() {
     );
   });
 
-  testWidgets('all complaint statuses use the locked client labels',
-      (tester) async {
+  testWidgets('report lookup error retries the existing provider method', (
+    tester,
+  ) async {
+    final repository = _FakeComplaintRepository(failFirstLookup: true);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [complaintRepositoryProvider.overrideWithValue(repository)],
+        child: MaterialApp(
+          theme: AppTheme.lightTheme,
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const ReportProblemPage(bookingId: 'booking-1'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('We couldn\'t load this'), findsOneWidget);
+    expect(
+      find.text('We could not load the report right now.'),
+      findsOneWidget,
+    );
+    expect(repository.lookupCalls, 1);
+
+    await tester.tap(find.text('Retry'));
+    await tester.pumpAndSettle();
+
+    expect(repository.lookupCalls, 2);
+    expect(find.byKey(const Key('report-form')), findsOneWidget);
+  });
+
+  testWidgets('all complaint statuses use the locked client labels', (
+    tester,
+  ) async {
     for (final entry in <ComplaintStatus, String>{
       ComplaintStatus.open: 'Pending',
       ComplaintStatus.inProgress: 'Under review',
@@ -224,66 +266,83 @@ void main() {
       ComplaintStatus.resolved: 'Resolved',
       ComplaintStatus.closed: 'Resolved',
     }.entries) {
-      await tester.pumpWidget(_widgetApp(ComplaintStatusChip(status: entry.key)));
+      await tester.pumpWidget(
+        _widgetApp(ComplaintStatusChip(status: entry.key)),
+      );
       expect(find.text(entry.value), findsOneWidget, reason: entry.key.name);
     }
   });
 
-  testWidgets('report form and existing section fit target widths in both themes',
-      (tester) async {
-    for (final brightness in Brightness.values) {
-      for (final width in [320.0, 360.0, 390.0, 430.0, 600.0]) {
-        await tester.binding.setSurfaceSize(Size(width, 800));
-        final repository = _FakeComplaintRepository();
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: [complaintRepositoryProvider.overrideWithValue(repository)],
-            child: MaterialApp(
-              theme: AppTheme.lightTheme,
-              darkTheme: AppTheme.darkTheme,
-              themeMode: brightness == Brightness.dark
-                  ? ThemeMode.dark
-                  : ThemeMode.light,
-              localizationsDelegates: const [
-                AppLocalizations.delegate,
-                GlobalMaterialLocalizations.delegate,
-                GlobalWidgetsLocalizations.delegate,
-                GlobalCupertinoLocalizations.delegate,
+  testWidgets(
+    'report form and existing section fit target widths in both themes',
+    (tester) async {
+      for (final brightness in Brightness.values) {
+        for (final width in [320.0, 360.0, 390.0, 430.0, 600.0]) {
+          await tester.binding.setSurfaceSize(Size(width, 800));
+          final repository = _FakeComplaintRepository();
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                complaintRepositoryProvider.overrideWithValue(repository),
               ],
-              supportedLocales: AppLocalizations.supportedLocales,
-              home: const ReportProblemPage(bookingId: 'booking-1'),
-            ),
-          ),
-        );
-        await tester.pumpAndSettle();
-        expect(tester.takeException(), isNull,
-            reason: '$brightness at ${width.toInt()}');
-
-        repository.stored = _complaint();
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: [complaintRepositoryProvider.overrideWithValue(repository)],
-            child: _widgetApp(
-              const BookingComplaintSection(
-                bookingId: 'booking-1',
-                bookingStatus: BookingStatus.completed,
-                isClient: true,
-                ownsBooking: true,
+              child: MaterialApp(
+                theme: AppTheme.lightTheme,
+                darkTheme: AppTheme.darkTheme,
+                themeMode: brightness == Brightness.dark
+                    ? ThemeMode.dark
+                    : ThemeMode.light,
+                localizationsDelegates: const [
+                  AppLocalizations.delegate,
+                  GlobalMaterialLocalizations.delegate,
+                  GlobalWidgetsLocalizations.delegate,
+                  GlobalCupertinoLocalizations.delegate,
+                ],
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: const ReportProblemPage(bookingId: 'booking-1'),
               ),
-              brightness: brightness,
             ),
-          ),
-        );
-        await tester.pumpAndSettle();
-        expect(tester.takeException(), isNull,
-            reason: 'section $brightness at ${width.toInt()}');
+          );
+          await tester.pumpAndSettle();
+          expect(
+            tester.takeException(),
+            isNull,
+            reason: '$brightness at ${width.toInt()}',
+          );
+
+          repository.stored = _complaint();
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                complaintRepositoryProvider.overrideWithValue(repository),
+              ],
+              child: _widgetApp(
+                const BookingComplaintSection(
+                  bookingId: 'booking-1',
+                  bookingStatus: BookingStatus.completed,
+                  isClient: true,
+                  ownsBooking: true,
+                ),
+                brightness: brightness,
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          expect(
+            tester.takeException(),
+            isNull,
+            reason: 'section $brightness at ${width.toInt()}',
+          );
+        }
       }
-    }
-    await tester.binding.setSurfaceSize(null);
-  });
+      await tester.binding.setSurfaceSize(null);
+    },
+  );
 }
 
-Widget _app({required _FakeComplaintRepository repository, required GoRouter router}) {
+Widget _app({
+  required _FakeComplaintRepository repository,
+  required GoRouter router,
+}) {
   return ProviderScope(
     overrides: [complaintRepositoryProvider.overrideWithValue(repository)],
     child: MaterialApp.router(
@@ -364,17 +423,28 @@ ComplaintEntity _complaint({
 }
 
 class _FakeComplaintRepository implements ComplaintRepository {
-  _FakeComplaintRepository({this.conflictOnCreate = false});
+  _FakeComplaintRepository({
+    this.conflictOnCreate = false,
+    this.failFirstLookup = false,
+  });
 
   final bool conflictOnCreate;
+  final bool failFirstLookup;
   ComplaintEntity? stored;
   int createCalls = 0;
+  int lookupCalls = 0;
   bool _initialConflictLookupDone = false;
 
   int get rows => stored == null ? 0 : 1;
 
   @override
-  Future<Either<Failure, ComplaintEntity?>> getForBooking(String bookingId) async {
+  Future<Either<Failure, ComplaintEntity?>> getForBooking(
+    String bookingId,
+  ) async {
+    lookupCalls += 1;
+    if (failFirstLookup && lookupCalls == 1) {
+      return const Left(ServerFailure('', diagnostic: 'private stack details'));
+    }
     if (conflictOnCreate && !_initialConflictLookupDone) {
       _initialConflictLookupDone = true;
       return const Right(null);

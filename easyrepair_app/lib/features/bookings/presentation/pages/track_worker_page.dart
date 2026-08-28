@@ -19,6 +19,7 @@ import '../utils/booking_timeline.dart';
 import '../providers/booking_providers.dart';
 import '../widgets/inspection_report_card.dart';
 import '../../../chat/presentation/providers/chat_providers.dart';
+import '../../../client/presentation/widgets/client_state_view.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
 import '../../../../core/errors/failure_messages.dart';
 
@@ -87,12 +88,8 @@ class _TrackWorkerPageState extends ConsumerState<TrackWorkerPage> {
       body: SafeArea(
         child: bookingAsync.when(
           skipError: true,
-          loading: () => Center(
-            child: CircularProgressIndicator(
-              color: colors.primary,
-              strokeWidth: 2,
-            ),
-          ),
+          loading: () =>
+              ClientStateView.loading(message: context.l10n.trackLoading),
           error: (err, _) => _ErrorBody(
             message: failureMessage(
               context.l10n,
@@ -1498,57 +1495,11 @@ class _ErrorBody extends StatelessWidget {
           ),
         ),
         Expanded(
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 40),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text('⚠️', style: TextStyle(fontSize: 40)),
-                  const SizedBox(height: 16),
-                  Text(
-                    context.l10n.trackLoadFailedShort,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: colors.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    message,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: colors.textSecondary,
-                      height: 1.4,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  GestureDetector(
-                    onTap: onRetry,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 12,
-                      ),
-                      decoration: BoxDecoration(
-                        color: colors.primary,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        context.l10n.commonRetry,
-                        style: TextStyle(
-                          color: colors.onPrimary,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          child: ClientStateView.error(
+            title: context.l10n.trackLoadFailedShort,
+            message: message,
+            actionLabel: context.l10n.commonRetry,
+            onAction: onRetry,
           ),
         ),
       ],

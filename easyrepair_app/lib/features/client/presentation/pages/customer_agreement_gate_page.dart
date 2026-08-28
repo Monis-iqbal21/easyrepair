@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/entities/customer_agreement_entity.dart';
 import '../providers/customer_agreement_providers.dart';
+import '../widgets/client_state_view.dart';
 import 'customer_agreement_viewer_page.dart';
 import '../../../../core/errors/failure_messages.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
@@ -81,23 +82,25 @@ class _CustomerAgreementGatePageState
         backgroundColor: _kBg,
         body: SafeArea(
           child: statusAsync.when(
-            loading: () => const Center(
-              child: CircularProgressIndicator(color: _kOrange),
+            loading: () => ClientStateView.loading(
+              message: context.l10n.clientStateLoading,
             ),
-            error: (err, _) => _ErrorState(
+            error: (err, _) => ClientStateView.error(
+              title: context.l10n.clientStateErrorTitle,
               message: failureMessage(
                 context.l10n,
                 err,
                 fallback: context.l10n.agreementLoadFailed,
               ),
-              onRetry: () => ref.invalidate(requiredCustomerAgreementProvider),
+              actionLabel: context.l10n.commonRetry,
+              onAction: () => ref.invalidate(requiredCustomerAgreementProvider),
             ),
             data: (status) {
               if (status == null || !status.acceptanceRequired) {
                 // The router redirect is about to navigate away; avoid a
                 // flash of the form during that single frame.
-                return const Center(
-                  child: CircularProgressIndicator(color: _kOrange),
+                return ClientStateView.loading(
+                  message: context.l10n.clientStateLoading,
                 );
               }
               return _GateBody(
@@ -203,9 +206,7 @@ class _GateBody extends StatelessWidget {
                   runSpacing: 6,
                   children: [
                     _Chip(
-                      label: l10n.workerAgreementVersion(
-                        agreement.version,
-                      ),
+                      label: l10n.workerAgreementVersion(agreement.version),
                     ),
                   ],
                 ),
@@ -414,47 +415,6 @@ class _Chip extends StatelessWidget {
           fontSize: 11.5,
           fontWeight: FontWeight.w600,
           color: _kGray,
-        ),
-      ),
-    );
-  }
-}
-
-class _ErrorState extends StatelessWidget {
-  final String message;
-  final VoidCallback onRetry;
-  const _ErrorState({required this.message, required this.onRetry});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.error_outline_rounded, size: 36, color: _kRed),
-            const SizedBox(height: 12),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 13.5, color: _kGray, height: 1.5),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: onRetry,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _kOrange,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: Text(context.l10n.commonRetry),
-            ),
-          ],
         ),
       ),
     );

@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../domain/entities/customer_agreement_entity.dart';
 import '../providers/customer_agreement_providers.dart';
+import '../widgets/client_state_view.dart';
 import '../../../../core/errors/failure_messages.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
 import '../../../../core/theme/app_semantic_colors.dart';
@@ -73,8 +74,10 @@ class _ClientAgreementsPageState extends ConsumerState<ClientAgreementsPage> {
       if (!folder.existsSync()) folder.createSync(recursive: true);
       // The public acceptance id only — never the phone number or the
       // Client's name.
-      final file = File('${folder.path}/handygo-agreement-'
-          '${record.downloadId.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '-')}.pdf');
+      final file = File(
+        '${folder.path}/handygo-agreement-'
+        '${record.downloadId.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '-')}.pdf',
+      );
       file.writeAsBytesSync(bytes);
       savedPath = file.path;
     } catch (_) {
@@ -152,25 +155,24 @@ class _ClientAgreementsPageState extends ConsumerState<ClientAgreementsPage> {
       ),
       body: SafeArea(
         child: recordsAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, _) => _StateView(
-            icon: Icons.error_outline_rounded,
+          loading: () =>
+              ClientStateView.loading(message: context.l10n.clientStateLoading),
+          error: (err, _) => ClientStateView.error(
+            title: context.l10n.clientStateErrorTitle,
             message: failureMessage(
               context.l10n,
               err,
               fallback: context.l10n.agreementsLoadFailed,
             ),
-            action: OutlinedButton(
-              onPressed: () =>
-                  ref.invalidate(customerAgreementHistoryProvider),
-              child: Text(context.l10n.commonRetry),
-            ),
+            actionLabel: context.l10n.commonRetry,
+            onAction: () => ref.invalidate(customerAgreementHistoryProvider),
           ),
           data: (records) {
             if (records.isEmpty) {
-              return _StateView(
+              return ClientStateView.empty(
                 icon: Icons.gavel_rounded,
-                message: context.l10n.workerAcceptedAgreementsEmpty,
+                title: context.l10n.customerAgreementHistoryEmptyTitle,
+                message: context.l10n.customerAgreementHistoryEmptyHelper,
               );
             }
             return ListView.separated(
@@ -185,58 +187,6 @@ class _ClientAgreementsPageState extends ConsumerState<ClientAgreementsPage> {
               ),
             );
           },
-        ),
-      ),
-    );
-  }
-}
-
-/// One shape for "nothing here" and "that failed" — same icon-over-text
-/// rhythm, so the page never changes layout language between its states.
-class _StateView extends StatelessWidget {
-  const _StateView({
-    required this.icon,
-    required this.message,
-    this.action,
-  });
-
-  final IconData icon;
-  final String message;
-  final Widget? action;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.semanticColors;
-    return Center(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                color: c.softTeal,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, size: 26, color: c.primary),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                height: 1.5,
-                color: c.textSecondary,
-              ),
-            ),
-            if (action != null) ...[
-              const SizedBox(height: 16),
-              action!,
-            ],
-          ],
         ),
       ),
     );
@@ -284,13 +234,21 @@ class _AcceptedAgreementCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             l10n.workerAgreementVersion(record.version),
-            style: TextStyle(fontSize: 12.5, height: 1.45, color: c.textSecondary),
+            style: TextStyle(
+              fontSize: 12.5,
+              height: 1.45,
+              color: c.textSecondary,
+            ),
           ),
           Text(
             l10n.agreementAcceptedOn(
               _formatAgreementDate(l10n, record.acceptedAt),
             ),
-            style: TextStyle(fontSize: 12.5, height: 1.45, color: c.textSecondary),
+            style: TextStyle(
+              fontSize: 12.5,
+              height: 1.45,
+              color: c.textSecondary,
+            ),
           ),
           const SizedBox(height: 12),
           Divider(height: 1, color: c.border),
@@ -330,11 +288,7 @@ class _AcceptedAgreementCard extends StatelessWidget {
 }
 
 class _Action extends StatelessWidget {
-  const _Action({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
+  const _Action({required this.icon, required this.label, required this.onTap});
 
   final IconData icon;
   final String label;
@@ -422,7 +376,9 @@ class _AcceptedAgreementSheet extends StatelessWidget {
                 ),
               ),
               if (record.acceptanceId != null)
-                _MetaRow(label: l10n.agreementAcceptanceId(record.acceptanceId!)),
+                _MetaRow(
+                  label: l10n.agreementAcceptanceId(record.acceptanceId!),
+                ),
               const SizedBox(height: 20),
               ElevatedButton.icon(
                 onPressed: onDownload,
@@ -463,9 +419,18 @@ class _MetaRow extends StatelessWidget {
 /// formatAgreementDate — kept local rather than imported across features.
 String _formatAgreementDate(AppLocalizations l10n, DateTime date) {
   final months = [
-    l10n.monthJan, l10n.monthFeb, l10n.monthMar, l10n.monthApr,
-    l10n.monthMay, l10n.monthJun, l10n.monthJul, l10n.monthAug,
-    l10n.monthSep, l10n.monthOct, l10n.monthNov, l10n.monthDec,
+    l10n.monthJan,
+    l10n.monthFeb,
+    l10n.monthMar,
+    l10n.monthApr,
+    l10n.monthMay,
+    l10n.monthJun,
+    l10n.monthJul,
+    l10n.monthAug,
+    l10n.monthSep,
+    l10n.monthOct,
+    l10n.monthNov,
+    l10n.monthDec,
   ];
   final local = date.toLocal();
   return l10n.dateDayMonthYear(local.day, months[local.month - 1], local.year);

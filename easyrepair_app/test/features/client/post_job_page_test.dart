@@ -849,6 +849,25 @@ void main() {
       expect(find.textContaining('optional'), findsWidgets);
     });
 
+    testWidgets('empty inspection report picker uses contextual state copy', (
+      tester,
+    ) async {
+      await _goToLaneDetailsStep(
+        tester,
+        laneOptionTitle: _customOption[AppLocale.english]!,
+      );
+
+      await tester.tap(find.byKey(const ValueKey('attach-inspection-report')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('No inspection reports yet'), findsOneWidget);
+      expect(
+        find.text('No previous inspection reports available for this service.'),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('BIDDING details matches the English reference hierarchy', (
       tester,
     ) async {

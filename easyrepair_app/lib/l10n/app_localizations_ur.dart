@@ -3585,6 +3585,33 @@ class AppLocalizationsUr extends AppLocalizations {
   String get customerAgreementHistoryTitle => 'منظور شدہ معاہدے';
 
   @override
+  String get customerAgreementHistoryEmptyTitle =>
+      'ابھی کوئی معاہدہ منظور نہیں کیا';
+
+  @override
+  String get customerAgreementHistoryEmptyHelper =>
+      'آپ کے منظور کیے ہوئے کسٹمر معاہدے یہاں نظر آئیں گے۔';
+
+  @override
+  String get clientStateLoading => 'لوڈ ہو رہا ہے…';
+
+  @override
+  String get clientStateErrorTitle => 'یہ لوڈ نہیں ہو سکا';
+
+  @override
+  String get trackLoading => 'لائیو ٹریکنگ لوڈ ہو رہی ہے…';
+
+  @override
+  String get reportCheckingExisting => 'پہلے سے موجود رپورٹ چیک ہو رہی ہے…';
+
+  @override
+  String get postJobInspectionReportsEmptyTitle =>
+      'ابھی کوئی انسپکشن رپورٹ نہیں';
+
+  @override
+  String get postJobInspectionReportsErrorTitle => 'انسپکشن رپورٹس دستیاب نہیں';
+
+  @override
   String get workerSubmittedDetails => 'جمع کرائی گئی تفصیلات';
 
   @override
@@ -7821,6 +7848,35 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get customerAgreementHistoryTitle => 'Manzoor Shuda Muahiday';
+
+  @override
+  String get customerAgreementHistoryEmptyTitle =>
+      'Abhi koi muahida manzoor nahi kiya';
+
+  @override
+  String get customerAgreementHistoryEmptyHelper =>
+      'Aap ke manzoor kiye hue customer muahiday yahan nazar aayenge.';
+
+  @override
+  String get clientStateLoading => 'Load ho raha hai…';
+
+  @override
+  String get clientStateErrorTitle => 'Yeh load nahi ho saka';
+
+  @override
+  String get trackLoading => 'Live tracking load ho rahi hai…';
+
+  @override
+  String get reportCheckingExisting =>
+      'Pehle se maujood report check ho rahi hai…';
+
+  @override
+  String get postJobInspectionReportsEmptyTitle =>
+      'Abhi koi inspection report nahi';
+
+  @override
+  String get postJobInspectionReportsErrorTitle =>
+      'Inspection reports dastyab nahi';
 
   @override
   String get workerSubmittedDetails => 'Jama karai gayi tafseelat';

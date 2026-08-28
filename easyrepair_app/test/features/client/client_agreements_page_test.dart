@@ -58,7 +58,9 @@ Future<void> _pump(
         else
           customerAgreementHistoryProvider.overrideWith((ref) async => history),
         if (downloadNotifier != null)
-          downloadCustomerAgreementProvider.overrideWith(() => downloadNotifier),
+          downloadCustomerAgreementProvider.overrideWith(
+            () => downloadNotifier,
+          ),
       ],
       child: localizedApp(const ClientAgreementsPage()),
     ),
@@ -86,8 +88,9 @@ void main() {
       tester,
     ) async {
       await _pump(tester, history: const []);
+      expect(find.text('No accepted agreements yet'), findsOneWidget);
       expect(
-        find.text('You have not accepted any agreements yet.'),
+        find.text('Customer agreements you accept will appear here.'),
         findsOneWidget,
       );
     });
@@ -107,7 +110,35 @@ void main() {
       tester,
     ) async {
       await _pump(tester, history: const [], historyError: Exception('boom'));
+      expect(find.text('We couldn\'t load this'), findsOneWidget);
+      expect(find.text('Agreements could not be loaded.'), findsOneWidget);
       expect(find.text('Retry'), findsOneWidget);
+      expect(find.textContaining('boom'), findsNothing);
+    });
+
+    testWidgets('retry invalidates and reloads the existing history provider', (
+      tester,
+    ) async {
+      var attempts = 0;
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            customerAgreementHistoryProvider.overrideWith((ref) async {
+              attempts++;
+              throw Exception('raw backend details');
+            }),
+          ],
+          child: localizedApp(const ClientAgreementsPage()),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(attempts, 1);
+
+      await tester.tap(find.text('Retry'));
+      await tester.pumpAndSettle();
+
+      expect(attempts, 2);
+      expect(find.textContaining('raw backend details'), findsNothing);
     });
 
     testWidgets('viewing a record shows its Acceptance ID', (tester) async {
@@ -119,18 +150,19 @@ void main() {
       expect(find.textContaining('HG-ACC-2026-ABCDEF123456'), findsOneWidget);
     });
 
-    testWidgets('downloading calls the download provider with the acceptance id', (
-      tester,
-    ) async {
-      final notifier = _FakeDownloadNotifier();
-      await _pump(tester, history: [_record()], downloadNotifier: notifier);
+    testWidgets(
+      'downloading calls the download provider with the acceptance id',
+      (tester) async {
+        final notifier = _FakeDownloadNotifier();
+        await _pump(tester, history: [_record()], downloadNotifier: notifier);
 
-      await tester.tap(find.text('Download'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('Download'));
+        await tester.pumpAndSettle();
 
-      expect(notifier.calls, 1);
-      expect(notifier.lastAcceptanceId, 'HG-ACC-2026-ABCDEF123456');
-    });
+        expect(notifier.calls, 1);
+        expect(notifier.lastAcceptanceId, 'HG-ACC-2026-ABCDEF123456');
+      },
+    );
 
     testWidgets('multiple accepted records each render their own card', (
       tester,

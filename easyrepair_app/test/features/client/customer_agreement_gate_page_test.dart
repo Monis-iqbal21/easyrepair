@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -10,7 +12,8 @@ import '../../support/l10n_test_app.dart';
 
 const _legalBody = 'This is the full legal body text for testing purposes.';
 
-CustomerAgreementStatusEntity _pendingStatus() => const CustomerAgreementStatusEntity(
+CustomerAgreementStatusEntity _pendingStatus() =>
+    const CustomerAgreementStatusEntity(
       acceptanceRequired: true,
       agreement: CustomerAgreementEntity(
         documentType: kCustomerTermsDocumentType,
@@ -59,7 +62,9 @@ Future<void> _pump(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
-        requiredCustomerAgreementProvider.overrideWith((ref) async => _pendingStatus()),
+        requiredCustomerAgreementProvider.overrideWith(
+          (ref) async => _pendingStatus(),
+        ),
         if (acceptNotifier != null)
           acceptCustomerAgreementProvider.overrideWith(() => acceptNotifier),
       ],
@@ -70,37 +75,100 @@ Future<void> _pump(
 }
 
 void main() {
+  group('initial agreement state', () {
+    testWidgets('shows localized loading feedback while agreement resolves', (
+      tester,
+    ) async {
+      final pending = Completer<CustomerAgreementStatusEntity?>();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            requiredCustomerAgreementProvider.overrideWith(
+              (ref) => pending.future,
+            ),
+          ],
+          child: localizedApp(const CustomerAgreementGatePage()),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('Loading…'), findsOneWidget);
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      pending.complete(_pendingStatus());
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('maps raw load errors and retry reloads the provider', (
+      tester,
+    ) async {
+      var attempts = 0;
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            requiredCustomerAgreementProvider.overrideWith((ref) async {
+              attempts++;
+              throw Exception('private stack details');
+            }),
+          ],
+          child: localizedApp(const CustomerAgreementGatePage()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('We couldn\'t load this'), findsOneWidget);
+      expect(
+        find.text('Could not load the agreement. Please try again.'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('private stack details'), findsNothing);
+      expect(attempts, 1);
+
+      await tester.tap(find.text('Retry'));
+      await tester.pumpAndSettle();
+      expect(attempts, 2);
+    });
+  });
+
   group('checkbox and I Agree gating', () {
-    testWidgets('the checkbox starts unchecked — never pre-selected', (tester) async {
+    testWidgets('the checkbox starts unchecked — never pre-selected', (
+      tester,
+    ) async {
       await _pump(tester);
       final checkbox = tester.widget<Checkbox>(find.byType(Checkbox));
       expect(checkbox.value, isFalse);
     });
 
-    testWidgets('I Agree is disabled until the checkbox is ticked', (tester) async {
+    testWidgets('I Agree is disabled until the checkbox is ticked', (
+      tester,
+    ) async {
       await _pump(tester);
 
-      final before =
-          tester.widget<ElevatedButton>(find.widgetWithText(ElevatedButton, 'I Agree'));
+      final before = tester.widget<ElevatedButton>(
+        find.widgetWithText(ElevatedButton, 'I Agree'),
+      );
       expect(before.onPressed, isNull);
 
       await tester.tap(find.byType(Checkbox));
       await tester.pumpAndSettle();
 
-      final after =
-          tester.widget<ElevatedButton>(find.widgetWithText(ElevatedButton, 'I Agree'));
+      final after = tester.widget<ElevatedButton>(
+        find.widgetWithText(ElevatedButton, 'I Agree'),
+      );
       expect(after.onPressed, isNotNull);
     });
 
-    testWidgets('unticking the checkbox disables I Agree again', (tester) async {
+    testWidgets('unticking the checkbox disables I Agree again', (
+      tester,
+    ) async {
       await _pump(tester);
       await tester.tap(find.byType(Checkbox));
       await tester.pumpAndSettle();
       await tester.tap(find.byType(Checkbox));
       await tester.pumpAndSettle();
 
-      final button =
-          tester.widget<ElevatedButton>(find.widgetWithText(ElevatedButton, 'I Agree'));
+      final button = tester.widget<ElevatedButton>(
+        find.widgetWithText(ElevatedButton, 'I Agree'),
+      );
       expect(button.onPressed, isNull);
     });
   });
@@ -119,8 +187,9 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            requiredCustomerAgreementProvider
-                .overrideWith((ref) async => _pendingStatus()),
+            requiredCustomerAgreementProvider.overrideWith(
+              (ref) async => _pendingStatus(),
+            ),
           ],
           child: localizedApp(
             Builder(
@@ -154,30 +223,33 @@ void main() {
   });
 
   group('submission', () {
-    testWidgets('a failed submission keeps the gate open and shows a retryable error', (
+    testWidgets(
+      'a failed submission keeps the gate open and shows a retryable error',
+      (tester) async {
+        final notifier = _FakeAcceptNotifier(error: Exception('boom'));
+        await _pump(tester, acceptNotifier: notifier);
+
+        await tester.tap(find.byType(Checkbox));
+        await tester.pumpAndSettle();
+        await tester.tap(find.widgetWithText(ElevatedButton, 'I Agree'));
+        await tester.pumpAndSettle();
+
+        expect(notifier.calls, 1);
+        expect(find.byType(CustomerAgreementGatePage), findsOneWidget);
+        expect(
+          find.text('Acceptance could not be saved. Please try again.'),
+          findsOneWidget,
+        );
+        // The checkbox stays ticked and the button stays enabled — a retry
+        // should not force the Client to re-read and re-tick.
+        final checkbox = tester.widget<Checkbox>(find.byType(Checkbox));
+        expect(checkbox.value, isTrue);
+      },
+    );
+
+    testWidgets('a successful submission calls accept exactly once', (
       tester,
     ) async {
-      final notifier = _FakeAcceptNotifier(error: Exception('boom'));
-      await _pump(tester, acceptNotifier: notifier);
-
-      await tester.tap(find.byType(Checkbox));
-      await tester.pumpAndSettle();
-      await tester.tap(find.widgetWithText(ElevatedButton, 'I Agree'));
-      await tester.pumpAndSettle();
-
-      expect(notifier.calls, 1);
-      expect(find.byType(CustomerAgreementGatePage), findsOneWidget);
-      expect(
-        find.text('Acceptance could not be saved. Please try again.'),
-        findsOneWidget,
-      );
-      // The checkbox stays ticked and the button stays enabled — a retry
-      // should not force the Client to re-read and re-tick.
-      final checkbox = tester.widget<Checkbox>(find.byType(Checkbox));
-      expect(checkbox.value, isTrue);
-    });
-
-    testWidgets('a successful submission calls accept exactly once', (tester) async {
       final notifier = _FakeAcceptNotifier();
       await _pump(tester, acceptNotifier: notifier);
 
@@ -196,7 +268,9 @@ void main() {
       );
     });
 
-    testWidgets('I Agree shows a loading spinner while submitting', (tester) async {
+    testWidgets('I Agree shows a loading spinner while submitting', (
+      tester,
+    ) async {
       final notifier = _FakeAcceptNotifier();
       await _pump(tester, acceptNotifier: notifier);
 
@@ -212,28 +286,31 @@ void main() {
     // Chunk 3 launch-hardening: a double-tap that races past the disabled
     // button (both taps land before the first rebuild shows the spinner)
     // must still only fire one accept request.
-    testWidgets('repeated tap before the spinner renders triggers only one accept request', (
-      tester,
-    ) async {
-      final notifier = _FakeAcceptNotifier();
-      await _pump(tester, acceptNotifier: notifier);
+    testWidgets(
+      'repeated tap before the spinner renders triggers only one accept request',
+      (tester) async {
+        final notifier = _FakeAcceptNotifier();
+        await _pump(tester, acceptNotifier: notifier);
 
-      await tester.tap(find.byType(Checkbox));
-      await tester.pumpAndSettle();
+        await tester.tap(find.byType(Checkbox));
+        await tester.pumpAndSettle();
 
-      final button = find.widgetWithText(ElevatedButton, 'I Agree');
-      // Two taps back-to-back, no pump in between — simulates a real
-      // double-tap landing before the widget rebuilds with isLoading:true.
-      await tester.tap(button);
-      await tester.tap(button);
-      await tester.pumpAndSettle();
+        final button = find.widgetWithText(ElevatedButton, 'I Agree');
+        // Two taps back-to-back, no pump in between — simulates a real
+        // double-tap landing before the widget rebuilds with isLoading:true.
+        await tester.tap(button);
+        await tester.tap(button);
+        await tester.pumpAndSettle();
 
-      expect(notifier.calls, 1);
-    });
+        expect(notifier.calls, 1);
+      },
+    );
   });
 
   group('reading the agreement', () {
-    testWidgets('the full legal text is shown inline, scrollable', (tester) async {
+    testWidgets('the full legal text is shown inline, scrollable', (
+      tester,
+    ) async {
       await _pump(tester);
       expect(find.text(_legalBody), findsOneWidget);
     });
@@ -255,8 +332,9 @@ void main() {
       await tester.tap(find.byType(Checkbox));
       await tester.pumpAndSettle();
 
-      final button =
-          tester.widget<ElevatedButton>(find.widgetWithText(ElevatedButton, 'I Agree'));
+      final button = tester.widget<ElevatedButton>(
+        find.widgetWithText(ElevatedButton, 'I Agree'),
+      );
       expect(button.onPressed, isNotNull);
     });
   });

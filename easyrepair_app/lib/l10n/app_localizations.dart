@@ -6519,6 +6519,54 @@ abstract class AppLocalizations {
   /// **'Accepted Agreements'**
   String get customerAgreementHistoryTitle;
 
+  /// No description provided for @customerAgreementHistoryEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No accepted agreements yet'**
+  String get customerAgreementHistoryEmptyTitle;
+
+  /// No description provided for @customerAgreementHistoryEmptyHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer agreements you accept will appear here.'**
+  String get customerAgreementHistoryEmptyHelper;
+
+  /// No description provided for @clientStateLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading…'**
+  String get clientStateLoading;
+
+  /// No description provided for @clientStateErrorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t load this'**
+  String get clientStateErrorTitle;
+
+  /// No description provided for @trackLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading live tracking…'**
+  String get trackLoading;
+
+  /// No description provided for @reportCheckingExisting.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking for an existing report…'**
+  String get reportCheckingExisting;
+
+  /// No description provided for @postJobInspectionReportsEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No inspection reports yet'**
+  String get postJobInspectionReportsEmptyTitle;
+
+  /// No description provided for @postJobInspectionReportsErrorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Inspection reports unavailable'**
+  String get postJobInspectionReportsErrorTitle;
+
   /// No description provided for @workerSubmittedDetails.
   ///
   /// In en, this message translates to:

@@ -39,6 +39,7 @@ import '../../../../features/saved_addresses/domain/entities/saved_address_entit
 import '../../../../features/saved_addresses/presentation/providers/saved_addresses_providers.dart';
 import '../widgets/saved_address_list.dart';
 import '../../../../core/services/geocoding_service.dart';
+import '../widgets/client_state_view.dart';
 import '../widgets/location_picker_sheet.dart';
 import '../widgets/service_card.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
@@ -5678,50 +5679,25 @@ class _InspectionReportSelectorSheet extends ConsumerWidget {
             child: Padding(
               padding: EdgeInsets.fromLTRB(16, 4, 16, 16 + bottomPadding),
               child: async.when(
-                loading: () => Padding(
-                  padding: EdgeInsets.symmetric(vertical: 28),
-                  child: Center(
-                    child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation(_primary(context)),
-                    ),
-                  ),
+                loading: () => ClientStateView.loading(
+                  message: context.l10n.clientStateLoading,
+                  compact: true,
                 ),
-                error: (err, _) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 20),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        context.l10n.postJobInspectionReportsFailed,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          color: _textSecondary(context),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      TextButton(
-                        onPressed: () => ref.invalidate(
-                          attachableInspectionsProvider(categoryId),
-                        ),
-                        child: Text(context.l10n.commonRetry),
-                      ),
-                    ],
-                  ),
+                error: (err, _) => ClientStateView.error(
+                  title: context.l10n.postJobInspectionReportsErrorTitle,
+                  message: context.l10n.postJobInspectionReportsFailed,
+                  actionLabel: context.l10n.commonRetry,
+                  onAction: () =>
+                      ref.invalidate(attachableInspectionsProvider(categoryId)),
+                  compact: true,
                 ),
                 data: (items) {
                   if (items.isEmpty) {
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 24),
-                      child: Text(
-                        context.l10n.postJobNoInspectionReports,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          height: 1.4,
-                          color: _textSecondary(context),
-                        ),
-                      ),
+                    return ClientStateView.empty(
+                      icon: Icons.fact_check_outlined,
+                      title: context.l10n.postJobInspectionReportsEmptyTitle,
+                      message: context.l10n.postJobNoInspectionReports,
+                      compact: true,
                     );
                   }
                   return ListView.separated(

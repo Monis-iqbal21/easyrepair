@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/l10n/l10n_extensions.dart';
 import '../../../../core/theme/app_semantic_colors.dart';
+import '../../../client/presentation/widgets/client_state_view.dart';
 import '../../domain/entities/complaint_entity.dart';
 import '../providers/complaint_providers.dart';
 import '../utils/complaint_labels.dart';
@@ -56,20 +57,24 @@ class _ReportProblemPageState extends ConsumerState<ReportProblemPage> {
         child: _submitted
             ? const _ReportSuccessView()
             : complaintState.isLoading &&
-                    !complaintState.hasValue &&
-                    !_submitting
-                ? Center(
-                    child: CircularProgressIndicator(color: colors.primary),
-                  )
-                : complaintState.hasError && !complaintState.hasValue
-                    ? _ReportLoadError(
-                        onRetry: () => ref.invalidate(
-                          bookingComplaintProvider(widget.bookingId),
-                        ),
-                      )
-                    : complaintState.valueOrNull != null && !_submitting
-                        ? _AlreadySubmittedView(bookingId: widget.bookingId)
-                        : _buildForm(context),
+                  !complaintState.hasValue &&
+                  !_submitting
+            ? Center(
+                child: ClientStateView.loading(
+                  message: context.l10n.reportCheckingExisting,
+                ),
+              )
+            : complaintState.hasError && !complaintState.hasValue
+            ? ClientStateView.error(
+                title: context.l10n.clientStateErrorTitle,
+                message: context.l10n.reportLookupFailed,
+                actionLabel: context.l10n.commonRetry,
+                onAction: () =>
+                    ref.invalidate(bookingComplaintProvider(widget.bookingId)),
+              )
+            : complaintState.valueOrNull != null && !_submitting
+            ? _AlreadySubmittedView(bookingId: widget.bookingId)
+            : _buildForm(context),
       ),
     );
   }
@@ -85,9 +90,9 @@ class _ReportProblemPageState extends ConsumerState<ReportProblemPage> {
             children: [
               Text(
                 context.l10n.reportProblemHelper,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: colors.textSecondary,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyLarge?.copyWith(color: colors.textSecondary),
               ),
               const SizedBox(height: 18),
               for (final issue in ComplaintIssueType.values) ...[
@@ -198,9 +203,9 @@ class _ReportProblemPageState extends ConsumerState<ReportProblemPage> {
     } catch (_) {
       if (!mounted) return;
       setState(() => _submitting = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.reportActionFailed)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.l10n.reportActionFailed)));
     }
   }
 }
@@ -285,9 +290,9 @@ class _ReportSuccessView extends StatelessWidget {
               context.l10n.reportSubmittedTitle,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: colors.textPrimary,
-                    fontWeight: FontWeight.w700,
-                  ),
+                color: colors.textPrimary,
+                fontWeight: FontWeight.w700,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
@@ -317,8 +322,11 @@ class _AlreadySubmittedView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.assignment_turned_in_rounded,
-                size: 56, color: colors.success),
+            Icon(
+              Icons.assignment_turned_in_rounded,
+              size: 56,
+              color: colors.success,
+            ),
             const SizedBox(height: 14),
             Text(
               context.l10n.reportAlreadyExists,
@@ -333,39 +341,6 @@ class _AlreadySubmittedView extends StatelessWidget {
                   ? context.pop()
                   : context.go('/client/booking/$bookingId'),
               child: Text(context.l10n.reportBackToBooking),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ReportLoadError extends StatelessWidget {
-  const _ReportLoadError({required this.onRetry});
-
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.semanticColors;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.cloud_off_rounded, color: colors.textSecondary),
-            const SizedBox(height: 10),
-            Text(
-              context.l10n.reportLookupFailed,
-              textAlign: TextAlign.center,
-              style: TextStyle(color: colors.textSecondary),
-            ),
-            const SizedBox(height: 10),
-            OutlinedButton(
-              onPressed: onRetry,
-              child: Text(context.l10n.commonRetry),
             ),
           ],
         ),

@@ -3659,6 +3659,32 @@ class AppLocalizationsEn extends AppLocalizations {
   String get customerAgreementHistoryTitle => 'Accepted Agreements';
 
   @override
+  String get customerAgreementHistoryEmptyTitle => 'No accepted agreements yet';
+
+  @override
+  String get customerAgreementHistoryEmptyHelper =>
+      'Customer agreements you accept will appear here.';
+
+  @override
+  String get clientStateLoading => 'Loading…';
+
+  @override
+  String get clientStateErrorTitle => 'We couldn\'t load this';
+
+  @override
+  String get trackLoading => 'Loading live tracking…';
+
+  @override
+  String get reportCheckingExisting => 'Checking for an existing report…';
+
+  @override
+  String get postJobInspectionReportsEmptyTitle => 'No inspection reports yet';
+
+  @override
+  String get postJobInspectionReportsErrorTitle =>
+      'Inspection reports unavailable';
+
+  @override
   String get workerSubmittedDetails => 'Submitted Details';
 
   @override

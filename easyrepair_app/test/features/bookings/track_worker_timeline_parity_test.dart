@@ -58,6 +58,13 @@ class _StubDetailNotifier extends BookingDetailNotifier {
   Future<BookingEntity> build(String arg) async => booking;
 }
 
+class _FailingDetailNotifier extends BookingDetailNotifier {
+  @override
+  Future<BookingEntity> build(String arg) async {
+    throw Exception('raw tracking stack details');
+  }
+}
+
 Future<void> _pumpTrackWorker(
   WidgetTester tester,
   BookingEntity booking, {
@@ -233,6 +240,31 @@ void main() {
 
     expect(find.byType(GoogleMap), findsOneWidget);
     expect(find.byKey(const Key('track-worker-timeline')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('tracking load failure uses friendly copy and hides raw errors', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 700));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          bookingDetailProvider.overrideWith(_FailingDetailNotifier.new),
+        ],
+        child: localizedApp(
+          const TrackWorkerPage(bookingId: _bookingId),
+          theme: AppTheme.darkTheme,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Failed to load tracking'), findsOneWidget);
+    expect(find.text('Failed to load tracking data.'), findsOneWidget);
+    expect(find.textContaining('raw tracking stack details'), findsNothing);
+    expect(find.text('Retry'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }
