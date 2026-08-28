@@ -2,10 +2,15 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
-const _kDark = Color(0xFF1A1A1A);
+import '../../../../core/theme/app_semantic_colors.dart';
 
-/// One reusable in-app full-screen map, shared by the client booking-detail
-/// and worker-tracking views.
+// Every colour on this page comes from `context.semanticColors`. The
+// `_kDark = Color(0xFF1A1A1A)` constant and the two `Colors.white` fills that
+// used to sit here are gone — they were EasyRepair values that ignored the
+// dark palette entirely, so this page rendered a white bar over a dark app.
+
+/// One reusable in-app full-screen map, opened from the client's Track Ustaad
+/// view.
 ///
 /// Deliberately in-app: it never launches an external maps application, so
 /// the user stays in HandyGo and a normal back returns to the exact page they
@@ -61,14 +66,31 @@ class _FullScreenMapPageState extends State<FullScreenMapPage> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
+
     return Scaffold(
+      backgroundColor: c.background,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: c.surface,
+        surfaceTintColor: c.surface,
         elevation: 0,
-        foregroundColor: _kDark,
+        scrolledUnderElevation: 0,
+        foregroundColor: c.textPrimary,
+        // A 1px hairline instead of a shadow — the same separation every other
+        // HandyGo surface uses.
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(height: 1, color: c.border),
+        ),
         title: Text(
           widget.title,
-          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 17,
+            color: c.textPrimary,
+          ),
         ),
       ),
       body: ValueListenableBuilder<Set<Marker>>(
@@ -104,6 +126,10 @@ class _FullScreenMapPageState extends State<FullScreenMapPage> {
 /// Positioned bottom-right by the caller so it cannot cover Google's
 /// attribution (bottom-left) or the zoom controls (which inline previews
 /// disable anyway).
+///
+/// Sits *over* a map rather than inside a screen, so it keeps a hairline
+/// border to stay legible against arbitrary map tiles — the same treatment
+/// the Track Ustaad page's floating banner uses.
 class MapExpandButton extends StatelessWidget {
   final VoidCallback onTap;
 
@@ -111,16 +137,24 @@ class MapExpandButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
+
     return Material(
-      color: Colors.white,
-      shape: const CircleBorder(),
-      elevation: 2,
+      color: c.surface,
+      shape: CircleBorder(side: BorderSide(color: c.border)),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         customBorder: const CircleBorder(),
         onTap: onTap,
-        child: const Padding(
-          padding: EdgeInsets.all(8),
-          child: Icon(Icons.fullscreen_rounded, size: 20, color: _kDark),
+        child: SizedBox(
+          // 44 — the prototype's minimum tappable control.
+          width: 44,
+          height: 44,
+          child: Icon(
+            Icons.fullscreen_rounded,
+            size: 22,
+            color: c.textPrimary,
+          ),
         ),
       ),
     );

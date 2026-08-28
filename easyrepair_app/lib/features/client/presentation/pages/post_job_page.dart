@@ -37,6 +37,7 @@ import '../../../../features/categories/presentation/providers/categories_provid
 import '../../../../features/saved_addresses/data/datasources/saved_addresses_remote_datasource.dart';
 import '../../../../features/saved_addresses/domain/entities/saved_address_entity.dart';
 import '../../../../features/saved_addresses/presentation/providers/saved_addresses_providers.dart';
+import '../widgets/saved_address_list.dart';
 import '../../../../core/services/geocoding_service.dart';
 import '../widgets/location_picker_sheet.dart';
 import '../widgets/service_card.dart';
@@ -2026,84 +2027,30 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     required String title,
     SavedAddressEntity? editing,
     String? initialError,
-  }) async {
-    final controller = TextEditingController(text: initialValue);
-    String? inlineError = initialError;
-    final result = await showModalBottomSheet<String>(
-      context: context,
-      isScrollControlled: true,
-      builder: (sheetContext) => StatefulBuilder(
-        builder: (context, setSheetState) => SafeArea(
-          top: false,
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(
-              20,
-              20,
-              20,
-              MediaQuery.viewInsetsOf(context).bottom + 20,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: Theme.of(context).textTheme.titleLarge),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: controller,
-                  autofocus: true,
-                  maxLength: 50,
-                  decoration: InputDecoration(
-                    labelText: context.l10n.savedAddressName,
-                    errorText: inlineError,
-                  ),
-                  onChanged: (_) {
-                    if (inlineError != null) {
-                      setSheetState(() => inlineError = null);
-                    }
-                  },
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    onPressed: () {
-                      final value = controller.text.trim();
-                      if (value.isEmpty) {
-                        setSheetState(
-                          () => inlineError =
-                              context.l10n.savedAddressNameRequired,
-                        );
-                        return;
-                      }
-                      final normalized = _normalizeSavedAddressLabel(value);
-                      final rows =
-                          ref.read(savedAddressesProvider).valueOrNull ??
-                          const <SavedAddressEntity>[];
-                      final conflicts = rows.any(
-                        (row) =>
-                            row.id != editing?.id &&
-                            row.normalizedLabel == normalized,
-                      );
-                      if (editing != null && conflicts) {
-                        setSheetState(
-                          () => inlineError =
-                              context.l10n.savedAddressRenameConflict,
-                        );
-                        return;
-                      }
-                      Navigator.pop(sheetContext, value);
-                    },
-                    child: Text(context.l10n.commonSave),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
+  }) {
+    // Presentation moved to `saved_address_list.dart`; the duplicate-label
+    // rule stays here because only this page can see the current saved list.
+    return showSavedAddressNameSheet(
+      context,
+      initialValue: initialValue,
+      title: title,
+      initialError: initialError,
+      onValidate: (value) {
+        if (value.isEmpty) return context.l10n.savedAddressNameRequired;
+        final normalized = _normalizeSavedAddressLabel(value);
+        final rows =
+            ref.read(savedAddressesProvider).valueOrNull ??
+            const <SavedAddressEntity>[];
+        final conflicts = rows.any(
+          (row) =>
+              row.id != editing?.id && row.normalizedLabel == normalized,
+        );
+        if (editing != null && conflicts) {
+          return context.l10n.savedAddressRenameConflict;
+        }
+        return null;
+      },
     );
-    controller.dispose();
-    return result;
   }
 
   Future<void> _askOtherSavedAddressName() async {
@@ -2179,39 +2126,9 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
   }
 
   Future<void> _manageSavedAddress(SavedAddressEntity address) async {
-    final action = await showModalBottomSheet<String>(
-      context: context,
-      builder: (sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: Icon(Icons.location_on_outlined),
-              title: Text(context.l10n.savedAddressUse),
-              onTap: () => Navigator.pop(sheetContext, 'use'),
-            ),
-            ListTile(
-              leading: Icon(Icons.sync_rounded),
-              title: Text(context.l10n.savedAddressUpdateWithCurrent),
-              onTap: () => Navigator.pop(sheetContext, 'update'),
-            ),
-            ListTile(
-              leading: Icon(Icons.edit_outlined),
-              title: Text(context.l10n.savedAddressRename),
-              onTap: () => Navigator.pop(sheetContext, 'rename'),
-            ),
-            ListTile(
-              leading: Icon(
-                Icons.delete_outline,
-                color: context.semanticColors.error,
-              ),
-              title: Text(context.l10n.commonDelete),
-              onTap: () => Navigator.pop(sheetContext, 'delete'),
-            ),
-          ],
-        ),
-      ),
-    );
+    // Same four actions in the same order, returning the same keys — only the
+    // sheet's presentation moved.
+    final action = await showSavedAddressOptionsSheet(context, address);
     if (!mounted) return;
     if (action == 'use') {
       _useSavedAddress(address);
@@ -2236,48 +2153,13 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
   Widget _buildSavedAddressesRow() {
     final addresses = ref.watch(savedAddressesProvider).valueOrNull ?? const [];
     if (addresses.isEmpty) return const SizedBox.shrink();
-    final colors = context.semanticColors;
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            context.l10n.savedAddresses,
-            style: TextStyle(
-              color: colors.textPrimary,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 8),
-          SizedBox(
-            height: 44,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: addresses.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 8),
-              itemBuilder: (_, index) {
-                final address = addresses[index];
-                final selected = _selectedSavedAddressId == address.id;
-                return InputChip(
-                  selected: selected,
-                  label: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 130),
-                    child: Text(address.label, overflow: TextOverflow.ellipsis),
-                  ),
-                  onPressed: () => _useSavedAddress(address),
-                  onDeleted: () => _manageSavedAddress(address),
-                  deleteIcon: Icon(Icons.more_horiz, size: 20),
-                  backgroundColor: colors.surface,
-                  selectedColor: colors.softTeal,
-                  side: BorderSide(
-                    color: selected ? colors.primary : colors.border,
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
+      child: SavedAddressList(
+        addresses: addresses,
+        selectedId: _selectedSavedAddressId,
+        onSelect: _useSavedAddress,
+        onEdit: _manageSavedAddress,
       ),
     );
   }
@@ -2449,7 +2331,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
         const SizedBox(height: 12),
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
           decoration: BoxDecoration(
             color: colors.surface,
             borderRadius: BorderRadius.circular(14),
@@ -2459,34 +2341,66 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildSavedAddressesRow(),
-              CheckboxListTile(
-                value: _showSaveAddressOptions,
-                contentPadding: EdgeInsets.zero,
-                visualDensity: VisualDensity.compact,
-                controlAffinity: ListTileControlAffinity.leading,
-                title: Text(context.l10n.savedAddressForNextTime),
-                onChanged: (value) =>
-                    setState(() => _showSaveAddressOptions = value ?? false),
+              // A 56-tall tappable row rather than a `CheckboxListTile`,
+              // whose Material default sat under the prototype's minimum and
+              // drew its own label typography.
+              InkWell(
+                onTap: () => setState(
+                  () => _showSaveAddressOptions = !_showSaveAddressOptions,
+                ),
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  constraints: const BoxConstraints(minHeight: 56),
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Row(
+                    children: [
+                      Checkbox(
+                        value: _showSaveAddressOptions,
+                        visualDensity: VisualDensity.compact,
+                        materialTapTargetSize:
+                            MaterialTapTargetSize.shrinkWrap,
+                        onChanged: (value) => setState(
+                          () => _showSaveAddressOptions = value ?? false,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          context.l10n.savedAddressForNextTime,
+                          style: TextStyle(
+                            fontSize: 14,
+                            height: 1.3,
+                            fontWeight: FontWeight.w600,
+                            color: colors.textPrimary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
               if (_showSaveAddressOptions) ...[
-                const SizedBox(height: 6),
+                const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
                   children: [
                     if (!hasHome)
-                      ActionChip(
-                        label: Text(context.l10n.navHome),
-                        onPressed: () => _saveCurrentAddressAs('Home'),
+                      SavedAddressPillButton(
+                        label: context.l10n.navHome,
+                        icon: Icons.home_outlined,
+                        onTap: () => _saveCurrentAddressAs('Home'),
                       ),
                     if (!hasOffice)
-                      ActionChip(
-                        label: Text(context.l10n.savedAddressOffice),
-                        onPressed: () => _saveCurrentAddressAs('Office'),
+                      SavedAddressPillButton(
+                        label: context.l10n.savedAddressOffice,
+                        icon: Icons.work_outline_rounded,
+                        onTap: () => _saveCurrentAddressAs('Office'),
                       ),
-                    ActionChip(
-                      label: Text(context.l10n.workerCancelReasonOther),
-                      onPressed: _askOtherSavedAddressName,
+                    SavedAddressPillButton(
+                      label: context.l10n.workerCancelReasonOther,
+                      icon: Icons.add_location_alt_outlined,
+                      onTap: _askOtherSavedAddressName,
                     ),
                   ],
                 ),
@@ -2546,7 +2460,10 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
           ),
           Positioned.fill(
             child: Material(
-              color: colors.surface.withValues(alpha: 0),
+              // `MaterialType.transparency` instead of a `surface` faded to
+              // alpha 0 — a colour comes from the palette or it does not
+              // exist, and this layer needs no colour at all.
+              type: MaterialType.transparency,
               child: InkWell(onTap: _openMapPicker),
             ),
           ),
@@ -2555,14 +2472,17 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
             end: 10,
             bottom: 9,
             child: Material(
-              color: colors.surface.withValues(alpha: 0.94),
-              borderRadius: BorderRadius.circular(9),
+              // Opaque `surface`, not a 94%-alpha derivation of it — and more
+              // legible over arbitrary map tiles for it.
+              color: colors.surface,
+              borderRadius: BorderRadius.circular(12),
               child: InkWell(
                 onTap: _openMapPicker,
-                borderRadius: BorderRadius.circular(9),
-                child: Padding(
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  constraints: const BoxConstraints(minHeight: 44),
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
+                    horizontal: 12,
                     vertical: 8,
                   ),
                   child: Row(
@@ -2580,11 +2500,12 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                           hasSelectedLocation
                               ? (_pickedAddress ?? _addressCtrl.text.trim())
                               : context.l10n.postJobMapPreviewEmpty,
-                          maxLines: 1,
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             color: colors.textPrimary,
-                            fontSize: 12,
+                            fontSize: 12.5,
+                            height: 1.3,
                             fontWeight: FontWeight.w600,
                           ),
                         ),

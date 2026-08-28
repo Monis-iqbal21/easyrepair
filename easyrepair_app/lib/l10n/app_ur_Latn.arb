@@ -1164,7 +1164,7 @@
   "postJobAddressResolving": "Is address ko map par dhoonda ja raha hai…",
   "postJobAddressUnresolved": "Yeh address nahi mila. Mazeed tafseel likhein ya map par chunain.",
   "postJobAddressRequired": "Aage barhne se pehle address likhein.",
-  "postJobMapPreviewEmpty": "MAP — PIN LAGANE KE LIYE TAP KAREIN",
+  "postJobMapPreviewEmpty": "Map — pin lagane ke liye tap karein",
   "postJobLanePageTitle": "Choose a booking option",
   "postJobLaneStepIndicator": "Step 2 / 4 · {service}",
   "postJobLaneFixedTitle": "Fixed-price services",

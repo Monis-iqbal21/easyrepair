@@ -8128,7 +8128,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get postJobAddressRequired => 'Aage barhne se pehle address likhein.';
 
   @override
-  String get postJobMapPreviewEmpty => 'MAP — PIN LAGANE KE LIYE TAP KAREIN';
+  String get postJobMapPreviewEmpty => 'Map — pin lagane ke liye tap karein';
 
   @override
   String get postJobLanePageTitle => 'Choose a booking option';

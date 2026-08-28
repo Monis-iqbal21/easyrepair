@@ -19,6 +19,19 @@ const _kMapsApiKey = String.fromEnvironment('GOOGLE_MAPS_API_KEY');
 const _kKarachiCenter = LatLng(24.8607, 67.0011);
 const _kKarachiRadiusM = 55000.0; // 55 km
 
+// ── Shape ─────────────────────────────────────────────────────────────────────
+// The same values Choose Ustaad and the bidding cards use, so this sheet reads
+// as one surface with the rest of the redesigned client UI. Colours are never
+// declared here — every one comes from `context.semanticColors`.
+const double _rCard = 16;
+const double _rButton = 14;
+
+/// Minimum height of the sheet's primary action, per the prototype.
+const double _hAction = 52;
+
+/// Minimum height of a tappable row (a search-result line, the GPS control).
+const double _hRow = 44;
+
 // ── Result model ──────────────────────────────────────────────────────────────
 
 class PickedLocation {
@@ -58,7 +71,13 @@ Future<PickedLocation?> showLocationPicker(
   return showModalBottomSheet<PickedLocation>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: context.semanticColors.surface.withValues(alpha: 0),
+    backgroundColor: context.semanticColors.surface,
+    // The sheet owns its own rounded top and clips to it, so the child no
+    // longer has to paint a transparent-background trick to get the corners.
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    ),
+    clipBehavior: Clip.antiAlias,
     builder: (_) => _LocationPickerSheet(initial: initial),
   );
 }
@@ -410,12 +429,8 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
     final screenH = MediaQuery.of(context).size.height;
     final topPad = MediaQuery.of(context).padding.top;
 
-    return Container(
+    return SizedBox(
       height: screenH - topPad - 24,
-      decoration: BoxDecoration(
-        color: _colors.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-      ),
       child: Column(
         children: [
           _buildHandle(),
@@ -455,11 +470,12 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
               onSubmitted: (v) {
                 if (v.trim().isNotEmpty) _runAutocomplete(v.trim());
               },
+              style: TextStyle(fontSize: 14, color: _colors.textPrimary),
               decoration: InputDecoration(
                 hintText: context.l10n.locationSearchHint,
                 hintStyle: TextStyle(
                   color: _colors.textSecondary,
-                  fontSize: 13.5,
+                  fontSize: 14,
                 ),
                 prefixIcon: _searching
                     ? Padding(
@@ -494,15 +510,15 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
                 filled: true,
                 fillColor: _colors.surfaceSubtle,
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(_rButton),
                   borderSide: BorderSide(color: _colors.controlBorder),
                 ),
                 enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(_rButton),
                   borderSide: BorderSide(color: _colors.controlBorder),
                 ),
                 focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(_rButton),
                   borderSide: BorderSide(color: _colors.primary, width: 1.4),
                 ),
                 contentPadding: const EdgeInsets.symmetric(
@@ -516,11 +532,11 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
           GestureDetector(
             onTap: _gpsLoading ? null : _goToCurrentLocation,
             child: Container(
-              width: 44,
-              height: 44,
+              width: _hRow,
+              height: _hRow,
               decoration: BoxDecoration(
                 color: _colors.softTeal,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(_rButton),
                 border: Border.all(color: _colors.primary),
               ),
               child: _gpsLoading
@@ -547,17 +563,13 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
     return Container(
       constraints: const BoxConstraints(maxHeight: 220),
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      // A card here is `surface` + radius 16 + a 1px hairline. The BoxShadow
+      // that used to lift this list — and the derived `textPrimary` alpha it
+      // was drawn in — are gone; nothing inside a HandyGo screen casts one.
       decoration: BoxDecoration(
         color: _colors.surface,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(_rCard),
         border: Border.all(color: _colors.border),
-        boxShadow: [
-          BoxShadow(
-            color: _colors.textPrimary.withValues(alpha: 0.06),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
       child: ListView.builder(
         shrinkWrap: true,
@@ -566,15 +578,18 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
         itemBuilder: (_, i) {
           final p = _predictions[i];
           return InkWell(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(_rCard),
             onTap: () => _selectPrediction(p),
-            child: Padding(
+            child: Container(
+              // A result line is a tappable row — never below the prototype's
+              // 44 minimum, however short the place name is.
+              constraints: const BoxConstraints(minHeight: _hRow),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Padding(
-                    padding: EdgeInsets.only(top: 2),
+                    padding: const EdgeInsets.only(top: 1),
                     child: Icon(
                       Icons.location_on_outlined,
                       size: 18,
@@ -589,11 +604,11 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
                         Text(
                           p.mainText,
                           style: TextStyle(
-                            fontSize: 13.5,
+                            fontSize: 14,
                             fontWeight: FontWeight.w600,
                             color: _colors.textPrimary,
                           ),
-                          maxLines: 1,
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
                         if (p.secondaryText.isNotEmpty) ...[
@@ -601,10 +616,10 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
                           Text(
                             p.secondaryText,
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: 12.5,
                               color: _colors.textSecondary,
                             ),
-                            maxLines: 1,
+                            maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ],
@@ -665,7 +680,14 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Pin head — scales up slightly while dragging
+                  // Pin head — scales up slightly while dragging.
+                  //
+                  // The teal glow this used to cast was a `primary` derived
+                  // with `withValues(alpha:)`, which the palette does not
+                  // allow. The lift now reads as a solid `onPrimary` ring
+                  // that thickens on drag — same "picked up" cue, drawn
+                  // entirely in named tokens, and more legible over dark
+                  // satellite tiles than a soft shadow ever was.
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 150),
                     curve: Curves.easeOut,
@@ -674,15 +696,10 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
                     decoration: BoxDecoration(
                       color: _colors.primary,
                       shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: _colors.primary.withValues(
-                            alpha: _isDragging ? 0.45 : 0.3,
-                          ),
-                          blurRadius: _isDragging ? 18 : 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
+                      border: Border.all(
+                        color: _colors.onPrimary,
+                        width: _isDragging ? 3.5 : 2.5,
+                      ),
                     ),
                     child: Icon(
                       Icons.location_on_rounded,
@@ -703,7 +720,9 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
                       ),
                     ),
                   ),
-                  // Ground shadow dot — fades when lifted
+                  // Ground dot — fades when the pin is lifted. Drawn in
+                  // `controlBorder`, the palette's own mid tone, instead of a
+                  // `textPrimary` alpha derivation.
                   AnimatedOpacity(
                     duration: const Duration(milliseconds: 150),
                     opacity: _isDragging ? 0.3 : 1.0,
@@ -711,7 +730,7 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
                       width: 10,
                       height: 5,
                       decoration: BoxDecoration(
-                        color: _colors.textPrimary.withValues(alpha: 0.18),
+                        color: _colors.controlBorder,
                         borderRadius: BorderRadius.circular(3),
                       ),
                     ),
@@ -730,6 +749,8 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
         _picked != null &&
         !_reverseGeocoding &&
         _addressLabel.trim().isNotEmpty;
+    final resolveFailed =
+        _picked != null && !_reverseGeocoding && _addressLabel.trim().isEmpty;
 
     return Container(
       padding: EdgeInsets.fromLTRB(
@@ -744,87 +765,148 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // ── Selected address ───────────────────────────────────────────────
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(
-                Icons.location_on_rounded,
-                size: 18,
-                color: _picked != null
-                    ? _colors.primary
-                    : _colors.textSecondary,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _reverseGeocoding
-                    ? Row(
-                        children: [
-                          SizedBox(
-                            width: 14,
-                            height: 14,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: _colors.primary,
-                            ),
-                          ),
-                          SizedBox(width: 8),
-                          Text(
-                            context.l10n.locationGettingAddress,
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: _colors.textSecondary,
-                            ),
-                          ),
-                        ],
-                      )
-                    : Text(
-                        _picked == null
-                            ? context.l10n.locationMoveMapHint
-                            : _addressLabel.isNotEmpty
-                            ? _addressLabel
-                            : context.l10n.locationResolveFailed,
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: _picked == null
-                              ? _colors.textSecondary
-                              : _colors.textPrimary,
-                          fontWeight: _picked != null
-                              ? FontWeight.w600
-                              : FontWeight.normal,
-                        ),
-                      ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
+          _buildAddressReadout(resolveFailed: resolveFailed),
+          const SizedBox(height: 12),
 
-          // ── Confirm button ─────────────────────────────────────────────────
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: canConfirm ? _confirm : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _colors.primary,
-                foregroundColor: _colors.onPrimary,
-                disabledBackgroundColor: _colors.disabled,
-                disabledForegroundColor: _colors.textSecondary,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                elevation: 0,
+          // ── Confirm ────────────────────────────────────────────────────────
+          ElevatedButton(
+            onPressed: canConfirm ? _confirm : null,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _colors.primary,
+              foregroundColor: _colors.onPrimary,
+              disabledBackgroundColor: _colors.surfaceSubtle,
+              disabledForegroundColor: _colors.textSecondary,
+              // 52 — the prototype's primary-button height. `minimumSize`
+              // rather than fixed padding so a 2.0 text scale grows the
+              // button instead of clipping its label.
+              minimumSize: const Size.fromHeight(_hAction),
+              // Standard density pinned: the platform-adaptive default shaves
+              // 4px off on desktop-class devices, which would put this control
+              // under the prototype's 52 floor.
+              visualDensity: VisualDensity.standard,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(_rButton),
               ),
-              child: Text(
-                context.l10n.locationUseThis,
-                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
-              ),
+              elevation: 0,
+            ),
+            child: Text(
+              context.l10n.locationUseThis,
+              maxLines: 2,
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
             ),
           ),
         ],
       ),
     );
   }
+
+  /// The address the pin currently resolves to — a card, not a bare line, so
+  /// the one piece of information the confirm button acts on reads as the
+  /// panel's subject.
+  ///
+  /// Three states, each with its own token pairing and no derived colours:
+  /// resolving (`surfaceSubtle`), resolved (`softTeal` + `primary` hairline),
+  /// and failed-to-resolve (`errorSoft` + `error` hairline) — the last one is
+  /// why the button below stays disabled, so it says so instead of leaving a
+  /// dead CTA unexplained.
+  Widget _buildAddressReadout({required bool resolveFailed}) {
+    final hasPick = _picked != null;
+
+    final Color fill;
+    final Color line;
+    final Color icon;
+    if (resolveFailed) {
+      fill = _colors.errorSoft;
+      line = _colors.error;
+      icon = _colors.error;
+    } else if (hasPick && !_reverseGeocoding) {
+      fill = _colors.softTeal;
+      line = _colors.primary;
+      icon = _colors.primary;
+    } else {
+      fill = _colors.surfaceSubtle;
+      line = _colors.border;
+      icon = _colors.textSecondary;
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      decoration: BoxDecoration(
+        color: fill,
+        borderRadius: BorderRadius.circular(_rCard),
+        border: Border.all(color: line),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 1),
+            child: Icon(
+              resolveFailed
+                  ? Icons.error_outline_rounded
+                  : Icons.location_on_rounded,
+              size: 18,
+              color: icon,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: _reverseGeocoding
+                ? Row(
+                    children: [
+                      SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: _colors.primary,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          context.l10n.locationGettingAddress,
+                          style: TextStyle(
+                            fontSize: 14,
+                            height: 1.35,
+                            color: _colors.textSecondary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                : Text(
+                    !hasPick
+                        ? context.l10n.locationMoveMapHint
+                        : resolveFailed
+                        ? context.l10n.locationResolveFailed
+                        : _addressLabel,
+                    // A Karachi address routinely runs three lines; it wraps
+                    // rather than truncating, because this is the text the
+                    // client is being asked to confirm.
+                    style: TextStyle(
+                      fontSize: 14,
+                      height: 1.35,
+                      color: resolveFailed
+                          ? _colors.error
+                          : hasPick
+                          ? _colors.textPrimary
+                          : _colors.textSecondary,
+                      fontWeight: hasPick && !resolveFailed
+                          ? FontWeight.w600
+                          : FontWeight.w400,
+                    ),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
 }
