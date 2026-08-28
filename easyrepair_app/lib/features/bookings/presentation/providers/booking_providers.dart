@@ -17,6 +17,7 @@ import '../../domain/entities/cash_payment_confirmation_entity.dart';
 import '../../domain/entities/create_booking_request.dart';
 import '../../domain/entities/inspection_report_entity.dart';
 import '../../domain/entities/nearby_worker_entity.dart';
+import '../../domain/entities/nearby_worker_profile_entity.dart';
 import '../../domain/entities/update_booking_request.dart';
 import '../../domain/repositories/booking_repository.dart';
 import '../../domain/usecases/cancel_booking_usecase.dart';
@@ -768,6 +769,21 @@ class NearbyWorkersNotifier
     });
   }
 }
+
+/// One candidate Ustaad's public profile, keyed by (bookingId, workerProfileId).
+///
+/// autoDispose so closing the modal releases it, and family-keyed so opening
+/// two different Ustaads in a row does not show the first one's data. Only
+/// ever watched by the profile modal — never by a list row.
+typedef NearbyWorkerProfileRef = ({String bookingId, String workerProfileId});
+
+final nearbyWorkerProfileProvider = FutureProvider.autoDispose
+    .family<NearbyWorkerProfileEntity, NearbyWorkerProfileRef>((ref, key) async {
+      final result = await ref
+          .read(bookingRepositoryProvider)
+          .getNearbyWorkerProfile(key.bookingId, key.workerProfileId);
+      return result.fold((failure) => throw failure, (profile) => profile);
+    });
 
 final nearbyWorkersNotifierProvider = NotifierProvider.autoDispose
     .family<NearbyWorkersNotifier, NearbyWorkersState, String>(

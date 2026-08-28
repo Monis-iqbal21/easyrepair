@@ -12,6 +12,8 @@ class NearbyWorkerModel {
   final double distanceKm;
   final List<String> skills;
   final bool recommended;
+  final bool cnicVerified;
+  final int? relevantExperienceYears;
 
   const NearbyWorkerModel({
     required this.id,
@@ -25,6 +27,8 @@ class NearbyWorkerModel {
     required this.distanceKm,
     required this.skills,
     this.recommended = false,
+    this.cnicVerified = false,
+    this.relevantExperienceYears,
   });
 
   factory NearbyWorkerModel.fromJson(Map<String, dynamic> json) {
@@ -43,6 +47,10 @@ class NearbyWorkerModel {
               .toList() ??
           const [],
       recommended: json['recommended'] as bool? ?? false,
+      // Absent is NOT verified — a missing flag must never read as a badge.
+      cnicVerified: json['cnicVerified'] as bool? ?? false,
+      relevantExperienceYears: (json['relevantExperienceYears'] as num?)
+          ?.toInt(),
     );
   }
 
@@ -58,6 +66,8 @@ class NearbyWorkerModel {
         distanceKm: distanceKm,
         skills: skills,
         recommended: recommended,
+        cnicVerified: cnicVerified,
+        relevantExperienceYears: relevantExperienceYears,
       );
 }
 

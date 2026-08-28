@@ -1894,6 +1894,43 @@ class AppLocalizationsUr extends AppLocalizations {
   String get chooseSkills => 'مہارتیں';
 
   @override
+  String get chooseNearestFirst => 'قریب والے پہلے';
+
+  @override
+  String chooseAvailableCount(int count) {
+    return '$count دستیاب';
+  }
+
+  @override
+  String get chooseViewProfile => 'پروفائل دیکھیں';
+
+  @override
+  String get chooseNoReviews => 'کوئی ریویو دستیاب نہیں';
+
+  @override
+  String get chooseCnicVerified => 'شناختی کارڈ تصدیق شدہ';
+
+  @override
+  String get chooseCnicVerifiedUstaad => 'شناختی کارڈ تصدیق شدہ استاد';
+
+  @override
+  String chooseExperienceYears(int years) {
+    String _temp0 = intl.Intl.pluralLogic(
+      years,
+      locale: localeName,
+      other: '$years سال تجربہ',
+      one: '$years سال تجربہ',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get choosePhoneLabel => 'فون نمبر';
+
+  @override
+  String get chooseProfileLoadFailed => 'اس استاد کی پروفائل لوڈ نہیں ہو سکی۔';
+
+  @override
   String get myBookingsLoadFailed =>
       'آپ کی بکنگز لوڈ نہیں ہو سکیں۔ دوبارہ کوشش کریں۔';
 
@@ -6065,6 +6102,44 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get chooseSkills => 'Skills';
+
+  @override
+  String get chooseNearestFirst => 'Qareeb wale pehle';
+
+  @override
+  String chooseAvailableCount(int count) {
+    return '$count mojood';
+  }
+
+  @override
+  String get chooseViewProfile => 'Profile dekhein';
+
+  @override
+  String get chooseNoReviews => 'Koi review mojood nahi';
+
+  @override
+  String get chooseCnicVerified => 'CNIC verified';
+
+  @override
+  String get chooseCnicVerifiedUstaad => 'CNIC Verified Ustaad';
+
+  @override
+  String chooseExperienceYears(int years) {
+    String _temp0 = intl.Intl.pluralLogic(
+      years,
+      locale: localeName,
+      other: '$years saal tajurba',
+      one: '$years saal tajurba',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get choosePhoneLabel => 'Phone number';
+
+  @override
+  String get chooseProfileLoadFailed =>
+      'Is Ustaad ki profile load nahi ho saki.';
 
   @override
   String get myBookingsLoadFailed =>

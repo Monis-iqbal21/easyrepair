@@ -3516,7 +3516,7 @@ abstract class AppLocalizations {
   /// No description provided for @chooseSelect.
   ///
   /// In en, this message translates to:
-  /// **'Select'**
+  /// **'Chunain'**
   String get chooseSelect;
 
   /// No description provided for @chooseRecommended.
@@ -3530,6 +3530,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Skills'**
   String get chooseSkills;
+
+  /// No description provided for @chooseNearestFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Nearest first'**
+  String get chooseNearestFirst;
+
+  /// No description provided for @chooseAvailableCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} available'**
+  String chooseAvailableCount(int count);
+
+  /// No description provided for @chooseViewProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'View profile'**
+  String get chooseViewProfile;
+
+  /// No description provided for @chooseNoReviews.
+  ///
+  /// In en, this message translates to:
+  /// **'No reviews available'**
+  String get chooseNoReviews;
+
+  /// No description provided for @chooseCnicVerified.
+  ///
+  /// In en, this message translates to:
+  /// **'CNIC verified'**
+  String get chooseCnicVerified;
+
+  /// No description provided for @chooseCnicVerifiedUstaad.
+  ///
+  /// In en, this message translates to:
+  /// **'CNIC Verified Ustaad'**
+  String get chooseCnicVerifiedUstaad;
+
+  /// No description provided for @chooseExperienceYears.
+  ///
+  /// In en, this message translates to:
+  /// **'{years, plural, =1{{years} yr experience} other{{years} yrs experience}}'**
+  String chooseExperienceYears(int years);
+
+  /// No description provided for @choosePhoneLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone number'**
+  String get choosePhoneLabel;
+
+  /// No description provided for @chooseProfileLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load this Ustaad\'s profile.'**
+  String get chooseProfileLoadFailed;
 
   /// No description provided for @myBookingsLoadFailed.
   ///

@@ -16,6 +16,7 @@ import {
   BookingLane,
   BookingStatus,
   BookingUrgency,
+  FaceMatchStatus,
   TimeSlot,
   UrgentWindow,
 } from '@prisma/client';
@@ -40,6 +41,7 @@ import {
   NearbyWorkersResponseDto,
   WorkerSummaryDto,
 } from './dto/booking-response.dto';
+import { NearbyWorkerProfileDto } from './dto/nearby-worker-profile.dto';
 import { derivePaymentDisplay } from './payment-display.util';
 import { UpdateBookingDto } from './dto/update-booking.dto';
 import { CreateReviewDto } from './dto/create-review.dto';
@@ -959,6 +961,8 @@ export class BookingsService {
       distanceKm: Math.round(w.distanceMeters / 100) / 10,
       skills: w.skills,
       recommended: w.recommended,
+      cnicVerified: w.cnicVerified,
+      relevantExperienceYears: w.relevantExperienceYears,
     }));
 
     // Re-broadcast while the client is on the discovery screen. Per-live-cycle
@@ -972,6 +976,87 @@ export class BookingsService {
       searchedRadiusKm,
       totalFound: workerDtos.length,
       searchCompleted,
+    };
+  }
+
+  /** How many reviews the selection modal shows, at most. */
+  private static readonly WORKER_PROFILE_REVIEW_LIMIT = 5;
+
+  /**
+   * GET /bookings/:bookingId/nearby-workers/:workerProfileId/profile
+   *
+   * The Ustaad detail behind the avatar in the Standard/Inspection selection
+   * list. Loaded only when that modal opens, never per list row.
+   *
+   * AUTHORIZATION reuses assertClientCanChatWithWorker verbatim — the single
+   * existing rule for "is this worker legitimately visible to this client, in
+   * the context of this booking". It already rejects a booking the caller
+   * does not own and any worker outside the eligible set for it, so a guessed
+   * workerProfileId cannot be used to read an arbitrary Ustaad's phone
+   * number. CLIENT-role is enforced by the controller.
+   */
+  async getNearbyWorkerProfile(
+    userId: string,
+    bookingId: string,
+    workerProfileId: string,
+  ): Promise<NearbyWorkerProfileDto> {
+    await this.assertClientCanChatWithWorker(
+      userId,
+      bookingId,
+      workerProfileId,
+    );
+
+    // Safe to read after the gate above: it has already confirmed the booking
+    // exists and belongs to this client.
+    const booking = await this.bookingsRepository.findBookingById(bookingId);
+
+    const profile =
+      await this.bookingsRepository.findWorkerPublicProfile(workerProfileId);
+    if (!profile) throw new NotFoundException('Worker not found');
+
+    const [summary, completedJobs, reviews] = await Promise.all([
+      this.bookingsRepository.getWorkerReviewSummary(workerProfileId),
+      this.bookingsRepository.countCompletedJobs(workerProfileId),
+      this.bookingsRepository.findLatestWorkerReviews(
+        workerProfileId,
+        BookingsService.WORKER_PROFILE_REVIEW_LIMIT,
+      ),
+    ]);
+
+    // The skill this booking is actually about — never a sum across skills.
+    const relevantSkill = booking
+      ? profile.skills.find((sk) => sk.categoryId === booking.categoryId)
+      : undefined;
+
+    return {
+      workerProfileId: profile.id,
+      firstName: profile.firstName,
+      lastName: profile.lastName,
+      avatarUrl: profile.avatarUrl ?? null,
+      phone: profile.user?.phone ?? null,
+      averageRating: summary.averageRating,
+      totalReviews: summary.totalReviews,
+      completedJobs,
+      // The one authoritative identity check in the schema: an admin
+      // manually compared the CNIC photos with the live selfie. Onboarding
+      // approval does NOT imply it (AdminRepository.approve never touches
+      // faceMatchStatus), so this is deliberately not derived from it.
+      cnicVerified: profile.faceMatchStatus === FaceMatchStatus.MATCHED,
+      relevantExperienceYears: relevantSkill?.yearsExperience ?? null,
+      skills: profile.skills.map((sk) => ({
+        name: sk.category.name,
+        yearsExperience: sk.yearsExperience,
+      })),
+      reviews: reviews.map((r) => ({
+        id: r.id,
+        rating: r.rating,
+        comment: r.comment ?? null,
+        reviewerName: r.booking.clientProfile
+          ? `${r.booking.clientProfile.firstName} ${r.booking.clientProfile.lastName}`.trim()
+          : null,
+        serviceCategory: r.booking.category.name,
+        createdAt: r.createdAt.toISOString(),
+      })),
     };
   }
 

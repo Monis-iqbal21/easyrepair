@@ -12,6 +12,7 @@ import '../../domain/entities/attachable_inspection_entity.dart';
 import '../../domain/entities/booking_entity.dart';
 import '../../domain/entities/create_booking_request.dart';
 import '../../domain/entities/inspection_report_entity.dart';
+import '../models/nearby_worker_profile_model.dart';
 import '../../domain/entities/update_booking_request.dart';
 import '../models/booking_model.dart';
 import '../models/cash_payment_confirmation_model.dart';
@@ -49,6 +50,14 @@ abstract class BookingRemoteDataSource {
     String bookingId, {
     double? radiusKm,
   });
+
+  /// One candidate Ustaad's public profile — loaded when the client opens
+  /// the profile modal on the Standard/Inspection selection list, never per
+  /// list row.
+  Future<NearbyWorkerProfileModel> getNearbyWorkerProfile(
+    String bookingId,
+    String workerProfileId,
+  );
   Future<BookingModel> assignWorker(String bookingId, String workerProfileId);
 
   /// Client "Make Live Again" on an EXPIRED booking.
@@ -333,6 +342,22 @@ class BookingRemoteDataSourceImpl implements BookingRemoteDataSource {
       );
       final data = response.data['data'] as Map<String, dynamic>;
       return NearbyWorkersResultModel.fromJson(data);
+    } on DioException catch (e) {
+      throw dioExceptionToFailure(e);
+    }
+  }
+
+  @override
+  Future<NearbyWorkerProfileModel> getNearbyWorkerProfile(
+    String bookingId,
+    String workerProfileId,
+  ) async {
+    try {
+      final response = await _dio.get(
+        '/bookings/$bookingId/nearby-workers/$workerProfileId/profile',
+      );
+      final data = response.data['data'] as Map<String, dynamic>;
+      return NearbyWorkerProfileModel.fromJson(data);
     } on DioException catch (e) {
       throw dioExceptionToFailure(e);
     }

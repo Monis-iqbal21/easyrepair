@@ -10,6 +10,7 @@ import '../entities/cash_payment_confirmation_entity.dart';
 import '../entities/create_booking_request.dart';
 import '../entities/inspection_report_entity.dart';
 import '../entities/nearby_worker_entity.dart';
+import '../entities/nearby_worker_profile_entity.dart';
 import '../entities/update_booking_request.dart';
 
 abstract class BookingRepository {
@@ -82,6 +83,12 @@ abstract class BookingRepository {
     String bookingId, {
     double? radiusKm,
   });
+
+  /// One candidate Ustaad's public profile, for the selection modal.
+  Future<Either<Failure, NearbyWorkerProfileEntity>> getNearbyWorkerProfile(
+    String bookingId,
+    String workerProfileId,
+  );
 
   /// Assign a specific worker to a PENDING booking → transitions to ACCEPTED.
   Future<Either<Failure, BookingEntity>> assignWorker(

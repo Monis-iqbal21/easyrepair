@@ -92,6 +92,9 @@ describe('BookingsRepository nearby search — geographic push-down', () => {
       'avatarUrl',
       'currentLat',
       'currentLng',
+      // Reduced to the public `cnicVerified` boolean before it leaves the
+      // service — the enum itself never reaches a client.
+      'faceMatchStatus',
       'firstName',
       'id',
       'lastName',
@@ -100,6 +103,21 @@ describe('BookingsRepository nearby search — geographic push-down', () => {
     ]);
     // The per-row COMPLETED-booking count is now one batched groupBy.
     expect(select._count).toBeUndefined();
+    // The columns this test exists to keep out, named rather than implied.
+    for (const priv of [
+      'cnicNumber',
+      'cnicFrontUrl',
+      'cnicBackUrl',
+      'liveSelfieUrl',
+      'residentialAddress',
+      'dateOfBirth',
+      'fatherName',
+      'emergencyContact',
+      'documents',
+      'user',
+    ]) {
+      expect(select[priv]).toBeUndefined();
+    }
   });
 
   it('boxes to the single caller-supplied radius for frontend-driven expansion', async () => {

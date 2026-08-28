@@ -7,6 +7,7 @@ import {
   BookingLane,
   BookingUrgency,
   BookingStatus,
+  FaceMatchStatus,
   TimeSlot,
   UrgentWindow,
   Prisma,
@@ -26,6 +27,8 @@ interface RawNearbyWorkerRow {
   rating: number;
   distance_meters: number;
   skills: string[];
+  face_match_status: string;
+  relevant_experience_years: number | null;
 }
 
 /**
@@ -41,6 +44,14 @@ interface NearbyWorkerRow {
   distanceMeters: number;
   skills: string[];
   completedJobs: number;
+  /// Admin has manually matched this Ustaad's CNIC photos against their live
+  /// selfie (FaceMatchStatus.MATCHED). The one authoritative identity check
+  /// in the schema - never inferred from status or document presence.
+  cnicVerified: boolean;
+  /// Years of experience on the skill row matching THIS booking's category.
+  /// Null when the worker has no yearsExperience recorded for it. Never a
+  /// sum across skills.
+  relevantExperienceYears: number | null;
 }
 
 /**
@@ -842,6 +853,8 @@ export class BookingsRepository {
       distanceMeters: number;
       skills: string[];
       recommended: boolean;
+      cnicVerified: boolean;
+      relevantExperienceYears: number | null;
     }>;
     searchedRadiusKm: number;
     searchCompleted: boolean;
@@ -879,6 +892,92 @@ export class BookingsRepository {
     }));
 
     return { ...result, workers };
+  }
+
+  /**
+   * The public profile of ONE worker, for the Standard/Inspection selection
+   * modal. Called only when a client opens that modal, never per list row.
+   *
+   * Projection is deliberately narrow: no CNIC number, no CNIC/selfie image
+   * urls or storage keys, no residential address, no date of birth, no
+   * father's name, no agreement/rejection metadata. `faceMatchStatus` is read
+   * only so the service can reduce it to a public boolean.
+   */
+  async findWorkerPublicProfile(workerProfileId: string) {
+    return this.prisma.workerProfile.findUnique({
+      where: { id: workerProfileId },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        avatarUrl: true,
+        rating: true,
+        faceMatchStatus: true,
+        user: { select: { phone: true } },
+        skills: {
+          select: {
+            categoryId: true,
+            yearsExperience: true,
+            category: { select: { name: true } },
+          },
+          orderBy: { yearsExperience: 'desc' },
+        },
+      },
+    });
+  }
+
+  /**
+   * The newest [limit] reviews for a worker, attributed the same way the
+   * worker's own reviews screen attributes them (Review is 1:1 with Booking,
+   * so a review belongs to whoever worked that booking).
+   *
+   * Bounded by `take` in SQL - never "fetch all and slice".
+   */
+  async findLatestWorkerReviews(workerProfileId: string, limit: number) {
+    return this.prisma.review.findMany({
+      where: { booking: { workerProfileId } },
+      select: {
+        id: true,
+        rating: true,
+        comment: true,
+        createdAt: true,
+        booking: {
+          select: {
+            category: { select: { name: true } },
+            clientProfile: { select: { firstName: true, lastName: true } },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+    });
+  }
+
+  /**
+   * Average rating + review count, computed the same way
+   * WorkersRepository.getWorkerReviewSummary computes them for the worker's
+   * own screen, so a client and a worker never see two different numbers.
+   */
+  async getWorkerReviewSummary(
+    workerProfileId: string,
+  ): Promise<{ totalReviews: number; averageRating: number }> {
+    const agg = await this.prisma.review.aggregate({
+      where: { booking: { workerProfileId } },
+      _count: { id: true },
+      _avg: { rating: true },
+    });
+    return {
+      totalReviews: agg._count.id,
+      averageRating: Math.round((agg._avg.rating ?? 0) * 10) / 10,
+    };
+  }
+
+  /** COMPLETED bookings for one worker - the single-row form of what
+   *  _attachCompletedJobs computes for a whole pool. */
+  async countCompletedJobs(workerProfileId: string): Promise<number> {
+    return this.prisma.booking.count({
+      where: { workerProfileId, status: BookingStatus.COMPLETED },
+    });
   }
 
   /**
@@ -1025,7 +1124,14 @@ export class BookingsRepository {
             FROM worker_skills ws2
             JOIN service_categories sc ON ws2."categoryId" = sc.id
             WHERE ws2."workerProfileId" = wp.id
-          ) AS skills
+          ) AS skills,
+          wp."faceMatchStatus"::text AS face_match_status,
+          (
+            SELECT ws3."yearsExperience"
+            FROM worker_skills ws3
+            WHERE ws3."workerProfileId" = wp.id
+              AND ws3."categoryId" = ${params.categoryId}
+          ) AS relevant_experience_years
         FROM worker_profiles wp
         WHERE wp."availabilityStatus" = 'ONLINE'::"AvailabilityStatus"
           AND wp."currentlyWorking" = FALSE
@@ -1068,6 +1174,11 @@ export class BookingsRepository {
       distanceMeters: Number(r.distance_meters),
       skills: r.skills,
       completedJobs: 0,
+      cnicVerified: r.face_match_status === FaceMatchStatus.MATCHED,
+      relevantExperienceYears:
+        r.relevant_experience_years === null
+          ? null
+          : Number(r.relevant_experience_years),
     }));
     return this._attachCompletedJobs(rows);
   }
@@ -1128,7 +1239,14 @@ export class BookingsRepository {
         rating: true,
         currentLat: true,
         currentLng: true,
-        skills: { select: { category: { select: { name: true } } } },
+        faceMatchStatus: true,
+        skills: {
+          select: {
+            categoryId: true,
+            yearsExperience: true,
+            category: { select: { name: true } },
+          },
+        },
       },
       take: this.nearbyWorkerFetchLimit,
     });
@@ -1152,6 +1270,10 @@ export class BookingsRepository {
         distanceMeters,
         skills: w.skills.map((s) => s.category.name),
         completedJobs: 0,
+        cnicVerified: w.faceMatchStatus === FaceMatchStatus.MATCHED,
+        relevantExperienceYears:
+          w.skills.find((sk) => sk.categoryId === params.categoryId)
+            ?.yearsExperience ?? null,
       });
     }
     return this._attachCompletedJobs(rows);

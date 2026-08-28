@@ -11,6 +11,14 @@ class NearbyWorkerEntity {
   final List<String> skills;
   final bool recommended;
 
+  /// Admin-confirmed CNIC-photo-vs-live-selfie match, computed server-side.
+  /// Never inferred in the UI from status or profile completeness.
+  final bool cnicVerified;
+
+  /// Years on the skill matching this booking's category; null when the
+  /// worker has none recorded. Never a sum across skills.
+  final int? relevantExperienceYears;
+
   const NearbyWorkerEntity({
     required this.id,
     required this.firstName,
@@ -23,6 +31,8 @@ class NearbyWorkerEntity {
     required this.distanceKm,
     required this.skills,
     this.recommended = false,
+    this.cnicVerified = false,
+    this.relevantExperienceYears,
   });
 
   String get fullName => '$firstName $lastName';

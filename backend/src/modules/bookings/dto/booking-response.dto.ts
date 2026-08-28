@@ -34,6 +34,12 @@ export class NearbyWorkerDto {
   distanceKm: number;
   skills: string[];
   recommended: boolean;
+  /// Admin-confirmed CNIC-photo-vs-live-selfie match. See
+  /// NearbyWorkerProfileDto.cnicVerified for the authoritative source.
+  cnicVerified: boolean;
+  /// Years on the skill row matching this booking's category; null when the
+  /// worker has none recorded. Never summed across skills.
+  relevantExperienceYears: number | null;
 }
 
 export class NearbyWorkersResponseDto {

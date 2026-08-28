@@ -171,6 +171,30 @@ export class BookingsController {
   }
 
   /**
+   * GET /bookings/:id/nearby-workers/:workerProfileId/profile
+   *
+   * The Ustaad detail shown behind the avatar in the Standard/Inspection
+   * selection list. Loaded only when that modal opens.
+   *
+   * Authorization is delegated to the service, which reuses the existing
+   * client-to-worker visibility rule for this booking — a guessed
+   * workerProfileId cannot be used to read an unrelated Ustaad's profile.
+   */
+  @Get(':id/nearby-workers/:workerProfileId/profile')
+  @Roles(Role.CLIENT)
+  getNearbyWorkerProfile(
+    @CurrentUser() user: { id: string },
+    @Param('id') bookingId: string,
+    @Param('workerProfileId') workerProfileId: string,
+  ) {
+    return this.bookingsService.getNearbyWorkerProfile(
+      user.id,
+      bookingId,
+      workerProfileId,
+    );
+  }
+
+  /**
    * POST /bookings/:id/assign
    * Client picks a specific worker for their PENDING booking.
    * Transitions booking to ACCEPTED.

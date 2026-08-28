@@ -1194,9 +1194,33 @@
   "chooseAutoRefreshNote": "The list refreshes automatically every 45 seconds.",
   "chooseRefreshOrWait": "You can refresh or wait a little — checking available Ustaads…",
   "chooseNewBadge": "New",
-  "chooseSelect": "Select",
+  "chooseSelect": "Chunain",
   "chooseRecommended": "Recommended",
   "chooseSkills": "Skills",
+  "chooseNearestFirst": "Nearest first",
+  "chooseAvailableCount": "{count} available",
+  "@chooseAvailableCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chooseViewProfile": "View profile",
+  "chooseNoReviews": "No reviews available",
+  "chooseCnicVerified": "CNIC verified",
+  "chooseCnicVerifiedUstaad": "CNIC Verified Ustaad",
+  "chooseExperienceYears": "{years, plural, =1{{years} yr experience} other{{years} yrs experience}}",
+  "@chooseExperienceYears": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "choosePhoneLabel": "Phone number",
+  "chooseProfileLoadFailed": "Could not load this Ustaad's profile.",
+
   "myBookingsLoadFailed": "Unable to load your bookings. Please try again.",
   "myBookingsTitle": "My Bookings",
   "myBookingsSubtitle": "All your bookings in one place",

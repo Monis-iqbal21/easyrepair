@@ -1909,13 +1909,51 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chooseNewBadge => 'New';
 
   @override
-  String get chooseSelect => 'Select';
+  String get chooseSelect => 'Chunain';
 
   @override
   String get chooseRecommended => 'Recommended';
 
   @override
   String get chooseSkills => 'Skills';
+
+  @override
+  String get chooseNearestFirst => 'Nearest first';
+
+  @override
+  String chooseAvailableCount(int count) {
+    return '$count available';
+  }
+
+  @override
+  String get chooseViewProfile => 'View profile';
+
+  @override
+  String get chooseNoReviews => 'No reviews available';
+
+  @override
+  String get chooseCnicVerified => 'CNIC verified';
+
+  @override
+  String get chooseCnicVerifiedUstaad => 'CNIC Verified Ustaad';
+
+  @override
+  String chooseExperienceYears(int years) {
+    String _temp0 = intl.Intl.pluralLogic(
+      years,
+      locale: localeName,
+      other: '$years yrs experience',
+      one: '$years yr experience',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get choosePhoneLabel => 'Phone number';
+
+  @override
+  String get chooseProfileLoadFailed =>
+      'Could not load this Ustaad\'s profile.';
 
   @override
   String get myBookingsLoadFailed =>

@@ -11,6 +11,7 @@ import '../../domain/entities/create_booking_request.dart';
 import '../../domain/entities/inspection_report_entity.dart';
 import '../../domain/entities/update_booking_request.dart';
 import '../../domain/entities/nearby_worker_entity.dart';
+import '../../domain/entities/nearby_worker_profile_entity.dart';
 import '../../domain/repositories/booking_repository.dart';
 import '../datasources/booking_remote_datasource.dart';
 
@@ -195,6 +196,24 @@ class BookingRepositoryImpl implements BookingRepository {
   }) async {
     try {
       final model = await _dataSource.getNearbyWorkers(bookingId, radiusKm: radiusKm);
+      return Right(model.toEntity());
+    } on Failure catch (f) {
+      return Left(f);
+    } catch (e) {
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, NearbyWorkerProfileEntity>> getNearbyWorkerProfile(
+    String bookingId,
+    String workerProfileId,
+  ) async {
+    try {
+      final model = await _dataSource.getNearbyWorkerProfile(
+        bookingId,
+        workerProfileId,
+      );
       return Right(model.toEntity());
     } on Failure catch (f) {
       return Left(f);
