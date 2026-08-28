@@ -1,14 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../../../core/l10n/l10n_extensions.dart';
-import '../../../../l10n/app_localizations.dart';
 
-const _kPrimary = Color(0xFFDB6234);
-const _kDark = Color(0xFF1A1A1A);
-const _kGray = Color(0xFF6B7280);
-const _kBorder = Color(0xFFE2E8F0);
-const _kBg = Color(0xFFF9FAFB);
-const _kRed = Color(0xFFDC2626);
+import '../../../../core/l10n/l10n_extensions.dart';
+import '../../../../core/theme/app_semantic_colors.dart';
+import '../../../../l10n/app_localizations.dart';
+import 'detail/booking_detail_primitives.dart';
 
 /// Free-text limit for the "Dusri wajah" field. The backend's
 /// CancelBookingDto allows 500, so this stays comfortably inside it.
@@ -50,29 +46,28 @@ enum ClientCancelReason {
 
   /// Shown to the client, in the app's current language.
   String label(AppLocalizations l10n) => switch (this) {
-        ClientCancelReason.noLongerNeeded => l10n.cancelReasonNoLongerNeeded,
-        ClientCancelReason.bookedByMistake => l10n.cancelReasonBookedByMistake,
-        ClientCancelReason.problemSolved => l10n.cancelReasonProblemSolved,
-        ClientCancelReason.timingNotSuitable =>
-          l10n.cancelReasonTimingNotSuitable,
-        ClientCancelReason.priceNotSuitable => l10n.cancelReasonPriceNotSuitable,
-        ClientCancelReason.cannotReachUstaad =>
-          l10n.cancelReasonCannotReachUstaad,
-        ClientCancelReason.ustaadRunningLate =>
-          l10n.cancelReasonUstaadRunningLate,
-        ClientCancelReason.other => l10n.cancelReasonOther,
-      };
+    ClientCancelReason.noLongerNeeded => l10n.cancelReasonNoLongerNeeded,
+    ClientCancelReason.bookedByMistake => l10n.cancelReasonBookedByMistake,
+    ClientCancelReason.problemSolved => l10n.cancelReasonProblemSolved,
+    ClientCancelReason.timingNotSuitable => l10n.cancelReasonTimingNotSuitable,
+    ClientCancelReason.priceNotSuitable => l10n.cancelReasonPriceNotSuitable,
+    ClientCancelReason.cannotReachUstaad => l10n.cancelReasonCannotReachUstaad,
+    ClientCancelReason.ustaadRunningLate => l10n.cancelReasonUstaadRunningLate,
+    ClientCancelReason.other => l10n.cancelReasonOther,
+  };
 }
 
-/// Roman Urdu cancellation-reason modal, shared by every lane and by both
-/// client entry points (booking detail + My Bookings list).
+/// Cancellation-reason sheet, shared by every lane and by both client entry
+/// points (booking detail + My Bookings list).
 ///
 /// Purely a reason collector: it is only ever opened once the caller has
 /// already decided cancellation is allowed. It changes nothing about *when*
-/// cancelling is permitted.
+/// cancelling is permitted, and there is no cancellation fee in this product
+/// to warn about.
 ///
-/// Pops with the reason string to store (the preset label, or the trimmed
-/// custom text for "Dusri wajah"), or null when the client backs out.
+/// Pops with the reason string to store (the preset [ClientCancelReason
+/// .storedValue], or the trimmed custom text for "Dusri wajah"), or null when
+/// the client backs out.
 class ClientCancelReasonSheet extends StatefulWidget {
   /// Hides the worker-related presets when no Ustaad is assigned yet.
   final bool hasAssignedWorker;
@@ -95,11 +90,13 @@ class ClientCancelReasonSheet extends StatefulWidget {
 class _ClientCancelReasonSheetState extends State<ClientCancelReasonSheet> {
   ClientCancelReason? _selected;
   final _customCtrl = TextEditingController();
+  final _customFocus = FocusNode();
   bool _submitting = false;
 
   @override
   void dispose() {
     _customCtrl.dispose();
+    _customFocus.dispose();
     super.dispose();
   }
 
@@ -120,6 +117,16 @@ class _ClientCancelReasonSheetState extends State<ClientCancelReasonSheet> {
   String get _reasonToStore =>
       _isOther ? _customCtrl.text.trim() : _selected!.storedValue;
 
+  void _select(ClientCancelReason reason) {
+    if (_submitting) return;
+    setState(() => _selected = reason);
+    if (reason == ClientCancelReason.other) {
+      _customFocus.requestFocus();
+    } else {
+      _customFocus.unfocus();
+    }
+  }
+
   Future<void> _submit() async {
     // Single-flight guard — a double tap must never send two cancellations.
     if (!_canSubmit || _submitting) return;
@@ -136,121 +143,249 @@ class _ClientCancelReasonSheetState extends State<ClientCancelReasonSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-      title: Text(
-        context.l10n.cancelReasonTitle,
-        style: TextStyle(
-          fontWeight: FontWeight.w700,
-          fontSize: 17,
-          color: _kDark,
-        ),
-      ),
-      content: SingleChildScrollView(
+    final colors = context.semanticColors;
+
+    return Padding(
+      // Lifts the whole sheet — reason list AND buttons — clear of the
+      // keyboard raised by the free-text field.
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: SafeArea(
+        top: false,
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              context.l10n.cancelReasonRequired,
-              style: TextStyle(color: _kGray, fontSize: 13.5),
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<ClientCancelReason>(
-              initialValue: _selected,
-              isExpanded: true,
-              decoration: InputDecoration(
-                hintText: context.l10n.cancelReasonSelect,
-                filled: true,
-                fillColor: _kBg,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: const BorderSide(color: _kBorder),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 10,
+            const SizedBox(height: 10),
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: colors.border,
+                  borderRadius: BorderRadius.circular(999),
                 ),
               ),
-              items: _reasons
-                  .map(
-                    (r) => DropdownMenuItem(
-                      value: r,
-                      child: Text(
-                        r.label(context.l10n),
-                        style: const TextStyle(fontSize: 13.5),
-                      ),
-                    ),
-                  )
-                  .toList(),
-              onChanged:
-                  _submitting ? null : (v) => setState(() => _selected = v),
             ),
-            if (_isOther) ...[
-              const SizedBox(height: 12),
-              TextField(
-                controller: _customCtrl,
-                maxLines: 3,
-                maxLength: kClientCancelReasonMaxLength,
-                enabled: !_submitting,
-                inputFormatters: [
-                  LengthLimitingTextInputFormatter(
-                    kClientCancelReasonMaxLength,
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    context.l10n.cancelReasonTitle,
+                    style: TextStyle(
+                      fontSize: 18,
+                      height: 1.3,
+                      fontWeight: FontWeight.w700,
+                      color: colors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    context.l10n.cancelReasonRequired,
+                    style: TextStyle(
+                      fontSize: 14,
+                      height: 1.45,
+                      color: colors.textSecondary,
+                    ),
                   ),
                 ],
-                onChanged: (_) => setState(() {}),
-                decoration: InputDecoration(
-                  hintText: context.l10n.cancelReasonWriteOwn,
-                  filled: true,
-                  fillColor: _kBg,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: _kBorder),
-                  ),
-                  contentPadding: const EdgeInsets.all(12),
-                ),
               ),
-            ],
+            ),
+            // Only the reason list scrolls, so the destructive CTA and its way
+            // out stay pinned and reachable at every text scale.
+            Flexible(
+              child: ListView(
+                shrinkWrap: true,
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+                children: [
+                  for (final reason in _reasons) ...[
+                    _ReasonTile(
+                      reason: reason,
+                      selected: _selected == reason,
+                      enabled: !_submitting,
+                      onTap: () => _select(reason),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                  if (_isOther) ...[
+                    const SizedBox(height: 4),
+                    TextField(
+                      controller: _customCtrl,
+                      focusNode: _customFocus,
+                      maxLines: 3,
+                      maxLength: kClientCancelReasonMaxLength,
+                      enabled: !_submitting,
+                      style: TextStyle(
+                        fontSize: 14,
+                        height: 1.45,
+                        color: colors.textPrimary,
+                      ),
+                      inputFormatters: [
+                        LengthLimitingTextInputFormatter(
+                          kClientCancelReasonMaxLength,
+                        ),
+                      ],
+                      onChanged: (_) => setState(() {}),
+                      decoration: InputDecoration(
+                        hintText: context.l10n.cancelReasonWriteOwn,
+                        hintStyle: TextStyle(
+                          fontSize: 14,
+                          color: colors.textSecondary,
+                        ),
+                        filled: true,
+                        fillColor: colors.surfaceSubtle,
+                        contentPadding: const EdgeInsets.all(14),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide(color: colors.border),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide(color: colors.border),
+                        ),
+                        disabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide(color: colors.border),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide(
+                            color: colors.primary,
+                            width: 1.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  BookingPrimaryButton(
+                    key: const Key('confirm-cancellation-button'),
+                    label: context.l10n.bookingCancelBooking,
+                    icon: Icons.close_rounded,
+                    destructive: true,
+                    loading: _submitting,
+                    onPressed: _canSubmit ? _submit : null,
+                  ),
+                  const SizedBox(height: 10),
+                  BookingSecondaryButton(
+                    key: const Key('keep-booking-button'),
+                    label: context.l10n.postJobBack,
+                    icon: Icons.arrow_back_rounded,
+                    onPressed: _submitting
+                        ? null
+                        : () => Navigator.of(context).pop<String?>(),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed:
-              _submitting ? null : () => Navigator.of(context).pop<String?>(),
-          child: Text(context.l10n.postJobBack, style: TextStyle(color: _kGray)),
-        ),
-        TextButton(
-          onPressed: _canSubmit && !_submitting ? _submit : null,
-          child: _submitting
-              ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: _kPrimary,
-                  ),
-                )
-              : Text(
-                  context.l10n.bookingCancelBooking,
-                  style: TextStyle(color: _kRed, fontWeight: FontWeight.w600),
-                ),
-        ),
-      ],
     );
   }
 }
 
-/// Opens the shared cancellation-reason modal. Returns the stored reason on
+/// One selectable reason. A full-width 56px row so a long or Urdu label wraps
+/// instead of truncating, with the radio glyph and a teal-tinted fill both
+/// carrying the selected state.
+class _ReasonTile extends StatelessWidget {
+  final ClientCancelReason reason;
+  final bool selected;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  const _ReasonTile({
+    required this.reason,
+    required this.selected,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.semanticColors;
+
+    return Semantics(
+      inMutuallyExclusiveGroup: true,
+      selected: selected,
+      button: true,
+      child: Material(
+        color: selected ? colors.softTeal : colors.surface,
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          onTap: enabled ? onTap : null,
+          borderRadius: BorderRadius.circular(14),
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 56),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: selected ? colors.primary : colors.border,
+                width: selected ? 1.5 : 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  selected
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_unchecked,
+                  size: 22,
+                  color: selected ? colors.primary : colors.controlBorder,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    reason.label(context.l10n),
+                    style: TextStyle(
+                      fontSize: 14,
+                      height: 1.4,
+                      fontWeight: selected
+                          ? FontWeight.w700
+                          : FontWeight.w500,
+                      color: colors.textPrimary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Opens the shared cancellation-reason sheet. Returns the stored reason on
 /// success, or null when the client backed out.
 Future<String?> showClientCancelReasonSheet({
   required BuildContext context,
   required bool hasAssignedWorker,
   required Future<void> Function(String reason) onSubmit,
 }) {
-  return showDialog<String>(
+  final colors = context.semanticColors;
+  return showModalBottomSheet<String>(
     context: context,
-    barrierDismissible: false,
+    // Cancelling is deliberate: the sheet is dismissed by its own "back"
+    // button, never by a stray tap on the barrier — matching the
+    // barrier-dismissible:false dialog it replaces.
+    isDismissible: false,
+    enableDrag: false,
+    isScrollControlled: true,
+    useSafeArea: true,
+    backgroundColor: colors.surface,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    ),
     builder: (_) => ClientCancelReasonSheet(
       hasAssignedWorker: hasAssignedWorker,
       onSubmit: onSubmit,

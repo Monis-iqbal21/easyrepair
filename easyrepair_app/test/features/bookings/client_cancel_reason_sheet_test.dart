@@ -41,24 +41,60 @@ Future<List<String>> _pumpSheet(
 Future<AppLocalizations> _l10nFor(AppLocale locale) =>
     AppLocalizations.delegate.load(locale.locale);
 
-Future<void> _selectReason(
+/// Scrolls [reason]'s row into view without tapping it. The reason list is a
+/// scroller, so a row further down is not built until it is reached.
+Future<Finder> _revealReason(
   WidgetTester tester,
   ClientCancelReason reason, {
   AppLocale locale = AppLocale.romanUrdu,
 }) async {
   final l10n = await _l10nFor(locale);
-  await tester.tap(find.byType(DropdownButtonFormField<ClientCancelReason>));
+  final target = find.text(reason.label(l10n));
+  if (target.evaluate().isEmpty) {
+    // Back to the top first, so one downward sweep always reaches the row
+    // wherever the list happens to be scrolled.
+    await tester.drag(find.byType(ListView), const Offset(0, 800));
+    await tester.pumpAndSettle();
+  }
+  if (target.evaluate().isEmpty) {
+    await tester.dragUntilVisible(
+      target,
+      find.byType(ListView),
+      const Offset(0, -80),
+    );
+  }
+  await tester.ensureVisible(target);
   await tester.pumpAndSettle();
-  await tester.tap(find.text(reason.label(l10n)).last);
+  return target;
+}
+
+/// Picks a reason from the radio list.
+Future<void> _selectReason(
+  WidgetTester tester,
+  ClientCancelReason reason, {
+  AppLocale locale = AppLocale.romanUrdu,
+}) async {
+  final target = await _revealReason(tester, reason, locale: locale);
+  await tester.tap(target);
   await tester.pumpAndSettle();
 }
 
-Finder get _submitBtn =>
-    find.widgetWithText(TextButton, 'Booking cancel karein');
+Finder get _submitBtn => find.byKey(const Key('confirm-cancellation-button'));
+Finder get _backBtn => find.byKey(const Key('keep-booking-button'));
 
-/// The submit button in whichever language the sheet is currently showing.
-Future<Finder> _submitBtnIn(AppLocale locale) async =>
-    find.widgetWithText(TextButton, (await _l10nFor(locale)).bookingCancelBooking);
+/// Reads the real Material button inside the shared primitive — that is what
+/// actually refuses a tap, both when nothing is selected and while a
+/// cancellation is in flight.
+bool _enabled(WidgetTester tester, Finder button) =>
+    tester
+        .widget<ButtonStyleButton>(
+          find.descendant(
+            of: button,
+            matching: find.byWidgetPredicate((w) => w is ButtonStyleButton),
+          ),
+        )
+        .onPressed !=
+    null;
 
 void main() {
   group('ClientCancelReasonSheet — Roman Urdu wording', () {
@@ -77,17 +113,34 @@ void main() {
     ) async {
       final l10n = await _l10nFor(AppLocale.romanUrdu);
       await _pumpSheet(tester, hasAssignedWorker: true);
-      await tester.tap(find.byType(DropdownButtonFormField<ClientCancelReason>));
-      await tester.pumpAndSettle();
 
       expect(ClientCancelReason.values, hasLength(8));
       for (final reason in ClientCancelReason.values) {
+        await _revealReason(tester, reason);
         expect(
           find.text(reason.label(l10n)),
-          findsWidgets,
+          findsOneWidget,
           reason: 'missing: ${reason.name}',
         );
       }
+    });
+
+    testWidgets('every reason is laid out as a tappable radio row', (
+      tester,
+    ) async {
+      await _pumpSheet(tester, hasAssignedWorker: true);
+
+      // Radio rows, none of them selected before the client picks one.
+      expect(find.byIcon(Icons.radio_button_unchecked), findsWidgets);
+      expect(find.byIcon(Icons.radio_button_checked), findsNothing);
+
+      await _selectReason(tester, ClientCancelReason.problemSolved);
+
+      // Exactly one selected — the list is genuinely single-select.
+      expect(find.byIcon(Icons.radio_button_checked), findsOneWidget);
+
+      await _selectReason(tester, ClientCancelReason.timingNotSuitable);
+      expect(find.byIcon(Icons.radio_button_checked), findsOneWidget);
     });
   });
 
@@ -99,19 +152,17 @@ void main() {
     ]) {
       testWidgets('${locale.storageValue} shows "$expected"', (tester) async {
         await _pumpSheet(tester, hasAssignedWorker: true, locale: locale);
-        await tester
-            .tap(find.byType(DropdownButtonFormField<ClientCancelReason>));
-        await tester.pumpAndSettle();
 
-        expect(find.text(expected), findsWidgets);
+        expect(find.text(expected), findsOneWidget);
       });
     }
 
     test('every reason has a distinct label in each language', () async {
       for (final locale in AppLocale.values) {
         final l10n = await _l10nFor(locale);
-        final labels =
-            ClientCancelReason.values.map((r) => r.label(l10n)).toList();
+        final labels = ClientCancelReason.values
+            .map((r) => r.label(l10n))
+            .toList();
         expect(
           labels.toSet(),
           hasLength(labels.length),
@@ -127,8 +178,6 @@ void main() {
     ) async {
       final l10n = await _l10nFor(AppLocale.romanUrdu);
       await _pumpSheet(tester, hasAssignedWorker: false);
-      await tester.tap(find.byType(DropdownButtonFormField<ClientCancelReason>));
-      await tester.pumpAndSettle();
 
       expect(
         find.text(ClientCancelReason.cannotReachUstaad.label(l10n)),
@@ -141,9 +190,9 @@ void main() {
       // …while the non-worker reasons remain available.
       expect(
         find.text(ClientCancelReason.noLongerNeeded.label(l10n)),
-        findsWidgets,
+        findsOneWidget,
       );
-      expect(find.text(ClientCancelReason.other.label(l10n)), findsWidgets);
+      expect(find.text(ClientCancelReason.other.label(l10n)), findsOneWidget);
     });
   });
 
@@ -151,10 +200,10 @@ void main() {
     testWidgets('disables submit until a reason is selected', (tester) async {
       await _pumpSheet(tester, hasAssignedWorker: true);
 
-      expect(tester.widget<TextButton>(_submitBtn).onPressed, isNull);
+      expect(_enabled(tester, _submitBtn), isFalse);
 
       await _selectReason(tester, ClientCancelReason.problemSolved);
-      expect(tester.widget<TextButton>(_submitBtn).onPressed, isNotNull);
+      expect(_enabled(tester, _submitBtn), isTrue);
     });
 
     testWidgets('the free-text option requires text before submit enables', (
@@ -167,11 +216,24 @@ void main() {
       // stays disabled while it is empty.
       expect(find.byType(TextField), findsOneWidget);
       expect(find.text('Apni wajah likhein'), findsOneWidget);
-      expect(tester.widget<TextButton>(_submitBtn).onPressed, isNull);
+      expect(_enabled(tester, _submitBtn), isFalse);
 
       await tester.enterText(find.byType(TextField), '  Ghar par koi nahi  ');
       await tester.pumpAndSettle();
-      expect(tester.widget<TextButton>(_submitBtn).onPressed, isNotNull);
+      expect(_enabled(tester, _submitBtn), isTrue);
+    });
+
+    testWidgets('the free-text field only exists once "other" is picked', (
+      tester,
+    ) async {
+      await _pumpSheet(tester, hasAssignedWorker: true);
+      expect(find.byType(TextField), findsNothing);
+
+      await _selectReason(tester, ClientCancelReason.other);
+      expect(find.byType(TextField), findsOneWidget);
+
+      await _selectReason(tester, ClientCancelReason.problemSolved);
+      expect(find.byType(TextField), findsNothing);
     });
 
     testWidgets('whitespace-only custom text does not enable submit', (
@@ -183,7 +245,7 @@ void main() {
       await tester.enterText(find.byType(TextField), '     ');
       await tester.pumpAndSettle();
 
-      expect(tester.widget<TextButton>(_submitBtn).onPressed, isNull);
+      expect(_enabled(tester, _submitBtn), isFalse);
     });
 
     testWidgets('caps the custom reason at 300 characters', (tester) async {
@@ -230,7 +292,7 @@ void main() {
             ClientCancelReason.ustaadRunningLate,
             locale: locale,
           );
-          await tester.tap(await _submitBtnIn(locale));
+          await tester.tap(_submitBtn);
           await tester.pumpAndSettle();
 
           expect(captured, ['Ustaad bohat dair kar raha hai']);
@@ -238,20 +300,19 @@ void main() {
       );
     }
 
-    testWidgets(
-      'stores ONLY the trimmed custom text for the free-text option',
-      (tester) async {
-        final captured = await _pumpSheet(tester, hasAssignedWorker: true);
-        await _selectReason(tester, ClientCancelReason.other);
-        await tester.enterText(find.byType(TextField), '  Ghar par koi nahi  ');
-        await tester.pumpAndSettle();
-        await tester.tap(_submitBtn);
-        await tester.pumpAndSettle();
+    testWidgets('stores ONLY the trimmed custom text for the free-text option', (
+      tester,
+    ) async {
+      final captured = await _pumpSheet(tester, hasAssignedWorker: true);
+      await _selectReason(tester, ClientCancelReason.other);
+      await tester.enterText(find.byType(TextField), '  Ghar par koi nahi  ');
+      await tester.pumpAndSettle();
+      await tester.tap(_submitBtn);
+      await tester.pumpAndSettle();
 
-        expect(captured, ['Ghar par koi nahi']);
-        expect(captured.first, isNot(contains('Dusri wajah')));
-      },
-    );
+      expect(captured, ['Ghar par koi nahi']);
+      expect(captured.first, isNot(contains('Dusri wajah')));
+    });
   });
 
   group('submission', () {
@@ -268,10 +329,13 @@ void main() {
       await tester.tap(_submitBtn);
       await tester.pump(); // enter loading state
 
-      // While the request is in flight the submit label is replaced by a
-      // spinner, so there is physically nothing left to tap a second time.
-      expect(_submitBtn, findsNothing);
+      // While the request is in flight the button is disabled, so a second
+      // tap cannot reach the handler — and the handler's own single-flight
+      // guard would refuse it even if it did.
+      expect(_enabled(tester, _submitBtn), isFalse);
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      await tester.tap(_submitBtn, warnIfMissed: false);
+      await tester.pump();
       expect(captured, hasLength(1));
 
       await tester.pumpAndSettle();
@@ -296,7 +360,6 @@ void main() {
     testWidgets('keeps the sheet open and the reason picked when it fails', (
       tester,
     ) async {
-      final l10n = await _l10nFor(AppLocale.romanUrdu);
       await _pumpSheet(
         tester,
         hasAssignedWorker: true,
@@ -306,24 +369,84 @@ void main() {
       await tester.tap(_submitBtn);
       await tester.pumpAndSettle();
 
-      // Still open, still showing the chosen reason, and retryable.
+      // Still open, still showing the chosen reason selected, and retryable.
       expect(find.text('Booking Cancel Karne Ki Wajah'), findsOneWidget);
-      expect(
-        find.text(ClientCancelReason.priceNotSuitable.label(l10n)),
-        findsWidgets,
-      );
-      expect(tester.widget<TextButton>(_submitBtn).onPressed, isNotNull);
+      expect(find.byIcon(Icons.radio_button_checked), findsOneWidget);
+      expect(_enabled(tester, _submitBtn), isTrue);
     });
 
     testWidgets('"Wapas" closes without cancelling anything', (tester) async {
       final captured = await _pumpSheet(tester, hasAssignedWorker: true);
       await _selectReason(tester, ClientCancelReason.problemSolved);
 
-      await tester.tap(find.widgetWithText(TextButton, 'Wapas'));
+      await tester.tap(_backBtn);
       await tester.pumpAndSettle();
 
       expect(captured, isEmpty);
       expect(find.text('Booking Cancel Karne Ki Wajah'), findsNothing);
+    });
+  });
+
+  group('responsive', () {
+    // Long Urdu reasons on the narrowest supported handset, at the largest
+    // text scale we support: everything must wrap, nothing may overflow.
+    for (final width in [320.0, 360.0, 390.0, 430.0]) {
+      testWidgets('lays out at ${width.toInt()}px with no overflow', (
+        tester,
+      ) async {
+        tester.view.physicalSize = Size(width, 800);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        await _pumpSheet(
+          tester,
+          hasAssignedWorker: true,
+          locale: AppLocale.urdu,
+        );
+        await _selectReason(
+          tester,
+          ClientCancelReason.other,
+          locale: AppLocale.urdu,
+        );
+
+        expect(tester.takeException(), isNull);
+        expect(find.byKey(const Key('confirm-cancellation-button')), findsOne);
+      });
+    }
+
+    testWidgets('survives a 2.0 text scale at 320px', (tester) async {
+      tester.view.physicalSize = const Size(320, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        localizedApp(
+          MediaQuery(
+            data: const MediaQueryData(textScaler: TextScaler.linear(2.0)),
+            child: Builder(
+              builder: (context) => Scaffold(
+                body: Center(
+                  child: ElevatedButton(
+                    onPressed: () => showClientCancelReasonSheet(
+                      context: context,
+                      hasAssignedWorker: true,
+                      onSubmit: (_) async {},
+                    ),
+                    child: const Text('OPEN'),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          locale: AppLocale.urdu,
+        ),
+      );
+      await tester.tap(find.text('OPEN'));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.byKey(const Key('confirm-cancellation-button')), findsOne);
+      expect(find.byKey(const Key('keep-booking-button')), findsOne);
     });
   });
 }

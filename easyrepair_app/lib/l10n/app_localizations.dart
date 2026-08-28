@@ -3915,6 +3915,18 @@ abstract class AppLocalizations {
   /// **'Submit Review'**
   String get reviewSubmit;
 
+  /// Shown under the stars when Submit Review is tapped with no rating chosen.
+  ///
+  /// In en, this message translates to:
+  /// **'Please choose a star rating first.'**
+  String get reviewSelectRating;
+
+  /// Confirmation shown after a review is successfully submitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Thank you! Your review has been submitted.'**
+  String get reviewSubmitSuccess;
+
   /// No description provided for @reviewLater.
   ///
   /// In en, this message translates to:

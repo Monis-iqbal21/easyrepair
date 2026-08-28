@@ -644,6 +644,8 @@
   "reviewHowWasWork": "کام کیسا رہا؟",
   "reviewCommentHint": "تبصرہ لکھیں (اختیاری)...",
   "reviewSubmit": "ریویو جمع کریں",
+  "reviewSelectRating": "پہلے ستارے منتخب کریں۔",
+  "reviewSubmitSuccess": "شکریہ! آپ کا ریویو جمع ہو گیا۔",
   "reviewLater": "بعد میں",
   "chatOpenFailed": "چیٹ نہیں کھل سکی۔",
   "mediaTapToPlay": "چلانے کے لیے دبائیں",

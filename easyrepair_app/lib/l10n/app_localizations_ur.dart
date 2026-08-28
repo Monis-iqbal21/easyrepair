@@ -2106,6 +2106,12 @@ class AppLocalizationsUr extends AppLocalizations {
   String get reviewSubmit => 'ریویو جمع کریں';
 
   @override
+  String get reviewSelectRating => 'پہلے ستارے منتخب کریں۔';
+
+  @override
+  String get reviewSubmitSuccess => 'شکریہ! آپ کا ریویو جمع ہو گیا۔';
+
+  @override
   String get reviewLater => 'بعد میں';
 
   @override
@@ -6316,6 +6322,12 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get reviewSubmit => 'Review Submit Karein';
+
+  @override
+  String get reviewSelectRating => 'Barah-e-karam pehle rating select karein.';
+
+  @override
+  String get reviewSubmitSuccess => 'Shukriya! Aap ka review submit ho gaya.';
 
   @override
   String get reviewLater => 'Baad Mein';

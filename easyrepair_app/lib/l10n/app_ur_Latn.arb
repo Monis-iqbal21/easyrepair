@@ -644,6 +644,8 @@
   "reviewHowWasWork": "Kaam kaisa raha?",
   "reviewCommentHint": "Comment likhein (optional)...",
   "reviewSubmit": "Review Submit Karein",
+  "reviewSelectRating": "Barah-e-karam pehle rating select karein.",
+  "reviewSubmitSuccess": "Shukriya! Aap ka review submit ho gaya.",
   "reviewLater": "Baad Mein",
   "chatOpenFailed": "Chat nahi khul saki.",
   "mediaTapToPlay": "Chalane ke liye dabayein",

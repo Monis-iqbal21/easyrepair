@@ -2130,6 +2130,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reviewSubmit => 'Submit Review';
 
   @override
+  String get reviewSelectRating => 'Please choose a star rating first.';
+
+  @override
+  String get reviewSubmitSuccess =>
+      'Thank you! Your review has been submitted.';
+
+  @override
   String get reviewLater => 'Later';
 
   @override

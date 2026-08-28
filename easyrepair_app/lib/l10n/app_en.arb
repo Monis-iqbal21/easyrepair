@@ -1293,6 +1293,14 @@
   "reviewHowWasWork": "How was the work?",
   "reviewCommentHint": "Write a comment (optional)...",
   "reviewSubmit": "Submit Review",
+  "reviewSelectRating": "Please choose a star rating first.",
+  "@reviewSelectRating": {
+    "description": "Shown under the stars when Submit Review is tapped with no rating chosen."
+  },
+  "reviewSubmitSuccess": "Thank you! Your review has been submitted.",
+  "@reviewSubmitSuccess": {
+    "description": "Confirmation shown after a review is successfully submitted."
+  },
   "reviewLater": "Later",
   "chatOpenFailed": "Could not open chat.",
   "mediaTapToPlay": "Tap to play",

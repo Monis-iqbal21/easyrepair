@@ -511,6 +511,8 @@ reviewPromptBeforeContinuing,Reviews & ratings,Please review your Ustaad before 
 reviewHowWasWork,Reviews & ratings,How was the work?,کام کیسا رہا؟,Kaam kaisa raha?,
 reviewCommentHint,Reviews & ratings,Write a comment (optional)...,تبصرہ لکھیں (اختیاری)...,Comment likhein (optional)...,
 reviewSubmit,Reviews & ratings,Submit Review,ریویو جمع کریں,Review Submit Karein,
+reviewSelectRating,Reviews & ratings,Please choose a star rating first.,پہلے ستارے منتخب کریں۔,Barah-e-karam pehle rating select karein.,Inline error under the stars when Submit is tapped with no rating
+reviewSubmitSuccess,Reviews & ratings,Thank you! Your review has been submitted.,شکریہ! آپ کا ریویو جمع ہو گیا۔,Shukriya! Aap ka review submit ho gaya.,Confirmation snackbar after a successful review
 reviewLater,Reviews & ratings,Later,بعد میں,Baad Mein,
 chatOpenFailed,Chat & Support,Could not open chat.,چیٹ نہیں کھل سکی۔,Chat nahi khul saki.,
 mediaTapToPlay,Uncategorised,Tap to play,چلانے کے لیے دبائیں,Chalane ke liye dabayein,
