@@ -526,6 +526,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatNoMessagesYet => 'No messages yet. Say hello!';
 
   @override
+  String chatNewMessages(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count new messages',
+      one: '1 new message',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get chatSupportBanner =>
       'Write your problem or question here. HandyGo Support will help you.';
 

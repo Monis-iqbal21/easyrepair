@@ -15,6 +15,7 @@ import '../utils/booking_labels.dart';
 import '../widgets/booking_card.dart';
 import '../widgets/booking_skeleton.dart';
 import '../widgets/client_cancel_reason_sheet.dart';
+import '../widgets/cash_payment_confirmation_card.dart';
 import 'choose_ustaad_page.dart';
 import 'track_worker_page.dart';
 import 'worker_discovery_map_page.dart';
@@ -55,6 +56,17 @@ class _MyBookingsPageState extends ConsumerState<MyBookingsPage> {
     final filtered = ref.watch(filteredBookingsProvider);
     final isShowingCachedData =
         ref.watch(bookingsIsOfflineProvider) && bookingsAsync.hasValue;
+    BookingEntity? paymentPromptBooking;
+    for (final booking
+        in bookingsAsync.valueOrNull ?? const <BookingEntity>[]) {
+      if (booking.canClientConfirmCash) {
+        paymentPromptBooking = booking;
+        break;
+      }
+    }
+    if (!isShowingCachedData && paymentPromptBooking != null) {
+      scheduleAutomaticCashPaymentPrompt(context, ref, paymentPromptBooking);
+    }
 
     return Scaffold(
       backgroundColor: colors.background,
@@ -143,6 +155,13 @@ class _MyBookingsPageState extends ConsumerState<MyBookingsPage> {
                                         ),
                                       ),
                                     )
+                                  : null,
+                              onConfirmCash: booking.canClientConfirmCash
+                                  ? () => ref
+                                        .read(
+                                          cashPaymentPromptControllerProvider,
+                                        )
+                                        .showForBooking(context, booking)
                                   : null,
                             );
                           },

@@ -18,6 +18,8 @@ import 'full_screen_map_page.dart';
 import '../utils/booking_timeline.dart';
 import '../providers/booking_providers.dart';
 import '../widgets/inspection_report_card.dart';
+import '../widgets/cash_payment_confirmation_card.dart';
+import '../widgets/detail/booking_detail_primitives.dart';
 import '../../../chat/presentation/providers/chat_providers.dart';
 import '../../../client/presentation/widgets/client_state_view.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
@@ -82,6 +84,9 @@ class _TrackWorkerPageState extends ConsumerState<TrackWorkerPage> {
   @override
   Widget build(BuildContext context) {
     final bookingAsync = ref.watch(bookingDetailProvider(widget.bookingId));
+    final isShowingCachedData =
+        ref.watch(bookingDetailIsOfflineProvider(widget.bookingId)) &&
+        bookingAsync.hasValue;
     final colors = context.semanticColors;
     return Scaffold(
       backgroundColor: colors.background,
@@ -100,7 +105,12 @@ class _TrackWorkerPageState extends ConsumerState<TrackWorkerPage> {
                 ref.invalidate(bookingDetailProvider(widget.bookingId)),
             onBack: _goBack,
           ),
-          data: (booking) => _TrackBody(booking: booking, onBack: _goBack),
+          data: (booking) {
+            if (!isShowingCachedData) {
+              scheduleAutomaticCashPaymentPrompt(context, ref, booking);
+            }
+            return _TrackBody(booking: booking, onBack: _goBack);
+          },
         ),
       ),
     );
@@ -109,14 +119,14 @@ class _TrackWorkerPageState extends ConsumerState<TrackWorkerPage> {
 
 // ── Track body ────────────────────────────────────────────────────────────────
 
-class _TrackBody extends StatelessWidget {
+class _TrackBody extends ConsumerWidget {
   final BookingEntity booking;
   final VoidCallback onBack;
 
   const _TrackBody({required this.booking, required this.onBack});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final worker = booking.assignedWorker;
 
     final double? distanceM =
@@ -146,6 +156,17 @@ class _TrackBody extends StatelessWidget {
           _TrackingMap(booking: booking),
           const SizedBox(height: 16),
           _StatusCard(booking: booking),
+          if (booking.canClientConfirmCash) ...[
+            const SizedBox(height: 16),
+            BookingPrimaryButton(
+              key: const Key('track-confirm-cash-button'),
+              label: context.l10n.cashPaymentTitle,
+              icon: Icons.payments_rounded,
+              onPressed: () => ref
+                  .read(cashPaymentPromptControllerProvider)
+                  .showForBooking(context, booking),
+            ),
+          ],
           const SizedBox(height: 16),
           if (worker != null) ...[
             _WorkerCard(bookingId: booking.id, worker: worker),

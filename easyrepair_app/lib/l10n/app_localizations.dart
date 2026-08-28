@@ -1053,6 +1053,12 @@ abstract class AppLocalizations {
   /// **'No messages yet. Say hello!'**
   String get chatNoMessagesYet;
 
+  /// No description provided for @chatNewMessages.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 new message} other{{count} new messages}}'**
+  String chatNewMessages(int count);
+
   /// No description provided for @chatSupportBanner.
   ///
   /// In en, this message translates to:

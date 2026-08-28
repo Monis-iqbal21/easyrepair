@@ -33,6 +33,11 @@ class SplashPage extends ConsumerWidget {
     // on — see AuthStateNotifier and app_router.dart's redirect. This never
     // means the session was destroyed; it just couldn't be confirmed yet,
     // so offer a retry instead of guessing either way.
+    //
+    // Only reachable when this device actually HOLDS a stored session:
+    // AuthStateNotifier resolves "no stored session" to `null` without
+    // making a request, so a logged-out or fresh install goes to the welcome
+    // screen and can never be parked here behind a Retry it cannot satisfy.
     final showRetry = authState.hasError && !authState.hasValue;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(

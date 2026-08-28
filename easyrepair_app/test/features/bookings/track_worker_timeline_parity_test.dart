@@ -6,6 +6,8 @@ import 'package:handygo_app/core/theme/app_theme.dart';
 import 'package:handygo_app/features/bookings/domain/entities/booking_entity.dart';
 import 'package:handygo_app/features/bookings/presentation/pages/track_worker_page.dart';
 import 'package:handygo_app/features/bookings/presentation/providers/booking_providers.dart';
+import 'package:handygo_app/features/bookings/domain/entities/cash_payment_confirmation_entity.dart';
+import 'package:handygo_app/features/bookings/presentation/widgets/cash_payment_confirmation_card.dart';
 
 import '../../support/l10n_test_app.dart';
 
@@ -27,6 +29,7 @@ BookingEntity _booking({
   DateTime? arrivedAt,
   DateTime? startedAt,
   bool hasLocation = false,
+  double? receivedAmount,
 }) {
   return BookingEntity(
     id: _bookingId,
@@ -46,6 +49,7 @@ BookingEntity _booking({
     latitude: hasLocation ? 31.5204 : 0,
     longitude: hasLocation ? 74.3587 : 0,
     address: hasLocation ? 'Lahore' : null,
+    receivedAmount: receivedAmount,
   );
 }
 
@@ -65,6 +69,24 @@ class _FailingDetailNotifier extends BookingDetailNotifier {
   }
 }
 
+class _NoopCashPaymentPromptController implements CashPaymentPromptController {
+  @override
+  String? get activeBookingId => null;
+
+  @override
+  bool get isShowing => false;
+
+  @override
+  Future<void> get whenIdle => Future<void>.value();
+
+  @override
+  Future<CashPaymentConfirmationEntity?> showForBooking(
+    BuildContext context,
+    BookingEntity booking, {
+    bool automatic = false,
+  }) async => null;
+}
+
 Future<void> _pumpTrackWorker(
   WidgetTester tester,
   BookingEntity booking, {
@@ -77,6 +99,9 @@ Future<void> _pumpTrackWorker(
     ProviderScope(
       overrides: [
         bookingDetailProvider.overrideWith(() => _StubDetailNotifier(booking)),
+        cashPaymentPromptControllerProvider.overrideWithValue(
+          _NoopCashPaymentPromptController(),
+        ),
       ],
       child: localizedApp(
         const TrackWorkerPage(bookingId: _bookingId),
@@ -243,6 +268,22 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('completed tracking exposes cash recovery CTA until settlement', (
+    tester,
+  ) async {
+    await _pumpTrackWorker(tester, _booking(status: BookingStatus.completed));
+    expect(find.byKey(const Key('track-confirm-cash-button')), findsOneWidget);
+
+    await _pumpTrackWorker(
+      tester,
+      _booking(status: BookingStatus.completed, receivedAmount: 2500),
+    );
+    expect(find.byKey(const Key('track-confirm-cash-button')), findsNothing);
+
+    await _pumpTrackWorker(tester, _booking(status: BookingStatus.inProgress));
+    expect(find.byKey(const Key('track-confirm-cash-button')), findsNothing);
+  });
+
   testWidgets('tracking load failure uses friendly copy and hides raw errors', (
     tester,
   ) async {
@@ -252,6 +293,9 @@ void main() {
       ProviderScope(
         overrides: [
           bookingDetailProvider.overrideWith(_FailingDetailNotifier.new),
+          cashPaymentPromptControllerProvider.overrideWithValue(
+            _NoopCashPaymentPromptController(),
+          ),
         ],
         child: localizedApp(
           const TrackWorkerPage(bookingId: _bookingId),

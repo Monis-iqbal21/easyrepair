@@ -46,9 +46,19 @@ class AuthStateNotifier extends AsyncNotifier<UserEntity?> {
   @override
   Future<UserEntity?> build() async {
     final storage = ref.watch(secureStorageServiceProvider);
-    final token = await storage.getAccessToken();
-    if (token == null) return null;
+    // Having no session to restore is an ANSWER, not a failure: resolve to
+    // `null` (logged out) and let the router land the user on the welcome
+    // screen. Nothing below this line runs, so a fresh install never touches
+    // the network at startup and can never be held on the Retry splash by an
+    // unreachable backend, a slow connectivity reading, or a failed
+    // /auth/me. `hasStoredSession` also absorbs an unreadable platform store
+    // for the same reason — see SecureStorageService.hasStoredSession.
+    if (!await storage.hasStoredSession()) return null;
 
+    // From here on there IS a stored session, so a failure genuinely is a
+    // failed session check: transient failures still throw (splash offers a
+    // Retry, and the tokens are left alone), and only a real
+    // UnauthorizedFailure resolves to logged out.
     final result = await ref.watch(authRepositoryProvider).getCurrentUser();
     return result.fold((failure) {
       if (failure is UnauthorizedFailure) return null;

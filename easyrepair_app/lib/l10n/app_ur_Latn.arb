@@ -159,6 +159,12 @@
   "chatNoResultsTitle": "Koi chat nahi mili",
   "chatNoResultsSubtitle": "Koi aur naam try karein, ya “support” likhein",
   "chatNoMessagesYet": "Abhi koi message nahi. Salam karein!",
+  "chatNewMessages": "{count, plural, =1{1 naya message} other{{count} naye messages}}",
+  "@chatNewMessages": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
   "chatSupportBanner": "Apna masla ya sawal yahan likhein. HandyGo Support aapki madad karega.",
   "chatEditMessage": "Message edit karein",
   "chatEditHint": "Apna message edit karein...",

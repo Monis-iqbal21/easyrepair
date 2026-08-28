@@ -19,6 +19,7 @@ class BookingCard extends StatelessWidget {
   final VoidCallback? onEdit;
   final VoidCallback? onFindWorkers;
   final VoidCallback? onTrackWorker;
+  final VoidCallback? onConfirmCash;
 
   const BookingCard({
     super.key,
@@ -29,6 +30,7 @@ class BookingCard extends StatelessWidget {
     this.onEdit,
     this.onFindWorkers,
     this.onTrackWorker,
+    this.onConfirmCash,
   });
 
   @override
@@ -101,6 +103,9 @@ class BookingCard extends StatelessWidget {
                       onEdit: onEdit,
                       onFindWorkers: _canFindWorkers ? onFindWorkers : null,
                       onTrackWorker: _canTrackWorker ? onTrackWorker : null,
+                      onConfirmCash: booking.canClientConfirmCash
+                          ? onConfirmCash
+                          : null,
                     ),
                   ],
                 ],
@@ -155,11 +160,7 @@ class BookingCard extends StatelessWidget {
   /// differs, never the rule.
   String _laneAndSchedule(BuildContext context) {
     final parts = <String>[bookingLaneLabel(context.l10n, booking.lane)];
-    final schedule = bookingScheduleLabel(
-      context.l10n,
-      booking,
-      compact: true,
-    );
+    final schedule = bookingScheduleLabel(context.l10n, booking, compact: true);
     if (schedule != null) parts.add(schedule);
     return parts.join(' · ');
   }
@@ -188,7 +189,8 @@ class BookingCard extends StatelessWidget {
   bool get _hasActions =>
       _hasQuickActions ||
       (_canFindWorkers && onFindWorkers != null) ||
-      (_canTrackWorker && onTrackWorker != null);
+      (_canTrackWorker && onTrackWorker != null) ||
+      (booking.canClientConfirmCash && onConfirmCash != null);
 }
 
 class _TopRow extends StatelessWidget {
@@ -404,6 +406,7 @@ class _ActionArea extends StatelessWidget {
   final VoidCallback? onEdit;
   final VoidCallback? onFindWorkers;
   final VoidCallback? onTrackWorker;
+  final VoidCallback? onConfirmCash;
 
   const _ActionArea({
     required this.booking,
@@ -412,6 +415,7 @@ class _ActionArea extends StatelessWidget {
     this.onEdit,
     this.onFindWorkers,
     this.onTrackWorker,
+    this.onConfirmCash,
   });
 
   @override
@@ -477,6 +481,18 @@ class _ActionArea extends StatelessWidget {
             label: context.l10n.bookingTrackWorker,
             icon: Icons.location_on_outlined,
             onTap: onTrackWorker!,
+          ),
+        ],
+        if (onConfirmCash != null) ...[
+          if (quickActions.isNotEmpty ||
+              onFindWorkers != null ||
+              onTrackWorker != null)
+            const SizedBox(height: 8),
+          _PrimaryActionButton(
+            key: const Key('booking-card-confirm-cash-button'),
+            label: context.l10n.cashPaymentTitle,
+            icon: Icons.payments_rounded,
+            onTap: onConfirmCash!,
           ),
         ],
       ],
@@ -549,6 +565,7 @@ class _PrimaryActionButton extends StatelessWidget {
   final VoidCallback onTap;
 
   const _PrimaryActionButton({
+    super.key,
     required this.label,
     required this.icon,
     required this.onTap,

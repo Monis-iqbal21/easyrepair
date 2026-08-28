@@ -5,13 +5,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/entities/booking_entity.dart';
 import '../widgets/review_modal.dart';
+import '../widgets/cash_payment_confirmation_card.dart';
 import 'booking_providers.dart';
 
 /// Completed bookings this client still owes a review for — backend truth.
 /// The controller never treats an in-memory notification callback as proof
 /// that a review is (or is not) pending.
-final pendingReviewsProvider =
-    FutureProvider.autoDispose<List<BookingEntity>>((ref) async {
+final pendingReviewsProvider = FutureProvider.autoDispose<List<BookingEntity>>((
+  ref,
+) async {
   final result = await ref.read(bookingRepositoryProvider).getPendingReviews();
   return result.fold((f) => throw f, (bookings) => bookings);
 });
@@ -193,6 +195,17 @@ class ReviewPromptController {
         // leaves the queue for good.
         if (booking == null) continue;
         if (!context.mounted) return;
+
+        // A completion cash prompt owns the modal lane until it actually
+        // closes. Wait without polling so Payment and Review can never be
+        // presented on top of one another; this does not change review
+        // eligibility or submission rules.
+        final cashPrompt = _ref.read(cashPaymentPromptControllerProvider);
+        if (cashPrompt.isShowing) {
+          _queue.insert(0, bookingId);
+          await cashPrompt.whenIdle;
+          continue;
+        }
 
         _activeBookingId = bookingId;
         _activeIsMandatory = false;

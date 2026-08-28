@@ -35,6 +35,29 @@ class SecureStorageService {
 
   Future<String?> getAccessToken() => _storage.read(key: _accessTokenKey);
 
+  /// Whether this device holds a token worth trying to restore a session
+  /// with — the startup session probe, and the ONLY read that is allowed to
+  /// answer without an exception.
+  ///
+  /// Returns `false` rather than throwing when the platform store cannot be
+  /// read at all. On Android that happens for reasons which say nothing
+  /// about whether a session exists: Auto Backup restores this app's
+  /// ciphertext onto a new device without the Keystore key that decrypts it,
+  /// or the read lands before the device has been unlocked. Neither is a
+  /// failed session check and neither is retryable, so startup must treat it
+  /// as "no usable session" and show the logged-out entry flow instead of a
+  /// Retry page the user can never get past.
+  ///
+  /// The stored bytes are deliberately left untouched — a later launch that
+  /// CAN read them restores the session normally.
+  Future<bool> hasStoredSession() async {
+    try {
+      return await getAccessToken() != null;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<String?> getRefreshToken() => _storage.read(key: _refreshTokenKey);
 
   Future<void> clearTokens() async {

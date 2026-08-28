@@ -517,6 +517,12 @@
   "chatNoResultsTitle": "No chats found",
   "chatNoResultsSubtitle": "Try a different name, or search “support”",
   "chatNoMessagesYet": "No messages yet. Say hello!",
+  "chatNewMessages": "{count, plural, =1{1 new message} other{{count} new messages}}",
+  "@chatNewMessages": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
   "chatSupportBanner": "Write your problem or question here. HandyGo Support will help you.",
   "chatEditMessage": "Edit message",
   "chatEditHint": "Edit your message...",

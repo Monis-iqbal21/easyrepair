@@ -72,6 +72,7 @@ Future<void> _pumpCard(
   VoidCallback? onEdit,
   VoidCallback? onFindWorkers,
   VoidCallback? onTrackWorker,
+  VoidCallback? onConfirmCash,
 }) async {
   await tester.pumpWidget(
     localizedApp(
@@ -86,6 +87,7 @@ Future<void> _pumpCard(
             onEdit: onEdit,
             onFindWorkers: onFindWorkers,
             onTrackWorker: onTrackWorker,
+            onConfirmCash: onConfirmCash,
           ),
         ),
       ),
@@ -337,6 +339,40 @@ void main() {
       await tester.tap(find.text('AC Technician'));
       await tester.pump();
       expect(cardTaps, 1);
+    });
+
+    testWidgets('completed unpaid card exposes nested cash confirmation only', (
+      tester,
+    ) async {
+      var cardTaps = 0;
+      var confirmationTaps = 0;
+      await _pumpCard(
+        tester,
+        _booking(status: BookingStatus.completed, worker: _worker),
+        onTap: () => cardTaps++,
+        onConfirmCash: () => confirmationTaps++,
+      );
+
+      expect(
+        find.byKey(const Key('booking-card-confirm-cash-button')),
+        findsOneWidget,
+      );
+      await tester.tap(
+        find.byKey(const Key('booking-card-confirm-cash-button')),
+      );
+      await tester.pump();
+      expect(confirmationTaps, 1);
+      expect(cardTaps, 0);
+
+      await _pumpCard(
+        tester,
+        _booking(status: BookingStatus.inProgress, worker: _worker),
+        onConfirmCash: () {},
+      );
+      expect(
+        find.byKey(const Key('booking-card-confirm-cash-button')),
+        findsNothing,
+      );
     });
   });
 

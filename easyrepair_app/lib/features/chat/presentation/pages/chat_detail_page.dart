@@ -51,6 +51,9 @@ class ChatDetailPage extends ConsumerStatefulWidget {
 }
 
 class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
+  static const _bottomThreshold = 80.0;
+  static const _loadOlderThreshold = 120.0;
+
   final _controller = TextEditingController();
   final _scrollController = ScrollController();
   final _picker = ImagePicker();
@@ -65,12 +68,16 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
   AudioRecorder? _recorder;
   StreamSubscription<Amplitude>? _amplitudeSub;
   final List<double> _amplitudeBars = [];
+  bool _initialPositionPending = true;
+  bool _isLoadingOlder = false;
+  int _unseenIncomingCount = 0;
 
   @override
   void initState() {
     super.initState();
     ChatSocketService.instance.joinConversation(widget.conversationId);
     _controller.addListener(_onTextChanged);
+    _scrollController.addListener(_onScroll);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       // Invalidate so the notifier re-fetches fresh messages every time this
@@ -92,6 +99,7 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
     _amplitudeSub?.cancel();
     _recorder?.dispose();
     _controller.removeListener(_onTextChanged);
+    _scrollController.removeListener(_onScroll);
     _controller.dispose();
     _scrollController.dispose();
     ChatSocketService.instance.leaveConversation(widget.conversationId);
@@ -123,14 +131,179 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
     }
   }
 
-  void _scrollToBottom() {
-    if (_scrollController.hasClients) {
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeOut,
-      );
+  bool get _isNearBottom {
+    if (!_scrollController.hasClients) return false;
+    final position = _scrollController.position;
+    return position.maxScrollExtent - position.pixels <= _bottomThreshold;
+  }
+
+  void _onScroll() {
+    if (_unseenIncomingCount > 0 && _isNearBottom && mounted) {
+      setState(() => _unseenIncomingCount = 0);
     }
+    if (_initialPositionPending ||
+        _isLoadingOlder ||
+        !_scrollController.hasClients ||
+        _scrollController.position.pixels > _loadOlderThreshold) {
+      return;
+    }
+    unawaited(_loadOlderMessages());
+  }
+
+  void _scheduleInitialPosition() {
+    if (!_initialPositionPending) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_initialPositionPending) return;
+      if (!_scrollController.hasClients) {
+        _scheduleInitialPosition();
+        return;
+      }
+      final laidOutMax = _scrollController.position.maxScrollExtent;
+      _scrollController.jumpTo(laidOutMax);
+      // A lazy list can discover taller rows only after jumping through them.
+      // Verify on the following layout frame and repeat until max extent is
+      // stable; this is lifecycle-driven and uses no timing guess.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || !_initialPositionPending) return;
+        if (!_scrollController.hasClients) {
+          _scheduleInitialPosition();
+          return;
+        }
+        final position = _scrollController.position;
+        final extentStable =
+            (position.maxScrollExtent - laidOutMax).abs() < 0.5;
+        final atAbsoluteBottom =
+            position.maxScrollExtent - position.pixels < 0.5;
+        if (extentStable && atAbsoluteBottom) {
+          _initialPositionPending = false;
+        } else {
+          _scheduleInitialPosition();
+        }
+      });
+    });
+  }
+
+  Future<void> _loadOlderMessages() async {
+    if (_isLoadingOlder || !_scrollController.hasClients) return;
+    final notifier = ref.read(
+      chatMessagesProvider(widget.conversationId).notifier,
+    );
+    if (!notifier.hasOlderMessages || notifier.isLoadingOlder) return;
+
+    _isLoadingOlder = true;
+    final oldPixels = _scrollController.position.pixels;
+    final oldMaxExtent = _scrollController.position.maxScrollExtent;
+    try {
+      final inserted = await notifier.loadOlder();
+      if (!mounted || inserted == 0) return;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || !_scrollController.hasClients) return;
+        final addedExtent =
+            _scrollController.position.maxScrollExtent - oldMaxExtent;
+        _scrollController.jumpTo(oldPixels + addedExtent);
+      });
+    } catch (error) {
+      if (mounted) _showError(failureMessage(context.l10n, error));
+    } finally {
+      _isLoadingOlder = false;
+    }
+  }
+
+  void _scrollToBottom({bool smooth = true}) {
+    if (_unseenIncomingCount > 0 && mounted) {
+      setState(() => _unseenIncomingCount = 0);
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) return;
+      final target = _scrollController.position.maxScrollExtent;
+      if (smooth) {
+        unawaited(
+          _scrollController
+              .animateTo(
+                target,
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeOut,
+              )
+              .then((_) {
+                // Lazy slivers can refine maxScrollExtent while traversing
+                // previously unbuilt rows. Correct on the next layout frame
+                // so "latest" is absolute, without an arbitrary delay.
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted && _scrollController.hasClients) {
+                    _scrollController.jumpTo(
+                      _scrollController.position.maxScrollExtent,
+                    );
+                  }
+                });
+              }),
+        );
+      } else {
+        _scrollController.jumpTo(target);
+      }
+    });
+  }
+
+  void _handleMessageStateChange(
+    AsyncValue<List<MessageEntity>>? previous,
+    AsyncValue<List<MessageEntity>> next,
+  ) {
+    final nextMessages = next.valueOrNull;
+    if (nextMessages == null) return;
+
+    if (_initialPositionPending) {
+      if (nextMessages.isNotEmpty) _scheduleInitialPosition();
+      WidgetsBinding.instance.addPostFrameCallback((_) => _markLastSeen());
+      return;
+    }
+
+    final previousMessages = previous?.valueOrNull;
+    if (previousMessages == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _markLastSeen());
+      return;
+    }
+    final previousIds = previousMessages.map((m) => m.id).toSet();
+    final appended = nextMessages
+        .where((message) => !previousIds.contains(message.id))
+        .where(
+          (message) =>
+              previousMessages.isEmpty ||
+              message.createdAt.compareTo(previousMessages.last.createdAt) >= 0,
+        )
+        .toList();
+    if (appended.isEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _markLastSeen());
+      return;
+    }
+
+    final currentUserId = ref.read(authStateProvider).valueOrNull?.id ?? '';
+    final incomingCount = appended
+        .where((message) => message.senderUserId != currentUserId)
+        .length;
+    final wasNearBottom = _isNearBottom;
+    final anchoredPixels = _scrollController.hasClients
+        ? _scrollController.position.pixels
+        : null;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _markLastSeen();
+      if (incomingCount == 0) return;
+      if (wasNearBottom) {
+        _scrollToBottom();
+      } else {
+        if (anchoredPixels != null && _scrollController.hasClients) {
+          _scrollController.jumpTo(
+            anchoredPixels
+                .clamp(
+                  _scrollController.position.minScrollExtent,
+                  _scrollController.position.maxScrollExtent,
+                )
+                .toDouble(),
+          );
+        }
+        setState(() => _unseenIncomingCount += incomingCount);
+      }
+    });
   }
 
   // ── Send text ─────────────────────────────────────────────────────────────
@@ -742,11 +915,10 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
         messagesAsync.hasValue;
     final currentUserId = ref.watch(authStateProvider).valueOrNull?.id ?? '';
 
-    ref.listen(chatMessagesProvider(widget.conversationId), (_, next) {
-      if (next.hasValue) {
-        WidgetsBinding.instance.addPostFrameCallback((_) => _markLastSeen());
-      }
-    });
+    ref.listen(
+      chatMessagesProvider(widget.conversationId),
+      _handleMessageStateChange,
+    );
 
     final conversations = ref.watch(chatConversationsProvider).valueOrNull;
     final conversation = conversations?.firstWhere(
@@ -870,110 +1042,140 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
             if (isSupport) const _SupportBanner(),
             if (isShowingCachedData) const OfflineDataBanner(),
             Expanded(
-              child: messagesAsync.when(
-                loading: () =>
-                    Center(child: CircularProgressIndicator(color: c.primary)),
-                error: (err, _) => isResourceUnavailableFailure(err)
-                    ? ResourceUnavailableView(
-                        message: context.l10n.resourceConversationUnavailable,
-                        actionLabel: context.l10n.goToChatsAction,
-                        onAction: () => context.go(
-                          ref.read(authStateProvider).valueOrNull?.isWorker ==
-                                  true
-                              ? '/worker/chat'
-                              : '/client/chat',
-                        ),
-                      )
-                    : Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.error_outline,
-                                size: 48,
-                                color: c.error,
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: messagesAsync.when(
+                      loading: () => Center(
+                        child: CircularProgressIndicator(color: c.primary),
+                      ),
+                      error: (err, _) => isResourceUnavailableFailure(err)
+                          ? ResourceUnavailableView(
+                              message:
+                                  context.l10n.resourceConversationUnavailable,
+                              actionLabel: context.l10n.goToChatsAction,
+                              onAction: () => context.go(
+                                ref
+                                            .read(authStateProvider)
+                                            .valueOrNull
+                                            ?.isWorker ==
+                                        true
+                                    ? '/worker/chat'
+                                    : '/client/chat',
                               ),
-                              const SizedBox(height: 12),
-                              Text(
-                                failureMessage(context.l10n, err),
-                                textAlign: TextAlign.center,
-                                style: TextStyle(color: c.textSecondary),
-                              ),
-                              const SizedBox(height: 16),
-                              TextButton(
-                                onPressed: () => ref
-                                    .read(
-                                      chatMessagesProvider(
-                                        widget.conversationId,
-                                      ).notifier,
-                                    )
-                                    .refresh(),
-                                child: Text(
-                                  context.l10n.commonRetry,
-                                  style: TextStyle(color: c.primary),
+                            )
+                          : Center(
+                              child: Padding(
+                                padding: const EdgeInsets.all(24),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.error_outline,
+                                      size: 48,
+                                      color: c.error,
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      failureMessage(context.l10n, err),
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(color: c.textSecondary),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    TextButton(
+                                      onPressed: () => ref
+                                          .read(
+                                            chatMessagesProvider(
+                                              widget.conversationId,
+                                            ).notifier,
+                                          )
+                                          .refresh(),
+                                      child: Text(
+                                        context.l10n.commonRetry,
+                                        style: TextStyle(color: c.primary),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ],
-                          ),
-                        ),
-                      ),
-                data: (messages) {
-                  if (messages.isEmpty) {
-                    return Center(
-                      child: Text(
-                        context.l10n.chatNoMessagesYet,
-                        style: TextStyle(color: c.textSecondary, fontSize: 14),
-                      ),
-                    );
-                  }
-
-                  int lastSeenSentIndex = -1;
-                  for (int i = messages.length - 1; i >= 0; i--) {
-                    if (messages[i].senderUserId == currentUserId &&
-                        messages[i].seenAt != null) {
-                      lastSeenSentIndex = i;
-                      break;
-                    }
-                  }
-
-                  return ListView.builder(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                    itemCount: messages.length,
-                    itemBuilder: (context, index) {
-                      final message = messages[index];
-                      final isMe = message.senderUserId == currentUserId;
-
-                      final showSeparator =
-                          index == 0 ||
-                          _differentDay(
-                            messages[index - 1].createdAt,
-                            message.createdAt,
+                            ),
+                      data: (messages) {
+                        if (messages.isEmpty) {
+                          return Center(
+                            child: Text(
+                              context.l10n.chatNoMessagesYet,
+                              style: TextStyle(
+                                color: c.textSecondary,
+                                fontSize: 14,
+                              ),
+                            ),
                           );
+                        }
 
-                      return Column(
-                        children: [
-                          if (showSeparator)
-                            _DateSeparator(isoString: message.createdAt),
-                          message.type == ChatMessageType.system
-                              ? _SystemMessageBubble(message: message)
-                              : _MessageBubble(
-                                  message: message,
-                                  isMe: isMe,
-                                  showSeen: isMe && index == lastSeenSentIndex,
-                                  onLongPress: (msg) =>
-                                      _showMessageActions(msg, currentUserId),
-                                ),
-                        ],
-                      );
-                    },
-                  );
-                },
+                        int lastSeenSentIndex = -1;
+                        for (int i = messages.length - 1; i >= 0; i--) {
+                          if (messages[i].senderUserId == currentUserId &&
+                              messages[i].seenAt != null) {
+                            lastSeenSentIndex = i;
+                            break;
+                          }
+                        }
+
+                        return ListView.builder(
+                          controller: _scrollController,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                          itemCount: messages.length,
+                          itemBuilder: (context, index) {
+                            final message = messages[index];
+                            final isMe = message.senderUserId == currentUserId;
+
+                            final showSeparator =
+                                index == 0 ||
+                                _differentDay(
+                                  messages[index - 1].createdAt,
+                                  message.createdAt,
+                                );
+
+                            return Column(
+                              children: [
+                                if (showSeparator)
+                                  _DateSeparator(isoString: message.createdAt),
+                                message.type == ChatMessageType.system
+                                    ? _SystemMessageBubble(message: message)
+                                    : _MessageBubble(
+                                        message: message,
+                                        isMe: isMe,
+                                        showSeen:
+                                            isMe && index == lastSeenSentIndex,
+                                        onLongPress: (msg) =>
+                                            _showMessageActions(
+                                              msg,
+                                              currentUserId,
+                                            ),
+                                      ),
+                              ],
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                  if (_unseenIncomingCount > 0)
+                    Positioned(
+                      left: 16,
+                      right: 16,
+                      bottom: 8,
+                      child: Center(
+                        child: _NewMessageIndicator(
+                          count: _unseenIncomingCount,
+                          onTap: _scrollToBottom,
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
             // Upload loading banner
@@ -2228,6 +2430,55 @@ class _MapGridPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_MapGridPainter old) => old.lineColor != lineColor;
+}
+
+class _NewMessageIndicator extends StatelessWidget {
+  const _NewMessageIndicator({required this.count, required this.onTap});
+
+  final int count;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.semanticColors;
+    return Material(
+      key: const Key('new-message-indicator'),
+      color: colors.surface,
+      elevation: 3,
+      shadowColor: colors.scrim.withValues(alpha: 0.16),
+      shape: StadiumBorder(side: BorderSide(color: colors.border)),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: Text(
+                  context.l10n.chatNewMessages(count),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: colors.textPrimary,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 5),
+              Icon(
+                Icons.arrow_downward_rounded,
+                size: 16,
+                color: colors.primary,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 // ── Chat input bar (WhatsApp-style: text/mic <-> recording/send) ──────────────

@@ -159,6 +159,12 @@
   "chatNoResultsTitle": "کوئی چیٹ نہیں ملی",
   "chatNoResultsSubtitle": "کوئی اور نام آزمائیں، یا ”support“ لکھیں",
   "chatNoMessagesYet": "ابھی کوئی پیغام نہیں۔ سلام کریں!",
+  "chatNewMessages": "{count, plural, =1{1 نیا پیغام} other{{count} نئے پیغامات}}",
+  "@chatNewMessages": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
   "chatSupportBanner": "اپنا مسئلہ یا سوال یہاں لکھیں۔ HandyGo Support آپ کی مدد کرے گا۔",
   "chatEditMessage": "پیغام میں تبدیلی",
   "chatEditHint": "اپنا پیغام تبدیل کریں...",

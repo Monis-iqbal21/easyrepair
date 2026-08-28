@@ -8,10 +8,12 @@ import 'package:handygo_app/core/theme/app_theme.dart';
 import 'package:handygo_app/features/auth/domain/entities/user_entity.dart';
 import 'package:handygo_app/features/auth/presentation/providers/auth_providers.dart';
 import 'package:handygo_app/features/bookings/domain/entities/booking_entity.dart';
+import 'package:handygo_app/features/bookings/domain/entities/cash_payment_confirmation_entity.dart';
 import 'package:handygo_app/features/bookings/domain/entities/inspection_report_entity.dart';
 import 'package:handygo_app/features/bookings/presentation/pages/booking_detail_page.dart';
 import 'package:handygo_app/features/bookings/presentation/providers/booking_providers.dart';
 import 'package:handygo_app/features/bookings/presentation/widgets/detail/booking_action_section.dart';
+import 'package:handygo_app/features/bookings/presentation/widgets/cash_payment_confirmation_card.dart';
 import 'package:handygo_app/features/complaints/domain/entities/complaint_entity.dart';
 import 'package:handygo_app/features/complaints/presentation/providers/complaint_providers.dart';
 
@@ -126,6 +128,24 @@ class _StubDetailNotifier extends BookingDetailNotifier {
   Future<BookingEntity> build(String arg) async => booking;
 }
 
+class _NoopCashPaymentPromptController implements CashPaymentPromptController {
+  @override
+  String? get activeBookingId => null;
+
+  @override
+  bool get isShowing => false;
+
+  @override
+  Future<void> get whenIdle => Future<void>.value();
+
+  @override
+  Future<CashPaymentConfirmationEntity?> showForBooking(
+    BuildContext context,
+    BookingEntity booking, {
+    bool automatic = false,
+  }) async => null;
+}
+
 class _StubComplaintNotifier extends BookingComplaintNotifier {
   _StubComplaintNotifier(this.complaint);
 
@@ -201,6 +221,9 @@ Future<GoRouter> _pumpDetail(
     ProviderScope(
       overrides: [
         bookingDetailProvider.overrideWith(() => _StubDetailNotifier(booking)),
+        cashPaymentPromptControllerProvider.overrideWithValue(
+          _NoopCashPaymentPromptController(),
+        ),
         bookingComplaintProvider.overrideWith(
           () => _StubComplaintNotifier(complaint),
         ),

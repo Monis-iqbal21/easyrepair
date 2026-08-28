@@ -520,6 +520,17 @@ class AppLocalizationsUr extends AppLocalizations {
   String get chatNoMessagesYet => 'ابھی کوئی پیغام نہیں۔ سلام کریں!';
 
   @override
+  String chatNewMessages(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count نئے پیغامات',
+      one: '1 نیا پیغام',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get chatSupportBanner =>
       'اپنا مسئلہ یا سوال یہاں لکھیں۔ HandyGo Support آپ کی مدد کرے گا۔';
 
@@ -4746,6 +4757,17 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get chatNoMessagesYet => 'Abhi koi message nahi. Salam karein!';
+
+  @override
+  String chatNewMessages(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count naye messages',
+      one: '1 naya message',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get chatSupportBanner =>

@@ -195,18 +195,20 @@ void main() {
       ],
     );
 
-    expect(find.text('Text message'), findsOneWidget);
-    expect(find.text('System message'), findsOneWidget);
-    expect(find.byIcon(Icons.broken_image_rounded), findsOneWidget);
-
-    await tester.drag(find.byType(ListView), const Offset(0, -600));
-    await tester.pumpAndSettle();
-
+    // Fake repository follows the API's newest-first contract, so the first
+    // supplied location row is the absolute latest after provider reversal.
     expect(find.byIcon(Icons.location_on_rounded), findsWidgets);
     expect(find.byIcon(Icons.play_circle_filled_rounded), findsWidgets);
     expect(find.byIcon(Icons.add_rounded), findsOneWidget);
     expect(find.byIcon(Icons.camera_alt_rounded), findsOneWidget);
     expect(find.byIcon(Icons.mic_rounded), findsOneWidget);
+
+    await tester.drag(find.byType(ListView), const Offset(0, 600));
+    await tester.pumpAndSettle();
+
+    expect(find.text('System message'), findsOneWidget);
+    expect(find.text('Text message'), findsOneWidget);
+    expect(find.byIcon(Icons.broken_image_rounded), findsOneWidget);
   });
 
   testWidgets('the shared conversation has no overflow at supported widths', (

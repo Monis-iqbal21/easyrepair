@@ -26,6 +26,7 @@ import '../widgets/detail/booking_location_section.dart';
 import '../widgets/detail/booking_payment_section.dart';
 import '../widgets/detail/booking_timeline_section.dart';
 import '../widgets/detail/booking_worker_card.dart';
+import '../widgets/cash_payment_confirmation_card.dart';
 import '../widgets/inspection_report_card.dart';
 
 /// Statuses during which the client detail page polls GET /bookings/:id every
@@ -69,7 +70,10 @@ class BookingDetailPage extends ConsumerWidget {
     // Reconnecting while the user is sitting on this nested page must refresh
     // the booking WITHOUT moving them: only this booking's provider is
     // invalidated, so the route stays /client/booking/<id>.
-    refreshOnReconnect(ref, () => ref.invalidate(bookingDetailProvider(bookingId)));
+    refreshOnReconnect(
+      ref,
+      () => ref.invalidate(bookingDetailProvider(bookingId)),
+    );
 
     final bookingAsync = ref.watch(bookingDetailProvider(bookingId));
     final isShowingCachedData =
@@ -99,14 +103,21 @@ class BookingDetailPage extends ConsumerWidget {
                     err,
                     fallback: context.l10n.bookingLoadFailed,
                   ),
-                  onRetry: () => ref.invalidate(bookingDetailProvider(bookingId)),
+                  onRetry: () =>
+                      ref.invalidate(bookingDetailProvider(bookingId)),
                 ),
-          data: (booking) => Column(
-            children: [
-              if (isShowingCachedData) const OfflineDataBanner(),
-              Expanded(child: _DetailBody(booking: booking)),
-            ],
-          ),
+          data: (booking) {
+            final user = ref.read(authStateProvider).valueOrNull;
+            if (!isShowingCachedData && user != null && !user.isWorker) {
+              scheduleAutomaticCashPaymentPrompt(context, ref, booking);
+            }
+            return Column(
+              children: [
+                if (isShowingCachedData) const OfflineDataBanner(),
+                Expanded(child: _DetailBody(booking: booking)),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -230,7 +241,8 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
       // 3. Terminal / attention states. COMPLETED is the whole story: the job
       //    is closed the moment the backend says so, regardless of review,
       //    report, payment or whether the client has been away and come back.
-      if (booking.status == BookingStatus.completed) const BookingClosedBanner(),
+      if (booking.status == BookingStatus.completed)
+        const BookingClosedBanner(),
       if (booking.status == BookingStatus.expired)
         BookingExpiredSection(bookingId: booking.id),
       if (booking.status == BookingStatus.cancelled &&
@@ -310,8 +322,7 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
       else if (booking.canClientReview)
         BookingReviewAction(booking: booking),
       if (isClient &&
-          (complaint != null ||
-              booking.status == BookingStatus.completed))
+          (complaint != null || booking.status == BookingStatus.completed))
         BookingComplaintSection(
           bookingId: booking.id,
           bookingStatus: booking.status,

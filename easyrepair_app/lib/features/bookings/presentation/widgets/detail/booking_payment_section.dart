@@ -5,7 +5,6 @@ import '../../../../../core/l10n/l10n_extensions.dart';
 import '../../../../../core/theme/app_semantic_colors.dart';
 import '../../../../../core/utils/currency_utils.dart';
 import '../../../domain/entities/booking_entity.dart';
-import '../../providers/booking_providers.dart';
 import '../../utils/booking_payment_presentation.dart';
 import '../../utils/status_labels.dart';
 import '../cash_payment_confirmation_card.dart';
@@ -139,19 +138,9 @@ class BookingPaymentSection extends ConsumerWidget {
   }
 
   Future<void> _confirmCash(BuildContext context, WidgetRef ref) async {
-    // Reuses the existing idempotent POST /bookings/:id/confirm-cash-payment
-    // dialog untouched; on success the booking is refetched so the server's
-    // settlement — not this dialog's return value — drives what is rendered.
-    final confirmation = await showCashPaymentConfirmationDialog(
-      context,
-      bookingId: booking.id,
-      expectedAmount: booking.canonicalPrice,
-    );
-    if (confirmation == null) return;
-    // Refetch so the SERVER's settlement — not this dialog's return value —
-    // decides what the client sees from here on, including after they leave
-    // the page and come back.
-    ref.invalidate(bookingDetailProvider(booking.id));
+    await ref
+        .read(cashPaymentPromptControllerProvider)
+        .showForBooking(context, booking);
   }
 }
 

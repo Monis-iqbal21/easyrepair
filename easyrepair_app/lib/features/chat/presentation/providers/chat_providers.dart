@@ -152,10 +152,17 @@ final chatMessagesIsOfflineProvider = StateProvider.family<bool, String>(
 
 class ChatMessagesNotifier
     extends FamilyAsyncNotifier<List<MessageEntity>, String> {
+  static const _pageSize = 50;
+
   StreamSubscription<Map<String, dynamic>>? _newMsgSub;
   StreamSubscription<Map<String, dynamic>>? _seenSub;
   StreamSubscription<Map<String, dynamic>>? _editedSub;
   StreamSubscription<Map<String, dynamic>>? _deletedSub;
+  bool _isLoadingOlder = false;
+  bool _hasOlderMessages = true;
+
+  bool get isLoadingOlder => _isLoadingOlder;
+  bool get hasOlderMessages => _hasOlderMessages;
 
   @override
   Future<List<MessageEntity>> build(String arg) async {
@@ -224,7 +231,9 @@ class ChatMessagesNotifier
       _deletedSub?.cancel();
     });
 
-    return _fetch(arg);
+    final messages = await _fetch(arg);
+    _hasOlderMessages = messages.length >= _pageSize;
+    return messages;
   }
 
   Future<List<MessageEntity>> _fetch(String conversationId) async {
@@ -241,7 +250,38 @@ class ChatMessagesNotifier
 
   Future<void> refresh() async {
     state = const AsyncLoading();
-    state = await AsyncValue.guard(() => _fetch(arg));
+    state = await AsyncValue.guard(() async {
+      final messages = await _fetch(arg);
+      _hasOlderMessages = messages.length >= _pageSize;
+      return messages;
+    });
+  }
+
+  /// Loads the page immediately older than the first rendered message.
+  ///
+  /// The backend returns newest-first, so the page is reversed and prepended
+  /// to the display list. The page owns the scroll-extent compensation that
+  /// keeps the reader's viewport anchored while these rows are inserted.
+  Future<int> loadOlder() async {
+    final current = state.valueOrNull ?? const <MessageEntity>[];
+    if (_isLoadingOlder || !_hasOlderMessages || current.isEmpty) return 0;
+
+    _isLoadingOlder = true;
+    try {
+      final result = await ref
+          .read(chatRepositoryProvider)
+          .getMessages(arg, limit: _pageSize, before: current.first.createdAt);
+      return result.fold((failure) => throw failure, (page) {
+        final older = page.data.reversed
+            .where((candidate) => !current.any((m) => m.id == candidate.id))
+            .toList();
+        _hasOlderMessages = page.data.length >= _pageSize;
+        if (older.isNotEmpty) state = AsyncData([...older, ...current]);
+        return older.length;
+      });
+    } finally {
+      _isLoadingOlder = false;
+    }
   }
 
   /// Append a freshly sent/received message to the end of the list.

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +9,7 @@ import '../../../../core/errors/failures.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
 import '../../../../core/theme/app_semantic_colors.dart';
 import '../../../../core/utils/currency_utils.dart';
+import '../../domain/entities/booking_entity.dart';
 import '../../domain/entities/cash_payment_confirmation_entity.dart';
 import '../providers/booking_providers.dart';
 
@@ -32,6 +35,91 @@ Future<CashPaymentConfirmationEntity?> showCashPaymentConfirmationDialog(
       ),
     ),
   );
+}
+
+/// The single entry point for Client cash-confirmation prompts.
+///
+/// Every surface delegates here, so provider refreshes and the in-flight
+/// dialog guard cannot drift apart. The guard is claimed synchronously before
+/// `showDialog` runs, collapsing socket, push, poll and rebuild observations
+/// of the same completion into one modal.
+class CashPaymentPromptController {
+  CashPaymentPromptController(this._ref);
+
+  final Ref _ref;
+  String? _activeBookingId;
+  Completer<void>? _idleCompleter;
+  final Set<String> _automaticallyPrompted = <String>{};
+
+  String? get activeBookingId => _activeBookingId;
+  bool get isShowing => _activeBookingId != null;
+  Future<void> get whenIdle => _idleCompleter?.future ?? Future<void>.value();
+
+  Future<CashPaymentConfirmationEntity?> showForBooking(
+    BuildContext context,
+    BookingEntity booking, {
+    bool automatic = false,
+  }) async {
+    if (!booking.canClientConfirmCash) return null;
+    if (_activeBookingId != null) return null;
+    if (automatic && _automaticallyPrompted.contains(booking.id)) return null;
+
+    _activeBookingId = booking.id;
+    _idleCompleter = Completer<void>();
+    if (automatic) _automaticallyPrompted.add(booking.id);
+    try {
+      final confirmation = await showCashPaymentConfirmationDialog(
+        context,
+        bookingId: booking.id,
+        expectedAmount: booking.canonicalPrice,
+      );
+      if (confirmation != null) {
+        // The POST response is server-authored, then every visible booking
+        // surface is refetched so settlement fields remain the rendering truth.
+        _ref.invalidate(bookingsNotifierProvider);
+        _ref.invalidate(bookingDetailProvider(booking.id));
+      } else if (automatic) {
+        // A route teardown is the only way the non-dismissible dialog can
+        // return null. Let a later authoritative observation try again.
+        _automaticallyPrompted.remove(booking.id);
+      }
+      return confirmation;
+    } finally {
+      _activeBookingId = null;
+      _idleCompleter?.complete();
+      _idleCompleter = null;
+    }
+  }
+}
+
+final cashPaymentPromptControllerProvider =
+    Provider<CashPaymentPromptController>(
+      (ref) => CashPaymentPromptController(ref),
+    );
+
+/// Schedules automatic presentation after the current build/layout pass.
+/// Repeated calls are intentional and safe: [CashPaymentPromptController]
+/// deduplicates them synchronously by booking id and active-dialog state.
+void scheduleAutomaticCashPaymentPrompt(
+  BuildContext context,
+  WidgetRef ref,
+  BookingEntity booking,
+) {
+  if (!booking.canClientConfirmCash) {
+    return;
+  }
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    if (!context.mounted) {
+      return;
+    }
+    final route = ModalRoute.of(context);
+    if (route != null && !route.isCurrent) return;
+    unawaited(
+      ref
+          .read(cashPaymentPromptControllerProvider)
+          .showForBooking(context, booking, automatic: true),
+    );
+  });
 }
 
 class CashPaymentConfirmationCard extends ConsumerStatefulWidget {
@@ -104,7 +192,8 @@ class _CashPaymentConfirmationCardState
                         Expanded(
                           child: Text(
                             context.l10n.cashPaymentTitle,
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(
                                   fontWeight: FontWeight.w700,
                                   color: colors.textPrimary,
                                 ),
@@ -116,9 +205,9 @@ class _CashPaymentConfirmationCardState
                     Text(
                       context.l10n.cashPaymentQuestion,
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: colors.textPrimary,
-                            fontWeight: FontWeight.w600,
-                          ),
+                        color: colors.textPrimary,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     if (widget.expectedAmount != null) ...[
                       const SizedBox(height: 6),
@@ -142,13 +231,17 @@ class _CashPaymentConfirmationCardState
                       ),
                       validator: (value) {
                         final text = value?.trim() ?? '';
-                        if (text.isEmpty) return context.l10n.cashPaymentRequired;
+                        if (text.isEmpty) {
+                          return context.l10n.cashPaymentRequired;
+                        }
                         if (!RegExp(r'^\d+$').hasMatch(text)) {
                           return context.l10n.cashPaymentWholeRupees;
                         }
                         return null;
                       },
-                      onFieldSubmitted: state.isLoading ? null : (_) => _submit(),
+                      onFieldSubmitted: state.isLoading
+                          ? null
+                          : (_) => _submit(),
                     ),
                     if (state.hasError) ...[
                       const SizedBox(height: 10),
@@ -159,6 +252,7 @@ class _CashPaymentConfirmationCardState
                     ],
                     const SizedBox(height: 14),
                     FilledButton.icon(
+                      key: const Key('cash-payment-submit-button'),
                       onPressed: state.isLoading ? null : _submit,
                       icon: state.isLoading
                           ? SizedBox.square(
@@ -217,18 +311,30 @@ class _ConfirmationReceipt extends StatelessWidget {
               child: Text(
                 context.l10n.cashPaymentConfirmedTitle,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: colors.textPrimary,
-                      fontWeight: FontWeight.w700,
-                    ),
+                  color: colors.textPrimary,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
           ],
         ),
         const SizedBox(height: 12),
-        Text(context.l10n.cashPaymentPaid(formatPkr(confirmation.receivedCashTotal))),
-        Text(context.l10n.cashPaymentExpectedReceipt(formatPkr(confirmation.expectedTotal))),
+        Text(
+          context.l10n.cashPaymentPaid(
+            formatPkr(confirmation.receivedCashTotal),
+          ),
+        ),
+        Text(
+          context.l10n.cashPaymentExpectedReceipt(
+            formatPkr(confirmation.expectedTotal),
+          ),
+        ),
         if (confirmation.shortfall > 0)
-          Text(context.l10n.cashPaymentShortfall(formatPkr(confirmation.shortfall))),
+          Text(
+            context.l10n.cashPaymentShortfall(
+              formatPkr(confirmation.shortfall),
+            ),
+          ),
         const SizedBox(height: 6),
         Text(
           context.l10n.cashPaymentReference(confirmation.settlementId),
