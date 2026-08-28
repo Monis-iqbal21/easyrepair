@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../../../core/errors/failures.dart';
+import '../../../../core/theme/app_semantic_colors.dart';
 import '../../../../core/utils/currency_utils.dart';
 import 'track_worker_page.dart';
 import '../../../bids/domain/entities/bid_entity.dart';
@@ -18,12 +19,9 @@ import '../../../bookings/presentation/utils/worker_labels.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
 import '../../../../core/errors/failure_messages.dart';
 
-// ── Palette ───────────────────────────────────────────────────────────────────
-const _kGreen  = Color(0xFFDB6234);
-const _kDark   = Color(0xFF1A1A1A);
-const _kGray   = Color(0xFF6B7280);
-const _kLight  = Color(0xFF94A3B8);
-const _kBorder = Color(0xFFE2E8F0);
+const double _rCard = 16;
+const double _rButton = 14;
+const double _hAction = 52;
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 
@@ -63,21 +61,22 @@ class _WorkerDiscoveryMapPageState extends ConsumerState<WorkerDiscoveryMapPage>
   }
 
   Set<Circle> _buildCircles(LatLng jobPos) {
+    final colors = context.semanticColors;
     return {
       Circle(
         circleId: const CircleId('job_search_radius_outer'),
         center: jobPos,
         radius: 400,
-        fillColor: _kGreen.withValues(alpha: 0.08),
-        strokeColor: _kGreen.withValues(alpha: 0.22),
+        fillColor: colors.softTeal.withValues(alpha: 0.8),
+        strokeColor: colors.primary.withValues(alpha: 0.55),
         strokeWidth: 2,
       ),
       Circle(
         circleId: const CircleId('job_search_radius_inner'),
         center: jobPos,
         radius: 180,
-        fillColor: _kGreen.withValues(alpha: 0.10),
-        strokeColor: _kGreen.withValues(alpha: 0.28),
+        fillColor: colors.softTeal,
+        strokeColor: colors.primary.withValues(alpha: 0.7),
         strokeWidth: 1,
       ),
     };
@@ -140,6 +139,7 @@ class _WorkerDiscoveryMapPageState extends ConsumerState<WorkerDiscoveryMapPage>
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.semanticColors;
     final safeTop = MediaQuery.of(context).padding.top;
 
     final jobLat = widget.booking.latitude;
@@ -195,18 +195,13 @@ class _WorkerDiscoveryMapPageState extends ConsumerState<WorkerDiscoveryMapPage>
                 padding:
                     const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: colors.surface,
                   borderRadius: BorderRadius.circular(10),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.08),
-                      blurRadius: 8,
-                    ),
-                  ],
+                  border: Border.all(color: colors.border),
                 ),
                 child: Text(
                   context.l10n.discoveryJobLocationUnavailable,
-                  style: TextStyle(fontSize: 12, color: _kGray),
+                  style: TextStyle(fontSize: 12, color: colors.textSecondary),
                 ),
               ),
             ),
@@ -216,16 +211,19 @@ class _WorkerDiscoveryMapPageState extends ConsumerState<WorkerDiscoveryMapPage>
             top: safeTop + 8,
             left: 12,
             child: Material(
-              color: Colors.white,
+              color: colors.surface,
               shape: const CircleBorder(),
               elevation: 2,
               child: InkWell(
                 customBorder: const CircleBorder(),
                 onTap: () => Navigator.of(context).pop(),
-                child: const Padding(
-                  padding: EdgeInsets.all(10),
-                  child: Icon(Icons.arrow_back_ios_new_rounded,
-                      size: 16, color: _kDark),
+                child: Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: Icon(
+                    Icons.arrow_back_ios_new_rounded,
+                    size: 16,
+                    color: colors.textPrimary,
+                  ),
                 ),
               ),
             ),
@@ -244,17 +242,11 @@ class _WorkerDiscoveryMapPageState extends ConsumerState<WorkerDiscoveryMapPage>
             builder: (ctx, scrollCtrl) {
               return Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: colors.surface,
                   borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(22),
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.12),
-                      blurRadius: 16,
-                      offset: const Offset(0, -4),
-                    ),
-                  ],
+                  border: Border.all(color: colors.border),
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: _BidsSheet(
@@ -280,6 +272,7 @@ class _BidsSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = context.semanticColors;
     final bidsAsync = ref.watch(bookingBidsProvider(booking.id));
 
     return CustomScrollView(
@@ -297,7 +290,7 @@ class _BidsSheet extends ConsumerWidget {
                   width: 38,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: _kBorder,
+                    color: colors.border,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -316,7 +309,7 @@ class _BidsSheet extends ConsumerWidget {
                             style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w700,
-                              color: _kDark,
+                              color: colors.textPrimary,
                               letterSpacing: -0.3,
                             ),
                           ),
@@ -326,8 +319,11 @@ class _BidsSheet extends ConsumerWidget {
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.refresh_rounded,
-                          size: 18, color: _kLight),
+                      icon: Icon(
+                        Icons.refresh_rounded,
+                        size: 18,
+                        color: colors.textSecondary,
+                      ),
                       tooltip: context.l10n.discoveryRefresh,
                       onPressed: () =>
                           ref.invalidate(bookingBidsProvider(booking.id)),
@@ -335,7 +331,7 @@ class _BidsSheet extends ConsumerWidget {
                   ],
                 ),
               ),
-              const Divider(height: 1, thickness: 1, color: _kBorder),
+              Divider(height: 1, thickness: 1, color: colors.border),
             ],
           ),
         ),
@@ -415,6 +411,7 @@ class _SheetSubtitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.semanticColors;
     final text = bidsAsync.when(
       skipError: true,
       loading: () => context.l10n.discoveryLoadingBids,
@@ -425,7 +422,10 @@ class _SheetSubtitle extends StatelessWidget {
         return context.l10n.discoveryPendingBidsSorted(count);
       },
     );
-    return Text(text, style: const TextStyle(fontSize: 12, color: _kLight));
+    return Text(
+      text,
+      style: TextStyle(fontSize: 12, color: colors.textSecondary),
+    );
   }
 }
 
@@ -450,121 +450,72 @@ class _BidOfferCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = context.semanticColors;
     final isHiring = ref.watch(acceptBidProvider).isLoading;
 
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: _kBorder),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(_rCard),
+        border: Border.all(color: colors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Top row: avatar + info + bid amount ────────────────────────────
+          // Identity follows the Standard/Inspection worker-card hierarchy.
           Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _BidAvatar(bidWorker: bidWorker),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       bidWorker.fullName,
-                      style: const TextStyle(
-                        fontSize: 14,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 16,
                         fontWeight: FontWeight.w700,
-                        color: _kDark,
-                        letterSpacing: -0.2,
+                        color: colors.textPrimary,
+                        height: 1.25,
                       ),
                     ),
-                    const SizedBox(height: 3),
-                    Row(
-                      children: [
-                        const Icon(Icons.star_rounded, size: 13, color: Color(0xFFF59E0B)),
-                        const SizedBox(width: 3),
-                        // Flexible so a long rating/jobs label can never
-                        // overflow the card on a narrow screen.
-                        Flexible(
-                          child: Text(
-                            workerRatingLabel(context.l10n, bidWorker.rating, bidWorker.completedJobs),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: _kGray,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              // Bid amount badge
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: _kGreen.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: _kGreen.withValues(alpha: 0.25)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      formatPkr(bidWorker.bid.amount),
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: _kGreen,
-                      ),
-                    ),
-                    const Text(
-                      'bid',
-                      style: TextStyle(fontSize: 10, color: _kGreen),
-                    ),
+                    const SizedBox(height: 6),
+                    _BidWorkerMetaLine(bidWorker: bidWorker),
                   ],
                 ),
               ),
             ],
           ),
-
-          // ── Distance ───────────────────────────────────────────────────────
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              const Icon(Icons.near_me_rounded, size: 12, color: _kLight),
-              const SizedBox(width: 4),
-              Text(
-                workerDistanceLabel(context.l10n, bidWorker.distanceKm),
-                style: const TextStyle(fontSize: 11.5, color: _kLight),
+          const SizedBox(height: 10),
+          // This remains visibly an offer card, not a fixed-price selection
+          // card. Keeping the amount on its own trailing-aligned line also
+          // lets long names and scaled text wrap without fighting it.
+          Align(
+            alignment: AlignmentDirectional.centerEnd,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              decoration: BoxDecoration(
+                color: colors.softTeal,
+                borderRadius: BorderRadius.circular(_rCard),
+                border: Border.all(color: colors.primary),
               ),
-            ],
-          ),
-
-          // ── Skills ─────────────────────────────────────────────────────────
-          if (bidWorker.skills.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(
-              bidWorker.skills.take(3).join(' · '),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 11.5, color: _kLight),
+              child: Text(
+                formatPkr(bidWorker.bid.amount),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: colors.primary,
+                ),
+              ),
             ),
-          ],
+          ),
 
           // ── Worker message ─────────────────────────────────────────────────
           if (bidWorker.bid.message != null &&
@@ -574,14 +525,18 @@ class _BidOfferCard extends ConsumerWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: const Color(0xFFF8FAFC),
+                color: colors.surfaceSubtle,
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: _kBorder),
+                border: Border.all(color: colors.border),
               ),
               child: Text(
                 bidWorker.bid.message!,
-                style: const TextStyle(fontSize: 12.5, color: _kGray, height: 1.4),
-                maxLines: 3,
+                style: TextStyle(
+                  fontSize: 12.5,
+                  color: colors.textSecondary,
+                  height: 1.4,
+                ),
+                maxLines: 4,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -592,39 +547,53 @@ class _BidOfferCard extends ConsumerWidget {
           // ── Action buttons ─────────────────────────────────────────────────
           Row(
             children: [
-              Expanded(
-                child: _ChatButton(
-                  bookingId: bookingId,
-                  workerProfileId: bidWorker.workerProfileId,
-                ),
+              _ChatButton(
+                bookingId: bookingId,
+                workerProfileId: bidWorker.workerProfileId,
               ),
               const SizedBox(width: 10),
               Expanded(
-                flex: 2,
-                child: FilledButton.icon(
-                  onPressed: isHiring
-                      ? null
-                      : () => _confirmHire(context, ref),
-                  icon: isHiring
-                      ? const SizedBox(
-                          width: 14,
-                          height: 14,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: _hAction),
+                  child: FilledButton.icon(
+                    onPressed:
+                        isHiring ? null : () => _confirmHire(context, ref),
+                    icon: isHiring
+                        ? SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: colors.textSecondary,
+                            ),
+                          )
+                        : const Icon(
+                            Icons.check_circle_outline_rounded,
+                            size: 18,
                           ),
-                        )
-                      : const Icon(Icons.check_circle_outline_rounded, size: 16),
-                  label: Text(isHiring ? context.l10n.discoveryHiring : context.l10n.discoveryHire),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: _kGreen,
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                    label: Text(
+                      isHiring
+                          ? context.l10n.discoveryHiring
+                          : context.l10n.discoveryHire,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    textStyle: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: colors.primary,
+                      foregroundColor: colors.onPrimary,
+                      disabledBackgroundColor: colors.surfaceSubtle,
+                      disabledForegroundColor: colors.textSecondary,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(_rButton),
+                      ),
+                      textStyle: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                 ),
@@ -637,16 +606,17 @@ class _BidOfferCard extends ConsumerWidget {
   }
 
   Future<void> _confirmHire(BuildContext context, WidgetRef ref) async {
+    final colors = context.semanticColors;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
           context.l10n.discoveryHireNamed(bidWorker.firstName),
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w700,
-            color: _kDark,
+            color: colors.textPrimary,
           ),
         ),
         content: Column(
@@ -658,16 +628,16 @@ class _BidOfferCard extends ConsumerWidget {
             bidWorker.fullName,
             formatPkr(bidWorker.bid.amount),
           ),
-              style: const TextStyle(fontSize: 13, color: _kGray),
+              style: TextStyle(fontSize: 13, color: colors.textSecondary),
             ),
             const SizedBox(height: 10),
             Text(
               isPostInspectionReopen
                   ? context.l10n.discoveryBidInspectionBasedNote
                   : context.l10n.discoveryBidLabourOnlyNote,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12.5,
-                color: _kGray,
+                color: colors.textSecondary,
                 height: 1.4,
               ),
             ),
@@ -677,7 +647,7 @@ class _BidOfferCard extends ConsumerWidget {
                 context.l10n.discoveryInspectionFeeSeparate,
                 style: TextStyle(
                   fontSize: 12.5,
-                  color: _kAmber,
+                  color: colors.warning,
                   fontWeight: FontWeight.w600,
                   height: 1.4,
                 ),
@@ -688,11 +658,17 @@ class _BidOfferCard extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(context.l10n.commonCancel, style: TextStyle(color: _kGray)),
+            child: Text(
+              context.l10n.commonCancel,
+              style: TextStyle(color: colors.textSecondary),
+            ),
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            style: FilledButton.styleFrom(backgroundColor: _kGreen),
+            style: FilledButton.styleFrom(
+              backgroundColor: colors.primary,
+              foregroundColor: colors.onPrimary,
+            ),
             child: Text(context.l10n.discoveryHire),
           ),
         ],
@@ -714,7 +690,7 @@ class _BidOfferCard extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(context.l10n.discoveryWorkerHired),
-            backgroundColor: _kGreen,
+            backgroundColor: colors.success,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             duration: const Duration(seconds: 2),
@@ -731,7 +707,7 @@ class _BidOfferCard extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(failureMessage(context.l10n, e, fallback: context.l10n.discoveryHireFailed)),
-            backgroundColor: const Color(0xFFEF4444),
+            backgroundColor: colors.error,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             duration: const Duration(seconds: 3),
@@ -742,11 +718,64 @@ class _BidOfferCard extends ConsumerWidget {
   }
 }
 
+class _BidWorkerMetaLine extends StatelessWidget {
+  final BidWithWorkerEntity bidWorker;
+
+  const _BidWorkerMetaLine({required this.bidWorker});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.semanticColors;
+
+    Widget item(IconData icon, String label, {Color? color}) => Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: color ?? colors.textSecondary),
+            const SizedBox(width: 4),
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 12.5,
+                  color: color ?? colors.textSecondary,
+                ),
+              ),
+            ),
+          ],
+        );
+
+    return Wrap(
+      spacing: 12,
+      runSpacing: 4,
+      children: [
+        item(
+          Icons.star_rounded,
+          workerRatingLabel(
+            context.l10n,
+            bidWorker.rating,
+            bidWorker.completedJobs,
+          ),
+          color: colors.warning,
+        ),
+        item(
+          Icons.location_on_rounded,
+          workerDistanceLabel(context.l10n, bidWorker.distanceKm),
+        ),
+        if (bidWorker.skills.isNotEmpty)
+          item(
+            Icons.home_repair_service_outlined,
+            bidWorker.skills.take(3).join(' · '),
+          ),
+      ],
+    );
+  }
+}
+
 // ── Pinned inspecting-Ustaad card ───────────────────────────────────────────────
 // Not a normal competing bid — the customer can re-hire this worker using
 // their already-submitted inspection quote instead of accepting a Bid row.
-
-const _kAmber = Color(0xFFB45309);
 
 class _InspectingWorkerOfferCard extends ConsumerWidget {
   final AssignedWorkerEntity worker;
@@ -759,15 +788,16 @@ class _InspectingWorkerOfferCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = context.semanticColors;
     final reportAsync = ref.watch(inspectionReportProvider(bookingId));
     final isHiring = ref.watch(inspectionDecisionNotifierProvider).isLoading;
 
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFFBEB),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFFDE9BC)),
+        color: colors.warningSurface,
+        borderRadius: BorderRadius.circular(_rCard),
+        border: Border.all(color: colors.warning),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -775,7 +805,7 @@ class _InspectingWorkerOfferCard extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
-              color: _kAmber,
+              color: colors.warning,
               borderRadius: BorderRadius.circular(6),
             ),
             child: Text(
@@ -783,7 +813,7 @@ class _InspectingWorkerOfferCard extends ConsumerWidget {
               style: TextStyle(
                 fontSize: 9.5,
                 fontWeight: FontWeight.w800,
-                color: Colors.white,
+                color: colors.surface,
                 letterSpacing: 0.5,
               ),
             ),
@@ -795,7 +825,10 @@ class _InspectingWorkerOfferCard extends ConsumerWidget {
               Container(
                 width: 46,
                 height: 46,
-                decoration: const BoxDecoration(color: _kGreen, shape: BoxShape.circle),
+                decoration: BoxDecoration(
+                  color: colors.primary,
+                  shape: BoxShape.circle,
+                ),
                 child: worker.avatarUrl != null
                     ? ClipOval(
                         child: Image.network(
@@ -813,21 +846,31 @@ class _InspectingWorkerOfferCard extends ConsumerWidget {
                   children: [
                     Text(
                       worker.fullName,
-                      style: const TextStyle(
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
-                        color: _kDark,
+                        color: colors.textPrimary,
                       ),
                     ),
                     if (worker.rating != null) ...[
                       const SizedBox(height: 3),
                       Row(
                         children: [
-                          const Icon(Icons.star_rounded, size: 13, color: Color(0xFFF59E0B)),
+                          Icon(
+                            Icons.star_rounded,
+                            size: 13,
+                            color: colors.warning,
+                          ),
                           const SizedBox(width: 3),
                           Text(
                             worker.rating!.toStringAsFixed(1),
-                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: _kGray),
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: colors.textSecondary,
+                            ),
                           ),
                         ],
                       ),
@@ -840,9 +883,9 @@ class _InspectingWorkerOfferCard extends ConsumerWidget {
                     ? Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
-                          color: _kAmber.withValues(alpha: 0.1),
+                          color: colors.surface,
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: _kAmber.withValues(alpha: 0.3)),
+                          border: Border.all(color: colors.warning),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
@@ -850,9 +893,23 @@ class _InspectingWorkerOfferCard extends ConsumerWidget {
                           children: [
                             Text(
                               formatPkr(r.repairQuoteTotal!),
-                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _kAmber),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: colors.warning,
+                              ),
                             ),
-                            Text(context.l10n.discoveryTheirQuote, style: TextStyle(fontSize: 10, color: _kAmber)),
+                            Text(
+                              context.l10n.discoveryTheirQuote,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: colors.warning,
+                              ),
+                            ),
                           ],
                         ),
                       )
@@ -864,7 +921,7 @@ class _InspectingWorkerOfferCard extends ConsumerWidget {
           const SizedBox(height: 8),
           Text(
             context.l10n.discoveryInspectionCompletedByThis,
-            style: TextStyle(fontSize: 11.5, color: _kGray),
+            style: TextStyle(fontSize: 11.5, color: colors.textSecondary),
           ),
           const SizedBox(height: 10),
           // Optional full technical report — never required before deciding.
@@ -875,8 +932,12 @@ class _InspectingWorkerOfferCard extends ConsumerWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.description_outlined, size: 15, color: _kAmber),
-                SizedBox(width: 5),
+                Icon(
+                  Icons.description_outlined,
+                  size: 15,
+                  color: colors.warning,
+                ),
+                const SizedBox(width: 5),
                 // Flexible so the label can never overflow this card on a
                 // narrow screen.
                 Flexible(
@@ -885,9 +946,9 @@ class _InspectingWorkerOfferCard extends ConsumerWidget {
                     style: TextStyle(
                       fontSize: 12.5,
                       fontWeight: FontWeight.w700,
-                      color: _kAmber,
+                      color: colors.warning,
                       decoration: TextDecoration.underline,
-                      decorationColor: _kAmber,
+                      decorationColor: colors.warning,
                     ),
                   ),
                 ),
@@ -897,27 +958,54 @@ class _InspectingWorkerOfferCard extends ConsumerWidget {
           const SizedBox(height: 12),
           Row(
             children: [
-              Expanded(
-                child: _ChatButton(bookingId: bookingId, workerProfileId: worker.id),
+              _ChatButton(
+                bookingId: bookingId,
+                workerProfileId: worker.id,
               ),
               const SizedBox(width: 10),
               Expanded(
-                flex: 2,
-                child: FilledButton.icon(
-                  onPressed: isHiring ? null : () => _confirmHire(context, ref),
-                  icon: isHiring
-                      ? const SizedBox(
-                          width: 14,
-                          height: 14,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                        )
-                      : const Icon(Icons.check_circle_outline_rounded, size: 16),
-                  label: Text(isHiring ? context.l10n.discoveryHiring : context.l10n.discoveryHireAgain),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: _kAmber,
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: _hAction),
+                  child: FilledButton.icon(
+                    onPressed:
+                        isHiring ? null : () => _confirmHire(context, ref),
+                    icon: isHiring
+                        ? SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: colors.textSecondary,
+                            ),
+                          )
+                        : const Icon(
+                            Icons.check_circle_outline_rounded,
+                            size: 18,
+                          ),
+                    label: Text(
+                      isHiring
+                          ? context.l10n.discoveryHiring
+                          : context.l10n.discoveryHireAgain,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: colors.warning,
+                      foregroundColor: colors.surface,
+                      disabledBackgroundColor: colors.surfaceSubtle,
+                      disabledForegroundColor: colors.textSecondary,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(_rButton),
+                      ),
+                      textStyle: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -929,26 +1017,37 @@ class _InspectingWorkerOfferCard extends ConsumerWidget {
   }
 
   Future<void> _confirmHire(BuildContext context, WidgetRef ref) async {
+    final colors = context.semanticColors;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
           context.l10n.discoveryHireAgainNamed(worker.firstName),
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: _kDark),
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            color: colors.textPrimary,
+          ),
         ),
         content: Text(
           context.l10n.discoveryOriginalQuoteContinues,
-          style: TextStyle(fontSize: 13, color: _kGray),
+          style: TextStyle(fontSize: 13, color: colors.textSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(context.l10n.commonCancel, style: TextStyle(color: _kGray)),
+            child: Text(
+              context.l10n.commonCancel,
+              style: TextStyle(color: colors.textSecondary),
+            ),
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            style: FilledButton.styleFrom(backgroundColor: _kAmber),
+            style: FilledButton.styleFrom(
+              backgroundColor: colors.warning,
+              foregroundColor: colors.surface,
+            ),
             child: Text(context.l10n.discoveryHire),
           ),
         ],
@@ -967,7 +1066,7 @@ class _InspectingWorkerOfferCard extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(context.l10n.discoveryWorkerHired),
-            backgroundColor: _kAmber,
+            backgroundColor: colors.success,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             duration: const Duration(seconds: 2),
@@ -991,7 +1090,7 @@ class _InspectingWorkerOfferCard extends ConsumerWidget {
           ..showSnackBar(
             SnackBar(
               content: Text(e.message),
-              backgroundColor: _kAmber,
+              backgroundColor: colors.warning,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               duration: const Duration(seconds: 5),
@@ -1003,7 +1102,7 @@ class _InspectingWorkerOfferCard extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(failureMessage(context.l10n, e, fallback: context.l10n.discoveryHireFailed)),
-            backgroundColor: const Color(0xFFEF4444),
+            backgroundColor: colors.error,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             duration: const Duration(seconds: 3),
@@ -1022,10 +1121,11 @@ class _BidAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.semanticColors;
     return Container(
-      width: 46,
-      height: 46,
-      decoration: const BoxDecoration(color: _kGreen, shape: BoxShape.circle),
+      width: 52,
+      height: 52,
+      decoration: BoxDecoration(color: colors.primary, shape: BoxShape.circle),
       child: bidWorker.avatarUrl != null
           ? ClipOval(
               child: Image.network(
@@ -1045,11 +1145,12 @@ class _InitialsLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.semanticColors;
     return Center(
       child: Text(
         initials,
-        style: const TextStyle(
-          color: Colors.white,
+        style: TextStyle(
+          color: colors.onPrimary,
           fontSize: 16,
           fontWeight: FontWeight.w700,
         ),
@@ -1084,10 +1185,11 @@ class _ChatButtonState extends ConsumerState<_ChatButton> {
       }
     } catch (e) {
       if (mounted) {
+        final colors = context.semanticColors;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(failureMessage(context.l10n, e)),
-            backgroundColor: const Color(0xFFEF4444),
+            backgroundColor: colors.error,
           ),
         );
       }
@@ -1098,25 +1200,39 @@ class _ChatButtonState extends ConsumerState<_ChatButton> {
 
   @override
   Widget build(BuildContext context) {
-    return OutlinedButton.icon(
-      onPressed: _loading ? null : _openChat,
-      icon: _loading
-          ? const SizedBox(
-              width: 12,
-              height: 12,
-              child: CircularProgressIndicator(
-                strokeWidth: 1.5,
-                valueColor: AlwaysStoppedAnimation<Color>(_kGray),
-              ),
-            )
-          : const Icon(Icons.chat_bubble_outline_rounded, size: 15),
-      label: Text(context.l10n.chatTitleFallback),
-      style: OutlinedButton.styleFrom(
-        foregroundColor: _kGray,
-        side: const BorderSide(color: _kBorder),
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        textStyle: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
+    final colors = context.semanticColors;
+    final label = context.l10n.chatTitleFallback;
+
+    return Semantics(
+      button: true,
+      label: label,
+      child: Tooltip(
+        message: label,
+        child: OutlinedButton(
+          onPressed: _loading ? null : _openChat,
+          style: OutlinedButton.styleFrom(
+            foregroundColor: colors.primary,
+            backgroundColor: colors.surfaceSubtle,
+            disabledForegroundColor: colors.textSecondary,
+            side: BorderSide(color: colors.controlBorder),
+            padding: EdgeInsets.zero,
+            minimumSize: const Size(_hAction, _hAction),
+            fixedSize: const Size(_hAction, _hAction),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(_rButton),
+            ),
+          ),
+          child: _loading
+              ? SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: colors.primary,
+                  ),
+                )
+              : const Icon(Icons.chat_bubble_outline_rounded, size: 20),
+        ),
       ),
     );
   }
@@ -1127,6 +1243,7 @@ class _ChatButtonState extends ConsumerState<_ChatButton> {
 class _LoadingState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final colors = context.semanticColors;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
       child: Column(
@@ -1137,8 +1254,9 @@ class _LoadingState extends StatelessWidget {
             child: Container(
               height: 120,
               decoration: BoxDecoration(
-                color: const Color(0xFFF1F5F9),
-                borderRadius: BorderRadius.circular(14),
+                color: colors.surfaceSubtle,
+                borderRadius: BorderRadius.circular(_rCard),
+                border: Border.all(color: colors.border),
               ),
             ),
           ),
@@ -1153,6 +1271,7 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.semanticColors;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -1163,10 +1282,14 @@ class _EmptyState extends StatelessWidget {
               width: 56,
               height: 56,
               decoration: BoxDecoration(
-                color: _kGreen.withValues(alpha: 0.08),
+                color: colors.softTeal,
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: const Icon(Icons.gavel_rounded, size: 28, color: _kGreen),
+              child: Icon(
+                Icons.gavel_rounded,
+                size: 28,
+                color: colors.primary,
+              ),
             ),
             const SizedBox(height: 14),
             Text(
@@ -1174,14 +1297,18 @@ class _EmptyState extends StatelessWidget {
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
-                color: _kDark,
+                color: colors.textPrimary,
               ),
             ),
             const SizedBox(height: 6),
             Text(
               context.l10n.discoveryWorkersWillAppear,
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12, color: _kLight, height: 1.5),
+              style: TextStyle(
+                fontSize: 12,
+                color: colors.textSecondary,
+                height: 1.5,
+              ),
             ),
           ],
         ),
@@ -1197,6 +1324,7 @@ class _ErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.semanticColors;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -1206,7 +1334,7 @@ class _ErrorState extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 12.5, color: _kGray),
+              style: TextStyle(fontSize: 12.5, color: colors.textSecondary),
             ),
             const SizedBox(height: 16),
             FilledButton.icon(
@@ -1214,8 +1342,11 @@ class _ErrorState extends StatelessWidget {
               icon: const Icon(Icons.refresh_rounded, size: 16),
               label: Text(context.l10n.discoveryTryAgain),
               style: FilledButton.styleFrom(
-                backgroundColor: _kGreen,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                backgroundColor: colors.primary,
+                foregroundColor: colors.onPrimary,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
             ),
           ],
