@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -25,6 +24,8 @@ import '../../../../features/auth/presentation/providers/auth_providers.dart';
 import '../../../../features/notifications/presentation/providers/notification_providers.dart';
 import '../../domain/entities/chat_entities.dart';
 import '../providers/chat_providers.dart';
+import '../widgets/chat_composer.dart';
+import '../widgets/voice_playback_coordinator.dart';
 import 'chat_list_page.dart' show kSupportAvatarAsset;
 
 class ChatDetailPage extends ConsumerStatefulWidget {
@@ -55,6 +56,11 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
   static const _loadOlderThreshold = 120.0;
 
   final _controller = TextEditingController();
+  final _inputFocusNode = FocusNode();
+
+  /// One player for the whole conversation, so voice notes can chain into
+  /// each other and can never overlap.
+  final _voicePlayback = VoicePlaybackCoordinator();
   final _scrollController = ScrollController();
   final _picker = ImagePicker();
 
@@ -71,12 +77,27 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
   bool _initialPositionPending = true;
   bool _isLoadingOlder = false;
   int _unseenIncomingCount = 0;
+  bool _isEmojiPanelVisible = false;
+
+  /// Last software-keyboard height this conversation saw, reused as the emoji
+  /// panel's height so swapping between the two does not resize the message
+  /// list. Seeded with a sane default for the first open.
+  double _lastKeyboardHeight = 280;
 
   @override
   void initState() {
     super.initState();
     ChatSocketService.instance.joinConversation(widget.conversationId);
+    // Reads the live list, so the note after a finished one is found against
+    // the conversation as currently rendered — including after pagination
+    // prepends an older page and shifts every index.
+    _voicePlayback.bindMessages(
+      () =>
+          ref.read(chatMessagesProvider(widget.conversationId)).valueOrNull ??
+          const <MessageEntity>[],
+    );
     _controller.addListener(_onTextChanged);
+    _inputFocusNode.addListener(_onInputFocusChanged);
     _scrollController.addListener(_onScroll);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -93,14 +114,46 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
     if (mounted) setState(() {});
   }
 
+  // ── Emoji panel / keyboard ────────────────────────────────────────────────
+
+  /// Tapping into the field asks for the keyboard, so the emoji panel steps
+  /// aside — otherwise both would claim the space below the composer.
+  void _onInputFocusChanged() {
+    if (_inputFocusNode.hasFocus && _isEmojiPanelVisible) {
+      setState(() => _isEmojiPanelVisible = false);
+    }
+  }
+
+  /// The one control that swaps the two input surfaces: emoji opens the panel
+  /// and drops the keyboard, the keyboard icon does the reverse.
+  void _toggleEmojiPanel() {
+    if (_isEmojiPanelVisible) {
+      setState(() => _isEmojiPanelVisible = false);
+      _inputFocusNode.requestFocus();
+      return;
+    }
+    // Unfocus first: the keyboard has to be on its way out before the panel
+    // claims the space, or the two briefly stack.
+    _inputFocusNode.unfocus();
+    setState(() => _isEmojiPanelVisible = true);
+  }
+
+  void _closeEmojiPanel() {
+    if (!_isEmojiPanelVisible) return;
+    setState(() => _isEmojiPanelVisible = false);
+  }
+
   @override
   void dispose() {
     _recordingTimer?.cancel();
     _amplitudeSub?.cancel();
     _recorder?.dispose();
     _controller.removeListener(_onTextChanged);
+    _inputFocusNode.removeListener(_onInputFocusChanged);
     _scrollController.removeListener(_onScroll);
     _controller.dispose();
+    _inputFocusNode.dispose();
+    _voicePlayback.dispose();
     _scrollController.dispose();
     ChatSocketService.instance.leaveConversation(widget.conversationId);
     super.dispose();
@@ -342,26 +395,16 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
           Navigator.pop(context);
           _pickFromGallery(true);
         },
+        // The camera button now captures a photo outright, so this sheet is
+        // the only remaining way to reach camera *video* capture. It routes
+        // to the same _captureFromCamera as before — no second media path.
+        onCameraVideo: () {
+          Navigator.pop(context);
+          _captureFromCamera(true);
+        },
         onLocation: () {
           Navigator.pop(context);
           _sendLocation();
-        },
-      ),
-    );
-  }
-
-  void _showCameraSheet() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: context.semanticColors.surface.withValues(alpha: 0),
-      builder: (_) => _CameraSheet(
-        onPhoto: () {
-          Navigator.pop(context);
-          _captureFromCamera(false);
-        },
-        onVideo: () {
-          Navigator.pop(context);
-          _captureFromCamera(true);
         },
       ),
     );
@@ -907,6 +950,12 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
   @override
   Widget build(BuildContext context) {
     final c = context.semanticColors;
+
+    // Read, never written back through setState: this only needs to be right
+    // by the *next* build, which is the build that opens the panel.
+    final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
+    if (keyboardInset > 100) _lastKeyboardHeight = keyboardInset;
+
     final messagesAsync = ref.watch(
       chatMessagesProvider(widget.conversationId),
     );
@@ -948,7 +997,11 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
     // Popping through the Navigator still keeps GoRouter in step: its
     // onPopPageWithRouteMatch callback fires for any removal of one of its
     // pages and updates the match list.
-    final canPop = Navigator.canPop(context);
+    // An open emoji panel is the innermost thing back should close, so pop is
+    // intercepted while it is up even when real history exists behind it.
+    // Once it closes this reverts to the plain history check, leaving normal
+    // back behaviour exactly as it was.
+    final canPop = Navigator.canPop(context) && !_isEmojiPanelVisible;
 
     // The Support thread never shows a call icon — HandyGo Support has no
     // legitimate phone-call workflow today, and no support number is ever
@@ -967,12 +1020,19 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
     }
 
     return PopScope(
-      // True whenever real history exists, so the Android system back button
-      // and the browser back button are handled by the framework and are not
-      // intercepted at all.
+      // True whenever real history exists and nothing on-screen wants back
+      // first, so the Android system back button and the browser back button
+      // are handled by the framework and are not intercepted at all.
       canPop: canPop,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) handleBack();
+        if (didPop) return;
+        // Back closes the emoji panel and stops there — it must not also
+        // leave the conversation.
+        if (_isEmojiPanelVisible) {
+          _closeEmojiPanel();
+          return;
+        }
+        handleBack();
       },
       child: Scaffold(
         backgroundColor: c.background,
@@ -1148,6 +1208,7 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
                                     : _MessageBubble(
                                         message: message,
                                         isMe: isMe,
+                                        voicePlayback: _voicePlayback,
                                         showSeen:
                                             isMe && index == lastSeenSentIndex,
                                         onLongPress: (msg) =>
@@ -1207,23 +1268,37 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
                   ],
                 ),
               ),
-            // WhatsApp-style input bar: text field <-> recording bar, mic <-> send.
-            _ChatInputBar(
+            // WhatsApp-style composer: [emoji | message | attach | camera]
+            // plus a separate circular mic/send action.
+            ChatComposer(
               controller: _controller,
+              focusNode: _inputFocusNode,
               isSending: _isSending,
               isAttachmentBusy: _isSendingAttachment,
               isRecording: _isRecording,
               isPaused: _isPaused,
               recordingDuration: _recordingDuration,
               amplitudeBars: _amplitudeBars,
+              isEmojiPanelVisible: _isEmojiPanelVisible,
+              // While the panel is open it sits below the composer and takes
+              // the system inset, so the composer must not add it as well.
+              applyBottomSafeArea: !_isEmojiPanelVisible,
+              onToggleEmojiPanel: _toggleEmojiPanel,
               onSendText: _send,
               onAttachmentTap: _showAttachmentSheet,
-              onCameraTap: _showCameraSheet,
+              // Straight to capture — the camera button is not a menu.
+              onCameraTap: () => _captureFromCamera(false),
               onStartRecording: _startVoiceRecording,
               onCancelRecording: _cancelVoiceRecording,
               onSendRecording: _stopVoiceRecording,
               onTogglePauseResume: _togglePauseResumeRecording,
             ),
+            if (_isEmojiPanelVisible)
+              ChatEmojiPanel(
+                controller: _controller,
+                height: emojiPanelHeight(context, _lastKeyboardHeight),
+                onBackspace: () {},
+              ),
           ],
         ),
       ),
@@ -1543,11 +1618,13 @@ class _MessageBubble extends StatelessWidget {
   final MessageEntity message;
   final bool isMe;
   final bool showSeen;
+  final VoicePlaybackCoordinator voicePlayback;
   final void Function(MessageEntity) onLongPress;
 
   const _MessageBubble({
     required this.message,
     required this.isMe,
+    required this.voicePlayback,
     required this.onLongPress,
     this.showSeen = false,
   });
@@ -1643,7 +1720,12 @@ class _MessageBubble extends StatelessWidget {
       case ChatMessageType.video:
         return _VideoContent(message: message, isMe: isMe, timeStr: timeStr);
       case ChatMessageType.voice:
-        return _VoiceContent(message: message, isMe: isMe, timeStr: timeStr);
+        return _VoiceContent(
+          message: message,
+          isMe: isMe,
+          timeStr: timeStr,
+          playback: voicePlayback,
+        );
       case ChatMessageType.location:
         return _LocationContent(message: message, isMe: isMe, timeStr: timeStr);
       default:
@@ -2085,53 +2167,21 @@ class _VideoPlayerDialogState extends State<_VideoPlayerDialog> {
   }
 }
 
-class _VoiceContent extends StatefulWidget {
+/// A voice note's bubble. It owns no player: play/pause goes to the shared
+/// [VoicePlaybackCoordinator], and the progress shown is the coordinator's
+/// only while this note is the active one.
+class _VoiceContent extends StatelessWidget {
   final MessageEntity message;
   final bool isMe;
   final String timeStr;
+  final VoicePlaybackCoordinator playback;
 
   const _VoiceContent({
     required this.message,
     required this.isMe,
     required this.timeStr,
+    required this.playback,
   });
-
-  @override
-  State<_VoiceContent> createState() => _VoiceContentState();
-}
-
-class _VoiceContentState extends State<_VoiceContent> {
-  final _player = AudioPlayer();
-  PlayerState _playerState = PlayerState.stopped;
-  Duration _position = Duration.zero;
-  Duration _total = Duration.zero;
-
-  late StreamSubscription<PlayerState> _stateSub;
-  late StreamSubscription<Duration> _positionSub;
-  late StreamSubscription<Duration> _durationSub;
-
-  @override
-  void initState() {
-    super.initState();
-    _stateSub = _player.onPlayerStateChanged.listen((s) {
-      if (mounted) setState(() => _playerState = s);
-    });
-    _positionSub = _player.onPositionChanged.listen((p) {
-      if (mounted) setState(() => _position = p);
-    });
-    _durationSub = _player.onDurationChanged.listen((d) {
-      if (mounted) setState(() => _total = d);
-    });
-  }
-
-  @override
-  void dispose() {
-    _stateSub.cancel();
-    _positionSub.cancel();
-    _durationSub.cancel();
-    _player.dispose();
-    super.dispose();
-  }
 
   String _fmtDuration(Duration d) {
     final m = d.inMinutes.toString().padLeft(2, '0');
@@ -2142,88 +2192,100 @@ class _VoiceContentState extends State<_VoiceContent> {
   @override
   Widget build(BuildContext context) {
     final c = context.semanticColors;
-    final isPlaying = _playerState == PlayerState.playing;
-    final totalSecs = _total.inSeconds;
-    final posSecs = _position.inSeconds;
-    final progress = totalSecs > 0
-        ? (posSecs / totalSecs).clamp(0.0, 1.0)
-        : 0.0;
-    final durationLabel = _total > Duration.zero
-        ? _fmtDuration(_total)
-        : '--:--';
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minWidth: 180),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            GestureDetector(
-              onTap: () async {
-                if (isPlaying) {
-                  await _player.pause();
-                } else if (_playerState == PlayerState.paused) {
-                  await _player.resume();
-                } else {
-                  await _player.play(UrlSource(widget.message.mediaUrl!));
-                }
-              },
-              child: Icon(
-                isPlaying
-                    ? Icons.pause_circle_filled_rounded
-                    : Icons.play_circle_filled_rounded,
-                size: 36,
-                color: widget.isMe ? c.onPrimary : c.primary,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  LinearProgressIndicator(
-                    value: progress,
-                    backgroundColor: widget.isMe
-                        ? c.onPrimary.withValues(alpha: 0.3)
-                        : c.surfaceSubtle,
-                    valueColor: AlwaysStoppedAnimation(
-                      widget.isMe ? c.onPrimary : c.primary,
-                    ),
-                    minHeight: 3,
-                    borderRadius: BorderRadius.circular(2),
+    // Scoped to this bubble: a note starting elsewhere in the conversation
+    // rebuilds the voice bubbles and nothing else — in particular it never
+    // touches the scroll position.
+    return ListenableBuilder(
+      listenable: playback,
+      builder: (context, _) {
+        final isActive = playback.isActive(message.id);
+        final isPlaying = playback.isPlayingMessage(message.id);
+        final position = isActive ? playback.position : Duration.zero;
+        // Falls back to the duration the API recorded, so a note that has
+        // never been opened still shows its length.
+        final fallback = message.durationSeconds;
+        final total = isActive && playback.duration > Duration.zero
+            ? playback.duration
+            : (fallback != null && fallback > 0
+                  ? Duration(milliseconds: (fallback * 1000).round())
+                  : Duration.zero);
+
+        final totalSecs = total.inSeconds;
+        final progress = totalSecs > 0
+            ? (position.inSeconds / totalSecs).clamp(0.0, 1.0)
+            : 0.0;
+        final durationLabel = total > Duration.zero
+            ? _fmtDuration(total)
+            : '--:--';
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 180),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                GestureDetector(
+                  key: Key('voice-play-${message.id}'),
+                  onTap: () => playback.toggle(message),
+                  child: Icon(
+                    isPlaying
+                        ? Icons.pause_circle_filled_rounded
+                        : Icons.play_circle_filled_rounded,
+                    size: 36,
+                    color: isMe ? c.onPrimary : c.primary,
                   ),
-                  const SizedBox(height: 5),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        durationLabel,
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: widget.isMe
-                              ? c.onPrimary.withValues(alpha: 0.72)
-                              : c.textSecondary,
+                      LinearProgressIndicator(
+                        value: progress,
+                        backgroundColor: isMe
+                            ? c.onPrimary.withValues(alpha: 0.3)
+                            : c.surfaceSubtle,
+                        valueColor: AlwaysStoppedAnimation(
+                          isMe ? c.onPrimary : c.primary,
                         ),
+                        minHeight: 3,
+                        borderRadius: BorderRadius.circular(2),
                       ),
-                      Text(
-                        widget.timeStr,
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: widget.isMe
-                              ? c.onPrimary.withValues(alpha: 0.72)
-                              : c.textSecondary,
-                        ),
+                      const SizedBox(height: 5),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            durationLabel,
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: isMe
+                                  ? c.onPrimary.withValues(alpha: 0.72)
+                                  : c.textSecondary,
+                            ),
+                          ),
+                          Text(
+                            timeStr,
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: isMe
+                                  ? c.onPrimary.withValues(alpha: 0.72)
+                                  : c.textSecondary,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }
@@ -2481,350 +2543,18 @@ class _NewMessageIndicator extends StatelessWidget {
   }
 }
 
-// ── Chat input bar (WhatsApp-style: text/mic <-> recording/send) ──────────────
-
-class _ChatInputBar extends StatelessWidget {
-  final TextEditingController controller;
-  final bool isSending;
-  final bool isAttachmentBusy;
-  final bool isRecording;
-  final bool isPaused;
-  final Duration recordingDuration;
-  final List<double> amplitudeBars;
-  final VoidCallback onSendText;
-  final VoidCallback onAttachmentTap;
-  final VoidCallback onCameraTap;
-  final VoidCallback onStartRecording;
-  final VoidCallback onCancelRecording;
-  final VoidCallback onSendRecording;
-  final VoidCallback onTogglePauseResume;
-
-  const _ChatInputBar({
-    required this.controller,
-    required this.isSending,
-    required this.isAttachmentBusy,
-    required this.isRecording,
-    required this.isPaused,
-    required this.recordingDuration,
-    required this.amplitudeBars,
-    required this.onSendText,
-    required this.onAttachmentTap,
-    required this.onCameraTap,
-    required this.onStartRecording,
-    required this.onCancelRecording,
-    required this.onSendRecording,
-    required this.onTogglePauseResume,
-  });
-
-  void _onActionTap() {
-    if (isRecording) {
-      onSendRecording();
-      return;
-    }
-    if (controller.text.trim().isNotEmpty) {
-      onSendText();
-      return;
-    }
-    onStartRecording();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final bottomPadding = MediaQuery.of(context).padding.bottom;
-    final hasText = controller.text.trim().isNotEmpty;
-    final c = context.semanticColors;
-
-    return Container(
-      padding: EdgeInsets.fromLTRB(8, 10, 8, 10 + bottomPadding),
-      decoration: BoxDecoration(
-        color: c.surface,
-        border: Border(top: BorderSide(color: c.border)),
-      ),
-      child: Row(
-        children: [
-          if (!isRecording) ...[
-            // Attachment (+) button
-            _IconBtn(
-              icon: Icons.add_rounded,
-              color: isAttachmentBusy ? c.disabled : c.textSecondary,
-              onTap: isAttachmentBusy ? null : onAttachmentTap,
-            ),
-            const SizedBox(width: 4),
-          ],
-          // Text field <-> recording bar
-          Expanded(
-            child: isRecording
-                ? _RecordingBar(
-                    duration: recordingDuration,
-                    isPaused: isPaused,
-                    amplitudeBars: amplitudeBars,
-                    onCancel: onCancelRecording,
-                  )
-                : Container(
-                    decoration: BoxDecoration(
-                      color: c.background,
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: c.controlBorder),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: controller,
-                            textInputAction: TextInputAction.send,
-                            onSubmitted: (_) => onSendText(),
-                            maxLines: 5,
-                            minLines: 1,
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: c.textPrimary,
-                            ),
-                            decoration: InputDecoration(
-                              hintText: context.l10n.chatComposerHint,
-                              hintStyle: TextStyle(
-                                color: c.textSecondary,
-                                fontSize: 14,
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 10,
-                              ),
-                              border: InputBorder.none,
-                            ),
-                          ),
-                        ),
-                        // Camera button
-                        _IconBtn(
-                          icon: Icons.camera_alt_rounded,
-                          color: isAttachmentBusy
-                              ? c.disabled
-                              : c.textSecondary,
-                          onTap: isAttachmentBusy ? null : onCameraTap,
-                        ),
-                      ],
-                    ),
-                  ),
-          ),
-          const SizedBox(width: 4),
-          // Pause/resume button — only while recording
-          if (isRecording) ...[
-            GestureDetector(
-              onTap: onTogglePauseResume,
-              child: Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: c.background,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: c.controlBorder),
-                ),
-                child: Icon(
-                  isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded,
-                  color: c.primary,
-                  size: 22,
-                ),
-              ),
-            ),
-            const SizedBox(width: 4),
-          ],
-          // Mic / Send circular action button
-          GestureDetector(
-            onTap: isSending ? null : _onActionTap,
-            child: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: isSending ? c.primary.withValues(alpha: 0.5) : c.primary,
-                shape: BoxShape.circle,
-              ),
-              child: isSending
-                  ? Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: c.onPrimary,
-                      ),
-                    )
-                  : Icon(
-                      isRecording || hasText
-                          ? Icons.send_rounded
-                          : Icons.mic_rounded,
-                      color: c.onPrimary,
-                      size: 20,
-                    ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _IconBtn extends StatelessWidget {
-  final IconData icon;
-  final Color color;
-  final VoidCallback? onTap;
-
-  const _IconBtn({required this.icon, required this.color, this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.all(8),
-        child: Icon(icon, size: 24, color: color),
-      ),
-    );
-  }
-}
-
-// ── Recording bar (replaces the text field while recording) ───────────────────
-
-class _RecordingBar extends StatelessWidget {
-  final Duration duration;
-  final bool isPaused;
-  final List<double> amplitudeBars;
-  final VoidCallback onCancel;
-
-  const _RecordingBar({
-    required this.duration,
-    required this.isPaused,
-    required this.amplitudeBars,
-    required this.onCancel,
-  });
-
-  String _fmt(Duration d) {
-    final m = d.inMinutes;
-    final s = (d.inSeconds % 60).toString().padLeft(2, '0');
-    return '$m:$s';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.semanticColors;
-    return Container(
-      height: 46,
-      padding: const EdgeInsets.symmetric(horizontal: 14),
-      decoration: BoxDecoration(
-        color: c.background,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: c.controlBorder),
-      ),
-      child: Row(
-        children: [
-          isPaused ? const SizedBox(width: 9, height: 9) : const _BlinkingDot(),
-          const SizedBox(width: 8),
-          SizedBox(
-            width: 34,
-            child: Text(
-              _fmt(duration),
-              style: TextStyle(
-                fontSize: 13,
-                color: c.textPrimary,
-                fontFeatures: [FontFeature.tabularFigures()],
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: ClipRect(
-              child: Align(
-                alignment: AlignmentDirectional.centerEnd,
-                child: _Waveform(bars: amplitudeBars),
-              ),
-            ),
-          ),
-          const SizedBox(width: 6),
-          GestureDetector(
-            onTap: onCancel,
-            child: Padding(
-              padding: const EdgeInsets.all(4),
-              child: Icon(
-                Icons.delete_outline_rounded,
-                color: c.error,
-                size: 22,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Waveform extends StatelessWidget {
-  final List<double> bars;
-  const _Waveform({required this.bars});
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.semanticColors;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        for (final v in bars)
-          Container(
-            width: 2.5,
-            height: 4 + (v.clamp(0.0, 1.0) * 22),
-            margin: const EdgeInsets.symmetric(horizontal: 1),
-            decoration: BoxDecoration(
-              color: c.primary,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-class _BlinkingDot extends StatefulWidget {
-  const _BlinkingDot();
-
-  @override
-  State<_BlinkingDot> createState() => _BlinkingDotState();
-}
-
-class _BlinkingDotState extends State<_BlinkingDot>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 900),
-  )..repeat(reverse: true);
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.semanticColors;
-    return FadeTransition(
-      opacity: Tween<double>(begin: 1, end: 0.25).animate(_controller),
-      child: SizedBox(
-        width: 9,
-        height: 9,
-        child: DecoratedBox(
-          decoration: BoxDecoration(color: c.error, shape: BoxShape.circle),
-        ),
-      ),
-    );
-  }
-}
-
 // ── Attachment sheet ───────────────────────────────────────────────────────────
 
 class _AttachmentSheet extends StatelessWidget {
   final VoidCallback onGalleryImage;
   final VoidCallback onGalleryVideo;
+  final VoidCallback onCameraVideo;
   final VoidCallback onLocation;
 
   const _AttachmentSheet({
     required this.onGalleryImage,
     required this.onGalleryVideo,
+    required this.onCameraVideo,
     required this.onLocation,
   });
 
@@ -2861,6 +2591,9 @@ class _AttachmentSheet extends StatelessWidget {
               physics: const NeverScrollableScrollPhysics(),
               mainAxisSpacing: 8,
               crossAxisSpacing: 8,
+              // Taller than wide: a two-word label wraps to two lines on a
+              // 320px screen, and a square cell has nowhere to put the second.
+              childAspectRatio: 0.72,
               children: [
                 _AttachOption(
                   icon: Icons.image_rounded,
@@ -2875,67 +2608,17 @@ class _AttachmentSheet extends StatelessWidget {
                   onTap: onGalleryVideo,
                 ),
                 _AttachOption(
+                  key: const Key('attach-camera-video'),
+                  icon: Icons.videocam_rounded,
+                  label: context.l10n.chatRecordVideo,
+                  color: c.urgent,
+                  onTap: onCameraVideo,
+                ),
+                _AttachOption(
                   icon: Icons.location_on_rounded,
                   label: context.l10n.chatAttachLocation,
                   color: c.success,
                   onTap: onLocation,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CameraSheet extends StatelessWidget {
-  final VoidCallback onPhoto;
-  final VoidCallback onVideo;
-
-  const _CameraSheet({required this.onPhoto, required this.onVideo});
-
-  @override
-  Widget build(BuildContext context) {
-    final bottomPadding = MediaQuery.of(context).padding.bottom;
-    final c = context.semanticColors;
-    return Container(
-      margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-      decoration: BoxDecoration(
-        color: c.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: c.border),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(top: 12, bottom: 4),
-            child: Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: c.controlBorder,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          Padding(
-            padding: EdgeInsets.fromLTRB(8, 8, 8, 12 + bottomPadding),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _AttachOption(
-                  icon: Icons.camera_alt_rounded,
-                  label: context.l10n.chatTakePhoto,
-                  color: c.primary,
-                  onTap: onPhoto,
-                ),
-                _AttachOption(
-                  icon: Icons.videocam_rounded,
-                  label: context.l10n.chatRecordVideo,
-                  color: c.urgent,
-                  onTap: onVideo,
                 ),
               ],
             ),
@@ -2953,6 +2636,7 @@ class _AttachOption extends StatelessWidget {
   final VoidCallback onTap;
 
   const _AttachOption({
+    super.key,
     required this.icon,
     required this.label,
     required this.color,
@@ -2968,23 +2652,27 @@ class _AttachOption extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 52,
-            height: 52,
+            width: 48,
+            height: 48,
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.12),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: color, size: 26),
+            child: Icon(icon, color: color, size: 24),
           ),
           const SizedBox(height: 6),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              color: c.textSecondary,
-              fontWeight: FontWeight.w500,
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 11,
+                color: c.textSecondary,
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.center,
             ),
-            textAlign: TextAlign.center,
           ),
         ],
       ),

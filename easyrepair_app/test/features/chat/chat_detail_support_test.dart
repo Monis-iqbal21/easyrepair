@@ -14,6 +14,7 @@ import 'package:handygo_app/features/chat/domain/entities/chat_entities.dart';
 import 'package:handygo_app/features/chat/domain/repositories/chat_repository.dart';
 import 'package:handygo_app/features/chat/presentation/pages/chat_detail_page.dart';
 import 'package:handygo_app/features/chat/presentation/providers/chat_providers.dart';
+import 'package:handygo_app/features/chat/presentation/widgets/chat_composer.dart';
 
 const _bannerText =
     'Apna masla ya sawal yahan likhein. '
@@ -199,7 +200,9 @@ void main() {
     // supplied location row is the absolute latest after provider reversal.
     expect(find.byIcon(Icons.location_on_rounded), findsWidgets);
     expect(find.byIcon(Icons.play_circle_filled_rounded), findsWidgets);
-    expect(find.byIcon(Icons.add_rounded), findsOneWidget);
+    // The composer offers emoji, attach, camera and the mic/send action.
+    expect(find.byKey(ChatComposerKeys.emojiButton), findsOneWidget);
+    expect(find.byKey(ChatComposerKeys.attachButton), findsOneWidget);
     expect(find.byIcon(Icons.camera_alt_rounded), findsOneWidget);
     expect(find.byIcon(Icons.mic_rounded), findsOneWidget);
 

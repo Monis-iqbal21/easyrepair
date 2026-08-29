@@ -11,6 +11,7 @@ import 'package:handygo_app/features/chat/domain/entities/chat_entities.dart';
 import 'package:handygo_app/features/chat/domain/repositories/chat_repository.dart';
 import 'package:handygo_app/features/chat/presentation/pages/chat_detail_page.dart';
 import 'package:handygo_app/features/chat/presentation/providers/chat_providers.dart';
+import 'package:handygo_app/features/chat/presentation/widgets/chat_composer.dart';
 
 import '../../support/l10n_test_app.dart';
 
@@ -212,7 +213,7 @@ void main() {
   );
 
   testWidgets(
-    'the "+" attachment menu no longer offers a duplicate voice option, but '
+    'the attachment menu no longer offers a duplicate voice option, but '
     'photo/video/location remain',
     (tester) async {
       await pumpDetail(
@@ -224,23 +225,23 @@ void main() {
         ),
       );
 
-      await tester.tap(find.byIcon(Icons.add_rounded));
+      await tester.tap(find.byKey(ChatComposerKeys.attachButton));
       await tester.pumpAndSettle();
 
       expect(find.text('Photo'), findsOneWidget);
       expect(find.text('Video'), findsOneWidget);
       expect(find.text('Location'), findsOneWidget);
       expect(find.text('Voice'), findsNothing);
-      // Exactly one mic icon remains on screen — the dedicated input-bar
-      // control underneath the open sheet. A second one would mean the "+"
-      // menu's duplicate voice option is still there.
+      // Exactly one mic icon remains on screen — the dedicated composer
+      // control underneath the open sheet. A second one would mean the
+      // attachment menu's duplicate voice option is still there.
       expect(find.byIcon(Icons.mic_rounded), findsOneWidget);
     },
   );
 
   testWidgets(
     'the dedicated voice-message control (mic/send action button) remains '
-    'available in the input bar',
+    'available in the composer',
     (tester) async {
       await pumpDetail(
         tester,

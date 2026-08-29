@@ -50,6 +50,12 @@ dependencies:
   firebase_messaging: ^16.0.1
   flutter_local_notifications: ^18.0.1
 
+  # Emoji keyboard for the chat composer. Pinned below 4.5.0: that release
+  # raised its floor to Dart 3.11.5 / Flutter 3.41.8, above this project's
+  # SDK. Chosen over hand-rolling a picker because an emoji database is not
+  # something to maintain by hand.
+  emoji_picker_flutter: ^4.4.0
+
   # Media & file handling
   image_picker: ^1.1.2
   path_provider: ^2.1.5
@@ -106,6 +112,12 @@ dev_dependencies:
   # test/core/notifications/notification_permission_service_test.dart to
   # swap PermissionHandlerPlatform.instance for a fake — same pattern.
   permission_handler_platform_interface: ^4.3.0
+
+  # Directly imported (not just transitive) by
+  # test/features/chat/chat_composer_test.dart to swap
+  # ImagePickerPlatform.instance for a fake that records which ImageSource
+  # the composer asked for — same pattern as above.
+  image_picker_platform_interface: ^2.10.0
 
 flutter:
   uses-material-design: true
