@@ -1,27 +1,32 @@
 import 'package:flutter/material.dart';
+import '../../../../core/theme/app_semantic_colors.dart';
 
 class PrivacyPolicyPage extends StatelessWidget {
   const PrivacyPolicyPage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
+      backgroundColor: c.background,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.transparent,
+        backgroundColor: c.surface,
+        surfaceTintColor: c.surface.withValues(alpha: 0),
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded,
-              size: 18, color: Color(0xFF1A1A1A)),
+          icon: Icon(
+            Icons.arrow_back_ios_new_rounded,
+            size: 18,
+            color: c.textPrimary,
+          ),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: const Text(
+        title: Text(
           'Privacy Policy',
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w700,
-            color: Color(0xFF1A1A1A),
+            color: c.textPrimary,
           ),
         ),
         centerTitle: true,
@@ -83,30 +88,31 @@ class _PolicyContent extends StatelessWidget {
         ),
         SizedBox(height: 24),
         _Heading('2. How We Use Your Information'),
-        _BodyText(
-          'We use the information we collect to:',
-        ),
+        _BodyText('We use the information we collect to:'),
         SizedBox(height: 8),
+        _NumberedPoint(number: '1.', text: 'Create and manage your account.'),
         _NumberedPoint(
-            number: '1.', text: 'Create and manage your account.'),
+          number: '2.',
+          text:
+              'Match clients with suitable workers based on location and service category.',
+        ),
         _NumberedPoint(
-            number: '2.',
-            text:
-                'Match clients with suitable workers based on location and service category.'),
+          number: '3.',
+          text: 'Facilitate bookings, job tracking, and in-app communication.',
+        ),
         _NumberedPoint(
-            number: '3.',
-            text:
-                'Facilitate bookings, job tracking, and in-app communication.'),
+          number: '4.',
+          text: 'Send push notifications about job updates and messages.',
+        ),
         _NumberedPoint(
-            number: '4.',
-            text: 'Send push notifications about job updates and messages.'),
+          number: '5.',
+          text: 'Improve the reliability and performance of the platform.',
+        ),
         _NumberedPoint(
-            number: '5.',
-            text: 'Improve the reliability and performance of the platform.'),
-        _NumberedPoint(
-            number: '6.',
-            text:
-                'Comply with legal obligations and enforce our Terms of Service.'),
+          number: '6.',
+          text:
+              'Comply with legal obligations and enforce our Terms of Service.',
+        ),
         SizedBox(height: 24),
         _Heading('3. Push Notifications'),
         _BodyText(
@@ -191,11 +197,12 @@ class _LastUpdated extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Text(
       'Last updated: $date',
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 12,
-        color: Color(0xFF6B7280),
+        color: c.textSecondary,
         fontStyle: FontStyle.italic,
       ),
     );
@@ -209,14 +216,15 @@ class _Heading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Text(
         text,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 15,
           fontWeight: FontWeight.w700,
-          color: Color(0xFF1A1A1A),
+          color: c.textPrimary,
         ),
       ),
     );
@@ -230,13 +238,10 @@ class _BodyText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Text(
       text,
-      style: const TextStyle(
-        fontSize: 14,
-        height: 1.6,
-        color: Color(0xFF374151),
-      ),
+      style: TextStyle(fontSize: 14, height: 1.6, color: c.textPrimary),
     );
   }
 }
@@ -249,26 +254,24 @@ class _BulletPoint extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Padding(
       padding: const EdgeInsets.only(bottom: 10, left: 4),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
+          Padding(
             padding: EdgeInsets.only(top: 6),
-            child: CircleAvatar(
-              radius: 3,
-              backgroundColor: Color(0xFF1D9E75),
-            ),
+            child: CircleAvatar(radius: 3, backgroundColor: c.primary),
           ),
           const SizedBox(width: 10),
           Expanded(
             child: RichText(
               text: TextSpan(
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   height: 1.6,
-                  color: Color(0xFF374151),
+                  color: c.textPrimary,
                 ),
                 children: [
                   TextSpan(
@@ -294,6 +297,7 @@ class _NumberedPoint extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Padding(
       padding: const EdgeInsets.only(bottom: 8, left: 4),
       child: Row(
@@ -301,21 +305,17 @@ class _NumberedPoint extends StatelessWidget {
         children: [
           Text(
             number,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF1D9E75),
+              color: c.primary,
             ),
           ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(
-                fontSize: 14,
-                height: 1.6,
-                color: Color(0xFF374151),
-              ),
+              style: TextStyle(fontSize: 14, height: 1.6, color: c.textPrimary),
             ),
           ),
         ],

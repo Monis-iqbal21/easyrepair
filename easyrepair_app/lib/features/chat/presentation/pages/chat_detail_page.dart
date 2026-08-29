@@ -20,13 +20,13 @@ import '../../../../core/permissions/media_permission_helper.dart';
 import '../../../../core/presentation/widgets/resource_unavailable_view.dart';
 import '../../../../core/services/chat_socket_service.dart';
 import '../../../../core/theme/app_semantic_colors.dart';
+import '../../../../core/widgets/handygo_brand_lockup.dart';
 import '../../../../features/auth/presentation/providers/auth_providers.dart';
 import '../../../../features/notifications/presentation/providers/notification_providers.dart';
 import '../../domain/entities/chat_entities.dart';
 import '../providers/chat_providers.dart';
 import '../widgets/chat_composer.dart';
 import '../widgets/voice_playback_coordinator.dart';
-import 'chat_list_page.dart' show kSupportAvatarAsset;
 
 class ChatDetailPage extends ConsumerStatefulWidget {
   final String conversationId;
@@ -1448,19 +1448,9 @@ class _AppBarAvatar extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.semanticColors;
     if (isSupport) {
-      return Container(
-        width: 38,
-        height: 38,
-        padding: const EdgeInsets.all(4),
-        decoration: BoxDecoration(
-          color: c.surface,
-          shape: BoxShape.circle,
-          border: Border.all(color: c.border),
-        ),
-        child: ClipOval(
-          child: Image.asset(kSupportAvatarAsset, fit: BoxFit.contain),
-        ),
-      );
+      // Same mark as the Chat List row and the About card — the launcher
+      // tile it replaced was a baked-in orange bitmap.
+      return const HandyGoBrandMark(size: 38);
     }
     if (avatarUrl != null && avatarUrl!.isNotEmpty) {
       return CircleAvatar(

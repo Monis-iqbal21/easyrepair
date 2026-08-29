@@ -1562,8 +1562,11 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                   return ServiceCard(
                     title: cat.name,
                     emoji: cat.emoji,
-                    backgroundColor: categoryBgColor(cat.name),
-                    emojiBackgroundColor: categoryEmojiBgColor(cat.name),
+                    // Same tokens the home page passes this card, so one
+                    // service tile is not pastel on one screen and teal on
+                    // the other.
+                    backgroundColor: context.semanticColors.surfaceSubtle,
+                    emojiBackgroundColor: context.semanticColors.softTeal,
                     imagePath: _serviceImagePath(cat.name),
                     isSelected: _selectedService == cat.name,
                     locked: !kLaunchActiveServiceCategories.contains(cat.name),
@@ -2043,8 +2046,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
             ref.read(savedAddressesProvider).valueOrNull ??
             const <SavedAddressEntity>[];
         final conflicts = rows.any(
-          (row) =>
-              row.id != editing?.id && row.normalizedLabel == normalized,
+          (row) => row.id != editing?.id && row.normalizedLabel == normalized,
         );
         if (editing != null && conflicts) {
           return context.l10n.savedAddressRenameConflict;
@@ -2358,8 +2360,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                       Checkbox(
                         value: _showSaveAddressOptions,
                         visualDensity: VisualDensity.compact,
-                        materialTapTargetSize:
-                            MaterialTapTargetSize.shrinkWrap,
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         onChanged: (value) => setState(
                           () => _showSaveAddressOptions = value ?? false,
                         ),

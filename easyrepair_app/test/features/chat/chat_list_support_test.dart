@@ -7,6 +7,7 @@ import 'package:handygo_app/core/data/cached_result.dart';
 import 'package:handygo_app/core/errors/failures.dart';
 import 'package:handygo_app/core/theme/app_semantic_colors.dart';
 import 'package:handygo_app/core/theme/app_theme.dart';
+import 'package:handygo_app/core/widgets/handygo_brand_lockup.dart';
 import 'package:handygo_app/features/chat/domain/entities/chat_entities.dart';
 import 'package:handygo_app/features/chat/domain/repositories/chat_repository.dart';
 import 'package:handygo_app/features/chat/presentation/pages/chat_list_page.dart';
@@ -148,6 +149,11 @@ void main() {
     ]);
 
     expect(_renderedNames(tester).first, 'HandyGo Support');
+    expect(find.byType(HandyGoBrandMark), findsOneWidget);
+    expect(
+      find.image(const AssetImage('assets/images/logo-green.png')),
+      findsNothing,
+    );
   });
 
   testWidgets('HandyGo Support is pinned first for a WORKER too', (

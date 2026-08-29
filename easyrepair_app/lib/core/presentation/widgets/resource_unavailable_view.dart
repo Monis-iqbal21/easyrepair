@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../errors/failures.dart';
+import '../../theme/app_semantic_colors.dart';
 
 /// Full-state view for a specific "this resource is gone" business state —
 /// a booking/job/conversation that was deleted, withdrawn, or is otherwise
@@ -24,6 +25,7 @@ class ResourceUnavailableView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -34,36 +36,42 @@ class ResourceUnavailableView extends StatelessWidget {
               width: 64,
               height: 64,
               decoration: BoxDecoration(
-                color: const Color(0xFFF1F5F9),
+                color: c.surfaceSubtle,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.link_off_rounded,
                 size: 30,
-                color: Color(0xFF94A3B8),
+                color: c.textSecondary,
               ),
             ),
             const SizedBox(height: 18),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 14.5, color: Color(0xFF6B7280)),
+              style: TextStyle(fontSize: 14.5, color: c.textSecondary),
             ),
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: onAction,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFDB6234),
-                foregroundColor: Colors.white,
+                backgroundColor: c.primary,
+                foregroundColor: c.onPrimary,
                 elevation: 0,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
               child: Text(
                 actionLabel,
-                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13.5,
+                ),
               ),
             ),
           ],

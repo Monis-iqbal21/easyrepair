@@ -73,6 +73,10 @@ class _PromptHarness extends ConsumerStatefulWidget {
 class _PromptHarnessState extends ConsumerState<_PromptHarness> {
   void rebuildFromProviderEvent() => setState(() {});
 
+  Future<CashPaymentConfirmationEntity?> openManually() => ref
+      .read(cashPaymentPromptControllerProvider)
+      .showForBooking(context, widget.booking);
+
   @override
   Widget build(BuildContext context) {
     scheduleAutomaticCashPaymentPrompt(context, ref, widget.booking);
@@ -154,6 +158,45 @@ void main() {
     expect(find.byType(CashPaymentConfirmationCard), findsNothing);
 
     key.currentState!.rebuildFromProviderEvent();
+    key.currentState!.rebuildFromProviderEvent();
+    await tester.pumpAndSettle();
+    expect(find.byType(CashPaymentConfirmationCard), findsNothing);
+
+    final manualPrompt = key.currentState!.openManually();
+    await tester.pumpAndSettle();
+    expect(find.byType(CashPaymentConfirmationCard), findsOneWidget);
+    await tester.tap(find.byKey(const Key('cash-payment-later-button')));
+    await tester.pumpAndSettle();
+    await manualPrompt;
+  });
+
+  testWidgets('outside tap dismisses once and does not reopen on rebuild', (
+    tester,
+  ) async {
+    final key = GlobalKey<_PromptHarnessState>();
+    await _pumpHarness(tester, _booking(), key: key);
+    expect(find.byType(CashPaymentConfirmationCard), findsOneWidget);
+
+    await tester.tapAt(const Offset(2, 2));
+    await tester.pumpAndSettle();
+    expect(find.byType(CashPaymentConfirmationCard), findsNothing);
+
+    key.currentState!.rebuildFromProviderEvent();
+    await tester.pumpAndSettle();
+    expect(find.byType(CashPaymentConfirmationCard), findsNothing);
+  });
+
+  testWidgets('Android back dismisses once and does not reopen on rebuild', (
+    tester,
+  ) async {
+    final key = GlobalKey<_PromptHarnessState>();
+    await _pumpHarness(tester, _booking(), key: key);
+    expect(find.byType(CashPaymentConfirmationCard), findsOneWidget);
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.byType(CashPaymentConfirmationCard), findsNothing);
+
     key.currentState!.rebuildFromProviderEvent();
     await tester.pumpAndSettle();
     expect(find.byType(CashPaymentConfirmationCard), findsNothing);

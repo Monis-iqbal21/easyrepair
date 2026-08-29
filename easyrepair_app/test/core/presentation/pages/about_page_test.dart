@@ -1,7 +1,9 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:handygo_app/core/presentation/pages/about_page.dart';
 import 'package:handygo_app/core/utils/app_version_info.dart';
+import 'package:handygo_app/core/widgets/handygo_brand_lockup.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../../support/l10n_test_app.dart';
@@ -30,6 +32,11 @@ void main() {
   testWidgets('shows the HandyGo name', (tester) async {
     await pump(tester);
     expect(find.text('HandyGo'), findsWidgets);
+    expect(find.byType(HandyGoBrandMark), findsOneWidget);
+    expect(
+      find.image(const AssetImage('assets/images/logo-green.png')),
+      findsNothing,
+    );
   });
 
   testWidgets('shows the official website', (tester) async {
@@ -37,22 +44,24 @@ void main() {
     expect(find.text('https://handygo.ai'), findsOneWidget);
   });
 
-  testWidgets('shows the runtime version/build from PackageInfo, not a hardcoded string', (
-    tester,
-  ) async {
-    await pump(tester);
-    expect(find.text('Version 1.0.1 (2)'), findsOneWidget);
-  });
+  testWidgets(
+    'shows the runtime version/build from PackageInfo, not a hardcoded string',
+    (tester) async {
+      await pump(tester);
+      expect(find.text('Version 1.0.1 (2)'), findsOneWidget);
+    },
+  );
 
-  testWidgets('never invents marketing claims — description is the fixed factual line', (
-    tester,
-  ) async {
-    await pump(tester);
-    expect(
-      find.text(
-        'HandyGo connects clients with nearby verified Ustaads for home repair and maintenance services.',
-      ),
-      findsOneWidget,
-    );
-  });
+  testWidgets(
+    'never invents marketing claims — description is the fixed factual line',
+    (tester) async {
+      await pump(tester);
+      expect(
+        find.text(
+          'HandyGo connects clients with nearby verified Ustaads for home repair and maintenance services.',
+        ),
+        findsOneWidget,
+      );
+    },
+  );
 }

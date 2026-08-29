@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../widgets/auth_header.dart';
 import '../widgets/selection_card.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
+import '../../../../core/theme/app_semantic_colors.dart';
 
 /// Shown after choosing "Ustaad" on the role-selection page — decides
 /// between new-Ustaad registration and existing-Ustaad login.
@@ -39,7 +40,7 @@ class _WorkerTypeSelectionPageState extends State<WorkerTypeSelectionPage> {
     final isSmall = mq.size.height < 680;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: context.semanticColors.surface,
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -66,8 +67,7 @@ class _WorkerTypeSelectionPageState extends State<WorkerTypeSelectionPage> {
                           title: context.l10n.authWorkerTypeNewTitle,
                           subtitle: context.l10n.authWorkerTypeNewSubtitle,
                           isSelected: _selected == 'new',
-                          onTap: () =>
-                              _select('new', '/auth/worker/register'),
+                          onTap: () => _select('new', '/auth/worker/register'),
                         ),
                         const SizedBox(height: 16),
                         SelectionCard(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'auth_primary_button.dart';
+import '../../../../core/theme/app_semantic_colors.dart';
+import '../../../../core/widgets/handygo_brand_lockup.dart';
 
 /// Shared logo + title + subtitle header, reused across every auth screen —
 /// consolidates the near-identical private `_AuthHeader` copy-pasted per
@@ -22,17 +23,18 @@ class AuthHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (showBackButton) ...[
           GestureDetector(
             onTap: () => Navigator.of(context).maybePop(),
-            child: const Padding(
+            child: Padding(
               padding: EdgeInsets.only(bottom: 4),
               child: Icon(
                 Icons.arrow_back_rounded,
-                color: kAuthDark,
+                color: c.textPrimary,
                 size: 24,
               ),
             ),
@@ -42,19 +44,14 @@ class AuthHeader extends StatelessWidget {
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Image.asset(
-              'assets/images/logo-green.png',
-              width: isSmall ? 36 : 44,
-              height: isSmall ? 36 : 44,
-              fit: BoxFit.contain,
-            ),
+            HandyGoBrandMark(size: isSmall ? 36 : 44),
             const SizedBox(width: 10),
             Text(
               'Handygo',
               style: TextStyle(
                 fontSize: isSmall ? 22 : 26,
                 fontWeight: FontWeight.w800,
-                color: kAuthAccent,
+                color: c.primary,
                 letterSpacing: 0.2,
               ),
             ),
@@ -66,7 +63,7 @@ class AuthHeader extends StatelessWidget {
           style: TextStyle(
             fontSize: isSmall ? 24 : 28,
             fontWeight: FontWeight.w800,
-            color: kAuthDark,
+            color: c.textPrimary,
             height: 1.2,
           ),
         ),
@@ -74,9 +71,9 @@ class AuthHeader extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             subtitle,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
-              color: kAuthGray,
+              color: c.textSecondary,
               height: 1.35,
             ),
           ),

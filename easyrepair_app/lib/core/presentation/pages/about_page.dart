@@ -5,12 +5,13 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../l10n/l10n_extensions.dart';
 import '../../theme/app_semantic_colors.dart';
 import '../../utils/app_version_info.dart';
+import '../../widgets/handygo_brand_lockup.dart';
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 //
 // There isn't one. The four page-local constants that used to live here —
-// _kOrange #DB6234 (EasyRepair's, on the website link), _kDark #1A1A1A,
-// _kGray #6B7280 and _kBg #F9FAFB — are now primary / textPrimary /
+// EasyRepair's retired orange, dark, gray and background constants are now
+// primary / textPrimary /
 // textSecondary / background.
 //
 // SHARED SCREEN: one About page for both Client and Ustaad (see
@@ -59,11 +60,9 @@ class AboutPage extends ConsumerWidget {
                 ),
                 child: Column(
                   children: [
-                    Image.asset(
-                      'assets/images/logo-green.png',
-                      width: 72,
-                      height: 72,
-                    ),
+                    // The launcher tile that used to sit here is a baked-in
+                    // orange bitmap; the mark is drawn from the palette.
+                    const HandyGoBrandMark(size: 72),
                     const SizedBox(height: 14),
                     // The product's own name — never translated.
                     Text(

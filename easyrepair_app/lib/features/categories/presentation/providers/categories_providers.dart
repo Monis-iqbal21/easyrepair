@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/network/api_client.dart';
@@ -79,38 +78,4 @@ List<ServiceCategoryEntity> _buildFallback() {
     for (final name in _kFallbackInspectionOnlyNames)
       ServiceCategoryEntity(id: '', name: name, inspectionOnly: true),
   ];
-}
-
-// ── Color lookup helpers (kept for post_job_page compatibility) ───────────────
-
-Color categoryBgColor(String name) {
-  return switch (name.toLowerCase()) {
-    'ac technician' => const Color(0xFFE8F4F8),
-    'electrician'   => const Color(0xFFFFF8E1),
-    'plumber'       => const Color(0xFFE8F5E9),
-    'handyman'      => const Color(0xFFF3E5F5),
-    'painter'       => const Color(0xFFFCE4EC),
-    'carpenter'     => const Color(0xFFEFEBE9),
-    'cleaner' || 'cleaning' => const Color(0xFFFFF3E0),
-    'pest control'          => const Color(0xFFE8F5E9),
-    'car wash'              => const Color(0xFFE3F2FD),
-    'gardener'              => const Color(0xFFE8F5E9),
-    _                       => const Color(0xFFF0F0F0),
-  };
-}
-
-Color categoryEmojiBgColor(String name) {
-  return switch (name.toLowerCase()) {
-    'ac technician'         => const Color(0xFFB2DFF0),
-    'electrician'           => const Color(0xFFFFECB3),
-    'plumber'               => const Color(0xFFC8E6C9),
-    'handyman'              => const Color(0xFFE1BEE7),
-    'painter'               => const Color(0xFFF8BBD0),
-    'carpenter'             => const Color(0xFFD7CCC8),
-    'cleaner' || 'cleaning' => const Color(0xFFFFE0B2),
-    'pest control'          => const Color(0xFFC8E6C9),
-    'car wash'              => const Color(0xFFBBDEFB),
-    'gardener'              => const Color(0xFFA5D6A7),
-    _                       => const Color(0xFFDDDDDD),
-  };
 }

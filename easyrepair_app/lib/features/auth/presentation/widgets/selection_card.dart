@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'auth_primary_button.dart';
+import '../../../../core/theme/app_semantic_colors.dart';
 
 /// Large, tappable selectable card shared by the role-selection and
 /// Worker-type-selection pages — icon + title + subtitle, with explicit
@@ -23,8 +23,9 @@ class SelectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Material(
-      color: isSelected ? kAuthAccent.withAlpha(18) : Colors.white,
+      color: isSelected ? c.softTeal : c.surface,
       borderRadius: BorderRadius.circular(18),
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
@@ -36,12 +37,12 @@ class SelectionCard extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
-              color: isSelected ? kAuthAccent : kAuthBorder,
+              color: isSelected ? c.primary : c.border,
               width: isSelected ? 1.6 : 1,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withAlpha(8),
+                color: c.scrim.withAlpha(8),
                 blurRadius: 10,
                 offset: const Offset(0, 3),
               ),
@@ -54,13 +55,13 @@ class SelectionCard extends StatelessWidget {
                 width: 52,
                 height: 52,
                 decoration: BoxDecoration(
-                  color: isSelected ? kAuthAccent : kAuthBg,
+                  color: isSelected ? c.primary : c.background,
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Icon(
                   icon,
                   size: 26,
-                  color: isSelected ? Colors.white : kAuthAccent,
+                  color: isSelected ? c.onPrimary : c.primary,
                 ),
               ),
               const SizedBox(width: 14),
@@ -70,19 +71,19 @@ class SelectionCard extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 15.5,
                         fontWeight: FontWeight.w700,
-                        color: kAuthDark,
+                        color: c.textPrimary,
                         height: 1.3,
                       ),
                     ),
                     const SizedBox(height: 6),
                     Text(
                       subtitle,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12.5,
-                        color: kAuthGray,
+                        color: c.textSecondary,
                         height: 1.35,
                       ),
                     ),
@@ -93,7 +94,7 @@ class SelectionCard extends StatelessWidget {
                 isSelected
                     ? Icons.check_circle_rounded
                     : Icons.chevron_right_rounded,
-                color: isSelected ? kAuthAccent : kAuthGray,
+                color: isSelected ? c.primary : c.textSecondary,
               ),
             ],
           ),

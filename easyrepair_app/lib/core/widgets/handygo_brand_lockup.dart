@@ -56,8 +56,10 @@ class HandyGoBrandLockup extends StatelessWidget {
     // phone-sized lockup rather than a poster.
     final byWidth = widthBudget * 0.42;
     final byHeight = heightBudget * 0.24;
-    final wrenchSize =
-        (byWidth < byHeight ? byWidth : byHeight).clamp(64.0, 168.0);
+    final wrenchSize = (byWidth < byHeight ? byWidth : byHeight).clamp(
+      64.0,
+      168.0,
+    );
 
     // The type is proportional to the mark, so the whole lockup scales as one
     // object. Text scaling is applied by Flutter on top of these.
@@ -108,6 +110,53 @@ class HandyGoBrandLockup extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// HandyGo's in-app brand mark: the off-white wrench on a filled
+/// [AppSemanticColors.primary] disc.
+///
+/// ## Why this exists
+///
+/// `assets/images/logo-green.png` is the *launcher* icon source — `pubspec.yaml`
+/// hands that exact file to `flutter_launcher_icons`. It is a pre-rendered
+/// orange tile carrying EasyRepair's retired orange, baked into the pixels
+/// where no palette can reach it. Screens that used it as ordinary in-app
+/// branding therefore showed an orange square inside a teal app, in both
+/// themes, and got the wrong brand colour besides.
+///
+/// This widget draws the same mark from the parts the app already owns: the
+/// transparent wrench of [HandyGoBrandLockup.wrenchAsset] over a `primary`
+/// disc. The colour is a token, so it follows light/dark like everything else
+/// and moves with the brand if the brand moves.
+class HandyGoBrandMark extends StatelessWidget {
+  const HandyGoBrandMark({super.key, required this.size, this.semanticLabel});
+
+  /// Diameter of the disc. The wrench is inset within it.
+  final double size;
+
+  /// Screen-reader label. Leave null where the brand name is already adjacent
+  /// as real text — the About card and the Support row both name HandyGo — so
+  /// the mark is not announced twice.
+  final String? semanticLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.semanticColors;
+    return Container(
+      width: size,
+      height: size,
+      // The wrench is drawn edge-to-edge in its own artwork; the inset keeps
+      // it from touching the rim of the disc at any size.
+      padding: EdgeInsets.all(size * 0.22),
+      decoration: BoxDecoration(color: colors.primary, shape: BoxShape.circle),
+      child: Image.asset(
+        HandyGoBrandLockup.wrenchAsset,
+        fit: BoxFit.contain,
+        excludeFromSemantics: semanticLabel == null,
+        semanticLabel: semanticLabel,
+      ),
     );
   }
 }

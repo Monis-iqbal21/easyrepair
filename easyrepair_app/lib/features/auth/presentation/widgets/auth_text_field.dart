@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
-
-const _kAccent = Color(0xFFDB6234);
-const _kHint = Color(0xFF94A3B8);
-const _kBorder = Color(0xFFE2E8F0);
+import '../../../../core/theme/app_semantic_colors.dart';
 
 class AuthTextField extends StatefulWidget {
   final TextEditingController controller;
@@ -58,6 +55,7 @@ class _AuthTextFieldState extends State<AuthTextField> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return TextFormField(
       controller: widget.controller,
       obscureText: _obscure,
@@ -69,18 +67,20 @@ class _AuthTextFieldState extends State<AuthTextField> {
       onChanged: widget.onChanged,
       enabled: widget.enabled,
       validator: widget.validator,
-      style: const TextStyle(fontSize: 15, color: Color(0xFF1A1A1A)),
+      style: TextStyle(fontSize: 15, color: c.textPrimary),
       decoration: InputDecoration(
         labelText: widget.label,
         hintText: widget.hint,
-        labelStyle: const TextStyle(fontSize: 14, color: _kHint),
-        hintStyle: const TextStyle(fontSize: 14, color: _kHint),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        labelStyle: TextStyle(fontSize: 14, color: c.textSecondary),
+        hintStyle: TextStyle(fontSize: 14, color: c.textSecondary),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
         filled: true,
-        fillColor: Colors.white,
+        fillColor: c.surface,
         prefixIcon: widget.prefixIcon != null
-            ? Icon(widget.prefixIcon, size: 20, color: _kHint)
+            ? Icon(widget.prefixIcon, size: 20, color: c.textSecondary)
             : null,
         suffixIcon: widget.obscureText
             ? IconButton(
@@ -89,26 +89,26 @@ class _AuthTextFieldState extends State<AuthTextField> {
                       ? Icons.visibility_off_outlined
                       : Icons.visibility_outlined,
                   size: 20,
-                  color: _kHint,
+                  color: c.textSecondary,
                 ),
                 onPressed: () => setState(() => _obscure = !_obscure),
               )
             : null,
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: _kBorder),
+          borderSide: BorderSide(color: c.border),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: _kAccent, width: 1.5),
+          borderSide: BorderSide(color: c.primary, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFEF4444)),
+          borderSide: BorderSide(color: c.error),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFEF4444), width: 1.5),
+          borderSide: BorderSide(color: c.error, width: 1.5),
         ),
       ),
     );

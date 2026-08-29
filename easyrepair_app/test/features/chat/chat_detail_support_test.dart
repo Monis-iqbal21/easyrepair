@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:handygo_app/core/l10n/app_locale.dart';
 import 'package:handygo_app/core/theme/app_semantic_colors.dart';
 import 'package:handygo_app/core/theme/app_theme.dart';
+import 'package:handygo_app/core/widgets/handygo_brand_lockup.dart';
 import '../../support/l10n_test_app.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:handygo_app/core/data/cached_result.dart';
@@ -144,6 +145,11 @@ void main() {
     await _pumpDetail(tester, isSupport: true);
 
     expect(find.text(_bannerText), findsOneWidget);
+    expect(find.byType(HandyGoBrandMark), findsOneWidget);
+    expect(
+      find.image(const AssetImage('assets/images/logo-green.png')),
+      findsNothing,
+    );
   });
 
   testWidgets('the banner needs no persisted SYSTEM message — the thread is '

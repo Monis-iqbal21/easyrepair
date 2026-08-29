@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
+import '../../../../core/theme/app_semantic_colors.dart';
 
 class BookingSearchBar extends StatefulWidget {
   final String initialValue;
@@ -47,18 +48,19 @@ class _BookingSearchBarState extends State<BookingSearchBar> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Row(
       children: [
         Expanded(
           child: Container(
             height: 46,
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: c.surface,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
+              border: Border.all(color: c.border),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
+                  color: c.scrim.withValues(alpha: 0.04),
                   blurRadius: 6,
                   offset: const Offset(0, 2),
                 ),
@@ -67,20 +69,14 @@ class _BookingSearchBarState extends State<BookingSearchBar> {
             child: TextField(
               controller: _controller,
               onChanged: _onTextChanged,
-              style: const TextStyle(
-                fontSize: 13.5,
-                color: Color(0xFF1A1A1A),
-              ),
+              style: TextStyle(fontSize: 13.5, color: c.textPrimary),
               decoration: InputDecoration(
                 hintText: context.l10n.searchBookingsHint,
-                hintStyle: const TextStyle(
-                  fontSize: 13.5,
-                  color: Color(0xFF94A3B8),
-                ),
-                prefixIcon: const Icon(
+                hintStyle: TextStyle(fontSize: 13.5, color: c.textSecondary),
+                prefixIcon: Icon(
                   Icons.search_rounded,
                   size: 18,
-                  color: Color(0xFF94A3B8),
+                  color: c.textSecondary,
                 ),
                 suffixIcon: _controller.text.isNotEmpty
                     ? GestureDetector(
@@ -88,10 +84,10 @@ class _BookingSearchBarState extends State<BookingSearchBar> {
                           _controller.clear();
                           widget.onChanged('');
                         },
-                        child: const Icon(
+                        child: Icon(
                           Icons.close_rounded,
                           size: 16,
-                          color: Color(0xFF94A3B8),
+                          color: c.textSecondary,
                         ),
                       )
                     : null,
@@ -124,24 +120,19 @@ class _FilterButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: 46,
         height: 46,
         decoration: BoxDecoration(
-          color: hasActiveFilters
-              ? const Color(0xFFDB6234)
-              : Colors.white,
+          color: hasActiveFilters ? c.primary : c.surface,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: hasActiveFilters
-                ? const Color(0xFFDB6234)
-                : const Color(0xFFE2E8F0),
-          ),
+          border: Border.all(color: hasActiveFilters ? c.primary : c.border),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
+              color: c.scrim.withValues(alpha: 0.04),
               blurRadius: 6,
               offset: const Offset(0, 2),
             ),
@@ -154,7 +145,7 @@ class _FilterButton extends StatelessWidget {
               child: Icon(
                 Icons.tune_rounded,
                 size: 18,
-                color: hasActiveFilters ? Colors.white : const Color(0xFF6B7280),
+                color: hasActiveFilters ? c.onPrimary : c.textSecondary,
               ),
             ),
             if (hasActiveFilters)
@@ -165,12 +156,10 @@ class _FilterButton extends StatelessWidget {
                   width: 7,
                   height: 7,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF59E0B),
+                    color: c.warning,
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: hasActiveFilters
-                          ? const Color(0xFFDB6234)
-                          : Colors.white,
+                      color: hasActiveFilters ? c.primary : c.surface,
                       width: 1,
                     ),
                   ),

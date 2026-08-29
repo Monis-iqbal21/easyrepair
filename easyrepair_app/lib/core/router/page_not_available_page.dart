@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../l10n/l10n_extensions.dart';
+import '../theme/app_semantic_colors.dart';
 
 /// Global fallback for an unknown/invalid route (GoRouter's `errorBuilder`)
 /// — never exposes the attempted path or any exception text.
@@ -26,6 +27,7 @@ class PageNotAvailablePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return PopScope(
       // Never let Android back reveal the invalid route again — always land
       // on a real, redirect-resolved screen instead.
@@ -34,7 +36,7 @@ class PageNotAvailablePage extends StatelessWidget {
         if (!didPop) _goHome(context);
       },
       child: Scaffold(
-        backgroundColor: const Color(0xFFF9FAFB),
+        backgroundColor: c.background,
         body: SafeArea(
           child: Center(
             child: Padding(
@@ -46,40 +48,42 @@ class PageNotAvailablePage extends StatelessWidget {
                     width: 72,
                     height: 72,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFFF0E8),
+                      color: c.softTeal,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.search_off_rounded,
                       size: 34,
-                      color: Color(0xFFDB6234),
+                      color: c.primary,
                     ),
                   ),
                   const SizedBox(height: 20),
                   Text(
                     context.l10n.pageNotAvailableTitle,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF1A1A1A),
+                      color: c.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     context.l10n.pageNotAvailableBody,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
+                    style: TextStyle(fontSize: 14, color: c.textSecondary),
                   ),
                   const SizedBox(height: 24),
                   ElevatedButton(
                     onPressed: () => _goHome(context),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFDB6234),
-                      foregroundColor: Colors.white,
+                      backgroundColor: c.primary,
+                      foregroundColor: c.onPrimary,
                       elevation: 0,
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 28,
+                        vertical: 14,
+                      ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),

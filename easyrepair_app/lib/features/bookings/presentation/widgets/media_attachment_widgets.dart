@@ -6,11 +6,7 @@ import 'package:video_player/video_player.dart';
 
 import '../../domain/entities/booking_entity.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
-
-// ── Palette (matches booking-detail pages) ────────────────────────────────────
-const _kAccent = Color(0xFF1D9E75);
-const _kDark   = Color(0xFF1A1A1A);
-const _kLight  = Color(0xFF94A3B8);
+import '../../../../core/theme/app_semantic_colors.dart';
 
 // ═════════════════════════════════════════════════════════════════════════════
 // AUDIO PLAYER
@@ -18,8 +14,26 @@ const _kLight  = Color(0xFF94A3B8);
 
 // Fixed waveform heights used by both the player and recorder waveforms.
 const _kWaveHeights = [
-  4.0, 9.0, 15.0, 7.0, 19.0, 12.0, 6.0, 14.0, 9.0, 5.0,
-  17.0, 11.0, 7.0, 13.0, 8.0, 4.0, 10.0, 16.0, 6.0, 12.0,
+  4.0,
+  9.0,
+  15.0,
+  7.0,
+  19.0,
+  12.0,
+  6.0,
+  14.0,
+  9.0,
+  5.0,
+  17.0,
+  11.0,
+  7.0,
+  13.0,
+  8.0,
+  4.0,
+  10.0,
+  16.0,
+  6.0,
+  12.0,
 ];
 
 /// WhatsApp-style voice note player. Accepts a network [url] for existing
@@ -29,8 +43,21 @@ class WhatsAppVoiceNotePlayer extends StatefulWidget {
   final String? localPath;
   final VoidCallback? onDelete;
 
-  const WhatsAppVoiceNotePlayer({super.key, this.url, this.localPath, this.onDelete})
-      : assert(url != null || localPath != null);
+  /// Length the backend recorded for this note, in seconds.
+  ///
+  /// The player only learns a duration from `onDurationChanged`, which does
+  /// not fire until the source is opened — so before the first tap the label
+  /// read "0:00" on a note that was plainly not empty. When the API already
+  /// knows the length, seed it here and the label is right on first paint.
+  final double? durationSeconds;
+
+  const WhatsAppVoiceNotePlayer({
+    super.key,
+    this.url,
+    this.localPath,
+    this.onDelete,
+    this.durationSeconds,
+  }) : assert(url != null || localPath != null);
 
   @override
   State<WhatsAppVoiceNotePlayer> createState() =>
@@ -48,8 +75,12 @@ class _WhatsAppVoiceNotePlayerState extends State<WhatsAppVoiceNotePlayer> {
   @override
   void initState() {
     super.initState();
+    _duration = _seededDuration(widget.durationSeconds);
     _player.onDurationChanged.listen((d) {
-      if (mounted) setState(() => _duration = d);
+      // The decoded length wins once it is known, but a zero reading — which
+      // some sources emit before the header is parsed — must not wipe out the
+      // duration the API already gave us.
+      if (mounted && d > Duration.zero) setState(() => _duration = d);
     });
     _player.onPositionChanged.listen((p) {
       if (mounted) setState(() => _position = p);
@@ -70,6 +101,22 @@ class _WhatsAppVoiceNotePlayerState extends State<WhatsAppVoiceNotePlayer> {
       }
     });
   }
+
+  @override
+  void didUpdateWidget(WhatsAppVoiceNotePlayer old) {
+    super.didUpdateWidget(old);
+    // Only re-seed while nothing has been decoded yet; a live duration read
+    // from the source outranks the recorded one.
+    if (widget.durationSeconds != old.durationSeconds &&
+        _duration == Duration.zero) {
+      setState(() => _duration = _seededDuration(widget.durationSeconds));
+    }
+  }
+
+  static Duration _seededDuration(double? seconds) =>
+      (seconds != null && seconds > 0)
+      ? Duration(milliseconds: (seconds * 1000).round())
+      : Duration.zero;
 
   @override
   void dispose() {
@@ -124,13 +171,14 @@ class _WhatsAppVoiceNotePlayerState extends State<WhatsAppVoiceNotePlayer> {
 
     const barCount = 28;
     final filledCount = (progress * barCount).round();
+    final c = context.semanticColors;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: c.surface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: c.border),
       ),
       child: Row(
         children: [
@@ -138,10 +186,10 @@ class _WhatsAppVoiceNotePlayerState extends State<WhatsAppVoiceNotePlayer> {
           if (widget.onDelete != null) ...[
             GestureDetector(
               onTap: widget.onDelete,
-              child: const Icon(
+              child: Icon(
                 Icons.delete_outline_rounded,
                 size: 20,
-                color: Color(0xFF6B7280),
+                color: c.textSecondary,
               ),
             ),
             const SizedBox(width: 8),
@@ -154,24 +202,24 @@ class _WhatsAppVoiceNotePlayerState extends State<WhatsAppVoiceNotePlayer> {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: _kAccent.withValues(alpha: 0.1),
+                color: c.softTeal,
                 shape: BoxShape.circle,
               ),
               child: _isLoading
-                  ? const Padding(
-                      padding: EdgeInsets.all(11),
+                  ? Padding(
+                      padding: const EdgeInsets.all(11),
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: _kAccent,
+                        color: c.primary,
                       ),
                     )
                   : Icon(
                       _hasError
                           ? Icons.error_outline_rounded
                           : _isPlaying
-                              ? Icons.pause_rounded
-                              : Icons.play_arrow_rounded,
-                      color: _kAccent,
+                          ? Icons.pause_rounded
+                          : Icons.play_arrow_rounded,
+                      color: c.primary,
                       size: 22,
                     ),
             ),
@@ -180,49 +228,48 @@ class _WhatsAppVoiceNotePlayerState extends State<WhatsAppVoiceNotePlayer> {
 
           // ── Waveform bars — tap to seek ──────────────────────────────────
           Expanded(
-            child: LayoutBuilder(builder: (_, bc) {
-              const spacing = 2.0;
-              final barW =
-                  (bc.maxWidth - (barCount - 1) * spacing) / barCount;
-              return GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTapDown: (d) =>
-                    _seekTo(d.localPosition.dx / bc.maxWidth),
-                child: SizedBox(
-                  height: 24,
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: List.generate(barCount, (i) {
-                      final h = _kWaveHeights[i % _kWaveHeights.length];
-                      final filled = i < filledCount;
-                      final isHead = filledCount > 0 && i == filledCount;
-                      return Container(
-                        width: barW,
-                        height: isHead ? (h + 4).clamp(0.0, 22.0) : h,
-                        margin: i < barCount - 1
-                            ? const EdgeInsetsDirectional.only(end: spacing)
-                            : null,
-                        decoration: BoxDecoration(
-                          color: filled
-                              ? _kAccent
-                              : const Color(0xFFE2E8F0),
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      );
-                    }),
+            child: LayoutBuilder(
+              builder: (_, bc) {
+                const spacing = 2.0;
+                final barW =
+                    (bc.maxWidth - (barCount - 1) * spacing) / barCount;
+                return GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTapDown: (d) => _seekTo(d.localPosition.dx / bc.maxWidth),
+                  child: SizedBox(
+                    height: 24,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: List.generate(barCount, (i) {
+                        final h = _kWaveHeights[i % _kWaveHeights.length];
+                        final filled = i < filledCount;
+                        final isHead = filledCount > 0 && i == filledCount;
+                        return Container(
+                          width: barW,
+                          height: isHead ? (h + 4).clamp(0.0, 22.0) : h,
+                          margin: i < barCount - 1
+                              ? const EdgeInsetsDirectional.only(end: spacing)
+                              : null,
+                          decoration: BoxDecoration(
+                            color: filled ? c.primary : c.border,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        );
+                      }),
+                    ),
                   ),
-                ),
-              );
-            }),
+                );
+              },
+            ),
           ),
           const SizedBox(width: 10),
 
           // ── Duration ─────────────────────────────────────────────────────
           Text(
             timeLabel,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
-              color: Color(0xFF6B7280),
+              color: c.textSecondary,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -238,8 +285,10 @@ class BookingAudioPlayerCard extends StatelessWidget {
   const BookingAudioPlayerCard({super.key, required this.attachment});
 
   @override
-  Widget build(BuildContext context) =>
-      WhatsAppVoiceNotePlayer(url: attachment.url);
+  Widget build(BuildContext context) => WhatsAppVoiceNotePlayer(
+    url: attachment.url,
+    durationSeconds: attachment.durationSeconds,
+  );
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -254,20 +303,22 @@ class BookingImageGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(builder: (context, bc) {
-      const cols = 2;
-      const spacing = 8.0;
-      final tileW = (bc.maxWidth - spacing) / cols;
-      final tileH = tileW * 0.72; // ~4:3
+    return LayoutBuilder(
+      builder: (context, bc) {
+        const cols = 2;
+        const spacing = 8.0;
+        final tileW = (bc.maxWidth - spacing) / cols;
+        final tileH = tileW * 0.72; // ~4:3
 
-      return Wrap(
-        spacing: spacing,
-        runSpacing: spacing,
-        children: images
-            .map((img) => _ImageTile(url: img.url, w: tileW, h: tileH))
-            .toList(),
-      );
-    });
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: images
+              .map((img) => _ImageTile(url: img.url, w: tileW, h: tileH))
+              .toList(),
+        );
+      },
+    );
   }
 }
 
@@ -278,7 +329,7 @@ class BookingImageGrid extends StatelessWidget {
 Future<void> showFullScreenImage(BuildContext context, String url) {
   return showDialog<void>(
     context: context,
-    barrierColor: Colors.black87,
+    barrierColor: context.semanticColors.scrim,
     builder: (_) => _FullImageDialog(url: url),
   );
 }
@@ -291,6 +342,7 @@ class _ImageTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return GestureDetector(
       onTap: () => showFullScreenImage(context, url),
       child: ClipRRect(
@@ -304,19 +356,19 @@ class _ImageTile extends StatelessWidget {
             errorBuilder: (_, _, _) => Container(
               width: w,
               height: h,
-              color: const Color(0xFFF1F5F9),
-              child: const Icon(Icons.broken_image_outlined, color: _kLight),
+              color: c.surfaceSubtle,
+              child: Icon(Icons.broken_image_outlined, color: c.textSecondary),
             ),
             loadingBuilder: (_, child, prog) => prog == null
                 ? child
                 : Container(
                     width: w,
                     height: h,
-                    color: const Color(0xFFF1F5F9),
-                    child: const Center(
+                    color: c.surfaceSubtle,
+                    child: Center(
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: _kAccent,
+                        color: c.primary,
                       ),
                     ),
                   ),
@@ -334,8 +386,9 @@ class _FullImageDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: c.scrim,
       body: Stack(
         children: [
           Center(
@@ -343,9 +396,9 @@ class _FullImageDialog extends StatelessWidget {
               child: Image.network(
                 url,
                 fit: BoxFit.contain,
-                errorBuilder: (_, _, _) => const Icon(
+                errorBuilder: (_, _, _) => Icon(
                   Icons.broken_image_outlined,
-                  color: Colors.white38,
+                  color: c.onScrimMuted,
                   size: 48,
                 ),
               ),
@@ -362,15 +415,11 @@ class _FullImageDialog extends StatelessWidget {
                   child: Container(
                     width: 38,
                     height: 38,
-                    decoration: const BoxDecoration(
-                      color: Colors.white24,
+                    decoration: BoxDecoration(
+                      color: c.scrimSurface,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
-                      Icons.close,
-                      color: Colors.white,
-                      size: 20,
-                    ),
+                    child: Icon(Icons.close, color: c.onScrim, size: 20),
                   ),
                 ),
               ),
@@ -394,16 +443,19 @@ class BookingVideoTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return GestureDetector(
       onTap: () => showDialog<void>(
         context: context,
-        barrierColor: Colors.black87,
+        barrierColor: c.scrim,
         builder: (_) => _VideoPlayerDialog(url: attachment.url),
       ),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: _kDark,
+          // A video poster reads as a dark tile in either theme, so this is
+          // scrim chrome rather than a page surface.
+          color: c.scrim,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -412,12 +464,12 @@ class BookingVideoTile extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.1),
+                color: c.scrimSurface,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.play_circle_fill_rounded,
-                color: Colors.white70,
+                color: c.onScrimMuted,
                 size: 24,
               ),
             ),
@@ -430,24 +482,20 @@ class BookingVideoTile extends StatelessWidget {
                     attachment.fileName ?? context.l10n.chatAttachVideo,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
-                      color: Colors.white,
+                      color: c.onScrim,
                     ),
                   ),
                   Text(
                     context.l10n.mediaTapToPlay,
-                    style: TextStyle(fontSize: 11, color: Colors.white54),
+                    style: TextStyle(fontSize: 11, color: c.onScrimMuted),
                   ),
                 ],
               ),
             ),
-            const Icon(
-              Icons.chevron_right_rounded,
-              color: Colors.white38,
-              size: 18,
-            ),
+            Icon(Icons.chevron_right_rounded, color: c.onScrimMuted, size: 18),
           ],
         ),
       ),
@@ -473,13 +521,15 @@ class _VideoPlayerDialogState extends State<_VideoPlayerDialog> {
   void initState() {
     super.initState();
     _ctrl = VideoPlayerController.networkUrl(Uri.parse(widget.url))
-      ..initialize().then((_) {
-        if (!mounted) return;
-        setState(() => _initialized = true);
-        _ctrl.play();
-      }).catchError((_) {
-        if (mounted) setState(() => _initialized = false);
-      });
+      ..initialize()
+          .then((_) {
+            if (!mounted) return;
+            setState(() => _initialized = true);
+            _ctrl.play();
+          })
+          .catchError((_) {
+            if (mounted) setState(() => _initialized = false);
+          });
     _ctrl.addListener(() {
       if (mounted) setState(() {});
     });
@@ -493,23 +543,23 @@ class _VideoPlayerDialogState extends State<_VideoPlayerDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: c.scrim,
       body: Stack(
         children: [
           // ── Video area ─────────────────────────────────────────────────
           Center(
             child: _initialized
                 ? GestureDetector(
-                    onTap: () => _ctrl.value.isPlaying
-                        ? _ctrl.pause()
-                        : _ctrl.play(),
+                    onTap: () =>
+                        _ctrl.value.isPlaying ? _ctrl.pause() : _ctrl.play(),
                     child: AspectRatio(
                       aspectRatio: _ctrl.value.aspectRatio,
                       child: VideoPlayer(_ctrl),
                     ),
                   )
-                : const CircularProgressIndicator(color: _kAccent),
+                : CircularProgressIndicator(color: c.onScrim),
           ),
 
           // ── Bottom controls ────────────────────────────────────────────
@@ -533,15 +583,11 @@ class _VideoPlayerDialogState extends State<_VideoPlayerDialog> {
                   child: Container(
                     width: 38,
                     height: 38,
-                    decoration: const BoxDecoration(
-                      color: Colors.white24,
+                    decoration: BoxDecoration(
+                      color: c.scrimSurface,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
-                      Icons.close,
-                      color: Colors.white,
-                      size: 20,
-                    ),
+                    child: Icon(Icons.close, color: c.onScrim, size: 20),
                   ),
                 ),
               ),
@@ -565,6 +611,7 @@ class _VideoControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     final pos = ctrl.value.position;
     final total = ctrl.value.duration;
     final progress = total.inMilliseconds > 0
@@ -572,7 +619,7 @@ class _VideoControls extends StatelessWidget {
         : 0.0;
 
     return Container(
-      color: Colors.black54,
+      color: c.scrim,
       padding: EdgeInsets.fromLTRB(
         16,
         10,
@@ -582,13 +629,12 @@ class _VideoControls extends StatelessWidget {
       child: Row(
         children: [
           GestureDetector(
-            onTap: () =>
-                ctrl.value.isPlaying ? ctrl.pause() : ctrl.play(),
+            onTap: () => ctrl.value.isPlaying ? ctrl.pause() : ctrl.play(),
             child: Icon(
               ctrl.value.isPlaying
                   ? Icons.pause_rounded
                   : Icons.play_arrow_rounded,
-              color: Colors.white,
+              color: c.onScrim,
               size: 28,
             ),
           ),
@@ -597,13 +643,14 @@ class _VideoControls extends StatelessWidget {
             child: SliderTheme(
               data: SliderTheme.of(context).copyWith(
                 trackHeight: 2,
-                thumbShape:
-                    const RoundSliderThumbShape(enabledThumbRadius: 6),
-                overlayShape:
-                    const RoundSliderOverlayShape(overlayRadius: 10),
-                activeTrackColor: _kAccent,
-                inactiveTrackColor: Colors.white24,
-                thumbColor: _kAccent,
+                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                overlayShape: const RoundSliderOverlayShape(overlayRadius: 10),
+                // Scrim chrome, not brand: the backdrop is fixed black in
+                // both themes, so a theme-varying accent would drop out of
+                // contrast in one of them.
+                activeTrackColor: c.onScrim,
+                inactiveTrackColor: c.scrimSurface,
+                thumbColor: c.onScrim,
               ),
               child: Slider(
                 value: progress,
@@ -619,7 +666,7 @@ class _VideoControls extends StatelessWidget {
           const SizedBox(width: 8),
           Text(
             '${_fmt(pos)} / ${_fmt(total)}',
-            style: const TextStyle(fontSize: 11, color: Colors.white70),
+            style: TextStyle(fontSize: 11, color: c.onScrimMuted),
           ),
         ],
       ),

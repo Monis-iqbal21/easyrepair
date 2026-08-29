@@ -5,7 +5,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../../../core/theme/app_semantic_colors.dart';
 
 // Every colour on this page comes from `context.semanticColors`. The
-// `_kDark = Color(0xFF1A1A1A)` constant and the two `Colors.white` fills that
+// `_kDark = c.textPrimary` constant and the two fixed light fills that
 // used to sit here are gone — they were EasyRepair values that ignored the
 // dark palette entirely, so this page rendered a white bar over a dark app.
 
@@ -150,11 +150,7 @@ class MapExpandButton extends StatelessWidget {
           // 44 — the prototype's minimum tappable control.
           width: 44,
           height: 44,
-          child: Icon(
-            Icons.fullscreen_rounded,
-            size: 22,
-            color: c.textPrimary,
-          ),
+          child: Icon(Icons.fullscreen_rounded, size: 22, color: c.textPrimary),
         ),
       ),
     );

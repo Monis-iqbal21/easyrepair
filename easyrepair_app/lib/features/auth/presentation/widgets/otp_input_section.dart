@@ -5,8 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:pinput/pinput.dart';
 import 'package:smart_auth/smart_auth.dart';
 
-import 'auth_primary_button.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
+import '../../../../core/theme/app_semantic_colors.dart';
 
 /// How many digits an OTP has.
 ///
@@ -152,33 +152,36 @@ class _OtpInputSectionState extends State<OtpInputSection>
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     final expired = _remaining <= Duration.zero;
-    final secondsSinceRequest =
-        DateTime.now().difference(_requestedAt).inSeconds;
-    final canResend = secondsSinceRequest >= otpResendCooldownDuration.inSeconds;
+    final secondsSinceRequest = DateTime.now()
+        .difference(_requestedAt)
+        .inSeconds;
+    final canResend =
+        secondsSinceRequest >= otpResendCooldownDuration.inSeconds;
 
     final defaultTheme = PinTheme(
       width: 46,
       height: 52,
-      textStyle: const TextStyle(
+      textStyle: TextStyle(
         fontSize: 20,
         fontWeight: FontWeight.w700,
-        color: kAuthDark,
+        color: c.textPrimary,
       ),
       decoration: BoxDecoration(
-        color: kAuthBg,
+        color: c.background,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: kAuthBorder),
+        border: Border.all(color: c.border),
       ),
     );
     final focusedTheme = defaultTheme.copyWith(
       decoration: defaultTheme.decoration!.copyWith(
-        border: Border.all(color: kAuthAccent, width: 1.5),
+        border: Border.all(color: c.primary, width: 1.5),
       ),
     );
     final errorTheme = defaultTheme.copyWith(
       decoration: defaultTheme.decoration!.copyWith(
-        border: Border.all(color: const Color(0xFFEF4444), width: 1.5),
+        border: Border.all(color: c.error, width: 1.5),
       ),
     );
 
@@ -190,21 +193,21 @@ class _OtpInputSectionState extends State<OtpInputSection>
         Directionality(
           textDirection: TextDirection.ltr,
           child: Pinput(
-          length: otpLength,
-          controller: _controller,
-          focusNode: _focusNode,
-          autofocus: true,
-          smsRetriever: _smsRetriever,
-          keyboardType: TextInputType.number,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          defaultPinTheme: defaultTheme,
-          focusedPinTheme: focusedTheme,
-          submittedPinTheme: defaultTheme,
-          errorPinTheme: errorTheme,
-          forceErrorState: widget.hasError,
-          onChanged: widget.onChanged,
-          onCompleted: widget.onCompleted,
-        ),
+            length: otpLength,
+            controller: _controller,
+            focusNode: _focusNode,
+            autofocus: true,
+            smsRetriever: _smsRetriever,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            defaultPinTheme: defaultTheme,
+            focusedPinTheme: focusedTheme,
+            submittedPinTheme: defaultTheme,
+            errorPinTheme: errorTheme,
+            forceErrorState: widget.hasError,
+            onChanged: widget.onChanged,
+            onCompleted: widget.onCompleted,
+          ),
         ),
         const SizedBox(height: 16),
         Center(
@@ -214,7 +217,7 @@ class _OtpInputSectionState extends State<OtpInputSection>
                     Text(
                       context.l10n.authOtpExpired,
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Color(0xFFEF4444), fontSize: 13),
+                      style: TextStyle(color: c.error, fontSize: 13),
                     ),
                     const SizedBox(height: 8),
                     _ResendLink(
@@ -227,8 +230,10 @@ class _OtpInputSectionState extends State<OtpInputSection>
               : Column(
                   children: [
                     Text(
-                      context.l10n.authOtpExpiresIn(_formatRemaining(_remaining)),
-                      style: const TextStyle(fontSize: 13, color: kAuthGray),
+                      context.l10n.authOtpExpiresIn(
+                        _formatRemaining(_remaining),
+                      ),
+                      style: TextStyle(fontSize: 13, color: c.textSecondary),
                     ),
                     const SizedBox(height: 8),
                     canResend
@@ -238,10 +243,13 @@ class _OtpInputSectionState extends State<OtpInputSection>
                             onTap: widget.onResend,
                           )
                         : Text(
-                            context.l10n.authOtpResendCooldown(otpResendCooldownDuration.inSeconds - secondsSinceRequest),
-                            style: const TextStyle(
+                            context.l10n.authOtpResendCooldown(
+                              otpResendCooldownDuration.inSeconds -
+                                  secondsSinceRequest,
+                            ),
+                            style: TextStyle(
                               fontSize: 13,
-                              color: kAuthGray,
+                              color: c.textSecondary,
                             ),
                           ),
                   ],
@@ -265,11 +273,12 @@ class _ResendLink extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     if (loading) {
-      return const SizedBox(
+      return SizedBox(
         height: 20,
         width: 20,
-        child: CircularProgressIndicator(strokeWidth: 2, color: kAuthAccent),
+        child: CircularProgressIndicator(strokeWidth: 2, color: c.primary),
       );
     }
     return GestureDetector(
@@ -281,7 +290,7 @@ class _ResendLink extends StatelessWidget {
           style: TextStyle(
             fontSize: 13.5,
             fontWeight: FontWeight.w700,
-            color: kAuthAccent,
+            color: c.primary,
           ),
         ),
       ),

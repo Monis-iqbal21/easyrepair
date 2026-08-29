@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/theme/app_semantic_colors.dart';
 
 /// Simple shimmer-style skeleton for booking cards.
 class BookingSkeleton extends StatefulWidget {
@@ -20,9 +21,10 @@ class _BookingSkeletonState extends State<BookingSkeleton>
       vsync: this,
       duration: const Duration(milliseconds: 1100),
     )..repeat(reverse: true);
-    _anim = Tween<double>(begin: 0.35, end: 0.9).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    _anim = Tween<double>(
+      begin: 0.35,
+      end: 0.9,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -35,7 +37,7 @@ class _BookingSkeletonState extends State<BookingSkeleton>
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _anim,
-      builder: (_, __) {
+      builder: (_, _) {
         return Column(
           children: List.generate(
             3,
@@ -53,15 +55,16 @@ class _SkeletonCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Opacity(
       opacity: opacity,
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: c.surface,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: const Color(0xFFE2E8F0)),
+          border: Border.all(color: c.border),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -96,7 +99,7 @@ class _SkeletonCard extends StatelessWidget {
             const SizedBox(height: 5),
             _Box(width: 160, height: 10, radius: 4),
             const SizedBox(height: 12),
-            const Divider(height: 1, color: Color(0xFFF1F5F9)),
+            Divider(height: 1, color: c.surfaceSubtle),
             const SizedBox(height: 12),
             Row(
               children: [
@@ -126,19 +129,16 @@ class _Box extends StatelessWidget {
   final double height;
   final double radius;
 
-  const _Box({
-    required this.width,
-    required this.height,
-    required this.radius,
-  });
+  const _Box({required this.width, required this.height, required this.radius});
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Container(
       width: width,
       height: height,
       decoration: BoxDecoration(
-        color: const Color(0xFFE2E8F0),
+        color: c.border,
         borderRadius: BorderRadius.circular(radius),
       ),
     );

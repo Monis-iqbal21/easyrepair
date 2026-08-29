@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../domain/entities/booking_entity.dart';
 import '../providers/booking_providers.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
+import '../../../../core/theme/app_semantic_colors.dart';
 
 class BookingFilterSheet extends StatefulWidget {
   final BookingFilter currentFilter;
@@ -35,10 +36,11 @@ class _BookingFilterSheetState extends State<BookingFilterSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      decoration: BoxDecoration(
+        color: c.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom + 24,
@@ -54,7 +56,7 @@ class _BookingFilterSheetState extends State<BookingFilterSheet> {
               width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: const Color(0xFFE2E8F0),
+                color: c.border,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -69,7 +71,7 @@ class _BookingFilterSheetState extends State<BookingFilterSheet> {
                   style: TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF1A1A1A),
+                    color: c.textPrimary,
                   ),
                 ),
                 const Spacer(),
@@ -87,7 +89,7 @@ class _BookingFilterSheetState extends State<BookingFilterSheet> {
                     context.l10n.filterReset,
                     style: TextStyle(
                       fontSize: 13,
-                      color: Color(0xFFDB6234),
+                      color: c.primary,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -105,12 +107,16 @@ class _BookingFilterSheetState extends State<BookingFilterSheet> {
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: _ChipGroup<BookingUrgency?>(
               value: _urgency,
-              options: const [null, BookingUrgency.urgent, BookingUrgency.normal],
+              options: const [
+                null,
+                BookingUrgency.urgent,
+                BookingUrgency.normal,
+              ],
               labelOf: (v) => v == null
                   ? context.l10n.filterAll
                   : v == BookingUrgency.urgent
-                      ? context.l10n.filterUrgentOption
-                      : context.l10n.filterNormalOption,
+                  ? context.l10n.filterUrgentOption
+                  : context.l10n.filterNormalOption,
               onSelected: (v) => setState(() => _urgency = v),
             ),
           ),
@@ -125,8 +131,9 @@ class _BookingFilterSheetState extends State<BookingFilterSheet> {
             child: _ChipGroup<SortOrder>(
               value: _sortOrder,
               options: const [SortOrder.newest, SortOrder.oldest],
-              labelOf: (v) =>
-                  v == SortOrder.newest ? context.l10n.filterNewestFirst : context.l10n.filterOldestFirst,
+              labelOf: (v) => v == SortOrder.newest
+                  ? context.l10n.filterNewestFirst
+                  : context.l10n.filterOldestFirst,
               onSelected: (v) => setState(() => _sortOrder = v),
             ),
           ),
@@ -144,8 +151,8 @@ class _BookingFilterSheetState extends State<BookingFilterSheet> {
               labelOf: (v) => v == null
                   ? context.l10n.filterAll
                   : v
-                      ? context.l10n.bookingStatusAssigned
-                      : context.l10n.cardNoWorkerYet,
+                  ? context.l10n.bookingStatusAssigned
+                  : context.l10n.cardNoWorkerYet,
               onSelected: (v) => setState(() => _hasWorker = v),
             ),
           ),
@@ -170,8 +177,8 @@ class _BookingFilterSheetState extends State<BookingFilterSheet> {
                   Navigator.pop(context);
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFDB6234),
-                  foregroundColor: Colors.white,
+                  backgroundColor: c.primary,
+                  foregroundColor: c.onPrimary,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),
@@ -197,14 +204,15 @@ class _SectionLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Text(
         label,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w600,
-          color: Color(0xFF6B7280),
+          color: c.textSecondary,
           letterSpacing: 0.4,
         ),
       ),
@@ -231,11 +239,13 @@ class _ChipGroup<T> extends StatelessWidget {
       spacing: 8,
       runSpacing: 8,
       children: options
-          .map((o) => _Chip(
-                label: labelOf(o),
-                isSelected: value == o,
-                onTap: () => onSelected(o),
-              ))
+          .map(
+            (o) => _Chip(
+              label: labelOf(o),
+              isSelected: value == o,
+              onTap: () => onSelected(o),
+            ),
+          )
           .toList(),
     );
   }
@@ -254,26 +264,23 @@ class _Chip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFDB6234) : const Color(0xFFF9FAFB),
+          color: isSelected ? c.primary : c.background,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isSelected
-                ? const Color(0xFFDB6234)
-                : const Color(0xFFE2E8F0),
-          ),
+          border: Border.all(color: isSelected ? c.primary : c.border),
         ),
         child: Text(
           label,
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w500,
-            color: isSelected ? Colors.white : const Color(0xFF6B7280),
+            color: isSelected ? c.onPrimary : c.textSecondary,
           ),
         ),
       ),

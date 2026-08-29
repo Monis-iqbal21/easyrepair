@@ -2,14 +2,16 @@ import 'package:flutter/material.dart';
 
 import '../widgets/client_bottom_nav_bar.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
+import '../../../../core/theme/app_semantic_colors.dart';
 
 class ClientJobsPage extends StatelessWidget {
   const ClientJobsPage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
+      backgroundColor: c.background,
       body: SafeArea(
         bottom: false,
         child: Column(
@@ -23,7 +25,7 @@ class ClientJobsPage extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF1A1A1A),
+                    color: c.textPrimary,
                   ),
                 ),
               ),
@@ -32,7 +34,7 @@ class ClientJobsPage extends StatelessWidget {
               child: Center(
                 child: Text(
                   context.l10n.clientJobsEmpty,
-                  style: TextStyle(color: Colors.grey, fontSize: 16),
+                  style: TextStyle(color: c.textSecondary, fontSize: 16),
                 ),
               ),
             ),

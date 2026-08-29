@@ -2,11 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../domain/entities/customer_agreement_entity.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
-
-const _kDark = Color(0xFF1A1A1A);
-const _kGray = Color(0xFF6B7280);
-const _kBorder = Color(0xFFE2E8F0);
-const _kBg = Color(0xFFF9FAFB);
+import '../../../../core/theme/app_semantic_colors.dart';
 
 /// The Customer Terms full-text reader, opened from the gate's
 /// "View/Download PDF" action.
@@ -23,20 +19,21 @@ class CustomerAgreementViewerPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Scaffold(
-      backgroundColor: _kBg,
+      backgroundColor: c.background,
       appBar: AppBar(
-        backgroundColor: _kBg,
+        backgroundColor: c.background,
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: _kDark),
+          icon: Icon(Icons.arrow_back, color: c.textPrimary),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
           context.l10n.agreementViewerTitle,
-          style: const TextStyle(
-            color: _kDark,
+          style: TextStyle(
+            color: c.textPrimary,
             fontWeight: FontWeight.w700,
             fontSize: 18,
           ),
@@ -50,10 +47,10 @@ class CustomerAgreementViewerPage extends StatelessWidget {
             // Backend-authored title — shown as-is, never translated.
             Text(
               agreement.title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.w700,
-                color: _kDark,
+                color: c.textPrimary,
                 height: 1.35,
               ),
             ),
@@ -61,16 +58,16 @@ class CustomerAgreementViewerPage extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: c.surface,
                 borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: _kBorder),
+                border: Border.all(color: c.border),
               ),
               child: Text(
                 context.l10n.workerAgreementVersion(agreement.version),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11.5,
                   fontWeight: FontWeight.w600,
-                  color: _kGray,
+                  color: c.textSecondary,
                 ),
               ),
             ),
@@ -79,16 +76,16 @@ class CustomerAgreementViewerPage extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: c.surface,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: _kBorder),
+                border: Border.all(color: c.border),
               ),
               child: SelectableText(
                 // The complete approved legal body, verbatim.
                 agreement.contentText,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
-                  color: _kDark,
+                  color: c.textPrimary,
                   height: 1.6,
                 ),
               ),

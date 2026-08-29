@@ -1,10 +1,5 @@
 import 'package:flutter/material.dart';
-
-const kAuthAccent = Color(0xFFDB6234);
-const kAuthDark = Color(0xFF1A1A1A);
-const kAuthGray = Color(0xFF6B7280);
-const kAuthBorder = Color(0xFFE2E8F0);
-const kAuthBg = Color(0xFFF9FAFB);
+import '../../../../core/theme/app_semantic_colors.dart';
 
 /// Shared primary CTA for every auth screen — consolidates the near-identical
 /// private `_PrimaryButton` that used to be copy-pasted per auth page file.
@@ -24,6 +19,7 @@ class AuthPrimaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     final enabled = onPressed != null && !isLoading;
     return SizedBox(
       width: double.infinity,
@@ -31,9 +27,9 @@ class AuthPrimaryButton extends StatelessWidget {
       child: ElevatedButton(
         onPressed: enabled ? onPressed : null,
         style: ElevatedButton.styleFrom(
-          backgroundColor: kAuthAccent,
-          foregroundColor: Colors.white,
-          disabledBackgroundColor: kAuthAccent.withAlpha(120),
+          backgroundColor: c.primary,
+          foregroundColor: c.onPrimary,
+          disabledBackgroundColor: c.primary.withAlpha(120),
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 16),
           shape: RoundedRectangleBorder(
@@ -41,12 +37,12 @@ class AuthPrimaryButton extends StatelessWidget {
           ),
         ),
         child: isLoading
-            ? const SizedBox(
+            ? SizedBox(
                 height: 22,
                 width: 22,
                 child: CircularProgressIndicator(
                   strokeWidth: 2.5,
-                  color: Colors.white,
+                  color: c.onPrimary,
                 ),
               )
             : Text(
@@ -78,14 +74,15 @@ class AuthSecondaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return SizedBox(
       width: double.infinity,
       height: 48,
       child: OutlinedButton(
         onPressed: onPressed,
         style: OutlinedButton.styleFrom(
-          foregroundColor: kAuthAccent,
-          side: const BorderSide(color: kAuthAccent, width: 1.5),
+          foregroundColor: c.primary,
+          side: BorderSide(color: c.primary, width: 1.5),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),

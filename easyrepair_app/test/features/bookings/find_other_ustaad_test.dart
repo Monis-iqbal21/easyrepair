@@ -12,6 +12,7 @@ import 'package:handygo_app/features/bookings/domain/entities/booking_entity.dar
 import 'package:handygo_app/features/bookings/domain/entities/inspection_report_entity.dart';
 import 'package:handygo_app/features/bookings/presentation/pages/inspection_report_page.dart';
 import 'package:handygo_app/features/bookings/presentation/providers/booking_providers.dart';
+import 'package:handygo_app/features/bookings/presentation/widgets/media_attachment_widgets.dart';
 import 'package:handygo_app/features/worker/domain/entities/worker_profile_entity.dart';
 import 'package:handygo_app/features/worker/domain/entities/worker_stats_entity.dart';
 import 'package:handygo_app/features/worker/presentation/pages/worker_jobs_page.dart';
@@ -62,6 +63,10 @@ BookingEntity _completedRepairJob() {
 InspectionReportEntity _report({
   bool sanitized = false,
   List<InspectionReportPhotoEntity> photos = const [],
+  InspectionDecisionStatus decisionStatus =
+      InspectionDecisionStatus.findOtherUstaad,
+  String? voiceNoteUrl,
+  double? voiceNoteDurationSeconds,
 }) {
   return InspectionReportEntity(
     id: 'report-1',
@@ -73,7 +78,9 @@ InspectionReportEntity _report({
     partsNeeded: false,
     partsTotal: sanitized ? null : 0,
     repairQuoteTotal: sanitized ? null : 3000,
-    decisionStatus: InspectionDecisionStatus.findOtherUstaad,
+    voiceNoteUrl: voiceNoteUrl,
+    voiceNoteDurationSeconds: voiceNoteDurationSeconds,
+    decisionStatus: decisionStatus,
     photos: photos,
     createdAt: DateTime(2026, 7, 30, 10),
     linkedRepairBookingId: 'child-1',
@@ -90,22 +97,31 @@ class _FakeWorkerJobsNotifier extends WorkerJobsNotifier {
   Future<List<BookingEntity>> build() async => _jobs;
 }
 
+class _FakeBookingDetailNotifier extends BookingDetailNotifier {
+  _FakeBookingDetailNotifier(this.booking);
+
+  final BookingEntity booking;
+
+  @override
+  Future<BookingEntity> build(String arg) async => booking;
+}
+
 class _FakeWorkerProfileNotifier extends WorkerProfileNotifier {
   @override
   Future<WorkerProfileEntity> build() async => const WorkerProfileEntity(
-        id: 'inspector-1',
-        userId: 'inspector-user-1',
-        firstName: 'Ali',
-        lastName: 'Khan',
-        status: 'ACTIVE',
-        verificationStatus: 'VERIFIED',
-        availabilityStatus: AvailabilityStatus.online,
-        rating: 4.5,
-        totalRatings: 12,
-        skills: [],
-        stats: WorkerStatsEntity(completedJobs: 12, activeJobs: 0),
-        onboardingStatus: 'APPROVED',
-      );
+    id: 'inspector-1',
+    userId: 'inspector-user-1',
+    firstName: 'Ali',
+    lastName: 'Khan',
+    status: 'ACTIVE',
+    verificationStatus: 'VERIFIED',
+    availabilityStatus: AvailabilityStatus.online,
+    rating: 4.5,
+    totalRatings: 12,
+    skills: [],
+    stats: WorkerStatsEntity(completedJobs: 12, activeJobs: 0),
+    onboardingStatus: 'APPROVED',
+  );
 }
 
 /// Records calls and can be primed to fail, so the tests can assert both the
@@ -182,6 +198,7 @@ Widget _wrapWorkerJobs(List<BookingEntity> jobs) {
 
 Widget _wrapReportPage({
   required InspectionReportEntity report,
+  BookingEntity? booking,
   _FakeInspectionDecisionNotifier? decisionNotifier,
   bool showDecisionButtons = false,
 }) {
@@ -189,15 +206,19 @@ Widget _wrapReportPage({
     overrides: [
       sharedPreferencesProvider.overrideWithValue(_testPrefs),
       inspectionReportProvider('booking-1').overrideWith((_) async => report),
+      if (booking != null)
+        bookingDetailProvider.overrideWith(
+          () => _FakeBookingDetailNotifier(booking),
+        ),
       if (decisionNotifier != null)
         inspectionDecisionNotifierProvider.overrideWith(() => decisionNotifier),
     ],
     child: localizedApp(
-       InspectionReportPage(
+      InspectionReportPage(
         bookingId: 'booking-1',
         showDecisionButtons: showDecisionButtons,
       ),
-      ),
+    ),
   );
 }
 
@@ -220,13 +241,19 @@ void main() {
     // regardless of these cards. Pump at a realistic portrait phone size so
     // an overflow here would mean a genuine layout regression in the card.
     setUp(() {
-      final view = TestWidgetsFlutterBinding.ensureInitialized().platformDispatcher.views.first;
+      final view = TestWidgetsFlutterBinding.ensureInitialized()
+          .platformDispatcher
+          .views
+          .first;
       view.physicalSize = const Size(1080, 2340);
       view.devicePixelRatio = 3.0;
     });
 
     tearDown(() {
-      final view = TestWidgetsFlutterBinding.ensureInitialized().platformDispatcher.views.first;
+      final view = TestWidgetsFlutterBinding.ensureInitialized()
+          .platformDispatcher
+          .views
+          .first;
       view.resetPhysicalSize();
       view.resetDevicePixelRatio();
     });
@@ -318,6 +345,99 @@ void main() {
     );
   });
 
+  group('Inspection report lifecycle badge', () {
+    testWidgets('COMPLETED booking never says repair is in progress', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrapReportPage(
+          report: _report(
+            decisionStatus: InspectionDecisionStatus.acceptedRepair,
+          ),
+          booking: _completedInspectionOnlyJob(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Completed'), findsOneWidget);
+      expect(find.text('Quote accepted — repair in progress'), findsNothing);
+    });
+
+    testWidgets('accepted repair keeps its in-progress wording while live', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrapReportPage(
+          report: _report(
+            decisionStatus: InspectionDecisionStatus.acceptedRepair,
+          ),
+          booking: _completedInspectionOnlyJob().copyWith(
+            status: BookingStatus.inProgress,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Quote accepted — repair in progress'), findsOneWidget);
+      expect(find.text('Completed'), findsNothing);
+    });
+  });
+
+  group('Inspection report voice duration', () {
+    testWidgets('API duration is visible before first playback', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrapReportPage(
+          report: _report(
+            voiceNoteUrl: 'https://example.test/inspection-note.m4a',
+            voiceNoteDurationSeconds: 65.4,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('01:05'), findsOneWidget);
+      expect(find.byIcon(Icons.play_arrow_rounded), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('missing duration remains safe before playback', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrapReportPage(
+          report: _report(
+            voiceNoteUrl: 'https://example.test/inspection-note.m4a',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('0:00'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('booking attachment forwards its duration to the player', (
+      tester,
+    ) async {
+      final attachment = BookingAttachmentEntity(
+        id: 'audio-1',
+        type: AttachmentType.audio,
+        url: 'https://example.test/booking-note.m4a',
+        durationSeconds: 125,
+        createdAt: DateTime(2026, 8, 30),
+      );
+
+      await tester.pumpWidget(
+        localizedApp(BookingAudioPlayerCard(attachment: attachment)),
+      );
+
+      expect(find.text('02:05'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  });
+
   // ── #7/#9 Full-screen image viewer ───────────────────────────────────────
   group('Inspection report photo viewer', () {
     final photos = [
@@ -331,9 +451,7 @@ void main() {
     testWidgets('tapping a photo opens the full-screen zoomable viewer', (
       tester,
     ) async {
-      await tester.pumpWidget(
-        _wrapReportPage(report: _report(photos: photos)),
-      );
+      await tester.pumpWidget(_wrapReportPage(report: _report(photos: photos)));
       await tester.pumpAndSettle();
 
       expect(find.byType(InteractiveViewer), findsNothing);
@@ -349,9 +467,7 @@ void main() {
     testWidgets('the ✕ button closes the viewer and returns to the report', (
       tester,
     ) async {
-      await tester.pumpWidget(
-        _wrapReportPage(report: _report(photos: photos)),
-      );
+      await tester.pumpWidget(_wrapReportPage(report: _report(photos: photos)));
       await tester.pumpAndSettle();
 
       await tester.tap(find.byType(Image).first);
@@ -364,9 +480,7 @@ void main() {
     });
 
     testWidgets('Android back also closes the viewer', (tester) async {
-      await tester.pumpWidget(
-        _wrapReportPage(report: _report(photos: photos)),
-      );
+      await tester.pumpWidget(_wrapReportPage(report: _report(photos: photos)));
       await tester.pumpAndSettle();
 
       await tester.tap(find.byType(Image).first);
@@ -429,7 +543,9 @@ void main() {
       await tester.tap(find.text('Find Other Ustaad'));
       await tester.pumpAndSettle();
       // Confirm the dialog.
-      await tester.tap(find.widgetWithText(ElevatedButton, 'Find Other Ustaad'));
+      await tester.tap(
+        find.widgetWithText(ElevatedButton, 'Find Other Ustaad'),
+      );
       await tester.pump();
 
       // While the first request is still in flight the button is disabled and
@@ -514,10 +630,7 @@ void main() {
     );
 
     test('completed inspection-only work is flagged for the badge', () {
-      expect(
-        _completedInspectionOnlyJob().isCompletedInspectionOnly,
-        isTrue,
-      );
+      expect(_completedInspectionOnlyJob().isCompletedInspectionOnly, isTrue);
     });
   });
 }

@@ -1,27 +1,32 @@
 import 'package:flutter/material.dart';
+import '../../../../core/theme/app_semantic_colors.dart';
 
 class TermsConditionsPage extends StatelessWidget {
   const TermsConditionsPage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
+      backgroundColor: c.background,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.transparent,
+        backgroundColor: c.surface,
+        surfaceTintColor: c.surface.withValues(alpha: 0),
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded,
-              size: 18, color: Color(0xFF1A1A1A)),
+          icon: Icon(
+            Icons.arrow_back_ios_new_rounded,
+            size: 18,
+            color: c.textPrimary,
+          ),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: const Text(
+        title: Text(
           'Terms & Conditions',
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w700,
-            color: Color(0xFF1A1A1A),
+            color: c.textPrimary,
           ),
         ),
         centerTitle: true,
@@ -100,8 +105,7 @@ class _TermsContent extends StatelessWidget {
               'Perform services diligently, professionally, and in accordance with applicable safety standards.',
         ),
         _BulletPoint(
-          body:
-              'Treat clients with respect and professionalism at all times.',
+          body: 'Treat clients with respect and professionalism at all times.',
         ),
         _BulletPoint(
           body:
@@ -139,10 +143,7 @@ class _TermsContent extends StatelessWidget {
           'The following actions are strictly prohibited on EasyRepair:',
         ),
         SizedBox(height: 8),
-        _BulletPoint(
-          body:
-              'Creating fake or duplicate accounts.',
-        ),
+        _BulletPoint(body: 'Creating fake or duplicate accounts.'),
         _BulletPoint(
           body:
               'Submitting fraudulent or misleading service requests or reviews.',
@@ -220,11 +221,12 @@ class _LastUpdated extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Text(
       'Last updated: $date',
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 12,
-        color: Color(0xFF6B7280),
+        color: c.textSecondary,
         fontStyle: FontStyle.italic,
       ),
     );
@@ -238,14 +240,15 @@ class _Heading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Text(
         text,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 15,
           fontWeight: FontWeight.w700,
-          color: Color(0xFF1A1A1A),
+          color: c.textPrimary,
         ),
       ),
     );
@@ -259,13 +262,10 @@ class _BodyText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Text(
       text,
-      style: const TextStyle(
-        fontSize: 14,
-        height: 1.6,
-        color: Color(0xFF374151),
-      ),
+      style: TextStyle(fontSize: 14, height: 1.6, color: c.textPrimary),
     );
   }
 }
@@ -277,27 +277,21 @@ class _BulletPoint extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Padding(
       padding: const EdgeInsets.only(bottom: 10, left: 4),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
+          Padding(
             padding: EdgeInsets.only(top: 6),
-            child: CircleAvatar(
-              radius: 3,
-              backgroundColor: Color(0xFF1D9E75),
-            ),
+            child: CircleAvatar(radius: 3, backgroundColor: c.primary),
           ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               body,
-              style: const TextStyle(
-                fontSize: 14,
-                height: 1.6,
-                color: Color(0xFF374151),
-              ),
+              style: TextStyle(fontSize: 14, height: 1.6, color: c.textPrimary),
             ),
           ),
         ],

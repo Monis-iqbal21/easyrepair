@@ -4,10 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../l10n/l10n_extensions.dart';
 import '../services/chat_socket_service.dart';
-
-const _kGreen = Color(0xFFDB6234);
-const _kDark = Color(0xFF1A1A1A);
-const _kGray = Color(0xFF6B7280);
+import '../theme/app_semantic_colors.dart';
 
 /// Reusable top banner/slider — listens to the existing chat socket's
 /// `app_banner` event and shows a fading toast at the top of the screen.
@@ -70,6 +67,7 @@ class _AppBannerOverlayState extends State<AppBannerOverlay>
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     final payload = _current;
     return Stack(
       children: [
@@ -87,15 +85,15 @@ class _AppBannerOverlayState extends State<AppBannerOverlay>
                   child: Padding(
                     padding: const EdgeInsets.all(12),
                     child: Material(
-                      color: Colors.transparent,
+                      color: c.surface.withValues(alpha: 0),
                       child: Container(
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: c.surface,
                           borderRadius: BorderRadius.circular(14),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.15),
+                              color: c.scrim.withValues(alpha: 0.15),
                               blurRadius: 16,
                               offset: const Offset(0, 4),
                             ),
@@ -108,13 +106,13 @@ class _AppBannerOverlayState extends State<AppBannerOverlay>
                               width: 36,
                               height: 36,
                               decoration: BoxDecoration(
-                                color: _kGreen.withValues(alpha: 0.1),
+                                color: c.primary.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(10),
                               ),
-                              child: const Icon(
+                              child: Icon(
                                 Icons.notifications_active_rounded,
                                 size: 18,
-                                color: _kGreen,
+                                color: c.primary,
                               ),
                             ),
                             const SizedBox(width: 10),
@@ -124,21 +122,28 @@ class _AppBannerOverlayState extends State<AppBannerOverlay>
                                 children: [
                                   Text(
                                     (payload['title'] as String?) ??
-                                        context.l10n
+                                        context
+                                            .l10n
                                             .notificationsBannerFallbackTitle,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 13.5,
                                       fontWeight: FontWeight.w700,
-                                      color: _kDark,
+                                      color: c.textPrimary,
                                     ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
-                                  if ((payload['body'] as String?)?.isNotEmpty == true) ...[
+                                  if ((payload['body'] as String?)
+                                          ?.isNotEmpty ==
+                                      true) ...[
                                     const SizedBox(height: 2),
                                     Text(
                                       payload['body'] as String,
-                                      style: const TextStyle(fontSize: 12.5, color: _kGray, height: 1.3),
+                                      style: TextStyle(
+                                        fontSize: 12.5,
+                                        color: c.textSecondary,
+                                        height: 1.3,
+                                      ),
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
                                     ),

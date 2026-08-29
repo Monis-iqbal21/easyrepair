@@ -10,6 +10,7 @@ import '../widgets/auth_primary_button.dart';
 import '../widgets/auth_text_field.dart';
 import '../widgets/otp_input_section.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
+import '../../../../core/theme/app_semantic_colors.dart';
 
 // ── Providers ─────────────────────────────────────────────────────────────────
 
@@ -19,8 +20,8 @@ import '../../../../core/l10n/l10n_extensions.dart';
 /// can only ever belong to one role, so sharing it has no cross-role risk).
 final _clientForgotPasswordRequestProvider =
     AsyncNotifierProvider.autoDispose<_RequestNotifier, DateTime?>(
-  _RequestNotifier.new,
-);
+      _RequestNotifier.new,
+    );
 
 class _RequestNotifier extends AutoDisposeAsyncNotifier<DateTime?> {
   @override
@@ -35,8 +36,10 @@ class _RequestNotifier extends AutoDisposeAsyncNotifier<DateTime?> {
         .clientForgotPasswordRequest(phone);
     return result.fold(
       (f) {
-        state = AsyncError<DateTime?>(f, StackTrace.current)
-            .copyWithPrevious(state);
+        state = AsyncError<DateTime?>(
+          f,
+          StackTrace.current,
+        ).copyWithPrevious(state);
         return false;
       },
       (expiresAt) {
@@ -48,9 +51,7 @@ class _RequestNotifier extends AutoDisposeAsyncNotifier<DateTime?> {
 }
 
 final _clientForgotPasswordResetProvider =
-    AsyncNotifierProvider.autoDispose<_ResetNotifier, void>(
-  _ResetNotifier.new,
-);
+    AsyncNotifierProvider.autoDispose<_ResetNotifier, void>(_ResetNotifier.new);
 
 class _ResetNotifier extends AutoDisposeAsyncNotifier<void> {
   @override
@@ -62,12 +63,13 @@ class _ResetNotifier extends AutoDisposeAsyncNotifier<void> {
     required String newPassword,
   }) async {
     state = const AsyncLoading();
-    final result =
-        await ref.read(authRepositoryProvider).clientForgotPasswordReset(
-              phone: phone,
-              otp: otp,
-              newPassword: newPassword,
-            );
+    final result = await ref
+        .read(authRepositoryProvider)
+        .clientForgotPasswordReset(
+          phone: phone,
+          otp: otp,
+          newPassword: newPassword,
+        );
     return result.fold(
       (f) {
         state = AsyncError(f, StackTrace.current);
@@ -125,7 +127,8 @@ class _ClientForgotPasswordPageState
   }
 
   String? _validatePhone(String? value) {
-    if (value == null || value.isEmpty) return context.l10n.authValidationPhoneRequired;
+    if (value == null || value.isEmpty)
+      return context.l10n.authValidationPhoneRequired;
     if (!RegExp(r'^(\+92|0092|92|0)?[3][0-9]{9}$').hasMatch(value.trim())) {
       return context.l10n.authValidationPhoneInvalid;
     }
@@ -152,12 +155,13 @@ class _ClientForgotPasswordPageState
     }
     setState(() => _resetInFlight = true);
     try {
-      final ok =
-          await ref.read(_clientForgotPasswordResetProvider.notifier).reset(
-                phone: _phoneCtrl.text.trim(),
-                otp: _otp,
-                newPassword: _newPasswordCtrl.text,
-              );
+      final ok = await ref
+          .read(_clientForgotPasswordResetProvider.notifier)
+          .reset(
+            phone: _phoneCtrl.text.trim(),
+            otp: _otp,
+            newPassword: _newPasswordCtrl.text,
+          );
       if (ok && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -195,7 +199,9 @@ class _ClientForgotPasswordPageState
       if (s is AsyncError && mounted) {
         ScaffoldMessenger.of(context)
           ..hideCurrentSnackBar()
-          ..showSnackBar(SnackBar(content: Text(_requestErrorMessage(s.error))));
+          ..showSnackBar(
+            SnackBar(content: Text(_requestErrorMessage(s.error))),
+          );
       }
     });
     ref.listen(_clientForgotPasswordResetProvider, (_, s) {
@@ -211,8 +217,9 @@ class _ClientForgotPasswordPageState
       }
     });
 
-    final expiresAt =
-        ref.watch(_clientForgotPasswordRequestProvider).valueOrNull;
+    final expiresAt = ref
+        .watch(_clientForgotPasswordRequestProvider)
+        .valueOrNull;
     final showOtp = expiresAt != null;
     final resetState = ref.watch(_clientForgotPasswordResetProvider);
     final hasOtpError = resetState is AsyncError;
@@ -222,13 +229,12 @@ class _ClientForgotPasswordPageState
     final isSmall = mq.size.height < 680;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: context.semanticColors.surface,
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
             return SingleChildScrollView(
-              keyboardDismissBehavior:
-                  ScrollViewKeyboardDismissBehavior.onDrag,
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               padding: EdgeInsets.only(bottom: viewInsets + 24),
               child: ConstrainedBox(
                 constraints: BoxConstraints(minHeight: constraints.maxHeight),
@@ -307,10 +313,14 @@ class _ClientForgotPasswordPageState
                                     obscureText: true,
                                     validator: (v) {
                                       if (v == null || v.isEmpty) {
-                                        return context.l10n.authNewPasswordRequired;
+                                        return context
+                                            .l10n
+                                            .authNewPasswordRequired;
                                       }
                                       if (v.length < 8) {
-                                        return context.l10n.authValidationPasswordTooShort;
+                                        return context
+                                            .l10n
+                                            .authValidationPasswordTooShort;
                                       }
                                       return null;
                                     },
@@ -318,23 +328,30 @@ class _ClientForgotPasswordPageState
                                   const SizedBox(height: 14),
                                   AuthTextField(
                                     controller: _confirmCtrl,
-                                    label: context.l10n.generalConfirmNewPassword,
+                                    label:
+                                        context.l10n.generalConfirmNewPassword,
                                     prefixIcon: Icons.lock_outline_rounded,
                                     obscureText: true,
                                     textInputAction: TextInputAction.done,
                                     validator: (v) {
                                       if (v == null || v.isEmpty) {
-                                        return context.l10n.authValidationConfirmPasswordRequired;
+                                        return context
+                                            .l10n
+                                            .authValidationConfirmPasswordRequired;
                                       }
                                       if (v != _newPasswordCtrl.text) {
-                                        return context.l10n.authValidationPasswordsDoNotMatch;
+                                        return context
+                                            .l10n
+                                            .authValidationPasswordsDoNotMatch;
                                       }
                                       return null;
                                     },
                                   ),
                                   const SizedBox(height: 24),
                                   AuthPrimaryButton(
-                                    label: context.l10n.authConfirmNewPasswordButton,
+                                    label: context
+                                        .l10n
+                                        .authConfirmNewPasswordButton,
                                     isLoading: _resetInFlight,
                                     onPressed: _otp.length == 6
                                         ? _resetPassword

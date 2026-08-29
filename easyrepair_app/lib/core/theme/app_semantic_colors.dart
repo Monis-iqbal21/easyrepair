@@ -75,6 +75,20 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
   /// Primary chrome drawn over [scrim].
   final Color onScrim;
 
+  /// The quieter voice over [scrim] — captions, secondary labels, inactive
+  /// icons in a lightbox or video overlay, where [onScrim] would shout.
+  ///
+  /// Fixed across both themes for the same reason [scrim] is: a media
+  /// lightbox is a black room in either theme, so its chrome cannot follow
+  /// the page's brightness. `#B4BDBB` on black is 9.4:1 — comfortably AA, and
+  /// a clear step below [onScrim]'s 21:1, which is what "muted" has to mean.
+  final Color onScrimMuted;
+
+  /// A faint raised fill over [scrim] — the disc behind a close button, the
+  /// inactive half of a scrubber track. A surface, not a text colour, so it
+  /// is deliberately far too low-contrast to write on.
+  final Color scrimSurface;
+
   // ── Lines ─────────────────────────────────────────────────────────────────
   /// Hairline outlines around cards, and separators inside a surface.
   final Color border;
@@ -136,6 +150,8 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
     required this.onPrimaryMuted,
     required this.scrim,
     required this.onScrim,
+    required this.onScrimMuted,
+    required this.scrimSurface,
     required this.border,
     required this.controlBorder,
     required this.primary,
@@ -177,6 +193,8 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
     onPrimaryMuted: Color(0xFFCFE6E2),
     scrim: Color(0xFF000000),
     onScrim: Color(0xFFFFFFFF),
+    onScrimMuted: Color(0xFFB4BDBB),
+    scrimSurface: Color(0xFF333B39),
     border: Color(0xFFD7E0DC),
     controlBorder: Color(0xFF7D8B87),
     primary: Color(0xFF11645D),
@@ -215,6 +233,8 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
     onPrimaryMuted: Color(0xFF0F3630),
     scrim: Color(0xFF000000),
     onScrim: Color(0xFFFFFFFF),
+    onScrimMuted: Color(0xFFB4BDBB),
+    scrimSurface: Color(0xFF333B39),
     border: Color(0xFF2C3E3B),
     controlBorder: Color(0xFF61736F),
     primary: Color(0xFF3FA79B),
@@ -256,6 +276,8 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
     Color? onPrimaryMuted,
     Color? scrim,
     Color? onScrim,
+    Color? onScrimMuted,
+    Color? scrimSurface,
     Color? border,
     Color? controlBorder,
     Color? primary,
@@ -280,6 +302,8 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
       onPrimaryMuted: onPrimaryMuted ?? this.onPrimaryMuted,
       scrim: scrim ?? this.scrim,
       onScrim: onScrim ?? this.onScrim,
+      onScrimMuted: onScrimMuted ?? this.onScrimMuted,
+      scrimSurface: scrimSurface ?? this.scrimSurface,
       border: border ?? this.border,
       controlBorder: controlBorder ?? this.controlBorder,
       primary: primary ?? this.primary,
@@ -309,6 +333,8 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
       onPrimaryMuted: Color.lerp(onPrimaryMuted, other.onPrimaryMuted, t)!,
       scrim: Color.lerp(scrim, other.scrim, t)!,
       onScrim: Color.lerp(onScrim, other.onScrim, t)!,
+      onScrimMuted: Color.lerp(onScrimMuted, other.onScrimMuted, t)!,
+      scrimSurface: Color.lerp(scrimSurface, other.scrimSurface, t)!,
       border: Color.lerp(border, other.border, t)!,
       controlBorder: Color.lerp(controlBorder, other.controlBorder, t)!,
       primary: Color.lerp(primary, other.primary, t)!,

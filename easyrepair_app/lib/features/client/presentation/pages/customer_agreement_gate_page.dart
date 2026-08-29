@@ -7,15 +7,7 @@ import '../widgets/client_state_view.dart';
 import 'customer_agreement_viewer_page.dart';
 import '../../../../core/errors/failure_messages.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
-
-const _kOrange = Color(0xFFDB6234);
-const _kOrangeDark = Color(0xFFC2541D);
-const _kOrangeLight = Color(0xFFF5E8E0);
-const _kDark = Color(0xFF1A1A1A);
-const _kGray = Color(0xFF6B7280);
-const _kBorder = Color(0xFFE2E8F0);
-const _kBg = Color(0xFFF9FAFB);
-const _kRed = Color(0xFFEF4444);
+import '../../../../core/theme/app_semantic_colors.dart';
 
 /// Mandatory, non-dismissible full-screen gate: every CLIENT must accept
 /// Customer Terms Version 1.0 before using the app.
@@ -73,13 +65,14 @@ class _CustomerAgreementGatePageState
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     final statusAsync = ref.watch(requiredCustomerAgreementProvider);
     final acceptState = ref.watch(acceptCustomerAgreementProvider);
 
     return PopScope(
       canPop: false,
       child: Scaffold(
-        backgroundColor: _kBg,
+        backgroundColor: c.background,
         body: SafeArea(
           child: statusAsync.when(
             loading: () => ClientStateView.loading(
@@ -147,6 +140,7 @@ class _GateBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     final l10n = context.l10n;
 
     return Column(
@@ -164,26 +158,26 @@ class _GateBody extends StatelessWidget {
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: _kOrange,
+                        color: c.primary,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       alignment: Alignment.center,
-                      child: const Text(
+                      child: Text(
                         'H',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: c.onPrimary,
                           fontWeight: FontWeight.w800,
                           fontSize: 20,
                         ),
                       ),
                     ),
                     const SizedBox(width: 10),
-                    const Text(
+                    Text(
                       'HandyGo',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
-                        color: _kDark,
+                        color: c.textPrimary,
                       ),
                     ),
                   ],
@@ -193,10 +187,10 @@ class _GateBody extends StatelessWidget {
                 // ── Title + version + effective date ────────────────────
                 Text(
                   l10n.customerAgreementTitle,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w700,
-                    color: _kDark,
+                    color: c.textPrimary,
                     height: 1.3,
                   ),
                 ),
@@ -213,9 +207,9 @@ class _GateBody extends StatelessWidget {
                 const SizedBox(height: 10),
                 Text(
                   l10n.customerAgreementEffectiveDateNote,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12.5,
-                    color: _kGray,
+                    color: c.textSecondary,
                     height: 1.4,
                   ),
                 ),
@@ -227,8 +221,8 @@ class _GateBody extends StatelessWidget {
                   icon: const Icon(Icons.description_outlined, size: 18),
                   label: Text(l10n.customerAgreementViewDownloadPdf),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: _kOrangeDark,
-                    side: const BorderSide(color: _kOrange),
+                    foregroundColor: c.primaryPressed,
+                    side: BorderSide(color: c.primary),
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 12,
@@ -246,18 +240,18 @@ class _GateBody extends StatelessWidget {
                   constraints: const BoxConstraints(maxHeight: 360),
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: c.surface,
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: _kBorder),
+                    border: Border.all(color: c.border),
                   ),
                   child: Scrollbar(
                     child: SingleChildScrollView(
                       child: SelectableText(
                         // The complete approved legal body, verbatim.
                         agreement.contentText,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12.5,
-                          color: _kDark,
+                          color: c.textPrimary,
                           height: 1.6,
                         ),
                       ),
@@ -273,10 +267,10 @@ class _GateBody extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: checked ? _kOrangeLight : Colors.white,
+                      color: checked ? c.softTeal : c.surface,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: checked ? _kOrange : _kBorder,
+                        color: checked ? c.primary : c.border,
                         width: checked ? 1.4 : 1,
                       ),
                     ),
@@ -285,7 +279,7 @@ class _GateBody extends StatelessWidget {
                       children: [
                         Checkbox(
                           value: checked,
-                          activeColor: _kOrange,
+                          activeColor: c.primary,
                           onChanged: (v) => onCheckedChanged(v ?? false),
                         ),
                         const SizedBox(width: 4),
@@ -294,9 +288,9 @@ class _GateBody extends StatelessWidget {
                             padding: const EdgeInsets.only(top: 12),
                             child: Text(
                               l10n.customerAgreementCheckboxLabel,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 13.5,
-                                color: _kDark,
+                                color: c.textPrimary,
                                 height: 1.4,
                               ),
                             ),
@@ -313,25 +307,25 @@ class _GateBody extends StatelessWidget {
                     width: double.infinity,
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFEF2F2),
+                      color: c.errorSoft,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: _kRed.withValues(alpha: 0.3)),
+                      border: Border.all(color: c.error.withValues(alpha: 0.3)),
                     ),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.error_outline_rounded,
                           size: 18,
-                          color: _kRed,
+                          color: c.error,
                         ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             errorMessage!,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12.5,
-                              color: _kRed,
+                              color: c.error,
                               height: 1.4,
                             ),
                           ),
@@ -348,10 +342,10 @@ class _GateBody extends StatelessWidget {
         // ── I Agree ────────────────────────────────────────────────────
         Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: c.surface,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
+                color: c.scrim.withValues(alpha: 0.05),
                 blurRadius: 12,
                 offset: const Offset(0, -2),
               ),
@@ -363,9 +357,9 @@ class _GateBody extends StatelessWidget {
             child: ElevatedButton(
               onPressed: onAgree,
               style: ElevatedButton.styleFrom(
-                backgroundColor: _kOrange,
-                disabledBackgroundColor: _kOrange.withValues(alpha: 0.4),
-                foregroundColor: Colors.white,
+                backgroundColor: c.primary,
+                disabledBackgroundColor: c.primary.withValues(alpha: 0.4),
+                foregroundColor: c.onPrimary,
                 padding: const EdgeInsets.symmetric(vertical: 15),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
@@ -373,12 +367,12 @@ class _GateBody extends StatelessWidget {
                 elevation: 0,
               ),
               child: isSubmitting
-                  ? const SizedBox(
+                  ? SizedBox(
                       width: 20,
                       height: 20,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: Colors.white,
+                        color: c.onPrimary,
                       ),
                     )
                   : Text(
@@ -402,19 +396,20 @@ class _Chip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: c.surface,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: _kBorder),
+        border: Border.all(color: c.border),
       ),
       child: Text(
         label,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 11.5,
           fontWeight: FontWeight.w600,
-          color: _kGray,
+          color: c.textSecondary,
         ),
       ),
     );

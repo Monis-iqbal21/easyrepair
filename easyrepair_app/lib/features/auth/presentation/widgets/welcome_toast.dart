@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
+import '../../../../core/theme/app_semantic_colors.dart';
 
 /// Shows an animated welcome card anchored to the bottom of the screen.
 /// Auto-dismisses after ~2 seconds with a slide+fade animation.
@@ -64,6 +65,7 @@ class _WelcomeToastState extends State<_WelcomeToast>
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     final bottom = MediaQuery.of(context).padding.bottom;
     return Positioned(
       bottom: bottom + 28,
@@ -74,18 +76,18 @@ class _WelcomeToastState extends State<_WelcomeToast>
         child: FadeTransition(
           opacity: _fade,
           child: Material(
-            color: Colors.transparent,
+            color: c.surface.withValues(alpha: 0),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: c.surface,
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
-                boxShadow: const [
+                border: Border.all(color: c.border),
+                boxShadow: [
                   BoxShadow(
-                    color: Color(0x1A000000),
+                    color: c.scrim.withValues(alpha: 0.10),
                     blurRadius: 24,
-                    offset: Offset(0, 10),
+                    offset: const Offset(0, 10),
                   ),
                 ],
               ),
@@ -95,12 +97,12 @@ class _WelcomeToastState extends State<_WelcomeToast>
                     width: 44,
                     height: 44,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF1D9E75),
+                      color: c.primary,
                       borderRadius: BorderRadius.circular(13),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.waving_hand_rounded,
-                      color: Colors.white,
+                      color: c.onPrimary,
                       size: 22,
                     ),
                   ),
@@ -112,10 +114,10 @@ class _WelcomeToastState extends State<_WelcomeToast>
                       children: [
                         Text(
                           context.l10n.authWelcomeToastTitle(widget.name),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFF1A1A1A),
+                            color: c.textPrimary,
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -123,7 +125,7 @@ class _WelcomeToastState extends State<_WelcomeToast>
                           context.l10n.authWelcomeToastSubtitle,
                           style: TextStyle(
                             fontSize: 13,
-                            color: Color(0xFF6B7280),
+                            color: c.textSecondary,
                           ),
                         ),
                       ],

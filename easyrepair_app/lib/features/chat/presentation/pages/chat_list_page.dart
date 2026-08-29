@@ -6,12 +6,10 @@ import '../../../../core/errors/failure_messages.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
 import '../../../../core/network/offline_banner.dart';
 import '../../../../core/theme/app_semantic_colors.dart';
+import '../../../../core/widgets/handygo_brand_lockup.dart';
 import '../../../../core/utils/support_search.dart';
 import '../../domain/entities/chat_entities.dart';
 import '../providers/chat_providers.dart';
-
-/// Asset used as the HandyGo Support avatar (same logo as splash / auth header).
-const String kSupportAvatarAsset = 'assets/images/logo-green.png';
 
 class ChatListPage extends ConsumerStatefulWidget {
   final String detailRoutePrefix;
@@ -381,19 +379,9 @@ class _Avatar extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.semanticColors;
     if (isSupport) {
-      return Container(
-        width: 50,
-        height: 50,
-        padding: const EdgeInsets.all(7),
-        decoration: BoxDecoration(
-          color: c.surface,
-          shape: BoxShape.circle,
-          border: Border.all(color: c.border),
-        ),
-        child: ClipOval(
-          child: Image.asset(kSupportAvatarAsset, fit: BoxFit.contain),
-        ),
-      );
+      // The HandyGo mark itself, not the launcher tile: that asset is a
+      // pre-rendered orange square and read as a foreign logo in the list.
+      return const HandyGoBrandMark(size: 50);
     }
 
     final url = participant.avatarUrl;
