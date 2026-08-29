@@ -11,15 +11,8 @@ import '../widgets/media_attachment_widgets.dart';
 import 'worker_discovery_map_page.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
 import '../../../../core/errors/failure_messages.dart';
+import '../../../../core/theme/app_semantic_colors.dart';
 
-const _kPrimary = Color(0xFFDB6234);
-const _kPrimaryLight = Color(0xFFF5E8E0);
-const _kDark = Color(0xFF1A1A1A);
-const _kGray = Color(0xFF6B7280);
-const _kBorder = Color(0xFFE5E7EB);
-const _kSuccess = Color(0xFF22C55E);
-const _kError = Color(0xFFEF4444);
-const _kBg = Color(0xFFF9FAFB);
 
 /// Full inspection report view — issue found, recommended repair, parts,
 /// labour, repair quote total, photos, notes. Reused for both the client
@@ -42,14 +35,15 @@ class InspectionReportPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.semanticColors;
     final reportAsync = ref.watch(inspectionReportProvider(bookingId));
 
     return Scaffold(
-      backgroundColor: _kBg,
+      backgroundColor: c.background,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        foregroundColor: _kDark,
+        foregroundColor: c.textPrimary,
         title: Text(
           context.l10n.inspectionReportTitle,
           style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
@@ -57,8 +51,8 @@ class InspectionReportPage extends ConsumerWidget {
       ),
       body: SafeArea(
         child: reportAsync.when(
-          loading: () => const Center(
-            child: CircularProgressIndicator(color: _kPrimary, strokeWidth: 2),
+          loading: () => Center(
+            child: CircularProgressIndicator(color: c.primary, strokeWidth: 2),
           ),
           error: (err, _) => Center(
             child: Padding(
@@ -66,19 +60,19 @@ class InspectionReportPage extends ConsumerWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.description_outlined, size: 40, color: _kGray),
+                  Icon(Icons.description_outlined, size: 40, color: c.textSecondary),
                   const SizedBox(height: 12),
                   Text(
                     failureMessage(context.l10n, err, fallback: context.l10n.inspectionReportNotAvailable),
                     textAlign: TextAlign.center,
-                    style: const TextStyle(color: _kGray, fontSize: 13.5),
+                    style: TextStyle(color: c.textSecondary, fontSize: 13.5),
                   ),
                   const SizedBox(height: 16),
                   OutlinedButton(
                     onPressed: () => ref.invalidate(inspectionReportProvider(bookingId)),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: _kPrimary,
-                      side: const BorderSide(color: _kPrimary),
+                      foregroundColor: c.primary,
+                      side: BorderSide(color: c.primary),
                     ),
                     child: Text(context.l10n.commonRetry),
                   ),
@@ -110,6 +104,7 @@ class _ReportBody extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.semanticColors;
     final isPending = report.decisionStatus == InspectionDecisionStatus.pendingClientDecision;
     final isDeciding = ref.watch(inspectionDecisionNotifierProvider).isLoading;
 
@@ -128,11 +123,11 @@ class _ReportBody extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (report.issueFound != null && report.issueFound!.isNotEmpty)
-                    _row(context.l10n.inspectionRowIssueFound, report.issueFound!),
+                    _row(c, context.l10n.inspectionRowIssueFound, report.issueFound!),
                   if (report.recommendedRepair != null && report.recommendedRepair!.isNotEmpty)
-                    _row(context.l10n.inspFormRecommendedRepair, report.recommendedRepair!),
+                    _row(c, context.l10n.inspFormRecommendedRepair, report.recommendedRepair!),
                   if (report.notes != null && report.notes!.isNotEmpty)
-                    _row(context.l10n.inspectionRowNotes, report.notes!, isLast: true),
+                    _row(c, context.l10n.inspectionRowNotes, report.notes!, isLast: true),
                 ],
               ),
             ),
@@ -144,7 +139,7 @@ class _ReportBody extends ConsumerWidget {
                 children: [
                   Text(
                     context.l10n.inspectionUstaadVoiceNote,
-                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: _kGray),
+                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: c.textSecondary),
                   ),
                   const SizedBox(height: 10),
                   WhatsAppVoiceNotePlayer(url: report.voiceNoteUrl),
@@ -158,7 +153,7 @@ class _ReportBody extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(context.l10n.inspectionPhotos, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: _kGray)),
+                  Text(context.l10n.inspectionPhotos, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: c.textSecondary)),
                   const SizedBox(height: 10),
                   SizedBox(
                     height: 88,
@@ -180,17 +175,17 @@ class _ReportBody extends ConsumerWidget {
                             errorBuilder: (_, _, _) => Container(
                               width: 88,
                               height: 88,
-                              color: const Color(0xFFF1F5F9),
-                              child: const Icon(Icons.broken_image_outlined, color: _kGray),
+                              color: c.surfaceSubtle,
+                              child: Icon(Icons.broken_image_outlined, color: c.textSecondary),
                             ),
                             loadingBuilder: (_, child, prog) => prog == null
                                 ? child
                                 : Container(
                                     width: 88,
                                     height: 88,
-                                    color: const Color(0xFFF1F5F9),
-                                    child: const Center(
-                                      child: CircularProgressIndicator(strokeWidth: 2, color: _kPrimary),
+                                    color: c.surfaceSubtle,
+                                    child: Center(
+                                      child: CircularProgressIndicator(strokeWidth: 2, color: c.primary),
                                     ),
                                   ),
                           ),
@@ -208,7 +203,7 @@ class _ReportBody extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(context.l10n.inspectionParts, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: _kGray)),
+                  Text(context.l10n.inspectionParts, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: c.textSecondary)),
                   const SizedBox(height: 8),
                   ...report.parts.map(
                     (p) => Padding(
@@ -222,13 +217,13 @@ class _ReportBody extends ConsumerWidget {
                                       p.name, p.quantity, p.warranty!)
                                   : context.l10n.bookingServiceQuantity(
                                       p.name, p.quantity),
-                              style: const TextStyle(fontSize: 13.5, color: _kDark),
+                              style: TextStyle(fontSize: 13.5, color: c.textPrimary),
                             ),
                           ),
                           // Price hidden in the sanitized bidder/hired-different-worker view.
                           if (p.lineTotal != null)
                             Text(formatPkr(p.lineTotal!),
-                                style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: _kDark)),
+                                style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: c.textPrimary)),
                         ],
                       ),
                     ),
@@ -245,11 +240,11 @@ class _ReportBody extends ConsumerWidget {
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: _kPrimaryLight, borderRadius: BorderRadius.circular(16)),
+              decoration: BoxDecoration(color: c.surfaceSubtle, borderRadius: BorderRadius.circular(16)),
               child: Column(
                 children: [
-                  _summaryLine(context.l10n.inspFormPartsTotal, report.partsTotal!),
-                  _summaryLine(context.l10n.inspFormLabour, report.labourCost!),
+                  _summaryLine(c, context.l10n.inspFormPartsTotal, report.partsTotal!),
+                  _summaryLine(c, context.l10n.inspFormLabour, report.labourCost!),
                   const Padding(
                     padding: EdgeInsets.symmetric(vertical: 8),
                     child: Divider(height: 1),
@@ -257,9 +252,9 @@ class _ReportBody extends ConsumerWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(context.l10n.inspectionRepairQuoteTotal, style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: _kDark)),
+                      Text(context.l10n.inspectionRepairQuoteTotal, style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: c.textPrimary)),
                       Text(formatPkr(report.repairQuoteTotal!),
-                          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17, color: _kPrimary)),
+                          style: TextStyle(fontWeight: FontWeight.w900, fontSize: 17, color: c.primary)),
                     ],
                   ),
                 ],
@@ -273,7 +268,7 @@ class _ReportBody extends ConsumerWidget {
               child: ElevatedButton(
                 onPressed: isDeciding ? null : () => _decide(context, ref, accept: true),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: _kPrimary,
+                  backgroundColor: c.primary,
                   foregroundColor: Colors.white,
                   elevation: 0,
                   padding: const EdgeInsets.symmetric(vertical: 15),
@@ -290,8 +285,8 @@ class _ReportBody extends ConsumerWidget {
               child: OutlinedButton(
                 onPressed: isDeciding ? null : () => _findOtherUstaad(context, ref),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFFB45309),
-                  side: const BorderSide(color: Color(0xFFB45309)),
+                  foregroundColor: c.warning,
+                  side: BorderSide(color: c.warning),
                   padding: const EdgeInsets.symmetric(vertical: 15),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
@@ -304,8 +299,8 @@ class _ReportBody extends ConsumerWidget {
               child: OutlinedButton(
                 onPressed: isDeciding ? null : () => _decide(context, ref, accept: false),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: _kPrimary,
-                  side: const BorderSide(color: _kPrimary),
+                  foregroundColor: c.primary,
+                  side: BorderSide(color: c.primary),
                   padding: const EdgeInsets.symmetric(vertical: 15),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
@@ -318,30 +313,30 @@ class _ReportBody extends ConsumerWidget {
     );
   }
 
-  Widget _row(String label, String value, {bool isLast = false}) {
+  Widget _row(AppSemanticColors c, String label, String value, {bool isLast = false}) {
     return Padding(
       padding: EdgeInsets.only(bottom: isLast ? 0 : 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: _kGray)),
+          Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: c.textSecondary)),
           const SizedBox(height: 3),
-          Text(value, style: const TextStyle(fontSize: 14, color: _kDark, height: 1.45)),
+          Text(value, style: TextStyle(fontSize: 14, color: c.textPrimary, height: 1.45)),
         ],
       ),
     );
   }
 
-  Widget _summaryLine(String label, double value) {
+  Widget _summaryLine(AppSemanticColors c, String label, double value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(fontSize: 13, color: _kGray)),
+          Text(label, style: TextStyle(fontSize: 13, color: c.textSecondary)),
           Text(
             formatPkr(value),
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _kDark),
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: c.textPrimary),
           ),
         ],
       ),
@@ -361,16 +356,16 @@ class _ReportBody extends ConsumerWidget {
           accept
               ? context.l10n.inspectionAcceptQuoteConfirmBody
               : context.l10n.inspectionCloseConfirmBody,
-          style: const TextStyle(color: _kGray, fontSize: 14),
+          style: TextStyle(color: c.textSecondary, fontSize: 14),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text(context.l10n.commonCancel, style: TextStyle(color: _kGray)),
+            child: Text(context.l10n.commonCancel, style: TextStyle(color: c.textSecondary)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(backgroundColor: _kPrimary, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(backgroundColor: c.primary, foregroundColor: Colors.white),
             child: Text(context.l10n.inspectionConfirm),
           ),
         ],
@@ -393,7 +388,7 @@ class _ReportBody extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(accept ? context.l10n.inspectionQuoteAcceptedRepairInProgress : context.l10n.inspectionClosedAfterInspection),
-            backgroundColor: _kPrimary,
+            backgroundColor: c.primary,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -404,7 +399,7 @@ class _ReportBody extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(failureMessage(context.l10n, e, fallback: context.l10n.inspectionActionFailed)),
-            backgroundColor: _kError,
+            backgroundColor: c.error,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -427,17 +422,17 @@ class _ReportBody extends ConsumerWidget {
         // "already paid" here was factually wrong.
         content: Text(
           context.l10n.inspectionFindAnotherConfirmBody,
-          style: TextStyle(color: _kGray, fontSize: 14),
+          style: TextStyle(color: c.textSecondary, fontSize: 14),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text(context.l10n.commonCancel, style: TextStyle(color: _kGray)),
+            child: Text(context.l10n.commonCancel, style: TextStyle(color: c.textSecondary)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFB45309),
+              backgroundColor: c.warning,
               foregroundColor: Colors.white,
             ),
             child: Text(context.l10n.inspectionFindOtherUstaad),
@@ -473,7 +468,7 @@ class _ReportBody extends ConsumerWidget {
           SnackBar(
             content:
                 Text(failureMessage(context.l10n, e, fallback: context.l10n.inspectionActionFailed)),
-            backgroundColor: _kError,
+            backgroundColor: c.error,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -539,15 +534,16 @@ class _DecisionBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     final (text, color) = switch (decisionStatus) {
       InspectionDecisionStatus.pendingClientDecision =>
-        (context.l10n.inspectionBadgeAwaitingDecision, _kPrimary),
+        (context.l10n.inspectionBadgeAwaitingDecision, c.primary),
       InspectionDecisionStatus.acceptedRepair =>
-        (context.l10n.inspectionBadgeQuoteAccepted, _kSuccess),
+        (context.l10n.inspectionBadgeQuoteAccepted, c.success),
       InspectionDecisionStatus.closedAfterInspection =>
-        (context.l10n.trackStepClosedAfterInspection, const Color(0xFF2563EB)),
+        (context.l10n.trackStepClosedAfterInspection, c.primary),
       InspectionDecisionStatus.findOtherUstaad =>
-        (context.l10n.inspectionBadgeFindingAnother, const Color(0xFFB45309)),
+        (context.l10n.inspectionBadgeFindingAnother, c.warning),
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -574,13 +570,14 @@ class _Card extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _kBorder),
+        border: Border.all(color: c.border),
       ),
       child: child,
     );

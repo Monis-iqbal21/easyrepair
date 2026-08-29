@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
+import '../../../../core/theme/app_semantic_colors.dart';
 
 /// Small pill shown when a booking has `inspection == true` — kept visually
 /// consistent with [StatusBadge]/[UrgencyBadge] (same pill shape/sizing).
@@ -10,6 +11,7 @@ class InspectionBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     final fontSize = small ? 10.0 : 11.0;
     final hPad = small ? 7.0 : 9.0;
     final vPad = small ? 3.0 : 4.0;
@@ -17,9 +19,9 @@ class InspectionBadge extends StatelessWidget {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: hPad, vertical: vPad),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF0EB),
+        color: c.surfaceSubtle,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFFFD0B5), width: 0.8),
+        border: Border.all(color: c.border, width: 0.8),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -27,7 +29,7 @@ class InspectionBadge extends StatelessWidget {
           Icon(
             Icons.search_rounded,
             size: small ? 9.0 : 10.0,
-            color: const Color(0xFFDB6234),
+            color: c.primary,
           ),
           const SizedBox(width: 3),
           Text(
@@ -35,7 +37,7 @@ class InspectionBadge extends StatelessWidget {
             style: TextStyle(
               fontSize: fontSize,
               fontWeight: FontWeight.w600,
-              color: const Color(0xFFDB6234),
+              color: c.primary,
               letterSpacing: 0.2,
             ),
           ),
