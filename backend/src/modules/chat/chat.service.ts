@@ -267,6 +267,53 @@ export class ChatService {
     }
   }
 
+  /**
+   * Append ONE complaint-linked message to a user's PERMANENT HandyGo Support
+   * conversation, creating that conversation if the user has none yet.
+   *
+   * There is deliberately no per-complaint conversation: HandyGo's product rule
+   * is one permanent support thread per user, so this reuses
+   * [ensureSupportConversation] (idempotent, DB-owned uniqueness) and simply
+   * posts into it. Writing the message bumps `lastMessageAt`, which is what
+   * floats the thread to the top of the Admin Support Inbox and gives support
+   * an unread count — after which admin and client keep talking in that same
+   * thread through the existing reply endpoints.
+   *
+   * Idempotent: (conversation, bookingId) is a natural key — Message.bookingId
+   * is written by this path only, and Complaint.bookingId is `@unique` — so a
+   * retried complaint creation re-finds the existing message instead of posting
+   * a second one.
+   *
+   * Returns null when the user cannot have a support thread (ADMIN), which is
+   * not an error.
+   */
+  async appendComplaintSupportMessage(params: {
+    userId: string;
+    role: Role;
+    bookingId: string;
+    text: string;
+  }): Promise<MessageResponseDto | null> {
+    const conversation = await this.ensureSupportConversation(
+      params.userId,
+      params.role,
+    );
+    if (!conversation) return null;
+
+    const existing = await this.chatRepository.findMessageByConversationAndBooking(
+      conversation.id,
+      params.bookingId,
+    );
+    if (existing) return this._toMessageDto(existing);
+
+    const message = await this.chatRepository.createSystemMessage({
+      conversationId: conversation.id,
+      senderUserId: params.userId,
+      text: params.text,
+      bookingId: params.bookingId,
+    });
+    return this._toMessageDto(message);
+  }
+
   /** True when the support system user is one of the two participants. */
   private _isSupportConversation(
     c: ConversationWithParticipants,

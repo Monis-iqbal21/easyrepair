@@ -70,10 +70,13 @@ class BookingDetailPage extends ConsumerWidget {
     // Reconnecting while the user is sitting on this nested page must refresh
     // the booking WITHOUT moving them: only this booking's provider is
     // invalidated, so the route stays /client/booking/<id>.
-    refreshOnReconnect(
-      ref,
-      () => ref.invalidate(bookingDetailProvider(bookingId)),
-    );
+    refreshOnReconnect(ref, () {
+      ref.invalidate(bookingDetailProvider(bookingId));
+      // The report's status is changed by Admin, never by this device, so a
+      // reconnect must re-read it too — otherwise "Your report" keeps showing
+      // whatever it said before the connection dropped.
+      ref.invalidate(bookingComplaintProvider(bookingId));
+    });
 
     final bookingAsync = ref.watch(bookingDetailProvider(bookingId));
     final isShowingCachedData =
@@ -163,7 +166,8 @@ class _DetailBody extends ConsumerStatefulWidget {
   ConsumerState<_DetailBody> createState() => _DetailBodyState();
 }
 
-class _DetailBodyState extends ConsumerState<_DetailBody> {
+class _DetailBodyState extends ConsumerState<_DetailBody>
+    with WidgetsBindingObserver {
   Timer? _pollTimer;
 
   BookingEntity get booking => widget.booking;
@@ -171,7 +175,21 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _syncPolling();
+  }
+
+  /// Resume refresh. The 6s poll below only runs while a job is actively in
+  /// progress, so a COMPLETED booking — the only kind that can carry a report
+  /// — refetches nothing on its own. Admin can resolve or close that report
+  /// while the app is backgrounded and the push can be missed entirely, so
+  /// coming back to the foreground re-reads the authoritative state.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state != AppLifecycleState.resumed || !mounted) return;
+    ref.invalidate(bookingDetailProvider(widget.booking.id));
+    ref.invalidate(bookingComplaintProvider(widget.booking.id));
   }
 
   @override
@@ -194,6 +212,7 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _pollTimer?.cancel();
     super.dispose();
   }

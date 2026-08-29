@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ChatModule } from '../chat/chat.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import {
   ClientComplaintsController,
@@ -8,7 +9,9 @@ import { ComplaintsRepository } from './complaints.repository';
 import { ComplaintsService } from './complaints.service';
 
 @Module({
-  imports: [NotificationsModule],
+  // ChatModule supplies the ONE permanent HandyGo Support conversation per
+  // user (get-or-create) that a new complaint is announced into.
+  imports: [NotificationsModule, ChatModule],
   controllers: [ClientComplaintsController, SupportComplaintsController],
   providers: [ComplaintsService, ComplaintsRepository],
   exports: [ComplaintsService],

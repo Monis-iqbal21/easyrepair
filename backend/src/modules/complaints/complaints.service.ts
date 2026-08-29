@@ -3,6 +3,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import {
@@ -11,7 +12,9 @@ import {
   ComplaintPriority,
   ComplaintStatus,
   Prisma,
+  Role,
 } from '@prisma/client';
+import { ChatService } from '../chat/chat.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import {
   ComplaintWriteConflictError,
@@ -67,13 +70,38 @@ export const COMPLAINT_NOTIFICATION_COPY = {
     en: 'Your report has been resolved',
     urLatn: 'Aap ka report resolve ho gaya',
   },
+  CLOSED: {
+    eventKey: 'complaint.status.closed',
+    en: 'Your report has been closed',
+    urLatn: 'Aap ka report band kar diya gaya',
+  },
 } as const;
+
+/** Client-facing labels for the complaint-linked support message. */
+const ISSUE_TYPE_LABELS: Record<ComplaintIssueType, string> = {
+  [ComplaintIssueType.WORK_QUALITY]: 'Work quality',
+  [ComplaintIssueType.PRICE_PAYMENT]: 'Price / payment',
+  [ComplaintIssueType.USTAAD_BEHAVIOUR]: 'Ustaad behaviour',
+  [ComplaintIssueType.DAMAGE]: 'Damage',
+  [ComplaintIssueType.PART_MATERIAL]: 'Part / material',
+  [ComplaintIssueType.WARRANTY_REWORK]: 'Warranty / rework',
+  [ComplaintIssueType.OTHER]: 'Other',
+};
+
+/** Short human reference for a uuid, for both client and admin to quote. */
+const shortRef = (id: string) => `#${id.slice(0, 8).toUpperCase()}`;
+
+/** Client-authored free text is trimmed to keep the thread preview readable. */
+const MAX_OTHER_TEXT_IN_MESSAGE = 280;
 
 @Injectable()
 export class ComplaintsService {
+  private readonly logger = new Logger(ComplaintsService.name);
+
   constructor(
     private readonly repository: ComplaintsRepository,
     private readonly notifications: NotificationsService,
+    private readonly chat: ChatService,
   ) {}
 
   async createForBooking(
@@ -114,6 +142,7 @@ export class ComplaintsService {
         reporterUserId,
         'CLIENT',
       );
+      await this.ensureSupportThreadMessage(created, booking.title);
       const { events: _events, ...complaint } = created;
       return complaint;
     } catch (error) {
@@ -177,7 +206,9 @@ export class ComplaintsService {
             ? COMPLAINT_NOTIFICATION_COPY.IN_PROGRESS
             : status === ComplaintStatus.RESOLVED
               ? COMPLAINT_NOTIFICATION_COPY.RESOLVED
-              : null;
+              : status === ComplaintStatus.CLOSED
+                ? COMPLAINT_NOTIFICATION_COPY.CLOSED
+                : null;
         if (copy && result.complaint.reporterUserId) {
           await this.sendNotification(
             result.complaint,
@@ -280,6 +311,83 @@ export class ComplaintsService {
       );
     }
     throw error;
+  }
+
+  /**
+   * Post the complaint into the reporter's permanent HandyGo Support thread so
+   * Admin can talk to them about it inside HandyGo.
+   *
+   * Deliberately AFTER the complaint transaction and deliberately non-fatal:
+   * the complaint row is the authoritative record and must never be lost
+   * because chat had a transient problem. Retry safety comes from the write
+   * itself, not from a wrapping transaction — ChatService.
+   * appendComplaintSupportMessage get-or-creates the one permanent
+   * conversation and is keyed on (conversation, bookingId), and complaint
+   * creation is already single-shot per booking via Complaint.bookingId
+   * `@unique`. So this can be re-run safely and still yields exactly one
+   * message per complaint.
+   */
+  private async ensureSupportThreadMessage(
+    complaint: {
+      id: string;
+      bookingId: string | null;
+      reporterUserId: string | null;
+      issueTypes: ComplaintIssueType[];
+      otherText: string | null;
+    },
+    bookingTitle: string | null,
+  ): Promise<void> {
+    if (!complaint.reporterUserId || !complaint.bookingId) return;
+    try {
+      await this.chat.appendComplaintSupportMessage({
+        userId: complaint.reporterUserId,
+        role: Role.CLIENT,
+        bookingId: complaint.bookingId,
+        text: this.buildSupportMessage(complaint, bookingTitle),
+      });
+    } catch (err) {
+      this.logger.warn(
+        `[complaint-support-thread] failed for complaintId=${complaint.id}: ${(err as Error)?.message}`,
+      );
+    }
+  }
+
+  /**
+   * Concise, safe context only: what happened, which booking, which category,
+   * the client's own words, and the two references either side can quote. No
+   * internal DB metadata, verification data, CNIC, internal notes or traces.
+   */
+  private buildSupportMessage(
+    complaint: {
+      id: string;
+      bookingId: string | null;
+      issueTypes: ComplaintIssueType[];
+      otherText: string | null;
+    },
+    bookingTitle: string | null,
+  ): string {
+    const title = bookingTitle?.trim();
+    const bookingRef = shortRef(complaint.bookingId ?? complaint.id);
+    const issues =
+      complaint.issueTypes.map((type) => ISSUE_TYPE_LABELS[type]).join(', ') ||
+      ISSUE_TYPE_LABELS[ComplaintIssueType.OTHER];
+    const details = complaint.otherText?.trim();
+
+    const lines = [
+      `Report submitted for booking ${bookingRef}${title ? ` — ${title}` : ''}`,
+      `Issue: ${issues}`,
+    ];
+    if (details) {
+      lines.push(
+        `Details: ${
+          details.length > MAX_OTHER_TEXT_IN_MESSAGE
+            ? `${details.slice(0, MAX_OTHER_TEXT_IN_MESSAGE)}…`
+            : details
+        }`,
+      );
+    }
+    lines.push(`Report ref: ${shortRef(complaint.id)}`);
+    return lines.join('\n');
   }
 
   private sendNotification(

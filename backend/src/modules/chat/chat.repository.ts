@@ -242,6 +242,8 @@ export class ChatRepository {
     senderUserId: string;
     senderRole: Role;
     text: string;
+    /** Context-only booking reference (no FK) — see Message.bookingId. */
+    bookingId?: string;
   }) {
     const preview =
       data.text.length > 80 ? data.text.slice(0, 80) + '…' : data.text;
@@ -255,6 +257,7 @@ export class ChatRepository {
           senderRole: data.senderRole,
           type: MessageType.TEXT,
           text: data.text,
+          ...(data.bookingId ? { bookingId: data.bookingId } : {}),
         },
       }),
       this.prisma.conversation.update({
@@ -275,12 +278,14 @@ export class ChatRepository {
     conversationId: string;
     senderUserId: string;
     text: string;
-  }): Promise<void> {
+    /** Context-only booking reference (no FK) — see Message.bookingId. */
+    bookingId?: string;
+  }) {
     const preview =
       data.text.length > 80 ? data.text.slice(0, 80) + '…' : data.text;
     const now = new Date();
 
-    await this.prisma.$transaction([
+    const [message] = await this.prisma.$transaction([
       this.prisma.message.create({
         data: {
           conversationId: data.conversationId,
@@ -288,6 +293,7 @@ export class ChatRepository {
           senderRole: Role.CLIENT,
           type: MessageType.SYSTEM,
           text: data.text,
+          ...(data.bookingId ? { bookingId: data.bookingId } : {}),
         },
       }),
       this.prisma.conversation.update({
@@ -295,6 +301,23 @@ export class ChatRepository {
         data: { lastMessageAt: now, lastMessagePreview: preview },
       }),
     ]);
+
+    return message;
+  }
+
+  /**
+   * The one message already posted into [conversationId] for [bookingId].
+   *
+   * Message.bookingId is written by exactly one path — the complaint-linked
+   * support message — so (conversationId, bookingId) is a reliable natural
+   * idempotency key. Complaint.bookingId is itself `@unique`, so one booking
+   * means one complaint means at most one such message.
+   */
+  findMessageByConversationAndBooking(conversationId: string, bookingId: string) {
+    return this.prisma.message.findFirst({
+      where: { conversationId, bookingId },
+      orderBy: { createdAt: 'asc' },
+    });
   }
 
   /**

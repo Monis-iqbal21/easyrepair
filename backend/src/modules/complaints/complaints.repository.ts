@@ -54,6 +54,7 @@ export class ComplaintsRepository {
       where: { id: bookingId },
       select: {
         id: true,
+        title: true,
         status: true,
         workerProfileId: true,
         clientProfile: { select: { userId: true } },

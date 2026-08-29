@@ -40,6 +40,7 @@ describe('ComplaintsService booking reports', () => {
 
   let repository: any;
   let notifications: any;
+  let chat: any;
   let service: ComplaintsService;
 
   beforeEach(() => {
@@ -55,7 +56,10 @@ describe('ComplaintsService booking reports', () => {
       markHumanRequested: jest.fn(),
     };
     notifications = { notify: jest.fn().mockResolvedValue(undefined) };
-    service = new ComplaintsService(repository, notifications);
+    chat = {
+      appendComplaintSupportMessage: jest.fn().mockResolvedValue({ id: 'm1' }),
+    };
+    service = new ComplaintsService(repository, notifications, chat);
   });
 
   it('creates a complaint for an owned completed booking with server defaults', async () => {
@@ -227,7 +231,9 @@ describe('ComplaintsService support lifecycle', () => {
     const notifications: any = {
       notify: jest.fn().mockResolvedValue(undefined),
     };
-    const service = new ComplaintsService(repository, notifications);
+    const service = new ComplaintsService(repository, notifications, {
+      appendComplaintSupportMessage: jest.fn(),
+    } as any);
 
     await service.changeStatus(
       'complaint-1',
@@ -250,7 +256,7 @@ describe('ComplaintsService support lifecycle', () => {
     );
   });
 
-  it('notifies on RESOLVED but does not duplicate resolved copy for CLOSED', async () => {
+  it('notifies once per real transition with its own copy for RESOLVED then CLOSED', async () => {
     const notifications: any = {
       notify: jest.fn().mockResolvedValue(undefined),
     };
@@ -281,7 +287,9 @@ describe('ComplaintsService support lifecycle', () => {
         }),
       findDetail: jest.fn().mockResolvedValue({ id: 'complaint-1' }),
     };
-    const service = new ComplaintsService(repository, notifications);
+    const service = new ComplaintsService(repository, notifications, {
+      appendComplaintSupportMessage: jest.fn(),
+    } as any);
 
     await service.changeStatus(
       'complaint-1',
@@ -294,11 +302,27 @@ describe('ComplaintsService support lifecycle', () => {
       'support-1',
     );
 
-    expect(notifications.notify).toHaveBeenCalledTimes(1);
-    expect(notifications.notify).toHaveBeenCalledWith(
+    expect(notifications.notify).toHaveBeenCalledTimes(2);
+    expect(notifications.notify).toHaveBeenNthCalledWith(
+      1,
       expect.objectContaining({
         eventKey: 'complaint.status.resolved',
         complaintEventId: 'event-resolved',
+        title: 'Your report has been resolved',
+      }),
+    );
+    // CLOSED gets its OWN copy and its OWN complaintEventId — never the
+    // resolved copy repeated.
+    expect(notifications.notify).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        eventKey: 'complaint.status.closed',
+        complaintEventId: 'event-closed',
+        title: 'Your report has been closed',
+        body: 'Aap ka report band kar diya gaya',
+        route: '/client/booking/booking-1',
+        entityType: 'complaint',
+        entityId: 'complaint-1',
       }),
     );
   });

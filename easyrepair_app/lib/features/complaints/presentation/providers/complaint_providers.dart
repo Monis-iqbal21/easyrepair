@@ -18,8 +18,19 @@ final complaintRepositoryProvider = Provider<ComplaintRepository>(
   ),
 );
 
+/// The client's report for ONE booking.
+///
+/// `autoDispose` — matching [inspectionReportProvider], the other async
+/// per-booking provider Booking Detail watches — because complaint status is
+/// changed by Admin, not by this app: a keep-alive cache would pin whatever
+/// status was fetched the first time the page was opened and never let go,
+/// which is exactly how "Your report" stayed on *Pending* for the rest of the
+/// session after Admin resolved or closed it. Disposing when Booking Detail
+/// (and Report Problem) are both off-screen means reopening either one always
+/// refetches the authoritative server state — so correctness never depends on
+/// a push actually being delivered.
 class BookingComplaintNotifier
-    extends FamilyAsyncNotifier<ComplaintEntity?, String> {
+    extends AutoDisposeFamilyAsyncNotifier<ComplaintEntity?, String> {
   @override
   Future<ComplaintEntity?> build(String bookingId) async {
     final result = await ref.read(complaintRepositoryProvider).getForBooking(
@@ -90,7 +101,7 @@ class BookingComplaintNotifier
   }
 }
 
-final bookingComplaintProvider = AsyncNotifierProviderFamily<
-    BookingComplaintNotifier, ComplaintEntity?, String>(
+final bookingComplaintProvider = AsyncNotifierProvider.autoDispose
+    .family<BookingComplaintNotifier, ComplaintEntity?, String>(
   BookingComplaintNotifier.new,
 );

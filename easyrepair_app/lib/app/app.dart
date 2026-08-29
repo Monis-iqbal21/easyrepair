@@ -20,6 +20,7 @@ import '../core/widgets/app_banner_overlay.dart';
 import '../features/auth/domain/entities/user_entity.dart';
 import '../features/auth/presentation/providers/auth_providers.dart';
 import '../features/bookings/presentation/providers/booking_providers.dart';
+import '../features/complaints/presentation/providers/complaint_providers.dart';
 import '../features/chat/presentation/providers/chat_providers.dart';
 import '../features/notifications/data/datasources/notification_remote_datasource.dart';
 import '../features/notifications/data/repositories/notification_repository_impl.dart';
@@ -54,6 +55,17 @@ class _EasyRepairAppState extends ConsumerState<EasyRepairApp>
     'booking.inspection.report_submitted',
     'booking.completed',
     'booking.cancelled.by_worker',
+  };
+
+  /// Complaint lifecycle events Admin drives. The client must see the real
+  /// status, so these refresh the booking's complaint provider as well as its
+  /// detail. Push is the FAST path only — [bookingComplaintProvider] is
+  /// autoDispose, so a missed push still self-corrects the next time Booking
+  /// Detail is opened.
+  static const _complaintStatusEventKeys = {
+    'complaint.status.in_progress',
+    'complaint.status.resolved',
+    'complaint.status.closed',
   };
 
   /// Client-side lifecycle events (beyond hire/bid-accept, already covered by
@@ -321,6 +333,13 @@ class _EasyRepairAppState extends ConsumerState<EasyRepairApp>
           // A new review can move the worker's average rating shown on Home.
           ref.invalidate(workerProfileProvider);
         }
+      }
+    } else if (_complaintStatusEventKeys.contains(eventKey)) {
+      // Admin moved the client's report on. Refresh the report itself and the
+      // detail page that renders its status banner.
+      if (bookingId != null && bookingId.isNotEmpty) {
+        ref.invalidate(bookingComplaintProvider(bookingId));
+        ref.invalidate(bookingDetailProvider(bookingId));
       }
     } else if (_clientLiveSyncEventKeys.contains(eventKey)) {
       // Worker-side lifecycle action on the client's booking — refresh the

@@ -6,6 +6,7 @@ import { AppModule } from './app.module';
 import { GlobalExceptionFilter } from './common/filters/http-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import { AdminOperationsScheduler } from './modules/admin/admin-operations.processor';
+import { BookingExpiryScheduler } from './modules/bookings/booking-expiry.scheduler';
 import { bindHttpThenStartBackgroundServices } from './common/startup/http-startup';
 
 async function bootstrap() {
@@ -54,9 +55,12 @@ async function bootstrap() {
   console.log(`[startup] binding HTTP server on configured port ${port}`);
   await bindHttpThenStartBackgroundServices(app, port, [
     app.get(AdminOperationsScheduler),
+    app.get(BookingExpiryScheduler),
   ]);
   console.log(`Application running on port ${port}`);
-  console.log('[startup] nightly commission scheduler start dispatched');
+  console.log(
+    '[startup] nightly commission + booking expiry sweep schedulers start dispatched',
+  );
 }
 
 bootstrap().catch((err) => {
