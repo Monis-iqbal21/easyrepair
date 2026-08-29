@@ -3755,6 +3755,9 @@ class AppLocalizationsUr extends AppLocalizations {
   String get aboutWebsiteLabel => 'ویب سائٹ';
 
   @override
+  String get cashPaymentLater => 'بعد میں';
+
+  @override
   String get cashPaymentTitle => 'نقد ادائیگی کی تصدیق کریں';
 
   @override
@@ -8033,6 +8036,9 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get aboutWebsiteLabel => 'Website';
+
+  @override
+  String get cashPaymentLater => 'Baad mein';
 
   @override
   String get cashPaymentTitle => 'Cash payment confirm karein';

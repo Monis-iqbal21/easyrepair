@@ -2485,6 +2485,7 @@
   "@aboutWebsiteLabel": {
     "description": "Label above the official HandyGo website link on the About page"
   },
+  "cashPaymentLater": "Later",
   "cashPaymentTitle": "Confirm cash payment",
   "cashPaymentQuestion": "How much cash did you pay?",
   "cashPaymentExpected": "Expected booking amount: {amount}",

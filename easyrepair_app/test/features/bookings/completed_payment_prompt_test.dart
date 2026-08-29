@@ -139,4 +139,23 @@ void main() {
       expect(find.byType(CashPaymentConfirmationCard), findsNothing);
     },
   );
+
+  testWidgets('"Later" closes the prompt and it stays closed', (tester) async {
+    // A customer with several unsettled bookings used to be locked out of the
+    // app: the prompt refused the back button and the barrier, so the only way
+    // forward was to pay every one of them. Closing it must be allowed, and
+    // must not immediately reopen on the next provider rebuild.
+    final key = GlobalKey<_PromptHarnessState>();
+    await _pumpHarness(tester, _booking(), key: key);
+    expect(find.byType(CashPaymentConfirmationCard), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('cash-payment-later-button')));
+    await tester.pumpAndSettle();
+    expect(find.byType(CashPaymentConfirmationCard), findsNothing);
+
+    key.currentState!.rebuildFromProviderEvent();
+    key.currentState!.rebuildFromProviderEvent();
+    await tester.pumpAndSettle();
+    expect(find.byType(CashPaymentConfirmationCard), findsNothing);
+  });
 }

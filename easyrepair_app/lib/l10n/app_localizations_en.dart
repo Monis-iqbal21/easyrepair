@@ -3831,6 +3831,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aboutWebsiteLabel => 'Website';
 
   @override
+  String get cashPaymentLater => 'Later';
+
+  @override
   String get cashPaymentTitle => 'Confirm cash payment';
 
   @override

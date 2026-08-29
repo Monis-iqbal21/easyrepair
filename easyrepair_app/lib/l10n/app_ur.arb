@@ -1131,6 +1131,7 @@
   "settingsAppVersionTitle": "ایپ ورژن",
   "aboutAppDescription": "HandyGo کلائنٹس کو قریبی تصدیق شدہ اُستادوں سے گھر کی مرمت اور دیکھ بھال کی خدمات سے جوڑتا ہے۔",
   "aboutWebsiteLabel": "ویب سائٹ",
+  "cashPaymentLater": "بعد میں",
   "cashPaymentTitle": "نقد ادائیگی کی تصدیق کریں",
   "cashPaymentQuestion": "آپ نے کتنی نقد ادائیگی کی؟",
   "cashPaymentExpected": "بکنگ کی متوقع رقم: {amount}",

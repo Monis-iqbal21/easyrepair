@@ -6813,6 +6813,12 @@ abstract class AppLocalizations {
   /// **'Website'**
   String get aboutWebsiteLabel;
 
+  /// No description provided for @cashPaymentLater.
+  ///
+  /// In en, this message translates to:
+  /// **'Later'**
+  String get cashPaymentLater;
+
   /// No description provided for @cashPaymentTitle.
   ///
   /// In en, this message translates to:

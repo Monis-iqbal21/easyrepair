@@ -18,20 +18,22 @@ Future<CashPaymentConfirmationEntity?> showCashPaymentConfirmationDialog(
   required String bookingId,
   required num? expectedAmount,
 }) {
+  // Dismissible on purpose. This prompt opens by itself on every COMPLETED
+  // booking that still owes cash, and a customer can easily have several — so
+  // a modal that refuses the back button and the barrier does not "remind"
+  // them, it locks them out of the app until every last booking is settled.
+  // Closing it returns null; the caller treats that as "not now".
   return showDialog<CashPaymentConfirmationEntity>(
     context: context,
-    barrierDismissible: false,
-    builder: (dialogContext) => PopScope(
-      canPop: false,
-      child: Dialog(
-        backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 20),
-        child: CashPaymentConfirmationCard(
-          bookingId: bookingId,
-          expectedAmount: expectedAmount,
-          onConfirmed: (confirmation) =>
-              Navigator.of(dialogContext).pop(confirmation),
-        ),
+    barrierDismissible: true,
+    builder: (dialogContext) => Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20),
+      child: CashPaymentConfirmationCard(
+        bookingId: bookingId,
+        expectedAmount: expectedAmount,
+        onConfirmed: (confirmation) =>
+            Navigator.of(dialogContext).pop(confirmation),
       ),
     ),
   );
@@ -78,11 +80,12 @@ class CashPaymentPromptController {
         // surface is refetched so settlement fields remain the rendering truth.
         _ref.invalidate(bookingsNotifierProvider);
         _ref.invalidate(bookingDetailProvider(booking.id));
-      } else if (automatic) {
-        // A route teardown is the only way the non-dismissible dialog can
-        // return null. Let a later authoritative observation try again.
-        _automaticallyPrompted.remove(booking.id);
       }
+      // A null result now means the customer closed the prompt — the back
+      // button, the barrier, or "later". The booking stays in
+      // [_automaticallyPrompted] so this session does not reopen it on the
+      // next rebuild; the manual CTA on My Bookings, Booking Detail and Track
+      // Worker is still there whenever they are ready to pay.
       return confirmation;
     } finally {
       _activeBookingId = null;
@@ -264,6 +267,14 @@ class _CashPaymentConfirmationCardState
                             )
                           : const Icon(Icons.check_circle_outline_rounded),
                       label: Text(context.l10n.cashPaymentTitle),
+                    ),
+                    const SizedBox(height: 4),
+                    TextButton(
+                      key: const Key('cash-payment-later-button'),
+                      onPressed: state.isLoading
+                          ? null
+                          : () => Navigator.of(context).pop(),
+                      child: Text(context.l10n.cashPaymentLater),
                     ),
                   ],
                 ),

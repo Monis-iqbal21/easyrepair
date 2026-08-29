@@ -1131,6 +1131,7 @@
   "settingsAppVersionTitle": "App Version",
   "aboutAppDescription": "HandyGo clients ko nearby verified Ustaadon se ghar ki marammat aur maintenance ki khidmat ke liye jorta hai.",
   "aboutWebsiteLabel": "Website",
+  "cashPaymentLater": "Baad mein",
   "cashPaymentTitle": "Cash payment confirm karein",
   "cashPaymentQuestion": "Aap ne kitni cash payment ki?",
   "cashPaymentExpected": "Booking ki expected amount: {amount}",
