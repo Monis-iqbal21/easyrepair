@@ -127,8 +127,9 @@ class _ClientForgotPasswordPageState
   }
 
   String? _validatePhone(String? value) {
-    if (value == null || value.isEmpty)
+    if (value == null || value.isEmpty) {
       return context.l10n.authValidationPhoneRequired;
+    }
     if (!RegExp(r'^(\+92|0092|92|0)?[3][0-9]{9}$').hasMatch(value.trim())) {
       return context.l10n.authValidationPhoneInvalid;
     }
