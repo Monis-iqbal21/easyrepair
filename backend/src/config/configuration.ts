@@ -29,9 +29,6 @@ export default () => ({
     publicUrl: (process.env.R2_PUBLIC_URL ?? '').replace(/\/$/, ''),
     endpoint: process.env.R2_ENDPOINT, // optional override; derived from accountId if omitted
   },
-  platform: {
-    feePercent: parseInt(process.env.PLATFORM_FEE_PERCENT || '10', 10),
-  },
   business: {
     timezone: process.env.BUSINESS_TIMEZONE || 'Asia/Karachi',
   },

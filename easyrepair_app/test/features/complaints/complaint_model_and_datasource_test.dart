@@ -53,12 +53,15 @@ void main() {
     expect(result, isNull);
   });
 
-  test('POST sends predefined issues without stale otherText', () async {
+  // The details are the report itself, not an OTHER-only extra: the server
+  // requires them for every complaint, so they always go on the wire.
+  test('POST sends the details alongside predefined issues', () async {
     final dio = _dio((options) {
       expect(options.method, 'POST');
       expect(options.path, '/complaints/booking/booking-1');
       expect(options.data, {
         'issueTypes': ['WORK_QUALITY', 'WARRANTY_REWORK'],
+        'otherText': 'Ustaad left the job half finished',
       });
       return {'success': true, 'data': json(), 'message': ''};
     });
@@ -69,12 +72,12 @@ void main() {
         ComplaintIssueType.workQuality,
         ComplaintIssueType.warrantyRework,
       },
-      otherText: 'must not be sent',
+      otherText: '  Ustaad left the job half finished  ',
     );
     expect(result.entity.issueTypes, hasLength(2));
   });
 
-  test('POST sends trimmed otherText only when OTHER is selected', () async {
+  test('POST always sends otherText trimmed', () async {
     final dio = _dio((options) {
       expect(options.data, {
         'issueTypes': ['OTHER'],

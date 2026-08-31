@@ -2,6 +2,20 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
+/**
+ * THE authoritative inspection fee per category.
+ *
+ * `ServiceCategory.inspectionFee` is the only place an inspection fee is
+ * decided. `BookingsService.createBooking` copies it into
+ * `Booking.inspectionFeeSnapshot` at create time, and every screen (client and
+ * Ustaad) renders that snapshot — no app, screen or DTO carries a fee of its
+ * own. Changing a fee here therefore changes it everywhere for NEW bookings,
+ * and never rewrites the money on an existing one.
+ *
+ * Current fees: AC Technician / Electrician / Plumber / Carpenter /
+ * Appliances Repair are all Rs 500. Every other category does not offer the
+ * inspection lane at all (`null`).
+ */
 const SERVICE_CATEGORIES: {
   name: string;
   description: string;
@@ -11,7 +25,7 @@ const SERVICE_CATEGORIES: {
   {
     name: 'AC Technician',
     description: 'Air conditioning installation, repair & maintenance',
-    inspectionFee: 1000,
+    inspectionFee: 500,
   },
   {
     name: 'Electrician',

@@ -65,6 +65,7 @@ describe('ComplaintsService booking reports', () => {
   it('creates a complaint for an owned completed booking with server defaults', async () => {
     const result = await service.createForBooking('client-1', 'booking-1', {
       issueTypes: [ComplaintIssueType.WORK_QUALITY],
+      otherText: '  Ustaad left the job half finished  ',
     });
 
     expect(repository.createBookingComplaint).toHaveBeenCalledWith({
@@ -72,7 +73,8 @@ describe('ComplaintsService booking reports', () => {
       reporterUserId: 'client-1',
       reportedWorkerProfileId: 'worker-profile-1',
       issueTypes: [ComplaintIssueType.WORK_QUALITY],
-      otherText: null,
+      // Required for every complaint now, and stored trimmed.
+      otherText: 'Ustaad left the job half finished',
     });
     expect(result).toMatchObject({
       source: ComplaintSource.APP_CUSTOMER,
@@ -101,6 +103,7 @@ describe('ComplaintsService booking reports', () => {
     await expect(
       service.createForBooking('client-1', 'booking-1', {
         issueTypes: [ComplaintIssueType.DAMAGE],
+        otherText: 'Ustaad left the job half finished',
       }),
     ).rejects.toThrow(BadRequestException);
     expect(repository.createBookingComplaint).not.toHaveBeenCalled();
@@ -114,13 +117,14 @@ describe('ComplaintsService booking reports', () => {
     await expect(
       service.createForBooking('client-1', 'booking-1', {
         issueTypes: [ComplaintIssueType.DAMAGE],
+        otherText: 'Ustaad left the job half finished',
       }),
     ).rejects.toThrow(ForbiddenException);
   });
 
   it('rejects an empty issue type list', async () => {
     await expect(
-      service.createForBooking('client-1', 'booking-1', { issueTypes: [] }),
+      service.createForBooking('client-1', 'booking-1', { issueTypes: [], otherText: 'Ustaad left the job half finished' }),
     ).rejects.toThrow('At least one issue type is required');
   });
 
@@ -149,7 +153,10 @@ describe('ComplaintsService booking reports', () => {
       ComplaintIssueType.PRICE_PAYMENT,
       ComplaintIssueType.WARRANTY_REWORK,
     ];
-    await service.createForBooking('client-1', 'booking-1', { issueTypes });
+    await service.createForBooking('client-1', 'booking-1', {
+      issueTypes,
+      otherText: 'Ustaad left the job half finished',
+    });
     expect(repository.createBookingComplaint).toHaveBeenCalledWith(
       expect.objectContaining({ issueTypes }),
     );
@@ -160,6 +167,7 @@ describe('ComplaintsService booking reports', () => {
     await expect(
       service.createForBooking('client-1', 'booking-1', {
         issueTypes: [ComplaintIssueType.DAMAGE],
+        otherText: 'Ustaad left the job half finished',
       }),
     ).rejects.toThrow(ConflictException);
     expect(repository.createBookingComplaint).not.toHaveBeenCalled();
@@ -178,9 +186,11 @@ describe('ComplaintsService booking reports', () => {
     const attempts = await Promise.allSettled([
       service.createForBooking('client-1', 'booking-1', {
         issueTypes: [ComplaintIssueType.DAMAGE],
+        otherText: 'Ustaad left the job half finished',
       }),
       service.createForBooking('client-1', 'booking-1', {
         issueTypes: [ComplaintIssueType.DAMAGE],
+        otherText: 'Ustaad left the job half finished',
       }),
     ]);
 

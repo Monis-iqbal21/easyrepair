@@ -114,6 +114,24 @@ const WORKER_JOB_INCLUDE = {
   // Required by deriveInspectionFeePaid so the inspecting Ustaad sees the fee
   // status of the ORIGINAL inspection work unit, not of this repair booking.
   sourceInspectionBooking: { select: { status: true } },
+  // The one authoritative record of what the client ACTUALLY paid. Unlike the
+  // client-facing include (BookingsRepository.BOOKING_INCLUDE), the Ustaad is
+  // entitled to the commission/munafa allocation as well — it is their own
+  // money. Never computed on the device: every number here is settleBooking's.
+  settlements: {
+    where: { isCurrent: true },
+    select: {
+      expectedTotal: true,
+      received: true,
+      partsPaid: true,
+      labourPaid: true,
+      feePaid: true,
+      commission: true,
+      munafa: true,
+      shortfall: true,
+    },
+    take: 1,
+  },
 } satisfies Prisma.BookingInclude;
 
 export type WorkerJobWithRelations = Prisma.BookingGetPayload<{
@@ -641,6 +659,8 @@ export class WorkersRepository {
         grossEarning: number;
         commissionAmount: number;
         ustaadEarning: number;
+        receivedAmount: number | null;
+        shortfall: number | null;
         commissionStatus: CommissionStatus;
         completedAt: Date;
         isInspectionOnly: boolean;
@@ -661,6 +681,18 @@ export class WorkersRepository {
           completedAt: true,
           commissionStatus: true,
           category: { select: { name: true } },
+          // FIX 1 — once a settlement exists it, not the quote, decides what
+          // HandyGo took and what the Ustaad kept.
+          settlements: {
+            where: { isCurrent: true },
+            select: {
+              received: true,
+              commission: true,
+              munafa: true,
+              shortfall: true,
+            },
+            take: 1,
+          },
           inspectionReport: {
             select: {
               labourCost: true,
@@ -704,6 +736,16 @@ export class WorkersRepository {
               inspectionFeeSnapshot: true,
               commissionStatus: true,
               category: { select: { name: true } },
+              settlements: {
+                where: { isCurrent: true },
+                select: {
+                  received: true,
+                  commission: true,
+                  munafa: true,
+                  shortfall: true,
+                },
+                take: 1,
+              },
             },
           },
         },
@@ -714,23 +756,54 @@ export class WorkersRepository {
       bookingId: string;
       lane: BookingLane;
       serviceCategory: string;
+      /** What the job was QUOTED to earn — unchanged, drives the day total. */
       grossEarning: number;
       commissionAmount: number;
       ustaadEarning: number;
+      /** Cash actually received, per the settlement. Null until settled. */
+      receivedAmount: number | null;
+      /** Still owed by the client. Null until settled, 0 when paid in full. */
+      shortfall: number | null;
       commissionStatus: CommissionStatus;
       completedAt: Date;
       isInspectionOnly: boolean;
     };
 
-    /** Gross and labour base stay distinct because inspection fees earn 100%. */
+    type SettlementRow = {
+      received: number;
+      commission: number;
+      munafa: number;
+      shortfall: number;
+    };
+
+    /**
+     * Gross and labour base stay distinct because inspection fees earn 100%.
+     *
+     * When a settlement exists it wins outright: its `commission` and `munafa`
+     * were produced by `settleBooking` from the cash the client ACTUALLY
+     * handed over, and re-deriving them from the quote here would show the
+     * Ustaad a bigger earning than the money that reached them. Nothing is
+     * recomputed — the stored numbers are passed straight through.
+     */
     const splitGross = (
       grossEarning: number,
       commissionBase = grossEarning,
+      settlement?: SettlementRow | null,
     ) => {
+      if (settlement) {
+        return {
+          commissionAmount: settlement.commission,
+          ustaadEarning: settlement.munafa,
+          receivedAmount: settlement.received,
+          shortfall: settlement.shortfall,
+        };
+      }
       const commissionAmount = calculatePlatformFee(commissionBase);
       return {
         commissionAmount,
         ustaadEarning: calculateWorkerEarning(grossEarning, commissionAmount),
+        receivedAmount: null,
+        shortfall: null,
       };
     };
 
@@ -766,7 +839,7 @@ export class WorkersRepository {
         lane: b.lane,
         serviceCategory: b.category.name,
         grossEarning,
-        ...splitGross(grossEarning, commissionBase),
+        ...splitGross(grossEarning, commissionBase, b.settlements?.[0]),
         commissionStatus: b.commissionStatus,
         completedAt: b.completedAt!,
         isInspectionOnly: false,
@@ -781,7 +854,7 @@ export class WorkersRepository {
         lane: BookingLane.INSPECTION,
         serviceCategory: r.booking.category.name,
         grossEarning: fee,
-        ...splitGross(fee, 0),
+        ...splitGross(fee, 0, r.booking.settlements?.[0]),
         commissionStatus: r.booking.commissionStatus,
         completedAt: r.booking.completedAt!,
         isInspectionOnly: true,

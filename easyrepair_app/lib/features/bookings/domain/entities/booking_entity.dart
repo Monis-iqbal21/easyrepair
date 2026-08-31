@@ -443,6 +443,17 @@ extension BookingClientActionsX on BookingEntity {
   /// distinguishes "nothing recorded yet" from a recorded zero-cash payment.
   bool get hasSettlementRecord => receivedAmount != null;
 
+  /// The client paid less than the payable total. Read straight off the
+  /// server's `remainingAmount` — never `expected - received` computed here.
+  bool get hasPaymentShortfall => (remainingAmount ?? 0) > 0;
+
+  /// The Ustaad may still declare what they were actually handed: the job is
+  /// done and nobody — client, Ustaad or Admin — has recorded a settlement
+  /// yet. Mirrors AdminOperationsService.reportUstaadCashPayment, which
+  /// requires COMPLETED and refuses a second differing amount.
+  bool get canWorkerReportPayment =>
+      status == BookingStatus.completed && !hasSettlementRecord;
+
   /// The client still owes a cash confirmation: the job is done and no
   /// settlement has been recorded by anyone yet. Mirrors
   /// AdminOperationsService.confirmClientCashPayment, which requires
@@ -875,6 +886,21 @@ class BookingEntity {
   final double? expectedAmount;
   final double? remainingAmount;
 
+  /// Server-computed settlement allocation, sent to the assigned Ustaad only
+  /// (never to a client, and never to a worker merely browsing the job).
+  /// Every one of these is `settleBooking`'s own arithmetic — the app must
+  /// never derive a commission or an earning of its own from them.
+  /// Null until a settlement exists.
+  final double? settlementPartsPaid;
+  final double? settlementLabourPaid;
+  final double? settlementFeePaid;
+
+  /// HandyGo's 18% cut of the labour ACTUALLY received.
+  final double? settlementCommission;
+
+  /// The Ustaad's own take-home for this job.
+  final double? settlementMunafa;
+
   /// My Jobs → Applied/Bids only: this worker's OWN bid outcome, which is
   /// deliberately independent of [status]. A REJECTED bid on an ACCEPTED
   /// booking is the normal "someone else was hired" case — without this the
@@ -950,6 +976,11 @@ class BookingEntity {
     this.receivedAmount,
     this.expectedAmount,
     this.remainingAmount,
+    this.settlementPartsPaid,
+    this.settlementLabourPaid,
+    this.settlementFeePaid,
+    this.settlementCommission,
+    this.settlementMunafa,
     this.myBidStatus,
     this.myBidAmount,
   });
@@ -1066,7 +1097,23 @@ class BookingEntity {
       isInspectionOnlyForCaller: isInspectionOnlyForCaller,
       sourceInspectionBookingId: sourceInspectionBookingId,
       linkedRepairBookingId: linkedRepairBookingId,
+      attachedInspectionBookingId: attachedInspectionBookingId,
       inspectionFeePaid: inspectionFeePaid,
+      // Payment truth is carried through untouched. copyWith takes no
+      // override for any of it on purpose: these amounts belong to the
+      // server's settlement, and dropping them here would silently reset a
+      // settled booking back to UNPAID on the next optimistic update.
+      paymentDisplayStatus: paymentDisplayStatus,
+      receivedAmount: receivedAmount,
+      expectedAmount: expectedAmount,
+      remainingAmount: remainingAmount,
+      settlementPartsPaid: settlementPartsPaid,
+      settlementLabourPaid: settlementLabourPaid,
+      settlementFeePaid: settlementFeePaid,
+      settlementCommission: settlementCommission,
+      settlementMunafa: settlementMunafa,
+      myBidStatus: myBidStatus,
+      myBidAmount: myBidAmount,
     );
   }
 }

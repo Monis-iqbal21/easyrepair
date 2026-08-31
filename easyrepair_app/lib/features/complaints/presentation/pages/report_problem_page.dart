@@ -21,16 +21,23 @@ class ReportProblemPage extends ConsumerStatefulWidget {
 }
 
 class _ReportProblemPageState extends ConsumerState<ReportProblemPage> {
+  /// Mirrors COMPLAINT_DETAILS_MIN_LENGTH in
+  /// backend/src/modules/complaints/dto/create-booking-complaint.dto.ts.
+  /// The server enforces this too — this copy exists so the Ustaad/client is
+  /// stopped before a doomed request is sent, not instead of that check.
+  static const _kMinDetailsLength = 10;
+
   final _selected = <ComplaintIssueType>{};
   final _otherController = TextEditingController();
   bool _submitting = false;
   bool _submitted = false;
+  /// Only show the "too short" message once they have tried to submit, so the
+  /// form does not scold anyone while they are still typing the first word.
+  bool _detailsTouched = false;
 
-  bool get _otherSelected => _selected.contains(ComplaintIssueType.other);
-  bool get _canSubmit =>
-      _selected.isNotEmpty &&
-      (!_otherSelected || _otherController.text.trim().isNotEmpty) &&
-      !_submitting;
+  String get _details => _otherController.text.trim();
+  bool get _detailsValid => _details.length >= _kMinDetailsLength;
+  bool get _canSubmit => _selected.isNotEmpty && _detailsValid && !_submitting;
 
   @override
   void dispose() {
@@ -101,29 +108,35 @@ class _ReportProblemPageState extends ConsumerState<ReportProblemPage> {
                   selected: _selected.contains(issue),
                   onChanged: () => _toggle(issue),
                 ),
-                if (issue == ComplaintIssueType.other && _otherSelected) ...[
-                  const SizedBox(height: 10),
-                  TextField(
-                    key: const Key('report-other-field'),
-                    controller: _otherController,
-                    onChanged: (_) => setState(() {}),
-                    minLines: 3,
-                    maxLines: 5,
-                    maxLength: 1000,
-                    textCapitalization: TextCapitalization.sentences,
-                    decoration: InputDecoration(
-                      labelText: context.l10n.reportOtherLabel,
-                      alignLabelWithHint: true,
-                      filled: true,
-                      fillColor: colors.surface,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                  ),
-                ],
                 const SizedBox(height: 10),
               ],
+              // Required for EVERY complaint, not only "Something else": a
+              // ticked box on its own gives Support nothing to act on. The
+              // same minimum is enforced server-side.
+              const SizedBox(height: 8),
+              TextField(
+                key: const Key('report-other-field'),
+                controller: _otherController,
+                onChanged: (_) => setState(() {}),
+                minLines: 3,
+                maxLines: 5,
+                maxLength: 1000,
+                textCapitalization: TextCapitalization.sentences,
+                decoration: InputDecoration(
+                  labelText: context.l10n.reportOtherLabel,
+                  helperText: context.l10n.reportDetailsHelper,
+                  helperMaxLines: 2,
+                  errorText: _detailsTouched && !_detailsValid
+                      ? context.l10n.reportDetailsRequiredError
+                      : null,
+                  alignLabelWithHint: true,
+                  filled: true,
+                  fillColor: colors.surface,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -136,7 +149,7 @@ class _ReportProblemPageState extends ConsumerState<ReportProblemPage> {
           ),
           child: FilledButton(
             key: const Key('submit-report-button'),
-            onPressed: _canSubmit ? _submit : null,
+            onPressed: _submitting ? null : _submit,
             style: FilledButton.styleFrom(
               minimumSize: const Size.fromHeight(52),
               backgroundColor: colors.primary,
@@ -173,22 +186,31 @@ class _ReportProblemPageState extends ConsumerState<ReportProblemPage> {
   void _toggle(ComplaintIssueType issue) {
     if (_submitting) return;
     setState(() {
-      if (!_selected.add(issue)) {
-        _selected.remove(issue);
-        if (issue == ComplaintIssueType.other) _otherController.clear();
-      }
+      if (!_selected.add(issue)) _selected.remove(issue);
     });
   }
 
   Future<void> _submit() async {
-    if (!_canSubmit || _submitting) return;
+    if (_submitting) return;
+    if (!_canSubmit) {
+      // Surface WHY the button did nothing instead of leaving it inert: an
+      // unexplained disabled button is what let empty reports feel "sent".
+      setState(() => _detailsTouched = true);
+      final message = _selected.isEmpty
+          ? context.l10n.reportSelectAtLeastOneError
+          : context.l10n.reportDetailsRequiredError;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
+      return;
+    }
     setState(() => _submitting = true);
     try {
       await ref
           .read(bookingComplaintProvider(widget.bookingId).notifier)
           .submit(
             issueTypes: Set.unmodifiable(_selected),
-            otherText: _otherSelected ? _otherController.text.trim() : null,
+            otherText: _details,
           );
       if (!mounted) return;
       setState(() {

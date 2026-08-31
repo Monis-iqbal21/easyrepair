@@ -13,6 +13,16 @@ class EarningHistoryJobEntity {
 
   /// What the Ustaad keeps, computed backend-side. Null means it was not sent.
   final double? ustaadEarning;
+  /// Cash the client actually handed over, per the job's settlement. Null
+  /// until a settlement exists — deliberately not 0, since "not settled yet"
+  /// and "paid nothing" are different answers.
+  ///
+  /// [commissionAmount] and [ustaadEarning] follow the same record once it
+  /// exists, so a short-paid job never shows the earning it was quoted at.
+  final double? receivedAmount;
+
+  /// Still owed by the client. Null until settled, 0 when paid in full.
+  final double? shortfall;
   final CommissionStatus commissionStatus;
   final DateTime completedAt;
   final bool isInspectionOnly;
@@ -27,7 +37,13 @@ class EarningHistoryJobEntity {
     required this.commissionStatus,
     required this.completedAt,
     required this.isInspectionOnly,
+    this.receivedAmount,
+    this.shortfall,
   });
+
+  /// The client paid less than this job was worth. Straight off the server's
+  /// own shortfall — never `grossEarning - receivedAmount` computed here.
+  bool get isShortPaid => (shortfall ?? 0) > 0;
 }
 
 class EarningHistoryDayEntity {

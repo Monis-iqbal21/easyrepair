@@ -44,7 +44,14 @@ void main() {
     await tester.tap(find.byKey(const Key('report-issue-WORK_QUALITY')));
     await tester.tap(find.byKey(const Key('report-issue-WARRANTY_REWORK')));
     await tester.pump();
-    expect(find.byKey(const Key('report-other-field')), findsNothing);
+    // The details field is part of every report, not an OTHER-only extra.
+    expect(find.byKey(const Key('report-other-field')), findsOneWidget);
+
+    await tester.enterText(
+      find.byKey(const Key('report-other-field')),
+      'Ustaad left the job half finished',
+    );
+    await tester.pump();
 
     await tester.tap(find.byKey(const Key('submit-report-button')));
     await tester.pump();
@@ -74,7 +81,10 @@ void main() {
     expect(find.byKey(const Key('report-problem-button')), findsNothing);
   });
 
-  testWidgets('OTHER is conditional, required, cleared, and persisted', (
+  // FIX 4 - a report with no description is not a report. The field is always
+  // present, always required, and a token character is not enough; the same
+  // minimum is enforced by CreateBookingComplaintDto server-side.
+  testWidgets('details are required for every complaint, not only OTHER', (
     tester,
   ) async {
     await _useTallSurface(tester);
@@ -83,35 +93,44 @@ void main() {
     await tester.pumpWidget(_app(repository: repository, router: router));
     await tester.pumpAndSettle();
 
-    final submit = tester.widget<FilledButton>(
-      find.byKey(const Key('submit-report-button')),
-    );
-    expect(submit.onPressed, isNull);
-
-    await tester.tap(find.byKey(const Key('report-issue-OTHER')));
-    await tester.pump();
+    // Visible before any issue type is picked.
     expect(find.byKey(const Key('report-other-field')), findsOneWidget);
-    expect(
-      tester
-          .widget<FilledButton>(find.byKey(const Key('submit-report-button')))
-          .onPressed,
-      isNull,
-    );
 
-    await tester.enterText(
-      find.byKey(const Key('report-other-field')),
-      '  Paint was scratched  ',
-    );
-    await tester.pump();
-    expect(
-      tester
-          .widget<FilledButton>(find.byKey(const Key('submit-report-button')))
-          .onPressed,
-      isNotNull,
-    );
+    // Nothing selected, nothing typed - submitting explains why instead of
+    // silently doing nothing.
     await tester.tap(find.byKey(const Key('submit-report-button')));
     await tester.pump();
-    expect(repository.stored!.otherText, 'Paint was scratched');
+    expect(repository.createCalls, 0);
+    expect(find.text('Select at least one issue.'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('report-issue-WORK_QUALITY')));
+    await tester.pump();
+
+    // An issue type on its own still is not a report.
+    await tester.tap(find.byKey(const Key('submit-report-button')));
+    await tester.pump();
+    expect(repository.createCalls, 0);
+    expect(
+      find.text('Please describe the problem in at least 10 characters.'),
+      findsWidgets,
+    );
+
+    // Neither is a token character, nor whitespace.
+    await tester.enterText(find.byKey(const Key('report-other-field')), '   a ');
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('submit-report-button')));
+    await tester.pump();
+    expect(repository.createCalls, 0);
+
+    // A real description goes through, trimmed.
+    await tester.enterText(
+      find.byKey(const Key('report-other-field')),
+      '  Paint was scratched badly  ',
+    );
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('submit-report-button')));
+    await tester.pump();
+    expect(repository.stored!.otherText, 'Paint was scratched badly');
     expect(repository.createCalls, 1);
 
     // Drain the success screen's auto-return delay so no timer outlives the
@@ -130,6 +149,10 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('report-issue-WORK_QUALITY')));
+    await tester.enterText(
+      find.byKey(const Key('report-other-field')),
+      'Ustaad left the job half finished',
+    );
     await tester.pump();
     await tester.tap(find.byKey(const Key('submit-report-button')));
     await tester.pump();

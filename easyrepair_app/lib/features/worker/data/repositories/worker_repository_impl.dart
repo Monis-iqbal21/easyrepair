@@ -16,6 +16,7 @@ import '../../domain/entities/new_job_entity.dart';
 import '../../domain/entities/worker_review_entity.dart';
 import '../../domain/entities/agreement_template_entity.dart';
 import '../../domain/entities/earning_history_entity.dart';
+import '../../domain/entities/worker_payment_report_entity.dart';
 import '../../domain/repositories/worker_repository.dart';
 import '../datasources/worker_remote_datasource.dart';
 import '../models/agreement_template_model.dart'
@@ -378,6 +379,24 @@ class WorkerRepositoryImpl implements WorkerRepository {
   ) async {
     try {
       final model = await _datasource.completeWorkerJob(bookingId);
+      return Right(model.toEntity());
+    } on DioException catch (e) {
+      return Left(dioExceptionToFailure(e));
+    } catch (e) {
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, WorkerPaymentReportEntity>> reportReceivedPayment(
+    String bookingId,
+    int receivedCashTotal,
+  ) async {
+    try {
+      final model = await _datasource.reportReceivedPayment(
+        bookingId,
+        receivedCashTotal,
+      );
       return Right(model.toEntity());
     } on DioException catch (e) {
       return Left(dioExceptionToFailure(e));

@@ -4316,4 +4316,53 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get ustaadLiveSelfieSubtitle =>
       'Take it now — your face must be clearly visible';
+
+  @override
+  String get reportDetailsHelper =>
+      'A short description helps our team act on your report.';
+
+  @override
+  String get reportDetailsRequiredError =>
+      'Please describe the problem in at least 10 characters.';
+
+  @override
+  String get workerPaymentPartsLabel => 'Parts recovered';
+
+  @override
+  String get workerPaymentLabourLabel => 'Labour received';
+
+  @override
+  String get workerPaymentAwaitingTitle => 'Payment not recorded yet';
+
+  @override
+  String get workerPaymentAwaitingBody =>
+      'Once the cash is recorded you will see exactly what came in.';
+
+  @override
+  String get workerReportPaymentAction => 'Kam paisa mila?';
+
+  @override
+  String get workerReportPaymentTitle => 'How much did you actually receive?';
+
+  @override
+  String get workerReportPaymentHelper =>
+      'Enter the cash the customer handed you. HandyGo works out the rest.';
+
+  @override
+  String get workerReportPaymentFieldLabel => 'Amount received';
+
+  @override
+  String get workerReportPaymentInvalidError =>
+      'Enter a whole rupee amount of 0 or more.';
+
+  @override
+  String get workerReportPaymentSubmit => 'Record payment';
+
+  @override
+  String get workerReportPaymentSuccess =>
+      'Payment recorded. HandyGo will follow up on anything still owed.';
+
+  @override
+  String get workerReportPaymentFailed =>
+      'Could not record the payment. Please try again.';
 }

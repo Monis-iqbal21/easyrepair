@@ -54,10 +54,13 @@
             android:name="flutterEmbedding"
             android:value="2" />
 
-        <!-- Tell FCM to use this channel for background/terminated push notifications -->
+        <!-- Tell FCM to use this channel for background/terminated push
+             notifications. MUST match LocalNotificationService.channelId:
+             when the id named here does not exist on the device, FCM falls
+             back to its own "Miscellaneous" channel instead. -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
-            android:value="easyrepair_bookings" />
+            android:value="handygo_bookings_v2" />
 
         <!-- Google Maps API key -->
         <meta-data

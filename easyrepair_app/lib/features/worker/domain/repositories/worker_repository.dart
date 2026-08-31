@@ -5,6 +5,7 @@ import 'package:fpdart/fpdart.dart';
 import '../../../../core/data/cached_result.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../bookings/domain/entities/booking_entity.dart';
+import '../entities/worker_payment_report_entity.dart';
 import '../entities/worker_profile_entity.dart';
 import '../entities/worker_skill_entity.dart';
 import '../entities/category_entity.dart';
@@ -83,6 +84,13 @@ abstract class WorkerRepository {
   );
 
   Future<Either<Failure, BookingEntity>> completeWorkerJob(String bookingId);
+
+  /// "Kam paisa mila" — report the cash the customer actually handed over.
+  /// Returns the server's own settlement breakdown; nothing is computed here.
+  Future<Either<Failure, WorkerPaymentReportEntity>> reportReceivedPayment(
+    String bookingId,
+    int receivedCashTotal,
+  );
 
   /// Returns reviews for this worker's completed bookings, latest first.
   /// Pass [limit] to cap the result (e.g. 2 for the dashboard preview).

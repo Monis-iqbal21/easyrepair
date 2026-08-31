@@ -4236,6 +4236,55 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get ustaadLiveSelfieSubtitle => 'ابھی لیں — چہرہ صاف نظر آنا چاہیے';
+
+  @override
+  String get reportDetailsHelper =>
+      'مختصر تفصیل سے ہماری ٹیم آپ کی شکایت پر جلد کارروائی کر سکتی ہے۔';
+
+  @override
+  String get reportDetailsRequiredError =>
+      'براہِ کرم مسئلہ کم از کم 10 حروف میں بیان کریں۔';
+
+  @override
+  String get workerPaymentPartsLabel => 'پرزہ جات کی رقم';
+
+  @override
+  String get workerPaymentLabourLabel => 'مزدوری موصول';
+
+  @override
+  String get workerPaymentAwaitingTitle => 'ادائیگی ابھی درج نہیں ہوئی';
+
+  @override
+  String get workerPaymentAwaitingBody =>
+      'رقم درج ہوتے ہی آپ کو معلوم ہو جائے گا کہ کتنی رقم موصول ہوئی۔';
+
+  @override
+  String get workerReportPaymentAction => 'کم پیسہ ملا؟';
+
+  @override
+  String get workerReportPaymentTitle => 'آپ کو اصل میں کتنی رقم ملی؟';
+
+  @override
+  String get workerReportPaymentHelper =>
+      'جو نقد رقم گاہک نے دی وہ لکھیں۔ باقی حساب HandyGo خود کرے گا۔';
+
+  @override
+  String get workerReportPaymentFieldLabel => 'موصول شدہ رقم';
+
+  @override
+  String get workerReportPaymentInvalidError =>
+      'صفر یا اس سے زیادہ مکمل روپے کی رقم لکھیں۔';
+
+  @override
+  String get workerReportPaymentSubmit => 'ادائیگی درج کریں';
+
+  @override
+  String get workerReportPaymentSuccess =>
+      'ادائیگی درج ہو گئی۔ باقی رقم کے لیے HandyGo رابطہ کرے گا۔';
+
+  @override
+  String get workerReportPaymentFailed =>
+      'ادائیگی درج نہیں ہو سکی۔ دوبارہ کوشش کریں۔';
 }
 
 /// The translations for Urdu, using the Latin script (`ur_Latn`).
@@ -8528,4 +8577,53 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   @override
   String get ustaadLiveSelfieSubtitle =>
       'Abhi lein — chehra saaf nazar aana chahiye';
+
+  @override
+  String get reportDetailsHelper =>
+      'Mukhtasar tafseel se hamari team aap ki shikayat par jald action le sakti hai.';
+
+  @override
+  String get reportDetailsRequiredError =>
+      'Barae meherbani masla kam az kam 10 harf mein bayan karein.';
+
+  @override
+  String get workerPaymentPartsLabel => 'Purza jaat ki raqam';
+
+  @override
+  String get workerPaymentLabourLabel => 'Mazdoori wasool';
+
+  @override
+  String get workerPaymentAwaitingTitle => 'Adaigi abhi darj nahi hui';
+
+  @override
+  String get workerPaymentAwaitingBody =>
+      'Raqam darj hotay hi aap ko maloom ho jaye ga kitni raqam wasool hui.';
+
+  @override
+  String get workerReportPaymentAction => 'Kam paisa mila?';
+
+  @override
+  String get workerReportPaymentTitle => 'Aap ko asal mein kitni raqam mili?';
+
+  @override
+  String get workerReportPaymentHelper =>
+      'Jo cash customer ne diya wo likhein. Baqi hisaab HandyGo khud kare ga.';
+
+  @override
+  String get workerReportPaymentFieldLabel => 'Wasool shuda raqam';
+
+  @override
+  String get workerReportPaymentInvalidError =>
+      'Sifar ya us se zyada poore rupay ki raqam likhein.';
+
+  @override
+  String get workerReportPaymentSubmit => 'Adaigi darj karein';
+
+  @override
+  String get workerReportPaymentSuccess =>
+      'Adaigi darj ho gayi. Baqi raqam ke liye HandyGo rabta kare ga.';
+
+  @override
+  String get workerReportPaymentFailed =>
+      'Adaigi darj nahi ho saki. Dobara koshish karein.';
 }

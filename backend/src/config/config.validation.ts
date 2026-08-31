@@ -81,10 +81,6 @@ class EnvironmentVariables {
   @IsOptional()
   R2_ENDPOINT: string;
 
-  @IsNumber()
-  @IsOptional()
-  PLATFORM_FEE_PERCENT: number = 10;
-
   @IsString()
   @IsOptional()
   BUSINESS_TIMEZONE: string = 'Asia/Karachi';

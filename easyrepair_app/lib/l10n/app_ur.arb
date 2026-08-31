@@ -1273,5 +1273,19 @@
   "timelineWaitingForUstaadTitle": "استاد کا انتظار",
   "timelineWaitingForUstaadBody": "جیسے ہی آپ اس کام کے لیے استاد ہائر کریں گے، کام شروع ہو جائے گا۔",
   "ustaadIdentityTitle": "شناختی تفصیلات",
-  "ustaadLiveSelfieSubtitle": "ابھی لیں — چہرہ صاف نظر آنا چاہیے"
+  "ustaadLiveSelfieSubtitle": "ابھی لیں — چہرہ صاف نظر آنا چاہیے",
+  "reportDetailsHelper": "مختصر تفصیل سے ہماری ٹیم آپ کی شکایت پر جلد کارروائی کر سکتی ہے۔",
+  "reportDetailsRequiredError": "براہِ کرم مسئلہ کم از کم 10 حروف میں بیان کریں۔",
+  "workerPaymentPartsLabel": "پرزہ جات کی رقم",
+  "workerPaymentLabourLabel": "مزدوری موصول",
+  "workerPaymentAwaitingTitle": "ادائیگی ابھی درج نہیں ہوئی",
+  "workerPaymentAwaitingBody": "رقم درج ہوتے ہی آپ کو معلوم ہو جائے گا کہ کتنی رقم موصول ہوئی۔",
+  "workerReportPaymentAction": "کم پیسہ ملا؟",
+  "workerReportPaymentTitle": "آپ کو اصل میں کتنی رقم ملی؟",
+  "workerReportPaymentHelper": "جو نقد رقم گاہک نے دی وہ لکھیں۔ باقی حساب HandyGo خود کرے گا۔",
+  "workerReportPaymentFieldLabel": "موصول شدہ رقم",
+  "workerReportPaymentInvalidError": "صفر یا اس سے زیادہ مکمل روپے کی رقم لکھیں۔",
+  "workerReportPaymentSubmit": "ادائیگی درج کریں",
+  "workerReportPaymentSuccess": "ادائیگی درج ہو گئی۔ باقی رقم کے لیے HandyGo رابطہ کرے گا۔",
+  "workerReportPaymentFailed": "ادائیگی درج نہیں ہو سکی۔ دوبارہ کوشش کریں۔"
 }

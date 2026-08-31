@@ -28,6 +28,8 @@ import { UpdateLocationDto } from './dto/update-location.dto';
 import { UpdateSkillsDto } from './dto/update-skills.dto';
 import { UpdateProfileCompletionDto } from './dto/update-profile-completion.dto';
 import { SubmitProfileCompletionDto } from './dto/submit-profile-completion.dto';
+import { ReportReceivedPaymentDto } from './dto/report-received-payment.dto';
+import { AdminOperationsService } from '../admin/admin-operations.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -41,6 +43,9 @@ export class WorkersController {
   constructor(
     private readonly workersService: WorkersService,
     private readonly bidsService: BidsService,
+    // The single authoritative settlement service — shared with the Admin and
+    // Client cash routes so money is never computed in two places.
+    private readonly adminOperationsService: AdminOperationsService,
   ) {}
 
   // ── Avatar upload ────────────────────────────────────────────────────────
@@ -330,6 +335,28 @@ export class WorkersController {
   @HttpCode(HttpStatus.OK)
   completeJob(@CurrentUser() user: { id: string }, @Param('id') id: string) {
     return this.workersService.completeJob(user.id, id);
+  }
+
+  /**
+   * POST /workers/jobs/:bookingId/report-payment
+   *
+   * "Kam paisa mila" — the Ustaad declares the cash they actually received.
+   * The body carries the received total and nothing else; the shortfall,
+   * the 18% labour commission, the munafa and the settlement case are all
+   * derived server-side by `settleBooking`.
+   */
+  @Post('jobs/:bookingId/report-payment')
+  @HttpCode(HttpStatus.OK)
+  reportReceivedPayment(
+    @CurrentUser() user: { id: string },
+    @Param('bookingId') bookingId: string,
+    @Body() dto: ReportReceivedPaymentDto,
+  ) {
+    return this.adminOperationsService.reportUstaadCashPayment(
+      bookingId,
+      dto.receivedCashTotal,
+      user.id,
+    );
   }
 
   // ── Worker reviews ───────────────────────────────────────────────────────

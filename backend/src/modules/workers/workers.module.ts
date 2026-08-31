@@ -9,11 +9,14 @@ import { BidsModule } from '../bids/bids.module';
 import { StorageModule } from '../storage/storage.module';
 import { AgreementsModule } from '../agreements/agreements.module';
 import { MatchingModule } from '../matching/matching.module';
+import { AdminOperationsModule } from '../admin/admin-operations.module';
 
 @Module({
   imports: [
     NotificationsModule,
     MatchingModule,
+    // Ustaad short-payment reporting reuses the shared settlement service.
+    AdminOperationsModule,
     BidsModule,
     StorageModule,
     AgreementsModule,

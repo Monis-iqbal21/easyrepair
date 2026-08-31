@@ -359,8 +359,12 @@ AWS_BUCKET=
 AWS_REGION=
 AWS_ACCESS_KEY=
 AWS_SECRET_KEY=
-PLATFORM_FEE_PERCENT=10
 ```
+
+> Commission is **not** an env var. It is a fixed **18% of labour actually
+> received** — never parts, never the inspection fee — and lives only in
+> `PLATFORM_COMMISSION_RATE` (`backend/src/common/utils/commission.util.ts`).
+> The old `PLATFORM_FEE_PERCENT=10` was dead config and has been removed.
 
 ## Flutter (dart-define)
 ```

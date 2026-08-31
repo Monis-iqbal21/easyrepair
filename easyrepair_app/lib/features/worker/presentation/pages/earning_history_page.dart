@@ -210,6 +210,7 @@ class _MoneyRow extends StatelessWidget {
   final Color color;
   final bool emphasize;
   const _MoneyRow({
+    super.key,
     required this.label,
     required this.amount,
     required this.color,
@@ -361,6 +362,28 @@ class _JobCard extends StatelessWidget {
             amount: job.grossEarning,
             color: c.textPrimary,
           ),
+          // Settlement truth: what actually arrived, and what is still owed.
+          // Both come from the job's own settlement, so the commission and
+          // earning below already describe the cash received rather than the
+          // quote above. Absent entirely until the job is settled.
+          if (job.receivedAmount != null) ...[
+            const SizedBox(height: 6),
+            _MoneyRow(
+              key: const Key('earning-received'),
+              label: context.l10n.bookingPaymentReceived,
+              amount: job.receivedAmount,
+              color: job.isShortPaid ? c.warning : c.textSecondary,
+            ),
+          ],
+          if (job.isShortPaid) ...[
+            const SizedBox(height: 6),
+            _MoneyRow(
+              key: const Key('earning-shortfall'),
+              label: context.l10n.bookingPaymentRemaining,
+              amount: job.shortfall,
+              color: c.urgent,
+            ),
+          ],
           const SizedBox(height: 6),
           _MoneyRow(
             label: context.l10n.earningCommissionLabel,

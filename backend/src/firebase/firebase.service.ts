@@ -52,7 +52,19 @@ export class FirebaseService implements OnModuleInit {
       data?.conversationId != null ||
       data?.entityType === 'conversation' ||
       (data?.eventKey ?? '').startsWith('chat');
-    const androidChannelId = isChat ? 'easyrepair_chat' : 'easyrepair_bookings';
+    // Must match LocalNotificationService's channel ids. The `_v2` suffix is
+    // the notification-sound fix: an Android channel's importance and sound
+    // are fixed at creation, so a device whose original `easyrepair_*`
+    // channel had ended up silent could only be recovered with a new id.
+    //
+    // Backward compatible with an APK that predates those ids: Firebase falls
+    // back to that app's manifest default channel and, failing that, creates
+    // `fcm_fallback_notification_channel` at IMPORTANCE_DEFAULT -- so an old
+    // client still receives, and still hears, the push. It only loses the
+    // chat/bookings split until it updates.
+    const androidChannelId = isChat
+      ? 'handygo_chat_v2'
+      : 'handygo_bookings_v2';
 
     await this.messaging.send({
       token: fcmToken,

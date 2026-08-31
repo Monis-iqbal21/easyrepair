@@ -24,6 +24,7 @@ import '../../../../core/network/reconnect_refresh.dart';
 import '../providers/worker_job_providers.dart';
 import '../providers/worker_providers.dart';
 import '../widgets/onboarding_gate.dart';
+import '../widgets/worker_payment_section.dart';
 import '../widgets/worker_chat_action.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
 import '../../../../l10n/app_localizations.dart';
@@ -526,6 +527,16 @@ class _JobBody extends ConsumerWidget {
                       ],
                     ),
                   ),
+                  const SizedBox(height: 16),
+                ],
+
+                // ── Payment truth ─────────────────────────────────────────
+                // What the client ACTUALLY paid, from the server settlement —
+                // never the quote above dressed up as money received. Only
+                // once the job is done: before that there is nothing to
+                // settle and nothing honest to show.
+                if (job.status == BookingStatus.completed) ...[
+                  WorkerPaymentSection(job: job),
                   const SizedBox(height: 16),
                 ],
 

@@ -40,6 +40,7 @@ import { JobBroadcastService } from '../matching/job-broadcast.service';
 import { JobCompletionNotifierService } from '../matching/job-completion-notifier.service';
 import { LOCATION_FRESHNESS_MS } from '../../common/utils/job-eligibility.util';
 import { deriveInspectionFeePaid } from '../../common/utils/inspection-fee.util';
+import { derivePaymentDisplay } from '../bookings/payment-display.util';
 import {
   WorkerJobAttachmentDto,
   WorkerJobResponseDto,
@@ -1229,6 +1230,11 @@ export class WorkersService {
     // tell them apart from the original inspector) — a not-yet-hired
     // bidder browsing this job via the New Job detail fallback must never
     // receive the inspector's phone number or other details.
+    // Only the assigned Ustaad sees the money: a bidder browsing this job via
+    // the New Job detail fallback must never learn what a previous client
+    // paid. `settlements` is already filtered to the current row.
+    const settlement = isAssignedToCaller ? job.settlements?.[0] : null;
+
     const iwp = isAssignedToCaller ? job.inspectionReport?.workerProfile : null;
     const inspectingWorker: WorkerSummaryDto | null = iwp
       ? {
@@ -1310,6 +1316,15 @@ export class WorkersService {
       // for every other list/detail response.
       myBidStatus: null,
       myBidAmount: null,
+      // FIX 1 — what the client ACTUALLY paid, straight off the current
+      // settlement. Same derivation the client's own surfaces use, so the two
+      // sides of a job can never describe the same money differently.
+      ...derivePaymentDisplay(settlement),
+      settlementPartsPaid: settlement?.partsPaid ?? null,
+      settlementLabourPaid: settlement?.labourPaid ?? null,
+      settlementFeePaid: settlement?.feePaid ?? null,
+      settlementCommission: settlement?.commission ?? null,
+      settlementMunafa: settlement?.munafa ?? null,
     };
   }
 

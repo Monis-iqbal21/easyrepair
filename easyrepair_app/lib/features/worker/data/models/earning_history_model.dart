@@ -11,6 +11,11 @@ class EarningHistoryJobModel {
 
   /// Null means the server did not send this field; a real zero remains zero.
   final double? ustaadEarning;
+
+  /// Settlement truth. Null means no settlement exists yet, in which case
+  /// [commissionAmount]/[ustaadEarning] are still the quote-based split.
+  final double? receivedAmount;
+  final double? shortfall;
   final CommissionStatus commissionStatus;
   final DateTime completedAt;
   final bool isInspectionOnly;
@@ -25,6 +30,8 @@ class EarningHistoryJobModel {
     required this.commissionStatus,
     required this.completedAt,
     required this.isInspectionOnly,
+    this.receivedAmount,
+    this.shortfall,
   });
 
   factory EarningHistoryJobModel.fromJson(Map<String, dynamic> json) {
@@ -39,6 +46,8 @@ class EarningHistoryJobModel {
       grossEarning: grossEarning,
       commissionAmount: commissionAmount,
       ustaadEarning: (json['ustaadEarning'] as num?)?.toDouble(),
+      receivedAmount: (json['receivedAmount'] as num?)?.toDouble(),
+      shortfall: (json['shortfall'] as num?)?.toDouble(),
       commissionStatus:
           (json['commissionStatus'] as String? ?? 'PENDING').toUpperCase() ==
               'PAID'
@@ -58,6 +67,8 @@ class EarningHistoryJobModel {
     grossEarning: grossEarning,
     commissionAmount: commissionAmount,
     ustaadEarning: ustaadEarning,
+    receivedAmount: receivedAmount,
+    shortfall: shortfall,
     commissionStatus: commissionStatus,
     completedAt: completedAt,
     isInspectionOnly: isInspectionOnly,

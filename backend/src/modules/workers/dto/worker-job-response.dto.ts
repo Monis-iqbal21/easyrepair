@@ -149,4 +149,30 @@ export class WorkerJobResponseDto {
   myBidStatus: BidStatus | null;
   /** My Jobs → Applied/Bids only — this worker's own bid amount. */
   myBidAmount: number | null;
+
+  // ── Payment truth ───────────────────────────────────────────────────────
+  // Everything below comes from the ONE current BookingSettlement row, i.e.
+  // from settleBooking(). The Ustaad app renders these verbatim and computes
+  // no money of its own. All null (and status UNPAID) until a settlement
+  // exists — before the job is settled there is no authoritative amount to
+  // show, and the quoted price must not be dressed up as one.
+  /** Server-derived cash state: nothing / part / all of the payable total. */
+  paymentDisplayStatus: 'UNPAID' | 'PARTIAL' | 'PAID';
+  /** Cash actually received: parts + labour + inspection fee allocated. */
+  receivedAmount: number | null;
+  /** The full payable total the job was expected to bring in. */
+  expectedAmount: number | null;
+  /** Still owed by the client. Same number as the settlement's shortfall. */
+  remainingAmount: number | null;
+  /** Waterfall allocation of the received cash — parts are paid first. */
+  settlementPartsPaid: number | null;
+  settlementLabourPaid: number | null;
+  settlementFeePaid: number | null;
+  /**
+   * HandyGo's 18% commission on the labour ACTUALLY received — never on
+   * parts, never on the inspection fee. Computed by settleBooking.
+   */
+  settlementCommission: number | null;
+  /** The Ustaad's own take-home (munafa) for this job, per the settlement. */
+  settlementMunafa: number | null;
 }

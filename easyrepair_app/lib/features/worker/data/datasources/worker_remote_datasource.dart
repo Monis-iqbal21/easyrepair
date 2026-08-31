@@ -11,6 +11,7 @@ import '../../../../core/network/cacheable_fetch.dart';
 import '../../../../core/storage/local_cache_service.dart';
 import '../../../../core/storage/secure_storage_service.dart';
 import '../../../bookings/data/models/booking_model.dart';
+import '../models/worker_payment_report_model.dart';
 import '../models/worker_profile_model.dart';
 import '../models/category_model.dart';
 import '../models/worker_review_model.dart';
@@ -86,6 +87,13 @@ abstract class WorkerRemoteDatasource {
   Future<CachedResult<BookingModel>> getWorkerJobById(String bookingId);
 
   Future<BookingModel> completeWorkerJob(String bookingId);
+
+  /// "Kam paisa mila" — declare the whole-rupee cash actually received.
+  /// The server does every calculation; this only carries the fact.
+  Future<WorkerPaymentReportModel> reportReceivedPayment(
+    String bookingId,
+    int receivedCashTotal,
+  );
 
   Future<List<WorkerReviewModel>> getWorkerReviews({int? limit});
 
@@ -375,6 +383,19 @@ class WorkerRemoteDatasourceImpl implements WorkerRemoteDatasource {
     );
     final data = response.data!['data'] as Map<String, dynamic>;
     return BookingModel.fromJson(data);
+  }
+
+  @override
+  Future<WorkerPaymentReportModel> reportReceivedPayment(
+    String bookingId,
+    int receivedCashTotal,
+  ) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/workers/jobs/$bookingId/report-payment',
+      data: {'receivedCashTotal': receivedCashTotal},
+    );
+    final data = response.data!['data'] as Map<String, dynamic>;
+    return WorkerPaymentReportModel.fromJson(data);
   }
 
   @override

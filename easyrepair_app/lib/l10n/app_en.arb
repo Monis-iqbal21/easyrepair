@@ -2715,5 +2715,19 @@
   "ustaadLiveSelfieSubtitle": "Take it now — your face must be clearly visible",
   "@ustaadLiveSelfieSubtitle": {
     "description": "Ustaad registration step 4 live selfie card subtitle"
-  }
+  },
+  "reportDetailsHelper": "A short description helps our team act on your report.",
+  "reportDetailsRequiredError": "Please describe the problem in at least 10 characters.",
+  "workerPaymentPartsLabel": "Parts recovered",
+  "workerPaymentLabourLabel": "Labour received",
+  "workerPaymentAwaitingTitle": "Payment not recorded yet",
+  "workerPaymentAwaitingBody": "Once the cash is recorded you will see exactly what came in.",
+  "workerReportPaymentAction": "Kam paisa mila?",
+  "workerReportPaymentTitle": "How much did you actually receive?",
+  "workerReportPaymentHelper": "Enter the cash the customer handed you. HandyGo works out the rest.",
+  "workerReportPaymentFieldLabel": "Amount received",
+  "workerReportPaymentInvalidError": "Enter a whole rupee amount of 0 or more.",
+  "workerReportPaymentSubmit": "Record payment",
+  "workerReportPaymentSuccess": "Payment recorded. HandyGo will follow up on anything still owed.",
+  "workerReportPaymentFailed": "Could not record the payment. Please try again."
 }

@@ -276,8 +276,9 @@ describe('ComplaintsService support-thread announcement', () => {
     // The complaint row is authoritative: a transient chat problem must never
     // fail the client's report.
     const result = await service.createForBooking('client-1', 'booking-1', {
-      issueTypes: [ComplaintIssueType.WORK_QUALITY],
-    });
+        issueTypes: [ComplaintIssueType.WORK_QUALITY],
+        otherText: 'Ustaad left the job half finished',
+      });
 
     expect(result).toMatchObject({ id: 'complaint-abcdef12' });
   });
@@ -289,6 +290,7 @@ describe('ComplaintsService support-thread announcement', () => {
     await expect(
       service.createForBooking('client-1', 'booking-1', {
         issueTypes: [ComplaintIssueType.WORK_QUALITY],
+        otherText: 'Ustaad left the job half finished',
       }),
     ).rejects.toThrow();
 

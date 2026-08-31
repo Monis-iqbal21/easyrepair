@@ -7670,6 +7670,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Take it now — your face must be clearly visible'**
   String get ustaadLiveSelfieSubtitle;
+
+  /// No description provided for @reportDetailsHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'A short description helps our team act on your report.'**
+  String get reportDetailsHelper;
+
+  /// No description provided for @reportDetailsRequiredError.
+  ///
+  /// In en, this message translates to:
+  /// **'Please describe the problem in at least 10 characters.'**
+  String get reportDetailsRequiredError;
+
+  /// No description provided for @workerPaymentPartsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Parts recovered'**
+  String get workerPaymentPartsLabel;
+
+  /// No description provided for @workerPaymentLabourLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Labour received'**
+  String get workerPaymentLabourLabel;
+
+  /// No description provided for @workerPaymentAwaitingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment not recorded yet'**
+  String get workerPaymentAwaitingTitle;
+
+  /// No description provided for @workerPaymentAwaitingBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Once the cash is recorded you will see exactly what came in.'**
+  String get workerPaymentAwaitingBody;
+
+  /// No description provided for @workerReportPaymentAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Kam paisa mila?'**
+  String get workerReportPaymentAction;
+
+  /// No description provided for @workerReportPaymentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'How much did you actually receive?'**
+  String get workerReportPaymentTitle;
+
+  /// No description provided for @workerReportPaymentHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the cash the customer handed you. HandyGo works out the rest.'**
+  String get workerReportPaymentHelper;
+
+  /// No description provided for @workerReportPaymentFieldLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount received'**
+  String get workerReportPaymentFieldLabel;
+
+  /// No description provided for @workerReportPaymentInvalidError.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a whole rupee amount of 0 or more.'**
+  String get workerReportPaymentInvalidError;
+
+  /// No description provided for @workerReportPaymentSubmit.
+  ///
+  /// In en, this message translates to:
+  /// **'Record payment'**
+  String get workerReportPaymentSubmit;
+
+  /// No description provided for @workerReportPaymentSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment recorded. HandyGo will follow up on anything still owed.'**
+  String get workerReportPaymentSuccess;
+
+  /// No description provided for @workerReportPaymentFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not record the payment. Please try again.'**
+  String get workerReportPaymentFailed;
 }
 
 class _AppLocalizationsDelegate

@@ -5,7 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../bookings/domain/entities/booking_entity.dart';
 import '../../data/repositories/worker_repository_impl.dart';
+import '../../../../core/errors/failures.dart';
 import '../../domain/entities/new_job_entity.dart';
+import '../../domain/entities/worker_payment_report_entity.dart';
 import 'worker_providers.dart'; // for workerProfileProvider
 
 // ── Filter ────────────────────────────────────────────────────────────────────
@@ -137,6 +139,48 @@ class CompleteJobNotifier extends AsyncNotifier<void> {
 
 final completeJobProvider =
     AsyncNotifierProvider<CompleteJobNotifier, void>(CompleteJobNotifier.new);
+
+// ── "Kam paisa mila" — report the cash actually received ─────────────────────
+
+/// Sends ONE fact (the received whole-rupee total) and holds the server's own
+/// settlement breakdown. Every number in [WorkerPaymentReportEntity] is
+/// `settleBooking`'s — the shortfall, the 18% labour commission and the munafa
+/// are never derived on the device.
+class ReportReceivedPaymentNotifier
+    extends AsyncNotifier<WorkerPaymentReportEntity?> {
+  @override
+  Future<WorkerPaymentReportEntity?> build() async => null;
+
+  /// Returns `null` on success, or the [Failure] to show. Deliberately hands
+  /// the failure back rather than parking it in provider state for the caller
+  /// to fish out: the sheet needs THIS attempt's error, and re-reading a
+  /// provider nothing is listening to is not a reliable way to get it.
+  Future<Failure?> report(String jobId, int receivedCashTotal) async {
+    final result = await ref
+        .read(workerRepositoryProvider)
+        .reportReceivedPayment(jobId, receivedCashTotal);
+    return result.fold(
+      (failure) {
+        state = AsyncError(failure, StackTrace.current);
+        return failure;
+      },
+      (report) {
+        state = AsyncData(report);
+        // The job's own payment fields now come back populated from the
+        // server, so re-read them rather than patching anything locally.
+        ref.invalidate(workerJobDetailProvider(jobId));
+        ref.invalidate(workerJobsProvider);
+        return null;
+      },
+    );
+  }
+}
+
+final reportReceivedPaymentProvider =
+    AsyncNotifierProvider<
+      ReportReceivedPaymentNotifier,
+      WorkerPaymentReportEntity?
+    >(ReportReceivedPaymentNotifier.new);
 
 // ── New jobs feed ─────────────────────────────────────────────────────────────
 

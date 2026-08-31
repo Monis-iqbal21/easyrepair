@@ -30,14 +30,44 @@ class LocalNotificationService {
   // outside the widget tree and re-registering both channels whenever the user
   // changes language. Tracked in docs/TRANSLATIONS_README.md; deliberately out
   // of scope for the in-app localization work.
-  static const channelId = 'easyrepair_bookings';
+  //
+  // -- Why the ids carry a version --
+  //
+  // An Android notification channel is created ONCE per install. After that
+  // its importance, sound and vibration belong to the user and the OS:
+  // `createNotificationChannel` on an existing id updates the name and the
+  // description and silently ignores everything else. A device whose
+  // `easyrepair_bookings` row ended up silent -- muted by the user, quieted
+  // by an OEM notification manager, or created before this configuration ever
+  // reached that device -- therefore stays silent no matter what this file
+  // declares. That is the "notifications arrive with no sound" reported from
+  // real devices; the Dart, backend and manifest settings were already
+  // correct, and correcting them again cannot reach an existing channel.
+  //
+  // The only fix that reaches an already-installed app is a NEW id, which
+  // Android has no prior row for and so creates with the importance and sound
+  // below. The legacy ids are deleted in [init] so nobody is left looking at
+  // two "Booking Updates" entries in Settings.
+  //
+  // Bump the suffix ONLY to recover from this same situation again, never for
+  // a copy change: each bump costs every user their per-channel preferences
+  // and leaves another id behind to retire.
+  static const channelId = 'handygo_bookings_v2';
   static const _kChannelName = 'Booking Updates';
   static const _kChannelDesc =
       'Notifications for booking status changes and job assignments';
 
-  static const chatChannelId = 'easyrepair_chat';
+  static const chatChannelId = 'handygo_chat_v2';
   static const _kChatChannelName = 'Chat Messages';
   static const _kChatChannelDesc = 'Notifications for new chat messages';
+
+  /// Superseded channel ids, deleted on every start so an upgraded install
+  /// does not show a stale duplicate in Android's notification settings.
+  /// Deleting an id the device never had is a no-op.
+  static const retiredChannelIds = <String>[
+    'easyrepair_bookings',
+    'easyrepair_chat',
+  ];
 
   // ── Tap callback ─────────────────────────────────────────────────────────
 
@@ -85,11 +115,16 @@ class LocalNotificationService {
       final androidPlugin = _plugin
           .resolvePlatformSpecificImplementation<
               AndroidFlutterLocalNotificationsPlugin>();
+      // Create the current channels BEFORE retiring the old ones, so a push
+      // arriving mid-upgrade always has somewhere to land.
       await androidPlugin?.createNotificationChannel(
         const AndroidNotificationChannel(
           channelId,
           _kChannelName,
           description: _kChannelDesc,
+          // Importance.high is what makes Android play a sound and heads-up
+          // the notification. Honoured only at creation time -- see the
+          // versioned-id note above.
           importance: Importance.high,
           playSound: true,
           enableVibration: true,
@@ -105,6 +140,9 @@ class LocalNotificationService {
           enableVibration: true,
         ),
       );
+      for (final retired in retiredChannelIds) {
+        await androidPlugin?.deleteNotificationChannel(retired);
+      }
     }
 
     // ── Terminated-launch: check if app was opened by tapping a local notif ─

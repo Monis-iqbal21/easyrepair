@@ -9,6 +9,18 @@ export const NOTIFICATION_KEYS = {
   BOOKING_CANCELLED_BY_WORKER: 'booking.cancelled.by_worker',
   BOOKING_REVIEW_CREATED: 'booking.review.created',
   WORKER_VERIFIED: 'worker.verified',
+  /**
+   * The client's cash payment was recorded in full — the Ustaad's own copy of
+   * "the money is in". Sent to the WORKER, never to the client.
+   */
+  PAYMENT_RECEIVED: 'payment.received',
+  /**
+   * The client's cash payment was recorded but came up short of the payable
+   * total. Same recipient, deliberately a DIFFERENT key so the two can never
+   * dedupe against each other: a booking that is first short and later
+   * corrected to paid in full legitimately notifies once for each state.
+   */
+  PAYMENT_SHORT: 'payment.short',
 } as const;
 
 export type NotificationKey =
@@ -68,6 +80,21 @@ export function getNotificationTemplate(
         body: params?.rating
           ? `Your client left you a ${params.rating}-star review.`
           : 'Your client left you a review.',
+      };
+    case NOTIFICATION_KEYS.PAYMENT_RECEIVED:
+      return {
+        title: 'Payment received',
+        body: params?.received
+          ? `The client paid Rs ${params.received} in full. Tap to see your earning.`
+          : 'The client paid in full. Tap to see your earning.',
+      };
+    case NOTIFICATION_KEYS.PAYMENT_SHORT:
+      return {
+        title: 'Short payment recorded',
+        body:
+          params?.received != null && params?.shortfall != null
+            ? `Only Rs ${params.received} was received — Rs ${params.shortfall} is still short. Tap to see the details.`
+            : 'The client paid less than the agreed total. Tap to see the details.',
       };
     case NOTIFICATION_KEYS.WORKER_VERIFIED:
       return {

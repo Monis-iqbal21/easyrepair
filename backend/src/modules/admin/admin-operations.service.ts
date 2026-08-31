@@ -2,9 +2,12 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
+  Inject,
   Injectable,
+  Logger,
   NotFoundException,
   Optional,
+  forwardRef,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
@@ -35,12 +38,27 @@ import {
   UpdateSettlementCaseDto,
 } from './dto/admin-operations.dto';
 import type { ClientCashPaymentConfirmationDto } from '../bookings/dto/confirm-cash-payment.dto';
+import type { UstaadPaymentReportDto } from '../workers/dto/report-received-payment.dto';
+import {
+  NOTIFICATION_KEYS,
+  getNotificationTemplate,
+} from '../notifications/notification-templates';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class AdminOperationsService {
+  private readonly logger = new Logger(AdminOperationsService.name);
+
   constructor(
     private readonly repository: AdminOperationsRepository,
     @Optional() private readonly config?: ConfigService,
+    // Optional + forwardRef: the settlement service sits underneath both the
+    // Admin and the Booking/Worker routes, and NotificationsModule reaches
+    // back here through Chat → Bookings. Optional also keeps the existing
+    // unit tests constructing this service with the repository alone.
+    @Optional()
+    @Inject(forwardRef(() => NotificationsService))
+    private readonly notifications?: NotificationsService,
   ) {}
 
   async listBookings(query: ListAdminBookingsQueryDto) {
@@ -113,6 +131,162 @@ export class AdminOperationsService {
         }
       }
       throw error;
+    }
+  }
+
+  /**
+   * FIX 3 — "kam paisa mila". The assigned Ustaad declares the cash they
+   * actually received for their own completed job.
+   *
+   * Deliberately the SAME `persistSettlement` path the Client confirmation
+   * and the Admin correction use, only with `SettlementSource.USTAAD` (an
+   * enum member the schema has always carried for exactly this). There is no
+   * second payment model and no second place money is computed: the app posts
+   * one fact, `settleBooking` allocates it, and the shortfall / settlement
+   * case fall out of the same waterfall as before.
+   *
+   * Idempotent in the same shape as the Client path — a retry of the exact
+   * same declaration returns the winning settlement instead of a conflict.
+   */
+  async reportUstaadCashPayment(
+    bookingId: string,
+    receivedCashTotal: number,
+    workerUserId: string,
+  ): Promise<UstaadPaymentReportDto> {
+    const booking = await this.repository.findBooking(bookingId);
+    if (!booking) throw new NotFoundException('Booking not found');
+    if (booking.workerProfile?.user?.id !== workerUserId) {
+      throw new ForbiddenException('Not your job');
+    }
+
+    const current = booking.settlements.find((row) => row.isCurrent);
+    if (current) {
+      return this.resolveUstaadReportRetry(current, receivedCashTotal);
+    }
+    if (booking.status !== BookingStatus.COMPLETED) {
+      throw new BadRequestException(
+        'Payment can only be reported for a completed job',
+      );
+    }
+
+    try {
+      const created = await this.persistSettlement(
+        bookingId,
+        { received: receivedCashTotal, source: SettlementSource.USTAAD },
+        workerUserId,
+      );
+      return this.toUstaadReport(created);
+    } catch (error) {
+      // Same partial-unique-index race the mobile Client path can lose.
+      if (error instanceof ConflictException) {
+        const refreshed = await this.repository.findBooking(bookingId);
+        const winner = refreshed?.settlements.find((row) => row.isCurrent);
+        if (winner) {
+          return this.resolveUstaadReportRetry(winner, receivedCashTotal);
+        }
+      }
+      throw error;
+    }
+  }
+
+  private resolveUstaadReportRetry(
+    settlement: any,
+    receivedCashTotal: number,
+  ): UstaadPaymentReportDto {
+    if (settlement.received === receivedCashTotal) {
+      // Same number, whoever recorded it first — the Ustaad's declaration is
+      // already the truth on file, so the retry succeeds.
+      return this.toUstaadReport(settlement);
+    }
+    throw new ConflictException(
+      'This job already has a recorded payment of a different amount; Admin correction is required',
+    );
+  }
+
+  private toUstaadReport(settlement: any): UstaadPaymentReportDto {
+    return {
+      settlementId: settlement.id,
+      bookingId: settlement.bookingId,
+      expectedTotal: settlement.expectedTotal,
+      receivedCashTotal: settlement.received,
+      partsPaid: settlement.partsPaid,
+      labourPaid: settlement.labourPaid,
+      feePaid: settlement.feePaid,
+      commission: settlement.commission,
+      munafa: settlement.munafa,
+      shortfall: settlement.shortfall,
+      recordedAt: settlement.settledAt,
+      isCurrent: true,
+    };
+  }
+
+  /**
+   * FIX 2 — tell the Ustaad what the client actually paid.
+   *
+   * Fired only for a settlement the Ustaad did NOT record themselves (a
+   * Client confirmation or an Admin correction); self-reporting "kam paisa
+   * mila" must not push a notification back at the person who just typed it.
+   *
+   * Idempotency is the notification table's own, via
+   * `wasAlreadyNotified(userId, bookingId, eventKey)` — the same dedupe every
+   * other booking-lifecycle push uses. A retried client confirmation, a queue
+   * redelivery or a double tap therefore all collapse to one push. Paid and
+   * short are distinct event keys on purpose: a short payment later corrected
+   * to paid-in-full is a genuinely new thing to say, and dedupes only against
+   * its own key.
+   *
+   * Never throws — a settlement is authoritative money and must not fail
+   * because a push did.
+   */
+  private async notifyWorkerOfPayment(
+    booking: any,
+    settlement: any,
+  ): Promise<void> {
+    const workerUserId = booking?.workerProfile?.user?.id;
+    if (!this.notifications || !workerUserId) return;
+
+    const shortfall = settlement?.shortfall ?? 0;
+    const eventKey =
+      shortfall > 0
+        ? NOTIFICATION_KEYS.PAYMENT_SHORT
+        : NOTIFICATION_KEYS.PAYMENT_RECEIVED;
+
+    try {
+      const already = await this.notifications.wasAlreadyNotified(
+        workerUserId,
+        booking.id,
+        eventKey,
+      );
+      if (already) return;
+
+      const { title, body } = getNotificationTemplate(eventKey, {
+        received: settlement.received,
+        shortfall,
+        expected: settlement.expectedTotal,
+      });
+
+      await this.notifications.notify({
+        userId: workerUserId,
+        eventKey,
+        title,
+        body,
+        bookingId: booking.id,
+        // Same worker deep link every other job notification uses, so an old
+        // APK that has never heard of these two event keys still lands on the
+        // right screen.
+        route: `/worker/job/${booking.id}`,
+        entityType: 'booking',
+        entityId: booking.id,
+        payload: {
+          receivedAmount: settlement.received,
+          expectedAmount: settlement.expectedTotal,
+          shortfall,
+        },
+      });
+    } catch (err) {
+      this.logger.warn(
+        `Payment notification failed for bookingId=${booking.id}: ${err}`,
+      );
     }
   }
 
@@ -214,7 +388,7 @@ export class AdminOperationsService {
       (type): type is SettlementCaseType => type !== 'AUTO_SETTLE',
     );
     try {
-      return await this.repository.createSettlement(
+      const settlement = await this.repository.createSettlement(
         {
           bookingId,
           workerProfileId: booking.workerProfileId,
@@ -238,6 +412,14 @@ export class AdminOperationsService {
         caseTypes,
         actorUserId,
       );
+      // FIX 2 — one place every authoritative settlement write passes
+      // through, so a Client confirmation and an Admin correction both tell
+      // the Ustaad the same truth. Skipped when the Ustaad is the actor:
+      // they are the one who just typed the amount.
+      if (actorUserId !== booking.workerProfile?.user?.id) {
+        await this.notifyWorkerOfPayment(booking, settlement);
+      }
+      return settlement;
     } catch (error: any) {
       if (
         error instanceof SettlementWriteConflictError ||

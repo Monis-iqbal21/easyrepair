@@ -130,6 +130,7 @@ describe('WorkersController.getAgreementTemplates', () => {
       controller: new WorkersController(
         workersService as unknown as WorkersService,
         {} as never,
+        {} as never,
       ),
       workersService,
     };
@@ -184,7 +185,11 @@ describe('the agreement-templates payload', () => {
       {} as never,
       {} as never,
     );
-    const controller = new WorkersController(service, {} as never);
+    const controller = new WorkersController(
+      service,
+      {} as never,
+      {} as never,
+    );
     return controller.getAgreementTemplates({ id: 'user-1' }, appLocale);
   }
 

@@ -1273,5 +1273,19 @@
   "timelineWaitingForUstaadTitle": "Ustaad ka intezaar",
   "timelineWaitingForUstaadBody": "Jaise hi aap is kaam ke liye Ustaad hire karenge, kaam shuru ho jayega.",
   "ustaadIdentityTitle": "Shanakhti tafseelat",
-  "ustaadLiveSelfieSubtitle": "Abhi lein — chehra saaf nazar aana chahiye"
+  "ustaadLiveSelfieSubtitle": "Abhi lein — chehra saaf nazar aana chahiye",
+  "reportDetailsHelper": "Mukhtasar tafseel se hamari team aap ki shikayat par jald action le sakti hai.",
+  "reportDetailsRequiredError": "Barae meherbani masla kam az kam 10 harf mein bayan karein.",
+  "workerPaymentPartsLabel": "Purza jaat ki raqam",
+  "workerPaymentLabourLabel": "Mazdoori wasool",
+  "workerPaymentAwaitingTitle": "Adaigi abhi darj nahi hui",
+  "workerPaymentAwaitingBody": "Raqam darj hotay hi aap ko maloom ho jaye ga kitni raqam wasool hui.",
+  "workerReportPaymentAction": "Kam paisa mila?",
+  "workerReportPaymentTitle": "Aap ko asal mein kitni raqam mili?",
+  "workerReportPaymentHelper": "Jo cash customer ne diya wo likhein. Baqi hisaab HandyGo khud kare ga.",
+  "workerReportPaymentFieldLabel": "Wasool shuda raqam",
+  "workerReportPaymentInvalidError": "Sifar ya us se zyada poore rupay ki raqam likhein.",
+  "workerReportPaymentSubmit": "Adaigi darj karein",
+  "workerReportPaymentSuccess": "Adaigi darj ho gayi. Baqi raqam ke liye HandyGo rabta kare ga.",
+  "workerReportPaymentFailed": "Adaigi darj nahi ho saki. Dobara koshish karein."
 }

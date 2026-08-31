@@ -287,6 +287,15 @@ class BookingModel {
   final double? expectedAmount;
   final double? remainingAmount;
 
+  /// Worker-only settlement allocation — the Ustaad's own money, so unlike
+  /// the four fields above these are never sent to a client. All null until a
+  /// settlement exists. See WorkerJobResponseDto.
+  final double? settlementPartsPaid;
+  final double? settlementLabourPaid;
+  final double? settlementFeePaid;
+  final double? settlementCommission;
+  final double? settlementMunafa;
+
   /// My Jobs → Applied/Bids only — this worker's OWN bid outcome on the job,
   /// which is independent of the booking's status (a REJECTED bid on an
   /// ACCEPTED booking means someone else was hired). Null on every other
@@ -354,6 +363,11 @@ class BookingModel {
     this.receivedAmount,
     this.expectedAmount,
     this.remainingAmount,
+    this.settlementPartsPaid,
+    this.settlementLabourPaid,
+    this.settlementFeePaid,
+    this.settlementCommission,
+    this.settlementMunafa,
     this.myBidStatus,
     this.myBidAmount,
   });
@@ -486,6 +500,11 @@ class BookingModel {
       receivedAmount: (json['receivedAmount'] as num?)?.toDouble(),
       expectedAmount: (json['expectedAmount'] as num?)?.toDouble(),
       remainingAmount: (json['remainingAmount'] as num?)?.toDouble(),
+      settlementPartsPaid: (json['settlementPartsPaid'] as num?)?.toDouble(),
+      settlementLabourPaid: (json['settlementLabourPaid'] as num?)?.toDouble(),
+      settlementFeePaid: (json['settlementFeePaid'] as num?)?.toDouble(),
+      settlementCommission: (json['settlementCommission'] as num?)?.toDouble(),
+      settlementMunafa: (json['settlementMunafa'] as num?)?.toDouble(),
       myBidStatus: json['myBidStatus'] as String?,
       myBidAmount: (json['myBidAmount'] as num?)?.toDouble(),
     );
@@ -577,6 +596,11 @@ class BookingModel {
       receivedAmount: receivedAmount,
       expectedAmount: expectedAmount,
       remainingAmount: remainingAmount,
+      settlementPartsPaid: settlementPartsPaid,
+      settlementLabourPaid: settlementLabourPaid,
+      settlementFeePaid: settlementFeePaid,
+      settlementCommission: settlementCommission,
+      settlementMunafa: settlementMunafa,
       myBidStatus: BidOutcomeX.fromRaw(myBidStatus),
       myBidAmount: myBidAmount,
     );

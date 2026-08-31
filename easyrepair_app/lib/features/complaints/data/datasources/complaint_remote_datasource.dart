@@ -39,12 +39,13 @@ class ComplaintRemoteDataSourceImpl implements ComplaintRemoteDataSource {
     String? otherText,
   }) async {
     try {
+      // `otherText` is the report itself, not an OTHER-only extra: the
+      // server requires it for every complaint, so it always goes on the
+      // wire. Sent trimmed to match the server's own trim-then-validate.
       final body = <String, dynamic>{
         'issueTypes': issueTypes.map((issue) => issue.apiValue).toList(),
+        'otherText': otherText?.trim() ?? '',
       };
-      if (issueTypes.contains(ComplaintIssueType.other)) {
-        body['otherText'] = otherText?.trim();
-      }
       final response = await _dio.post(
         '/complaints/booking/$bookingId',
         data: body,
