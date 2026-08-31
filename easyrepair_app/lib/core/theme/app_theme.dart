@@ -72,8 +72,10 @@ class AppTheme {
       inverseSurface: c.textPrimary,
       onInverseSurface: c.background,
       inversePrimary: c.softTeal,
-      shadow: const Color(0xFF000000),
-      scrim: const Color(0xFF000000),
+      // Both come from the palette rather than a literal black, so the one
+      // place that decides HandyGo's colours also decides Material's.
+      shadow: c.scrim,
+      scrim: c.scrim,
     );
 
     return ThemeData(

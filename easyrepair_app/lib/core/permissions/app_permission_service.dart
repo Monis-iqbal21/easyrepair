@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../core/l10n/l10n_extensions.dart';
+import '../theme/app_semantic_colors.dart';
 
 /// Requests camera, microphone, and location-when-in-use permissions once per
 /// app session. Call [maybeRequest] after the user is authenticated.
@@ -67,10 +68,9 @@ class AppPermissionService {
 class _PermissionExplainDialog extends StatelessWidget {
   const _PermissionExplainDialog();
 
-  static const _brand = Color(0xFFDB6234);
-
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       title: Text(
@@ -86,14 +86,14 @@ class _PermissionExplainDialog extends StatelessWidget {
           onPressed: () => Navigator.pop(context, false),
           child: Text(
             context.l10n.commonNotNow,
-            style: TextStyle(color: Color(0xFF6B7280)),
+            style: TextStyle(color: c.textSecondary),
           ),
         ),
         ElevatedButton(
           onPressed: () => Navigator.pop(context, true),
           style: ElevatedButton.styleFrom(
-            backgroundColor: _brand,
-            foregroundColor: Colors.white,
+            backgroundColor: c.primary,
+            foregroundColor: c.onPrimary,
             elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
@@ -111,10 +111,9 @@ class _PermissionExplainDialog extends StatelessWidget {
 class _OpenSettingsDialog extends StatelessWidget {
   const _OpenSettingsDialog();
 
-  static const _brand = Color(0xFFDB6234);
-
   @override
   Widget build(BuildContext context) {
+    final c = context.semanticColors;
     return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       title: Text(
@@ -130,7 +129,7 @@ class _OpenSettingsDialog extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
           child: Text(
             context.l10n.commonNotNow,
-            style: TextStyle(color: Color(0xFF6B7280)),
+            style: TextStyle(color: c.textSecondary),
           ),
         ),
         ElevatedButton(
@@ -139,8 +138,8 @@ class _OpenSettingsDialog extends StatelessWidget {
             Navigator.pop(context);
           },
           style: ElevatedButton.styleFrom(
-            backgroundColor: _brand,
-            foregroundColor: Colors.white,
+            backgroundColor: c.primary,
+            foregroundColor: c.onPrimary,
             elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
