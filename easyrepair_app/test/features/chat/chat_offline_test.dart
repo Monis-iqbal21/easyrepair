@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
@@ -34,8 +35,9 @@ class _FakeAdapter implements HttpClientAdapter {
     RequestOptions options,
     Stream<Uint8List>? requestStream,
     Future<void>? cancelFuture,
-  ) {
+  ) async {
     callCount++;
+    await requestStream?.drain<void>();
     return handler(options);
   }
 }
@@ -168,23 +170,57 @@ void main() {
       final result = await repo.getConversations();
 
       expect(result.isLeft(), isTrue);
-      result.fold(
-        (f) {
-          expect(f, isA<NetworkFailure>());
-          expect(f.code, FailureCode.noInternet);
-        },
-        (_) => fail('expected a failure with nothing cached'),
-      );
+      result.fold((f) {
+        expect(f, isA<NetworkFailure>());
+        expect(f.code, FailureCode.noInternet);
+      }, (_) => fail('expected a failure with nothing cached'));
     });
   });
 
   group('chat offline send', () {
+    test(
+      'voice upload includes the measured duration in multipart data',
+      () async {
+        final tempDir = await Directory.systemTemp.createTemp(
+          'chat-voice-test-',
+        );
+        addTearDown(() => tempDir.delete(recursive: true));
+        final voiceFile = File('${tempDir.path}/voice.m4a');
+        await voiceFile.writeAsBytes([1, 2, 3]);
+
+        final repo = repoWith((options) async {
+          expect(options.path, '/chat/conversations/c1/messages/voice');
+          final formData = options.data as FormData;
+          expect(
+            Map<String, String>.fromEntries(formData.fields)['durationSeconds'],
+            '3.275',
+          );
+          return _jsonBody(
+            201,
+            _messageJson
+                .replaceFirst('"type": "TEXT"', '"type": "VOICE"')
+                .replaceFirst('"text": "Hello",', '"durationSeconds": 3.275,'),
+          );
+        });
+
+        final result = await repo.sendVoiceMessage('c1', voiceFile.path, 3.275);
+
+        result.fold(
+          (failure) => fail('expected voice upload success: $failure'),
+          (message) => expect(message.durationSeconds, 3.275),
+        );
+      },
+    );
+
     test('sending while offline is blocked before ever reaching the network '
         '— it never pretends success', () async {
       final adapter = _FakeAdapter((options) async {
         fail('the network must never be reached while offline');
       });
-      final repo = repoWith((_) async => throw StateError('unused'), capture: adapter);
+      final repo = repoWith(
+        (_) async => throw StateError('unused'),
+        capture: adapter,
+      );
 
       ConnectivityService.instance.debugIsOnline = false;
 
@@ -203,7 +239,10 @@ void main() {
       final adapter = _FakeAdapter(
         (options) async => _jsonBody(200, _messageJson),
       );
-      final repo = repoWith((_) async => throw StateError('unused'), capture: adapter);
+      final repo = repoWith(
+        (_) async => throw StateError('unused'),
+        capture: adapter,
+      );
 
       ConnectivityService.instance.debugIsOnline = false;
       final blocked = await repo.sendMessage('c1', 'hi there');
@@ -216,7 +255,11 @@ void main() {
       result.fold((_) => fail('expected success once online'), (message) {
         expect(message.id, 'm1');
       });
-      expect(adapter.callCount, 1, reason: 'only the online attempt hit the network');
+      expect(
+        adapter.callCount,
+        1,
+        reason: 'only the online attempt hit the network',
+      );
     });
   });
 }

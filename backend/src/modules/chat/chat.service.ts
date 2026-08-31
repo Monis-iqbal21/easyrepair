@@ -299,10 +299,11 @@ export class ChatService {
     );
     if (!conversation) return null;
 
-    const existing = await this.chatRepository.findMessageByConversationAndBooking(
-      conversation.id,
-      params.bookingId,
-    );
+    const existing =
+      await this.chatRepository.findMessageByConversationAndBooking(
+        conversation.id,
+        params.bookingId,
+      );
     if (existing) return this._toMessageDto(existing);
 
     const message = await this.chatRepository.createSystemMessage({
@@ -440,7 +441,11 @@ export class ChatService {
   }
 
   /** Marks the requester's messages as seen once an admin opens the thread. */
-  async markSupportConversationRead(conversationId: string): Promise<number> {
+  async markSupportConversationRead(conversationId: string): Promise<{
+    count: number;
+    messageIds: string[];
+    seenAt: Date;
+  }> {
     await this._assertSupportConversation(conversationId);
     const supportUserId = await this.supportUserService.getSupportUserId();
     return this.chatRepository.markAllSeenFrom(conversationId, supportUserId);
@@ -636,6 +641,7 @@ export class ChatService {
     buffer: Buffer,
     originalName: string,
     fileMimeType?: string,
+    durationSeconds?: number,
   ): Promise<MessageResponseDto> {
     const conversation =
       await this.chatRepository.findConversationById(conversationId);
@@ -660,6 +666,7 @@ export class ChatService {
       mimeType: uploaded.mimeType,
       fileName: uploaded.fileName,
       sizeBytes: uploaded.sizeBytes,
+      durationSeconds,
     });
 
     const receiverId =

@@ -199,17 +199,29 @@ export class ChatRepository {
   async markAllSeenFrom(
     conversationId: string,
     readerUserId: string,
-  ): Promise<number> {
-    const res = await this.prisma.message.updateMany({
-      where: {
-        conversationId,
-        senderUserId: { not: readerUserId },
-        seenAt: null,
-        deletedAt: null,
-      },
-      data: { seenAt: new Date() },
+  ): Promise<{ count: number; messageIds: string[]; seenAt: Date }> {
+    const seenAt = new Date();
+    return this.prisma.$transaction(async (tx) => {
+      const unread = await tx.message.findMany({
+        where: {
+          conversationId,
+          senderUserId: { not: readerUserId },
+          seenAt: null,
+          deletedAt: null,
+        },
+        select: { id: true },
+      });
+      if (unread.length === 0) {
+        return { count: 0, messageIds: [], seenAt };
+      }
+
+      const messageIds = unread.map((message) => message.id);
+      const result = await tx.message.updateMany({
+        where: { id: { in: messageIds }, seenAt: null },
+        data: { seenAt },
+      });
+      return { count: result.count, messageIds, seenAt };
     });
-    return res.count;
   }
 
   /** Minimal, deliberately non-sensitive detail about a support requester. */
@@ -313,7 +325,10 @@ export class ChatRepository {
    * idempotency key. Complaint.bookingId is itself `@unique`, so one booking
    * means one complaint means at most one such message.
    */
-  findMessageByConversationAndBooking(conversationId: string, bookingId: string) {
+  findMessageByConversationAndBooking(
+    conversationId: string,
+    bookingId: string,
+  ) {
     return this.prisma.message.findFirst({
       where: { conversationId, bookingId },
       orderBy: { createdAt: 'asc' },
@@ -392,18 +407,22 @@ export class ChatRepository {
    *   - seenAt must still be null (idempotent)
    */
   async markMessageSeen(
+    conversationId: string,
     messageId: string,
     seenByUserId: string,
     seenAt: Date,
-  ): Promise<void> {
-    await this.prisma.message.updateMany({
+  ): Promise<boolean> {
+    const result = await this.prisma.message.updateMany({
       where: {
         id: messageId,
+        conversationId,
         senderUserId: { not: seenByUserId },
         seenAt: null,
+        deletedAt: null,
       },
       data: { seenAt },
     });
+    return result.count === 1;
   }
 
   /**
@@ -465,6 +484,7 @@ export class ChatRepository {
     mimeType?: string;
     fileName?: string;
     sizeBytes?: number;
+    durationSeconds?: number;
   }) {
     const preview = '🎙️ Voice message';
     const now = new Date();
@@ -480,6 +500,7 @@ export class ChatRepository {
           mimeType: data.mimeType ?? null,
           fileName: data.fileName ?? null,
           sizeBytes: data.sizeBytes ?? null,
+          durationSeconds: data.durationSeconds ?? null,
         },
       }),
       this.prisma.conversation.update({

@@ -48,7 +48,11 @@ describe('ChatService — HandyGo Support', () => {
         createdAt: new Date(),
         updatedAt: new Date(),
       }),
-      markAllSeenFrom: jest.fn().mockResolvedValue(3),
+      markAllSeenFrom: jest.fn().mockResolvedValue({
+        count: 3,
+        messageIds: ['msg-1', 'msg-2', 'msg-3'],
+        seenAt: new Date('2026-08-31T10:00:00.000Z'),
+      }),
       findUserSummary: jest.fn().mockResolvedValue({
         id: 'client-user-1',
         role: Role.CLIENT,
@@ -372,7 +376,12 @@ describe('ChatService — HandyGo Support', () => {
     it('marks the requester messages seen when a thread is opened', async () => {
       const count = await service.markSupportConversationRead('conv-1');
 
-      expect(count).toBe(3);
+      expect(count).toEqual(
+        expect.objectContaining({
+          count: 3,
+          messageIds: ['msg-1', 'msg-2', 'msg-3'],
+        }),
+      );
       expect(chatRepository.markAllSeenFrom).toHaveBeenCalledWith(
         'conv-1',
         SUPPORT_USER_ID,

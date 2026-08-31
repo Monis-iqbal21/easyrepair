@@ -48,7 +48,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * its participants. Resolved here (rather than via ChatService) so the
    * gateway stays free of a service dependency cycle.
    */
-  private async _isSupportConversation(conversationId: string): Promise<boolean> {
+  private async _isSupportConversation(
+    conversationId: string,
+  ): Promise<boolean> {
     try {
       const participants =
         await this.chatRepository.findConversationParticipants(conversationId);
@@ -90,7 +92,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       // ask for this room. Mirrors SUPPORT_ROLES in support.controller.ts.
       if (SUPPORT_SOCKET_ROLES.includes(payload.role)) {
         await socket.join(SUPPORT_INBOX_ROOM);
-        this.logger.log(`[chat] admin joined support inbox userId=${payload.sub}`);
+        this.logger.log(
+          `[chat] admin joined support inbox userId=${payload.sub}`,
+        );
       }
 
       this.logger.log(`[chat] connected userId=${payload.sub}`);
@@ -175,20 +179,35 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       if (!isParticipant) return;
 
       const seenAt = new Date();
-      await this.chatRepository.markMessageSeen(
+      const marked = await this.chatRepository.markMessageSeen(
+        payload.conversationId,
         payload.messageId,
         userId,
         seenAt,
       );
+      if (!marked) return;
 
-      this.server
-        .to(`conversation:${payload.conversationId}`)
-        .emit('message_seen', {
-          messageId: payload.messageId,
-          seenAt: seenAt.toISOString(),
-        });
+      this.broadcastMessagesSeen(
+        payload.conversationId,
+        [payload.messageId],
+        seenAt,
+      );
     } catch (err) {
       this.logger.warn(`[chat] mark_seen failed: ${(err as Error)?.message}`);
+    }
+  }
+
+  /** Reuses the established message_seen event for one or more saved receipts. */
+  broadcastMessagesSeen(
+    conversationId: string,
+    messageIds: string[],
+    seenAt: Date,
+  ): void {
+    for (const messageId of messageIds) {
+      this.server.to(`conversation:${conversationId}`).emit('message_seen', {
+        messageId,
+        seenAt: seenAt.toISOString(),
+      });
     }
   }
 

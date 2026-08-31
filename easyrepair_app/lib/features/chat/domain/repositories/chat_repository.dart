@@ -12,11 +12,12 @@ abstract class ChatRepository {
   Future<Either<Failure, ConversationEntity>> getOrCreateConversationForBooking(
     String bookingId,
   );
+
   /// Guarantees the caller's permanent HandyGo Support thread exists.
   /// Idempotent — repeated calls never create a second conversation.
   Future<Either<Failure, void>> ensureSupportConversation();
   Future<Either<Failure, CachedResult<List<ConversationEntity>>>>
-      getConversations();
+  getConversations();
   Future<Either<Failure, CachedResult<List<MessageEntity>>>> getMessages(
     String conversationId, {
     int limit,
@@ -34,6 +35,7 @@ abstract class ChatRepository {
   Future<Either<Failure, MessageEntity>> sendVoiceMessage(
     String conversationId,
     String filePath,
+    double durationSeconds,
   );
   Future<Either<Failure, MessageEntity>> sendLocationMessage(
     String conversationId,

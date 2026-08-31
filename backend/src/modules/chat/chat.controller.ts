@@ -236,7 +236,22 @@ export class ChatController {
       }),
     )
     file: Express.Multer.File,
+    @Body('durationSeconds') durationSecondsRaw?: string,
   ) {
+    let durationSeconds: number | undefined;
+    if (durationSecondsRaw != null && durationSecondsRaw.trim() !== '') {
+      durationSeconds = Number(durationSecondsRaw);
+      if (
+        !Number.isFinite(durationSeconds) ||
+        durationSeconds <= 0 ||
+        durationSeconds > 60 * 60
+      ) {
+        throw new BadRequestException(
+          'durationSeconds must be a positive number no greater than 3600.',
+        );
+      }
+    }
+
     const message = await this.chatService.sendVoiceMessage(
       user.id,
       user.role,
@@ -244,6 +259,7 @@ export class ChatController {
       file.buffer,
       file.originalname,
       file.mimetype,
+      durationSeconds,
     );
     void this.chatGateway.broadcastNewMessage(id, message);
     return message;

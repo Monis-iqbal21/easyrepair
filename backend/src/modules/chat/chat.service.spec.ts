@@ -1,4 +1,5 @@
 import { ForbiddenException } from '@nestjs/common';
+import { MessageType, Role } from '@prisma/client';
 import { ChatService } from './chat.service';
 
 describe('ChatService.getOrCreateConversation', () => {
@@ -30,7 +31,11 @@ describe('ChatService.getOrCreateConversation', () => {
         },
       },
       clientUser: {
-        clientProfile: { firstName: 'Sara', lastName: 'Ahmed', avatarUrl: null },
+        clientProfile: {
+          firstName: 'Sara',
+          lastName: 'Ahmed',
+          avatarUrl: null,
+        },
       },
       ...overrides,
     };
@@ -73,7 +78,9 @@ describe('ChatService.getOrCreateConversation', () => {
     );
 
     expect(result.id).toBe('conv-1');
-    expect(bookingsService.assertClientCanChatWithWorker).not.toHaveBeenCalled();
+    expect(
+      bookingsService.assertClientCanChatWithWorker,
+    ).not.toHaveBeenCalled();
     expect(chatRepository.createConversation).not.toHaveBeenCalled();
   });
 
@@ -113,6 +120,80 @@ describe('ChatService.getOrCreateConversation', () => {
   });
 });
 
+describe('ChatService.sendVoiceMessage', () => {
+  it('passes duration to persistence and returns it in the message response', async () => {
+    const conversation = {
+      id: 'conv-voice',
+      clientUserId: 'client-1',
+      workerUserId: 'worker-1',
+      clientUser: {
+        clientProfile: { firstName: 'Sara', lastName: 'Khan' },
+      },
+      workerUser: {
+        workerProfile: { firstName: 'Ali', lastName: 'Khan' },
+      },
+    };
+    const chatRepository = {
+      findConversationById: jest.fn().mockResolvedValue(conversation),
+      createVoiceMessage: jest.fn().mockImplementation(async (data) => ({
+        id: 'message-voice',
+        conversationId: data.conversationId,
+        senderUserId: data.senderUserId,
+        senderRole: data.senderRole,
+        type: MessageType.VOICE,
+        text: null,
+        mediaUrl: data.mediaUrl,
+        storageKey: data.storageKey,
+        thumbnailUrl: null,
+        mimeType: data.mimeType,
+        fileName: data.fileName,
+        sizeBytes: data.sizeBytes,
+        durationSeconds: data.durationSeconds,
+        latitude: null,
+        longitude: null,
+        bookingId: null,
+        replyToMessageId: null,
+        editedAt: null,
+        deletedAt: null,
+        seenAt: null,
+        createdAt: new Date('2026-08-31T10:00:00.000Z'),
+        updatedAt: new Date('2026-08-31T10:00:00.000Z'),
+      })),
+    };
+    const storageService = {
+      uploadFile: jest.fn().mockResolvedValue({
+        url: 'https://cdn.invalid/voice.m4a',
+        key: 'chat/voice.m4a',
+        mimeType: 'audio/m4a',
+        fileName: 'voice.m4a',
+        sizeBytes: 1234,
+      }),
+    };
+    const service = new ChatService(
+      chatRepository as any,
+      storageService as any,
+      { notify: jest.fn() } as any,
+      {} as any,
+      { displayName: 'HandyGo Support' } as any,
+    );
+
+    const response = await service.sendVoiceMessage(
+      'client-1',
+      Role.CLIENT,
+      'conv-voice',
+      Buffer.from('voice'),
+      'voice.m4a',
+      'audio/m4a',
+      6.425,
+    );
+
+    expect(chatRepository.createVoiceMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ durationSeconds: 6.425 }),
+    );
+    expect(response.durationSeconds).toBe(6.425);
+  });
+});
+
 describe('BookingsService.assertClientCanChatWithWorker', () => {
   // These scenarios exercise the shared eligibility method directly (the
   // single source of truth ChatService delegates to), covering #4-#10, #13.
@@ -128,7 +209,10 @@ describe('BookingsService.assertClientCanChatWithWorker', () => {
     id: 'booking-1',
     clientProfile: { userId: 'client-user-1' },
     workerProfileId: null as string | null,
-    inspectionReport: null as { workerProfile: { id: string } | null; decisionStatus: string } | null,
+    inspectionReport: null as {
+      workerProfile: { id: string } | null;
+      decisionStatus: string;
+    } | null,
     status: 'PENDING',
     lane: 'STANDARD',
     categoryId: 'cat-1',
@@ -253,7 +337,11 @@ describe('BookingsService.assertClientCanChatWithWorker', () => {
     });
 
     await expect(
-      service.assertClientCanChatWithWorker('client-user-1', 'booking-1', 'worker-1'),
+      service.assertClientCanChatWithWorker(
+        'client-user-1',
+        'booking-1',
+        'worker-1',
+      ),
     ).resolves.toBeUndefined();
   });
 
@@ -332,7 +420,11 @@ describe('BookingsService.assertClientCanChatWithWorker', () => {
     });
 
     await expect(
-      service.assertClientCanChatWithWorker('client-user-1', 'booking-1', 'worker-1'),
+      service.assertClientCanChatWithWorker(
+        'client-user-1',
+        'booking-1',
+        'worker-1',
+      ),
     ).resolves.toBeUndefined();
   });
 });

@@ -109,8 +109,13 @@ export class SupportController {
   @Post('conversations/:id/read')
   @HttpCode(HttpStatus.OK)
   async markRead(@Param('id') conversationId: string) {
-    const updated =
+    const receipt =
       await this.chatService.markSupportConversationRead(conversationId);
-    return { success: true, markedSeen: updated };
+    this.chatGateway.broadcastMessagesSeen(
+      conversationId,
+      receipt.messageIds,
+      receipt.seenAt,
+    );
+    return { success: true, markedSeen: receipt.count };
   }
 }

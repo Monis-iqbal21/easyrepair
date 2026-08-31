@@ -26,7 +26,9 @@ class ChatRepositoryImpl implements ChatRepository {
     } on Failure catch (f) {
       return Left(f);
     } catch (e) {
-      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
+      return Left(
+        ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()),
+      );
     }
   }
 
@@ -35,13 +37,16 @@ class ChatRepositoryImpl implements ChatRepository {
     String bookingId,
   ) async {
     try {
-      final model =
-          await _dataSource.getOrCreateConversationForBooking(bookingId);
+      final model = await _dataSource.getOrCreateConversationForBooking(
+        bookingId,
+      );
       return Right(model.toEntity());
     } on Failure catch (f) {
       return Left(f);
     } catch (e) {
-      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
+      return Left(
+        ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()),
+      );
     }
   }
 
@@ -53,23 +58,29 @@ class ChatRepositoryImpl implements ChatRepository {
     } on Failure catch (f) {
       return Left(f);
     } catch (e) {
-      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
+      return Left(
+        ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()),
+      );
     }
   }
 
   @override
   Future<Either<Failure, CachedResult<List<ConversationEntity>>>>
-      getConversations() async {
+  getConversations() async {
     try {
       final result = await _dataSource.getConversations();
-      return Right(CachedResult(
-        result.data.map((m) => m.toEntity()).toList(),
-        isStale: result.isStale,
-      ));
+      return Right(
+        CachedResult(
+          result.data.map((m) => m.toEntity()).toList(),
+          isStale: result.isStale,
+        ),
+      );
     } on Failure catch (f) {
       return Left(f);
     } catch (e) {
-      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
+      return Left(
+        ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()),
+      );
     }
   }
 
@@ -85,14 +96,18 @@ class ChatRepositoryImpl implements ChatRepository {
         limit: limit,
         before: before,
       );
-      return Right(CachedResult(
-        result.data.map((m) => m.toEntity()).toList(),
-        isStale: result.isStale,
-      ));
+      return Right(
+        CachedResult(
+          result.data.map((m) => m.toEntity()).toList(),
+          isStale: result.isStale,
+        ),
+      );
     } on Failure catch (f) {
       return Left(f);
     } catch (e) {
-      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
+      return Left(
+        ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()),
+      );
     }
   }
 
@@ -109,7 +124,9 @@ class ChatRepositoryImpl implements ChatRepository {
     } on Failure catch (f) {
       return Left(f);
     } catch (e) {
-      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
+      return Left(
+        ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()),
+      );
     }
   }
 
@@ -122,13 +139,18 @@ class ChatRepositoryImpl implements ChatRepository {
     final offline = offlineActionGuard();
     if (offline != null) return Left(offline);
     try {
-      final model =
-          await _dataSource.sendMediaMessage(conversationId, filePath, mimeType);
+      final model = await _dataSource.sendMediaMessage(
+        conversationId,
+        filePath,
+        mimeType,
+      );
       return Right(model.toEntity());
     } on Failure catch (f) {
       return Left(f);
     } catch (e) {
-      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
+      return Left(
+        ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()),
+      );
     }
   }
 
@@ -136,16 +158,23 @@ class ChatRepositoryImpl implements ChatRepository {
   Future<Either<Failure, MessageEntity>> sendVoiceMessage(
     String conversationId,
     String filePath,
+    double durationSeconds,
   ) async {
     final offline = offlineActionGuard();
     if (offline != null) return Left(offline);
     try {
-      final model = await _dataSource.sendVoiceMessage(conversationId, filePath);
+      final model = await _dataSource.sendVoiceMessage(
+        conversationId,
+        filePath,
+        durationSeconds,
+      );
       return Right(model.toEntity());
     } on Failure catch (f) {
       return Left(f);
     } catch (e) {
-      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
+      return Left(
+        ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()),
+      );
     }
   }
 
@@ -167,7 +196,9 @@ class ChatRepositoryImpl implements ChatRepository {
     } on Failure catch (f) {
       return Left(f);
     } catch (e) {
-      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
+      return Left(
+        ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()),
+      );
     }
   }
 
@@ -178,13 +209,18 @@ class ChatRepositoryImpl implements ChatRepository {
     String text,
   ) async {
     try {
-      final model =
-          await _dataSource.editMessage(conversationId, messageId, text);
+      final model = await _dataSource.editMessage(
+        conversationId,
+        messageId,
+        text,
+      );
       return Right(model.toEntity());
     } on Failure catch (f) {
       return Left(f);
     } catch (e) {
-      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
+      return Left(
+        ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()),
+      );
     }
   }
 
@@ -199,7 +235,9 @@ class ChatRepositoryImpl implements ChatRepository {
     } on Failure catch (f) {
       return Left(f);
     } catch (e) {
-      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
+      return Left(
+        ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()),
+      );
     }
   }
 }

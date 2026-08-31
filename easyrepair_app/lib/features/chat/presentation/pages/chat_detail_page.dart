@@ -69,6 +69,7 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
   bool _isRecording = false;
   bool _isPaused = false;
   Duration _recordingDuration = Duration.zero;
+  final Stopwatch _recordingStopwatch = Stopwatch();
   Timer? _recordingTimer;
   String? _recordingPath;
   AudioRecorder? _recorder;
@@ -174,7 +175,6 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
       if (msg.senderUserId != currentUserId && msg.seenAt == null) {
         ChatSocketService.instance.markSeen(widget.conversationId, msg.id);
         markedAny = true;
-        break;
       }
     }
     if (markedAny) {
@@ -518,6 +518,9 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
       const RecordConfig(encoder: AudioEncoder.aacLc),
       path: _recordingPath!,
     );
+    _recordingStopwatch
+      ..reset()
+      ..start();
 
     setState(() {
       _isRecording = true;
@@ -528,7 +531,7 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
 
     _recordingTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) {
-        setState(() => _recordingDuration += const Duration(seconds: 1));
+        setState(() => _recordingDuration = _recordingStopwatch.elapsed);
       }
     });
 
@@ -553,9 +556,10 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
     if (!_isRecording || _recorder == null) return;
     if (_isPaused) {
       await _recorder!.resume();
+      _recordingStopwatch.start();
       _recordingTimer = Timer.periodic(const Duration(seconds: 1), (_) {
         if (mounted) {
-          setState(() => _recordingDuration += const Duration(seconds: 1));
+          setState(() => _recordingDuration = _recordingStopwatch.elapsed);
         }
       });
       setState(() => _isPaused = false);
@@ -563,6 +567,7 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
       _recordingTimer?.cancel();
       _recordingTimer = null;
       await _recorder!.pause();
+      _recordingStopwatch.stop();
       setState(() => _isPaused = true);
     }
   }
@@ -573,6 +578,10 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
     await _amplitudeSub?.cancel();
     _amplitudeSub = null;
 
+    _recordingStopwatch.stop();
+    final durationSeconds =
+        _recordingStopwatch.elapsedMicroseconds /
+        Duration.microsecondsPerSecond;
     final path = await _recorder?.stop();
     final filePath = path ?? _recordingPath;
 
@@ -584,8 +593,9 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
     });
 
     if (filePath != null) {
-      await _sendVoiceFile(filePath);
+      await _sendVoiceFile(filePath, durationSeconds);
     }
+    _recordingStopwatch.reset();
   }
 
   Future<void> _cancelVoiceRecording() async {
@@ -596,6 +606,9 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
 
     // cancel() stops the recorder and deletes the underlying temp file.
     await _recorder?.cancel();
+    _recordingStopwatch
+      ..stop()
+      ..reset();
 
     setState(() {
       _isRecording = false;
@@ -605,7 +618,7 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
     });
   }
 
-  Future<void> _sendVoiceFile(String path) async {
+  Future<void> _sendVoiceFile(String path, double durationSeconds) async {
     // Re-entry guard: an attachment send already in flight must never submit
     // the same recorded voice note twice from an accidental repeated tap.
     if (_isSendingAttachment) return;
@@ -613,7 +626,7 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
     try {
       final result = await ref
           .read(chatRepositoryProvider)
-          .sendVoiceMessage(widget.conversationId, path);
+          .sendVoiceMessage(widget.conversationId, path, durationSeconds);
       result.fold(
         (failure) => _showError(failureMessage(context.l10n, failure)),
         (message) {
@@ -1172,15 +1185,6 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
                           );
                         }
 
-                        int lastSeenSentIndex = -1;
-                        for (int i = messages.length - 1; i >= 0; i--) {
-                          if (messages[i].senderUserId == currentUserId &&
-                              messages[i].seenAt != null) {
-                            lastSeenSentIndex = i;
-                            break;
-                          }
-                        }
-
                         return ListView.builder(
                           controller: _scrollController,
                           padding: const EdgeInsets.symmetric(
@@ -1209,8 +1213,6 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
                                         message: message,
                                         isMe: isMe,
                                         voicePlayback: _voicePlayback,
-                                        showSeen:
-                                            isMe && index == lastSeenSentIndex,
                                         onLongPress: (msg) =>
                                             _showMessageActions(
                                               msg,
@@ -1607,7 +1609,6 @@ class _SystemMessageBubble extends StatelessWidget {
 class _MessageBubble extends StatelessWidget {
   final MessageEntity message;
   final bool isMe;
-  final bool showSeen;
   final VoicePlaybackCoordinator voicePlayback;
   final void Function(MessageEntity) onLongPress;
 
@@ -1616,7 +1617,6 @@ class _MessageBubble extends StatelessWidget {
     required this.isMe,
     required this.voicePlayback,
     required this.onLongPress,
-    this.showSeen = false,
   });
 
   @override
@@ -1655,7 +1655,7 @@ class _MessageBubble extends StatelessWidget {
               ),
               margin: EdgeInsetsDirectional.only(
                 top: 4,
-                bottom: showSeen ? 2 : 4,
+                bottom: 4,
                 start: isMe ? 48 : 0,
                 end: isMe ? 0 : 48,
               ),
@@ -1686,14 +1686,6 @@ class _MessageBubble extends StatelessWidget {
                       ),
                     ),
             ),
-            if (showSeen)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 4, right: 4),
-                child: Text(
-                  context.l10n.chatSeen,
-                  style: TextStyle(fontSize: 11, color: c.textSecondary),
-                ),
-              ),
           ],
         ),
       ),
@@ -1702,7 +1694,12 @@ class _MessageBubble extends StatelessWidget {
 
   Widget _buildContent(BuildContext context, String timeStr) {
     if (message.isDeleted) {
-      return _DeletedContent(isMe: isMe, timeStr: timeStr);
+      return _DeletedContent(
+        messageId: message.id,
+        isMe: isMe,
+        isRead: message.seenAt != null,
+        timeStr: timeStr,
+      );
     }
     switch (message.type) {
       case ChatMessageType.image:
@@ -1737,10 +1734,58 @@ class _MessageBubble extends StatelessWidget {
 
 // ── Message content widgets ────────────────────────────────────────────────────
 
-class _DeletedContent extends StatelessWidget {
-  final bool isMe;
+class _MessageTimestamp extends StatelessWidget {
+  final String messageId;
   final String timeStr;
-  const _DeletedContent({required this.isMe, required this.timeStr});
+  final bool isMe;
+  final bool isRead;
+  final Color color;
+  final double fontSize;
+
+  const _MessageTimestamp({
+    required this.messageId,
+    required this.timeStr,
+    required this.isMe,
+    required this.isRead,
+    required this.color,
+    this.fontSize = 11,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          timeStr,
+          style: TextStyle(fontSize: fontSize, color: color),
+        ),
+        if (isMe) ...[
+          const SizedBox(width: 3),
+          Icon(
+            isRead ? Icons.done_all_rounded : Icons.done_rounded,
+            key: Key('message-state-$messageId'),
+            size: fontSize + 4,
+            color: color,
+            semanticLabel: isRead ? context.l10n.chatSeen : null,
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _DeletedContent extends StatelessWidget {
+  final String messageId;
+  final bool isMe;
+  final bool isRead;
+  final String timeStr;
+  const _DeletedContent({
+    required this.messageId,
+    required this.isMe,
+    required this.isRead,
+    required this.timeStr,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1773,12 +1818,12 @@ class _DeletedContent extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 4),
-        Text(
-          timeStr,
-          style: TextStyle(
-            fontSize: 11,
-            color: isMe ? c.onPrimary.withValues(alpha: 0.65) : c.textSecondary,
-          ),
+        _MessageTimestamp(
+          messageId: messageId,
+          timeStr: timeStr,
+          isMe: isMe,
+          isRead: isRead,
+          color: isMe ? c.onPrimary.withValues(alpha: 0.65) : c.textSecondary,
         ),
       ],
     );
@@ -1825,14 +1870,14 @@ class _TextContent extends StatelessWidget {
                       : c.textSecondary,
                 ),
               ),
-            Text(
-              timeStr,
-              style: TextStyle(
-                fontSize: 11,
-                color: isMe
-                    ? c.onPrimary.withValues(alpha: 0.75)
-                    : c.textSecondary,
-              ),
+            _MessageTimestamp(
+              messageId: message.id,
+              timeStr: timeStr,
+              isMe: isMe,
+              isRead: message.seenAt != null,
+              color: isMe
+                  ? c.onPrimary.withValues(alpha: 0.75)
+                  : c.textSecondary,
             ),
           ],
         ),
@@ -1917,9 +1962,13 @@ class _ImageContent extends StatelessWidget {
                     color: c.scrim.withValues(alpha: 0.55),
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  child: Text(
-                    timeStr,
-                    style: TextStyle(fontSize: 10, color: c.onScrim),
+                  child: _MessageTimestamp(
+                    messageId: message.id,
+                    timeStr: timeStr,
+                    isMe: isMe,
+                    isRead: message.seenAt != null,
+                    color: c.onScrim,
+                    fontSize: 10,
                   ),
                 ),
               ),
@@ -2021,9 +2070,13 @@ class _VideoContent extends StatelessWidget {
                     color: c.scrim.withValues(alpha: 0.55),
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  child: Text(
-                    timeStr,
-                    style: TextStyle(fontSize: 10, color: c.onScrim),
+                  child: _MessageTimestamp(
+                    messageId: message.id,
+                    timeStr: timeStr,
+                    isMe: isMe,
+                    isRead: message.seenAt != null,
+                    color: c.onScrim,
+                    fontSize: 10,
                   ),
                 ),
               ),
@@ -2257,14 +2310,15 @@ class _VoiceContent extends StatelessWidget {
                                   : c.textSecondary,
                             ),
                           ),
-                          Text(
-                            timeStr,
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: isMe
-                                  ? c.onPrimary.withValues(alpha: 0.72)
-                                  : c.textSecondary,
-                            ),
+                          _MessageTimestamp(
+                            messageId: message.id,
+                            timeStr: timeStr,
+                            isMe: isMe,
+                            isRead: message.seenAt != null,
+                            color: isMe
+                                ? c.onPrimary.withValues(alpha: 0.72)
+                                : c.textSecondary,
+                            fontSize: 10,
                           ),
                         ],
                       ),
@@ -2399,9 +2453,13 @@ class _LocationContent extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Text(
-                      timeStr,
-                      style: TextStyle(fontSize: 10, color: c.textSecondary),
+                    _MessageTimestamp(
+                      messageId: message.id,
+                      timeStr: timeStr,
+                      isMe: isMe,
+                      isRead: message.seenAt != null,
+                      color: c.textSecondary,
+                      fontSize: 10,
                     ),
                   ],
                 ),

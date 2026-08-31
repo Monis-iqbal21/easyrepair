@@ -13,9 +13,7 @@ abstract class ChatRemoteDataSource {
     String bookingId,
     String workerProfileId,
   );
-  Future<ConversationModel> getOrCreateConversationForBooking(
-    String bookingId,
-  );
+  Future<ConversationModel> getOrCreateConversationForBooking(String bookingId);
 
   /// Idempotent on the backend — safe to call on every Chat-tab load.
   Future<void> ensureSupportConversation();
@@ -34,6 +32,7 @@ abstract class ChatRemoteDataSource {
   Future<MessageModel> sendVoiceMessage(
     String conversationId,
     String filePath,
+    double durationSeconds,
   );
   Future<MessageModel> sendLocationMessage(
     String conversationId,
@@ -45,10 +44,7 @@ abstract class ChatRemoteDataSource {
     String messageId,
     String text,
   );
-  Future<MessageModel> deleteMessage(
-    String conversationId,
-    String messageId,
-  );
+  Future<MessageModel> deleteMessage(String conversationId, String messageId);
 }
 
 class ChatRemoteDataSourceImpl implements ChatRemoteDataSource {
@@ -125,10 +121,7 @@ class ChatRemoteDataSourceImpl implements ChatRemoteDataSource {
     Future<dynamic> request() async {
       final response = await _dio.get(
         '/chat/conversations/$conversationId/messages',
-        queryParameters: {
-          'limit': limit,
-          if (before != null) 'before': before,
-        },
+        queryParameters: {'limit': limit, 'before': ?before},
       );
       return response.data['data'];
     }
@@ -165,10 +158,7 @@ class ChatRemoteDataSourceImpl implements ChatRemoteDataSource {
   }
 
   @override
-  Future<MessageModel> sendMessage(
-    String conversationId,
-    String text,
-  ) async {
+  Future<MessageModel> sendMessage(String conversationId, String text) async {
     try {
       final response = await _dio.post(
         '/chat/conversations/$conversationId/messages',
@@ -190,8 +180,9 @@ class ChatRemoteDataSourceImpl implements ChatRemoteDataSource {
     try {
       final fileName = filePath.split('/').last;
       final parts = mimeType.split('/');
-      final contentType =
-          parts.length == 2 ? MediaType(parts[0], parts[1]) : null;
+      final contentType = parts.length == 2
+          ? MediaType(parts[0], parts[1])
+          : null;
 
       final formData = FormData.fromMap({
         'file': await MultipartFile.fromFile(
@@ -216,6 +207,7 @@ class ChatRemoteDataSourceImpl implements ChatRemoteDataSource {
   Future<MessageModel> sendVoiceMessage(
     String conversationId,
     String filePath,
+    double durationSeconds,
   ) async {
     try {
       final fileName = filePath.split('/').last;
@@ -226,6 +218,7 @@ class ChatRemoteDataSourceImpl implements ChatRemoteDataSource {
           filename: fileName,
           contentType: MediaType('audio', 'm4a'),
         ),
+        'durationSeconds': durationSeconds.toStringAsFixed(3),
       });
 
       final response = await _dio.post(

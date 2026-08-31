@@ -21,9 +21,15 @@ const _bannerText =
     'Apna masla ya sawal yahan likhein. '
     'HandyGo Support aapki madad karega.';
 
-class _SignedOutAuthStateNotifier extends AuthStateNotifier {
+class _SignedInAuthStateNotifier extends AuthStateNotifier {
   @override
-  Future<UserEntity?> build() async => null;
+  Future<UserEntity?> build() async => const UserEntity(
+    id: 'me',
+    phone: '+923000000000',
+    role: 'CLIENT',
+    firstName: 'Sara',
+    lastName: 'Khan',
+  );
 }
 
 class _FakeChatRepository implements ChatRepository {
@@ -67,18 +73,23 @@ MessageEntity _message(
   String? thumbnailUrl,
   double? latitude,
   double? longitude,
+  double? durationSeconds,
+  String senderUserId = 'other',
+  String? seenAt,
 }) {
   return MessageEntity(
     id: id,
     conversationId: 'conv-1',
-    senderUserId: 'other',
-    senderRole: 'WORKER',
+    senderUserId: senderUserId,
+    senderRole: senderUserId == 'me' ? 'CLIENT' : 'WORKER',
     type: type,
     text: text,
     mediaUrl: mediaUrl,
     thumbnailUrl: thumbnailUrl,
+    durationSeconds: durationSeconds,
     latitude: latitude,
     longitude: longitude,
+    seenAt: seenAt,
     createdAt: '2026-08-26T20:00:00.000Z',
     updatedAt: '2026-08-26T20:00:00.000Z',
   );
@@ -111,6 +122,10 @@ Future<void> _pumpDetail(
   List<MessageEntity> messages = const <MessageEntity>[],
   ThemeData? theme,
 }) async {
+  // Give each call a fresh ProviderScope and ChatDetailPage state. Several
+  // tests intentionally pump multiple conversation variants in one body.
+  await tester.pumpWidget(const SizedBox.shrink());
+  await tester.pump();
   final conversation = _conversation(
     id: 'conv-1',
     name: isSupport ? 'HandyGo Support' : 'Ali',
@@ -122,7 +137,7 @@ Future<void> _pumpDetail(
         chatRepositoryProvider.overrideWithValue(
           _FakeChatRepository([conversation], messages: messages),
         ),
-        authStateProvider.overrideWith(_SignedOutAuthStateNotifier.new),
+        authStateProvider.overrideWith(_SignedInAuthStateNotifier.new),
       ],
       // Roman Urdu: this banner's wording is specified in Roman Urdu, and now
       // lives in app_ur_Latn.arb.
@@ -219,6 +234,91 @@ void main() {
     expect(find.text('Text message'), findsOneWidget);
     expect(find.byIcon(Icons.broken_image_rounded), findsOneWidget);
   });
+
+  testWidgets(
+    'voice duration is visible before playback with a safe old-message fallback',
+    (tester) async {
+      await _pumpDetail(
+        tester,
+        isSupport: false,
+        messages: [
+          _message(
+            'voice-known',
+            ChatMessageType.voice,
+            mediaUrl: 'https://example.invalid/known.m4a',
+            durationSeconds: 7.6,
+          ),
+          _message(
+            'voice-unknown',
+            ChatMessageType.voice,
+            mediaUrl: 'https://example.invalid/unknown.m4a',
+          ),
+        ],
+      );
+
+      expect(find.text('00:07'), findsOneWidget);
+      expect(find.text('--:--'), findsOneWidget);
+      expect(find.byIcon(Icons.pause_circle_filled_rounded), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'saved and read ticks render truthfully for every outgoing message type',
+    (tester) async {
+      final cases = <ChatMessageType, Map<String, Object?>>{
+        ChatMessageType.text: {'text': 'Hello'},
+        ChatMessageType.voice: {
+          'mediaUrl': 'https://example.invalid/voice.m4a',
+          'durationSeconds': 4.0,
+        },
+        ChatMessageType.image: {
+          'mediaUrl': 'https://example.invalid/photo.jpg',
+        },
+        ChatMessageType.location: {'latitude': 31.52, 'longitude': 74.35},
+      };
+
+      for (final entry in cases.entries) {
+        final id = entry.key.name;
+        await _pumpDetail(
+          tester,
+          isSupport: entry.key == ChatMessageType.text,
+          messages: [
+            _message(
+              id,
+              entry.key,
+              text: entry.value['text'] as String?,
+              mediaUrl: entry.value['mediaUrl'] as String?,
+              durationSeconds: entry.value['durationSeconds'] as double?,
+              latitude: entry.value['latitude'] as double?,
+              longitude: entry.value['longitude'] as double?,
+              senderUserId: 'me',
+              seenAt: '2026-08-31T10:01:00.000Z',
+            ),
+          ],
+        );
+
+        final tick = tester.widget<Icon>(find.byKey(Key('message-state-$id')));
+        expect(tick.icon, Icons.done_all_rounded, reason: '$id read tick');
+      }
+
+      await _pumpDetail(
+        tester,
+        isSupport: true,
+        messages: [
+          _message(
+            'saved-only',
+            ChatMessageType.text,
+            text: 'Waiting for recipient',
+            senderUserId: 'me',
+          ),
+        ],
+      );
+      final sentTick = tester.widget<Icon>(
+        find.byKey(const Key('message-state-saved-only')),
+      );
+      expect(sentTick.icon, Icons.done_rounded);
+    },
+  );
 
   testWidgets('the shared conversation has no overflow at supported widths', (
     tester,
