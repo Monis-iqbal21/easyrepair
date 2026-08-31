@@ -121,4 +121,19 @@ export default () => ({
      */
     encryptionKey: process.env.OTP_ADMIN_ENCRYPTION_KEY,
   },
+  adminReadonly: {
+    /**
+     * Machine credential for the GET-only /admin-readonly surface. Store only
+     * the SHA-256 digest in deployment config; the raw key belongs in the
+     * approved secret manager and is never committed or logged.
+     */
+    apiKeySha256: process.env.ADMIN_READONLY_API_KEY_SHA256,
+    clientId: process.env.ADMIN_READONLY_CLIENT_ID || 'admin-readonly',
+    scopes: process.env.ADMIN_READONLY_SCOPES || '',
+    expiresAt: process.env.ADMIN_READONLY_EXPIRES_AT,
+    rateLimitPerMinute: parseInt(
+      process.env.ADMIN_READONLY_RATE_LIMIT_PER_MINUTE || '120',
+      10,
+    ),
+  },
 });

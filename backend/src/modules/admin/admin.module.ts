@@ -19,13 +19,17 @@ import {
   AdminCommissionCollectionsController,
   AdminSettlementCasesController,
 } from './admin-operations.controller';
-import { AdminOperationsService } from './admin-operations.service';
 import { AdminOperationsModule } from './admin-operations.module';
 import {
   AdminOperationsScheduler,
   ADMIN_OPERATIONS_QUEUE_FACTORY,
   defaultAdminOperationsQueueFactory,
 } from './admin-operations.processor';
+import { ComplaintsModule } from '../complaints/complaints.module';
+import { AdminReadonlyController } from './admin-readonly.controller';
+import { AdminReadonlyService } from './admin-readonly.service';
+import { AdminReadonlyGuard } from './admin-readonly.guard';
+import { AdminReadonlyAuditInterceptor } from './admin-readonly-audit.interceptor';
 
 @Module({
   imports: [
@@ -33,6 +37,7 @@ import {
     NotificationsModule,
     StorageModule,
     AdminOperationsModule,
+    ComplaintsModule,
   ],
   controllers: [
     AdminController,
@@ -44,6 +49,7 @@ import {
     AdminBookingOperationsController,
     AdminSettlementCasesController,
     AdminCommissionCollectionsController,
+    AdminReadonlyController,
   ],
   providers: [
     AdminService,
@@ -52,6 +58,9 @@ import {
     AdminOtpRepository,
     AdminClientsService,
     AdminClientsRepository,
+    AdminReadonlyService,
+    AdminReadonlyGuard,
+    AdminReadonlyAuditInterceptor,
     AdminOperationsScheduler,
     {
       provide: ADMIN_OPERATIONS_QUEUE_FACTORY,

@@ -1,6 +1,7 @@
 import { plainToInstance } from 'class-transformer';
 import {
   IsNotEmpty,
+  IsDateString,
   IsNumber,
   IsOptional,
   IsString,
@@ -103,6 +104,26 @@ class EnvironmentVariables {
   @IsString()
   @IsOptional()
   OTP_ADMIN_ENCRYPTION_KEY: string;
+
+  @IsString()
+  @IsOptional()
+  ADMIN_READONLY_API_KEY_SHA256: string;
+
+  @IsString()
+  @IsOptional()
+  ADMIN_READONLY_CLIENT_ID: string;
+
+  @IsString()
+  @IsOptional()
+  ADMIN_READONLY_SCOPES: string;
+
+  @IsDateString()
+  @IsOptional()
+  ADMIN_READONLY_EXPIRES_AT: string;
+
+  @IsNumber()
+  @IsOptional()
+  ADMIN_READONLY_RATE_LIMIT_PER_MINUTE: number = 120;
 }
 
 export function validate(config: Record<string, unknown>) {
