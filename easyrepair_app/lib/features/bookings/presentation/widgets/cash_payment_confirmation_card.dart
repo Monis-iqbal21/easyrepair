@@ -12,6 +12,7 @@ import '../../../../core/utils/currency_utils.dart';
 import '../../domain/entities/booking_entity.dart';
 import '../../domain/entities/cash_payment_confirmation_entity.dart';
 import '../providers/booking_providers.dart';
+import '../providers/review_prompt_controller.dart';
 
 Future<CashPaymentConfirmationEntity?> showCashPaymentConfirmationDialog(
   BuildContext context, {
@@ -80,6 +81,20 @@ class CashPaymentPromptController {
         // surface is refetched so settlement fields remain the rendering truth.
         _ref.invalidate(bookingsNotifierProvider);
         _ref.invalidate(bookingDetailProvider(booking.id));
+        _ref.invalidate(pendingReviewsProvider);
+
+        // The receipt's CTA explicitly says "Continue to review". Closing
+        // the cash dialog is only the first half of that action: enqueue the
+        // same canonical review controller used by Booking Detail,
+        // notification taps and resume sweeps. Its modal-lane guard waits for
+        // this cash prompt's finally block before presenting ReviewModal, so
+        // the dialogs never overlap and payment remains complete even if the
+        // customer later dismisses the optional review.
+        if (context.mounted) {
+          _ref
+              .read(reviewPromptControllerProvider)
+              .enqueueFront(context, booking.id);
+        }
       }
       // A null result now means the customer closed the prompt — the back
       // button, the barrier, or "later". The booking stays in

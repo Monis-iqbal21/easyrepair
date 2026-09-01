@@ -25,6 +25,7 @@ import '../features/chat/presentation/providers/chat_providers.dart';
 import '../features/notifications/data/datasources/notification_remote_datasource.dart';
 import '../features/notifications/data/repositories/notification_repository_impl.dart';
 import '../features/notifications/presentation/providers/notification_providers.dart';
+import '../features/notifications/presentation/utils/notification_event_refresh.dart';
 import '../features/worker/presentation/providers/worker_job_providers.dart';
 import '../features/worker/presentation/providers/worker_providers.dart';
 
@@ -38,45 +39,6 @@ class EasyRepairApp extends ConsumerStatefulWidget {
 class _EasyRepairAppState extends ConsumerState<EasyRepairApp>
     with WidgetsBindingObserver {
   bool _fcmTokenRegistered = false;
-
-  /// Event keys pushed to a worker when a booking becomes theirs — STANDARD/
-  /// INSPECTION direct hire (`booking.assigned`, see bookings.service.ts) and
-  /// BIDDING lane bid acceptance (`bid.accepted`, see bids.service.ts).
-  static const _assignedJobEventKeys = {'booking.assigned', 'bid.accepted'};
-
-  /// Worker-side lifecycle events that should silently refresh the CLIENT's
-  /// booking detail/list (and the inspection report for the report_submitted
-  /// case). See bookings.service.ts / inspection-reports.service.ts for the
-  /// eventKey source of each.
-  static const _clientLiveSyncEventKeys = {
-    'booking.status.en_route',
-    'booking.status.arrived',
-    'booking.status.in_progress',
-    'booking.inspection.report_submitted',
-    'booking.completed',
-    'booking.cancelled.by_worker',
-  };
-
-  /// Complaint lifecycle events Admin drives. The client must see the real
-  /// status, so these refresh the booking's complaint provider as well as its
-  /// detail. Push is the FAST path only — [bookingComplaintProvider] is
-  /// autoDispose, so a missed push still self-corrects the next time Booking
-  /// Detail is opened.
-  static const _complaintStatusEventKeys = {
-    'complaint.status.in_progress',
-    'complaint.status.resolved',
-    'complaint.status.closed',
-  };
-
-  /// Client-side lifecycle events (beyond hire/bid-accept, already covered by
-  /// [_assignedJobEventKeys]) that should silently refresh the WORKER's job
-  /// list/detail/profile stats.
-  static const _workerLiveSyncEventKeys = {
-    'booking.cancelled.by_client',
-    'booking.inspection.quote_accepted',
-    'booking.inspection.closed',
-    'booking.review.created',
-  };
 
   /// Queues a notification data map that arrived before the user finished
   /// authenticating (e.g. tapping a notification that cold-starts the app).
@@ -158,9 +120,7 @@ class _EasyRepairAppState extends ConsumerState<EasyRepairApp>
 
   void _setupFcmListeners() {
     // ── Background → foreground tap (app was running in background) ──────────
-    _subs.add(
-      FirebaseMessaging.onMessageOpenedApp.listen(_handleFcmMessage),
-    );
+    _subs.add(FirebaseMessaging.onMessageOpenedApp.listen(_handleFcmMessage));
 
     // ── Terminated-launch tap via FCM (not a local notification) ─────────────
     // Checked once at startup; null if app was not opened from a notification.
@@ -169,13 +129,18 @@ class _EasyRepairAppState extends ConsumerState<EasyRepairApp>
     });
 
     // ── Foreground FCM message ────────────────────────────────────────────────
-    _subs.add(
-      FirebaseMessaging.onMessage.listen(_handleForegroundFcmMessage),
-    );
+    _subs.add(FirebaseMessaging.onMessage.listen(_handleForegroundFcmMessage));
 
     // ── FCM token refresh ─────────────────────────────────────────────────────
     _subs.add(
       FirebaseMessaging.instance.onTokenRefresh.listen(_onTokenRefresh),
+    );
+
+    // The authenticated socket is the fastest foreground lifecycle path.
+    // It carries the same eventKey/bookingId as FCM, so run the same provider
+    // refresh instead of only painting the app-banner overlay.
+    _subs.add(
+      ChatSocketService.instance.onAppBanner.listen(_handleSocketAppBanner),
     );
 
     // ── Local notification tap (from flutter_local_notifications) ────────────
@@ -201,7 +166,11 @@ class _EasyRepairAppState extends ConsumerState<EasyRepairApp>
     final bookingId = message.data['bookingId'] as String?;
     final user = ref.read(authStateProvider).valueOrNull;
     if (user != null) {
-      _refreshForEventKey(eventKey, isWorker: user.isWorker, bookingId: bookingId);
+      _refreshForEventKey(
+        eventKey,
+        isWorker: user.isWorker,
+        bookingId: bookingId,
+      );
     }
 
     // On Android, FCM does NOT show a system-tray notification while the app
@@ -211,6 +180,18 @@ class _EasyRepairAppState extends ConsumerState<EasyRepairApp>
       // Fire-and-forget; failures are logged inside the service.
       LocalNotificationService.instance.showFromMessage(message).ignore();
     }
+  }
+
+  void _handleSocketAppBanner(Map<String, dynamic> payload) {
+    final user = ref.read(authStateProvider).valueOrNull;
+    if (user == null) return;
+    _refreshForEventKey(
+      payload['eventKey'] as String?,
+      isWorker: user.isWorker,
+      bookingId: payload['bookingId'] as String?,
+    );
+    ref.invalidate(notificationsProvider);
+    ref.invalidate(unreadNotificationCountProvider);
   }
 
   /// Central navigation handler for ALL notification tap sources.
@@ -262,10 +243,7 @@ class _EasyRepairAppState extends ConsumerState<EasyRepairApp>
     });
   }
 
-  void _navigateFromData(
-    Map<String, dynamic> data, {
-    required bool isWorker,
-  }) {
+  void _navigateFromData(Map<String, dynamic> data, {required bool isWorker}) {
     final eventKey = data['eventKey'] as String?;
     final bookingId = data['bookingId'] as String?;
     _refreshForEventKey(eventKey, isWorker: isWorker, bookingId: bookingId);
@@ -280,11 +258,12 @@ class _EasyRepairAppState extends ConsumerState<EasyRepairApp>
           .read(notificationRepositoryProvider)
           .markRead(notificationId)
           .then((_) {
-        ref.invalidate(unreadNotificationCountProvider);
-        // Also patch the in-memory list if it is already loaded.
-        final notifier = ref.read(notificationsProvider.notifier);
-        notifier.markRead(notificationId);
-      }).catchError((Object _) {});
+            ref.invalidate(unreadNotificationCountProvider);
+            // Also patch the in-memory list if it is already loaded.
+            final notifier = ref.read(notificationsProvider.notifier);
+            notifier.markRead(notificationId);
+          })
+          .catchError((Object _) {});
     } else {
       // No notificationId in payload — still refresh the count in case the
       // backend already marked it (e.g. via a different code path).
@@ -304,53 +283,30 @@ class _EasyRepairAppState extends ConsumerState<EasyRepairApp>
     required bool isWorker,
     String? bookingId,
   }) {
-    if (isWorker) {
-      if (eventKey == 'new_job') {
-        // A new_job notification arrived — immediately refresh the New Jobs
-        // tab so the job appears without waiting for the 30-second auto-poll.
-        ref.invalidate(newJobsProvider);
-      } else if (_assignedJobEventKeys.contains(eventKey)) {
-        // Worker was just hired/assigned (direct hire or accepted bid) —
-        // refresh My Jobs, New Jobs, profile stats, and — if the worker
-        // already had this job's detail page cached from before the
-        // hire/bid-acceptance (e.g. viewed it while still just bidding) —
-        // its detail too, so a stale PENDING/"Bid Now" view doesn't linger.
-        ref.invalidate(workerJobsProvider);
-        ref.invalidate(newJobsProvider);
-        ref.invalidate(workerProfileProvider);
-        if (bookingId != null && bookingId.isNotEmpty) {
-          ref.invalidate(workerJobDetailProvider(bookingId));
-        }
-      } else if (_workerLiveSyncEventKeys.contains(eventKey)) {
-        // Client-side action on a booking this worker is assigned to
-        // (cancelled, quote accepted/closed, review left) — refresh the
-        // worker's list and, if we know which booking, its detail page too.
-        ref.invalidate(workerJobsProvider);
-        if (bookingId != null && bookingId.isNotEmpty) {
-          ref.invalidate(workerJobDetailProvider(bookingId));
-        }
-        if (eventKey == 'booking.review.created') {
-          // A new review can move the worker's average rating shown on Home.
+    final hasBookingId = bookingId != null && bookingId.isNotEmpty;
+    final targets = notificationRefreshTargets(
+      eventKey,
+      isWorker: isWorker,
+      hasBookingId: hasBookingId,
+    );
+    for (final target in targets) {
+      switch (target) {
+        case NotificationRefreshTarget.bookings:
+          ref.invalidate(bookingsNotifierProvider);
+        case NotificationRefreshTarget.bookingDetail:
+          ref.invalidate(bookingDetailProvider(bookingId!));
+        case NotificationRefreshTarget.inspectionReport:
+          ref.invalidate(inspectionReportProvider(bookingId!));
+        case NotificationRefreshTarget.complaint:
+          ref.invalidate(bookingComplaintProvider(bookingId!));
+        case NotificationRefreshTarget.workerJobs:
+          ref.invalidate(workerJobsProvider);
+        case NotificationRefreshTarget.workerJobDetail:
+          ref.invalidate(workerJobDetailProvider(bookingId!));
+        case NotificationRefreshTarget.newJobs:
+          ref.invalidate(newJobsProvider);
+        case NotificationRefreshTarget.workerProfile:
           ref.invalidate(workerProfileProvider);
-        }
-      }
-    } else if (_complaintStatusEventKeys.contains(eventKey)) {
-      // Admin moved the client's report on. Refresh the report itself and the
-      // detail page that renders its status banner.
-      if (bookingId != null && bookingId.isNotEmpty) {
-        ref.invalidate(bookingComplaintProvider(bookingId));
-        ref.invalidate(bookingDetailProvider(bookingId));
-      }
-    } else if (_clientLiveSyncEventKeys.contains(eventKey)) {
-      // Worker-side lifecycle action on the client's booking — refresh the
-      // bookings list and, if we know which booking, its detail page (plus
-      // the inspection report when one was just submitted).
-      ref.invalidate(bookingsNotifierProvider);
-      if (bookingId != null && bookingId.isNotEmpty) {
-        ref.invalidate(bookingDetailProvider(bookingId));
-        if (eventKey == 'booking.inspection.report_submitted') {
-          ref.invalidate(inspectionReportProvider(bookingId));
-        }
       }
     }
   }
@@ -361,8 +317,9 @@ class _EasyRepairAppState extends ConsumerState<EasyRepairApp>
   /// Non-critical — failures are silently ignored.
   Future<void> _connectChatSocket() async {
     try {
-      final token =
-          await ref.read(secureStorageServiceProvider).getAccessToken();
+      final token = await ref
+          .read(secureStorageServiceProvider)
+          .getAccessToken();
       if (token != null) {
         ChatSocketService.instance.connect(token);
       }
@@ -382,7 +339,7 @@ class _EasyRepairAppState extends ConsumerState<EasyRepairApp>
     try {
       await ref
           .read(notificationRemoteDatasourceProvider)
-          .saveFcmToken(token);
+          .saveFcmToken(token, locale: ref.read(localeProvider).storageValue);
     } catch (_) {}
   }
 
@@ -397,6 +354,15 @@ class _EasyRepairAppState extends ConsumerState<EasyRepairApp>
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(localeProvider, (previous, next) {
+      if (previous == null || previous == next) return;
+      if (ref.read(authStateProvider).valueOrNull == null) return;
+      // Language changes must reach the server even when Firebase keeps the
+      // same token. Re-registering the existing token is idempotent and now
+      // updates its notification locale in the same authenticated request.
+      _registerFcmToken();
+    });
+
     ref.listen(authStateProvider, (_, next) {
       final user = next.valueOrNull;
 

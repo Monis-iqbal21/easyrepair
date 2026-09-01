@@ -16,13 +16,15 @@ class NotificationRepositoryImpl implements NotificationRepository {
 
   @override
   Future<Either<Failure, CachedResult<List<NotificationEntity>>>>
-      getNotifications() async {
+  getNotifications() async {
     try {
       final result = await _datasource.getNotifications();
-      return Right(CachedResult(
-        result.data.map((m) => m.toEntity()).toList(),
-        isStale: result.isStale,
-      ));
+      return Right(
+        CachedResult(
+          result.data.map((m) => m.toEntity()).toList(),
+          isStale: result.isStale,
+        ),
+      );
     } on Failure catch (f) {
       // fetchWithCache already mapped the DioException (and decided whether
       // cache was permitted) — pass its verdict through untouched.
@@ -30,7 +32,9 @@ class NotificationRepositoryImpl implements NotificationRepository {
     } on DioException catch (e) {
       return Left(dioExceptionToFailure(e));
     } catch (e) {
-      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
+      return Left(
+        ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()),
+      );
     }
   }
 
@@ -42,7 +46,9 @@ class NotificationRepositoryImpl implements NotificationRepository {
     } on DioException catch (e) {
       return Left(dioExceptionToFailure(e));
     } catch (e) {
-      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
+      return Left(
+        ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()),
+      );
     }
   }
 
@@ -54,7 +60,9 @@ class NotificationRepositoryImpl implements NotificationRepository {
     } on DioException catch (e) {
       return Left(dioExceptionToFailure(e));
     } catch (e) {
-      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
+      return Left(
+        ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()),
+      );
     }
   }
 
@@ -66,19 +74,26 @@ class NotificationRepositoryImpl implements NotificationRepository {
     } on DioException catch (e) {
       return Left(dioExceptionToFailure(e));
     } catch (e) {
-      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
+      return Left(
+        ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()),
+      );
     }
   }
 
   @override
-  Future<Either<Failure, void>> saveFcmToken(String token) async {
+  Future<Either<Failure, void>> saveFcmToken(
+    String token, {
+    required String locale,
+  }) async {
     try {
-      await _datasource.saveFcmToken(token);
+      await _datasource.saveFcmToken(token, locale: locale);
       return const Right(null);
     } on DioException catch (e) {
       return Left(dioExceptionToFailure(e));
     } catch (e) {
-      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
+      return Left(
+        ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()),
+      );
     }
   }
 }

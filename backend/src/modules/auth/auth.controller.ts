@@ -34,6 +34,7 @@ import { ClientPasswordRegisterDto } from './dto/client-password-register.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { BypassClientSuspension } from '../../common/decorators/bypass-client-suspension.decorator';
+import { SaveFcmTokenDto } from './dto/save-fcm-token.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -90,9 +91,9 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   saveFcmToken(
     @CurrentUser() user: { id: string },
-    @Body('token') token: string,
+    @Body() dto: SaveFcmTokenDto,
   ) {
-    return this.authService.saveFcmToken(user.id, token);
+    return this.authService.saveFcmToken(user.id, dto.token, dto.locale);
   }
 
   /** POST /auth/otp/request — public, purpose-scoped OTP for the SMS flows below. */

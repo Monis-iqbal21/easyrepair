@@ -303,14 +303,14 @@ class _ReportPaymentSheetState extends ConsumerState<_ReportPaymentSheet> {
             autofocus: true,
             enabled: !_submitting,
             keyboardType: const TextInputType.numberWithOptions(decimal: false),
+            textInputAction: TextInputAction.done,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             onChanged: (_) => setState(() {}),
+            onSubmitted: _submitting ? null : (_) => _submit(),
             decoration: InputDecoration(
               labelText: l10n.workerReportPaymentFieldLabel,
               prefixText: 'Rs ',
-              errorText: invalid
-                  ? l10n.workerReportPaymentInvalidError
-                  : null,
+              errorText: invalid ? l10n.workerReportPaymentInvalidError : null,
               filled: true,
               fillColor: c.surfaceSubtle,
               border: OutlineInputBorder(

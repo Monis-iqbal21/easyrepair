@@ -35,8 +35,8 @@ describe('AuthRepository.softDeleteUser — legal-preservation', () => {
       },
     };
     const prisma = {
-      $transaction: jest.fn(
-        async (fn: (arg: typeof tx) => Promise<void>) => fn(tx),
+      $transaction: jest.fn(async (fn: (arg: typeof tx) => Promise<void>) =>
+        fn(tx),
       ),
     };
 
@@ -58,8 +58,8 @@ describe('AuthRepository.softDeleteUser — legal-preservation', () => {
       },
     };
     const prisma = {
-      $transaction: jest.fn(
-        async (fn: (arg: typeof tx) => Promise<void>) => fn(tx),
+      $transaction: jest.fn(async (fn: (arg: typeof tx) => Promise<void>) =>
+        fn(tx),
       ),
     };
 
@@ -73,8 +73,10 @@ describe('AuthRepository.softDeleteUser — legal-preservation', () => {
   });
 
   it('sets deletedAt / isActive: false rather than issuing a hard delete', async () => {
-    let updateArgs: { where: { id: string }; data: Record<string, unknown> } | null =
-      null;
+    let updateArgs: {
+      where: { id: string };
+      data: Record<string, unknown>;
+    } | null = null;
     const tx = {
       user: {
         update: jest.fn(async (args: typeof updateArgs) => {
@@ -85,8 +87,8 @@ describe('AuthRepository.softDeleteUser — legal-preservation', () => {
       refreshToken: { deleteMany: jest.fn(async () => ({ count: 0 })) },
     };
     const prisma = {
-      $transaction: jest.fn(
-        async (fn: (arg: typeof tx) => Promise<void>) => fn(tx),
+      $transaction: jest.fn(async (fn: (arg: typeof tx) => Promise<void>) =>
+        fn(tx),
       ),
     };
 
@@ -125,7 +127,7 @@ describe('AuthRepository.saveFcmToken — exclusive token ownership', () => {
     };
 
     const repository = new AuthRepository(prisma as never);
-    await repository.saveFcmToken('user-2', 'token-abc');
+    await repository.saveFcmToken('user-2', 'token-abc', 'en');
 
     expect(prisma.user.updateMany).toHaveBeenCalledWith({
       where: { fcmToken: 'token-abc', id: { not: 'user-2' } },
@@ -133,13 +135,31 @@ describe('AuthRepository.saveFcmToken — exclusive token ownership', () => {
     });
     expect(prisma.user.update).toHaveBeenCalledWith({
       where: { id: 'user-2' },
-      data: { fcmToken: 'token-abc' },
+      data: { fcmToken: 'token-abc', notificationLocale: 'en' },
     });
     // Detach is built (and handed to $transaction) before assign, so a
     // reader observing the transaction's effects never sees the token on
     // two rows at once.
     expect(calls.map((c) => c.op)).toEqual(['updateMany', 'update']);
     expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the existing locale when an older app omits it', async () => {
+    const prisma = {
+      user: {
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+        update: jest.fn().mockResolvedValue({}),
+      },
+      $transaction: jest.fn((ops: Promise<unknown>[]) => Promise.all(ops)),
+    };
+    const repository = new AuthRepository(prisma as never);
+
+    await repository.saveFcmToken('user-2', 'legacy-token');
+
+    expect(prisma.user.update).toHaveBeenCalledWith({
+      where: { id: 'user-2' },
+      data: { fcmToken: 'legacy-token' },
+    });
   });
 });
 

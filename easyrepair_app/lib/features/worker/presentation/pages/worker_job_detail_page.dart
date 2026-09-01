@@ -55,10 +55,10 @@ import '../../../../core/theme/app_semantic_colors.dart';
 // no provider, API call, navigation target or condition was touched.
 
 /// Shape values shared with Home, New Jobs and My Reviews.
-const double _rCard = 16;    // prototype `.crd`
-const double _rButton = 14;  // prototype `.btnp`
-const double _rPill = 999;   // prototype `.tg` / `.av`
-const double _hButton = 52;  // prototype `.btnp` min-height
+const double _rCard = 16; // prototype `.crd`
+const double _rButton = 14; // prototype `.btnp`
+const double _rPill = 999; // prototype `.tg` / `.av`
+const double _hButton = 52; // prototype `.btnp` min-height
 
 /// First letters of a client's name, for the live-job card's avatar.
 String _initialsOf(String name) {
@@ -97,7 +97,10 @@ class WorkerJobDetailPage extends ConsumerWidget {
     // Reconnecting on this nested page refreshes the job in place — only
     // this job's data provider is invalidated, so the Ustaad stays on
     // /worker/job/<id> instead of being bounced anywhere.
-    refreshOnReconnect(ref, () => ref.invalidate(workerJobDetailProvider(jobId)));
+    refreshOnReconnect(
+      ref,
+      () => ref.invalidate(workerJobDetailProvider(jobId)),
+    );
     final jobAsync = ref.watch(workerJobDetailProvider(jobId));
     final isShowingCachedData =
         ref.watch(workerJobDetailIsOfflineProvider(jobId)) && jobAsync.hasValue;
@@ -107,9 +110,8 @@ class WorkerJobDetailPage extends ConsumerWidget {
       appBar: _AppBar(),
       body: jobAsync.when(
         skipError: true,
-        loading: () => Center(child: CircularProgressIndicator(
-          color: c.primary,
-        )),
+        loading: () =>
+            Center(child: CircularProgressIndicator(color: c.primary)),
         error: (err, _) => isResourceUnavailableFailure(err)
             ? ResourceUnavailableView(
                 message: context.l10n.resourceJobUnavailable,
@@ -117,13 +119,19 @@ class WorkerJobDetailPage extends ConsumerWidget {
                 onAction: () => context.go('/worker/jobs'),
               )
             : _ErrorScreen(
-                message: failureMessage(context.l10n, err, fallback: context.l10n.workerJobLoadFailed),
+                message: failureMessage(
+                  context.l10n,
+                  err,
+                  fallback: context.l10n.workerJobLoadFailed,
+                ),
                 onRetry: () => ref.invalidate(workerJobDetailProvider(jobId)),
               ),
         data: (job) => Column(
           children: [
             if (isShowingCachedData) const OfflineDataBanner(),
-            Expanded(child: _JobBody(job: job, openMapOnLoad: openMapOnLoad)),
+            Expanded(
+              child: _JobBody(job: job, openMapOnLoad: openMapOnLoad),
+            ),
           ],
         ),
       ),
@@ -178,13 +186,16 @@ class _JobBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = context.semanticColors;
-    final isPending    = job.status == BookingStatus.pending;
-    final isStandard   = job.lane == BookingLane.standard;
+    final isPending = job.status == BookingStatus.pending;
+    final isStandard = job.lane == BookingLane.standard;
     final isInspection = job.lane == BookingLane.inspection;
-    final isBidding    = job.lane == BookingLane.bidding;
-    final isHired     = job.assignedWorker != null || job.status != BookingStatus.pending;
-    final canComplete = job.status.isWorkerActive && !isStandard && !isInspection && !isBidding;
-    final cancelledByClient = job.status == BookingStatus.cancelled &&
+    final isBidding = job.lane == BookingLane.bidding;
+    final isHired =
+        job.assignedWorker != null || job.status != BookingStatus.pending;
+    final canComplete =
+        job.status.isWorkerActive && !isStandard && !isInspection && !isBidding;
+    final cancelledByClient =
+        job.status == BookingStatus.cancelled &&
         job.cancelledByRole == CancelledByRole.client;
     // Same getter Booking Details' Qeemat card and Track Worker read, so
     // this Ustaad's own job detail can never show a different number.
@@ -225,12 +236,20 @@ class _JobBody extends ConsumerWidget {
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.info_outline_rounded, size: 18, color: c.primary),
+                        Icon(
+                          Icons.info_outline_rounded,
+                          size: 18,
+                          color: c.primary,
+                        ),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
                             context.l10n.workerStandardDirectHireNote,
-                            style: TextStyle(fontSize: 12.5, color: c.primary, height: 1.4),
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              color: c.primary,
+                              height: 1.4,
+                            ),
                           ),
                         ),
                       ],
@@ -305,7 +324,10 @@ class _JobBody extends ConsumerWidget {
                       child: OutlinedButton.icon(
                         onPressed: () =>
                             openWorkerChatForBooking(context, ref, job.id),
-                        icon: const Icon(Icons.chat_bubble_outline_rounded, size: 16),
+                        icon: const Icon(
+                          Icons.chat_bubble_outline_rounded,
+                          size: 16,
+                        ),
                         label: Text(context.l10n.bidChatWithClient),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: c.primary,
@@ -387,6 +409,7 @@ class _JobBody extends ConsumerWidget {
                 // it used to sit below Attachments, near the bottom.
                 if (job.statusHistory.isNotEmpty) ...[
                   _StatusHistorySection(
+                    key: const Key('worker-status-history-section'),
                     history: job.statusHistory,
                     review: job.review,
                   ),
@@ -429,61 +452,25 @@ class _JobBody extends ConsumerWidget {
                         label: context.l10n.bookingTiming,
                         value: job.urgency == BookingUrgency.urgent
                             ? (job.urgentWindow != null
-                              ? urgentWindowLabel(
-                                  context.l10n, job.urgentWindow!)
-                              : context.l10n.postJobUrgent)
+                                  ? urgentWindowLabel(
+                                      context.l10n,
+                                      job.urgentWindow!,
+                                    )
+                                  : context.l10n.postJobUrgent)
                             : job.scheduledDate != null
-                                ? DateFormat('EEE, d MMM yyyy')
-                                        .format(job.scheduledDate!) +
-                                    (job.timeSlot != null
-                                        ? ' • ${timeSlotLabel(context.l10n, job.timeSlot!)}'
-                                        : '')
-                                : context.l10n.bookingNotScheduledYet,
+                            ? DateFormat(
+                                    'EEE, d MMM yyyy',
+                                  ).format(job.scheduledDate!) +
+                                  (job.timeSlot != null
+                                      ? ' • ${timeSlotLabel(context.l10n, job.timeSlot!)}'
+                                      : '')
+                            : context.l10n.bookingNotScheduledYet,
                       ),
                       if (job.timeSlot != null)
                         _InfoRow(
                           icon: Icons.schedule_rounded,
                           label: context.l10n.workerTimeSlotLabel,
                           value: timeSlotLabel(context.l10n, job.timeSlot!),
-                        ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // ── Timeline ─────────────────────────────────────────────
-                _Section(
-                  title: context.l10n.workerTimelineSection,
-                  child: Column(
-                    children: [
-                      _InfoRow(
-                        icon: Icons.add_circle_outline_rounded,
-                        label: context.l10n.bookingCreated,
-                        value: _fmtDateTime(job.createdAt),
-                      ),
-                      if (job.scheduledDate != null)
-                        _InfoRow(
-                          icon: Icons.event_rounded,
-                          label: context.l10n.workerTimelineScheduled,
-                          value: _fmtDateTime(job.scheduledDate!),
-                        ),
-                      if (job.acceptedAt != null)
-                        _InfoRow(
-                          icon: Icons.handshake_outlined,
-                          label: context.l10n.bidStatusAccepted,
-                          value: _fmtDateTime(job.acceptedAt!),
-                        ),
-                      if (job.startedAt != null)
-                        _InfoRow(
-                          icon: Icons.play_circle_outline_rounded,
-                          label: context.l10n.workerTimelineStarted,
-                          value: _fmtDateTime(job.startedAt!),
-                        ),
-                      if (job.completedAt != null)
-                        _InfoRow(
-                          icon: Icons.check_circle_outline_rounded,
-                          label: context.l10n.bookingStatusCompleted,
-                          value: _fmtDateTime(job.completedAt!),
                         ),
                     ],
                   ),
@@ -514,7 +501,9 @@ class _JobBody extends ConsumerWidget {
                         // unit, so the inspecting Ustaad is never told the fee
                         // is earned before that booking is COMPLETED.
                         if (workerInspectionFeeLabel(
-                                context.l10n, job.inspectionFeePaid) !=
+                              context.l10n,
+                              job.inspectionFeePaid,
+                            ) !=
                             null)
                           _InfoRow(
                             icon: job.inspectionFeePaid == true
@@ -522,7 +511,9 @@ class _JobBody extends ConsumerWidget {
                                 : Icons.schedule_rounded,
                             label: context.l10n.workerFeeStatusLabel,
                             value: workerInspectionFeeLabel(
-                                context.l10n, job.inspectionFeePaid)!,
+                              context.l10n,
+                              job.inspectionFeePaid,
+                            )!,
                           ),
                       ],
                     ),
@@ -548,7 +539,10 @@ class _JobBody extends ConsumerWidget {
 
                 // ── Review ────────────────────────────────────────────────
                 if (job.review != null) ...[
-                  _ReviewSection(review: job.review!, clientName: job.clientName),
+                  _ReviewSection(
+                    review: job.review!,
+                    clientName: job.clientName,
+                  ),
                   const SizedBox(height: 16),
                 ],
               ],
@@ -561,9 +555,6 @@ class _JobBody extends ConsumerWidget {
       ],
     );
   }
-
-  String _fmtDateTime(DateTime dt) =>
-      DateFormat('d MMM yyyy, h:mm a').format(dt);
 
   Future<void> _callClient(String phone) async {
     final uri = Uri(scheme: 'tel', path: phone);
@@ -595,7 +586,9 @@ class _StandardServicesSection extends StatelessWidget {
                     child: Text(
                       item.quantity > 1
                           ? context.l10n.bookingServiceQuantity(
-                              item.nameSnapshot, item.quantity)
+                              item.nameSnapshot,
+                              item.quantity,
+                            )
                           : item.nameSnapshot,
                       style: TextStyle(fontSize: 13.5, color: c.textPrimary),
                     ),
@@ -618,7 +611,11 @@ class _StandardServicesSection extends StatelessWidget {
               Expanded(
                 child: Text(
                   context.l10n.postJobTotal,
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: c.textPrimary),
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: c.textPrimary,
+                  ),
                 ),
               ),
               Text(
@@ -665,7 +662,9 @@ class _StandardLifecycleSection extends ConsumerWidget {
               content: Text(successMessage),
               backgroundColor: c.primary,
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
           );
         }
@@ -674,10 +673,17 @@ class _StandardLifecycleSection extends ConsumerWidget {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                  failureMessage(context.l10n, e, fallback: context.l10n.inspectionActionFailed)),
+                failureMessage(
+                  context.l10n,
+                  e,
+                  fallback: context.l10n.inspectionActionFailed,
+                ),
+              ),
               backgroundColor: c.error,
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
           );
         }
@@ -697,7 +703,10 @@ class _StandardLifecycleSection extends ConsumerWidget {
               ? SizedBox(
                   width: 16,
                   height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: c.onPrimary),
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: c.onPrimary,
+                  ),
                 )
               : Icon(icon, size: 16),
           label: Text(label),
@@ -706,8 +715,13 @@ class _StandardLifecycleSection extends ConsumerWidget {
             foregroundColor: c.onPrimary,
             elevation: 0,
             minimumSize: const Size.fromHeight(_hButton),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(_rButton)),
-            textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(_rButton),
+            ),
+            textStyle: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
       );
@@ -718,13 +732,14 @@ class _StandardLifecycleSection extends ConsumerWidget {
     // worker_jobs_page.dart's _StandardActionBtn — the two surfaces can never
     // show a different button for the same booking. Exactly one of the two
     // getters is non-null for any given booking (mutually exclusive by lane).
-    final nextAction = job.standardWorkerNextAction ?? job.biddingWorkerNextAction;
+    final nextAction =
+        job.standardWorkerNextAction ?? job.biddingWorkerNextAction;
     IconData iconFor(WorkerLifecycleAction a) => switch (a) {
-          WorkerLifecycleAction.onMyWay => Icons.directions_car_filled_rounded,
-          WorkerLifecycleAction.arrived => Icons.location_on_rounded,
-          WorkerLifecycleAction.start => Icons.play_circle_outline_rounded,
-          WorkerLifecycleAction.complete => Icons.check_circle_outline_rounded,
-        };
+      WorkerLifecycleAction.onMyWay => Icons.directions_car_filled_rounded,
+      WorkerLifecycleAction.arrived => Icons.location_on_rounded,
+      WorkerLifecycleAction.start => Icons.play_circle_outline_rounded,
+      WorkerLifecycleAction.complete => Icons.check_circle_outline_rounded,
+    };
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -750,14 +765,23 @@ class _StandardLifecycleSection extends ConsumerWidget {
               onPressed: isLoading
                   ? null
                   : () => _showWorkerCancelReasonDialog(
-                      context, ref, job.id, runAction),
+                      context,
+                      ref,
+                      job.id,
+                      runAction,
+                    ),
               icon: const Icon(Icons.close_rounded, size: 16),
               label: Text(context.l10n.workerCancelJob),
               style: TextButton.styleFrom(
                 foregroundColor: c.error,
                 minimumSize: const Size.fromHeight(_hButton),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(_rButton)),
-                textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(_rButton),
+                ),
+                textStyle: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ),
@@ -765,7 +789,6 @@ class _StandardLifecycleSection extends ConsumerWidget {
       ],
     );
   }
-
 }
 
 // ── Inspection-lane lifecycle actions ─────────────────────────────────────────
@@ -796,7 +819,9 @@ class _InspectionLifecycleSection extends ConsumerWidget {
               content: Text(successMessage),
               backgroundColor: c.primary,
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
           );
         }
@@ -805,10 +830,17 @@ class _InspectionLifecycleSection extends ConsumerWidget {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                  failureMessage(context.l10n, e, fallback: context.l10n.inspectionActionFailed)),
+                failureMessage(
+                  context.l10n,
+                  e,
+                  fallback: context.l10n.inspectionActionFailed,
+                ),
+              ),
               backgroundColor: c.error,
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
           );
         }
@@ -828,7 +860,10 @@ class _InspectionLifecycleSection extends ConsumerWidget {
               ? SizedBox(
                   width: 16,
                   height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: c.onPrimary),
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: c.onPrimary,
+                  ),
                 )
               : Icon(icon, size: 16),
           label: Text(label),
@@ -837,8 +872,13 @@ class _InspectionLifecycleSection extends ConsumerWidget {
             foregroundColor: c.onPrimary,
             elevation: 0,
             minimumSize: const Size.fromHeight(_hButton),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(_rButton)),
-            textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(_rButton),
+            ),
+            textStyle: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
       );
@@ -850,14 +890,14 @@ class _InspectionLifecycleSection extends ConsumerWidget {
     // button for the same booking.
     final nextAction = job.inspectionWorkerNextAction;
     IconData iconFor(InspectionWorkerAction a) => switch (a) {
-          InspectionWorkerAction.onMyWay => Icons.directions_car_filled_rounded,
-          InspectionWorkerAction.arrived => Icons.location_on_rounded,
-          InspectionWorkerAction.startInspection => Icons.search_rounded,
-          InspectionWorkerAction.startWork => Icons.build_rounded,
-          InspectionWorkerAction.fillReport => Icons.assignment_outlined,
-          InspectionWorkerAction.waitingForDecision => Icons.hourglass_top_rounded,
-          InspectionWorkerAction.complete => Icons.check_circle_outline_rounded,
-        };
+      InspectionWorkerAction.onMyWay => Icons.directions_car_filled_rounded,
+      InspectionWorkerAction.arrived => Icons.location_on_rounded,
+      InspectionWorkerAction.startInspection => Icons.search_rounded,
+      InspectionWorkerAction.startWork => Icons.build_rounded,
+      InspectionWorkerAction.fillReport => Icons.assignment_outlined,
+      InspectionWorkerAction.waitingForDecision => Icons.hourglass_top_rounded,
+      InspectionWorkerAction.complete => Icons.check_circle_outline_rounded,
+    };
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -878,7 +918,11 @@ class _InspectionLifecycleSection extends ConsumerWidget {
                 Expanded(
                   child: Text(
                     context.l10n.workerReportSubmittedWaiting,
-                    style: TextStyle(fontSize: 12.5, color: c.warning, height: 1.4),
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: c.warning,
+                      height: 1.4,
+                    ),
                   ),
                 ),
               ],
@@ -890,7 +934,9 @@ class _InspectionLifecycleSection extends ConsumerWidget {
             icon: iconFor(nextAction),
             onPressed: () async {
               await context.push('/worker/job/${job.id}/inspection-report');
-              if (context.mounted) ref.invalidate(workerJobDetailProvider(job.id));
+              if (context.mounted) {
+                ref.invalidate(workerJobDetailProvider(job.id));
+              }
             },
           )
         else if (nextAction != null)
@@ -914,14 +960,23 @@ class _InspectionLifecycleSection extends ConsumerWidget {
               onPressed: isLoading
                   ? null
                   : () => _showWorkerCancelReasonDialog(
-                      context, ref, job.id, runAction),
+                      context,
+                      ref,
+                      job.id,
+                      runAction,
+                    ),
               icon: const Icon(Icons.close_rounded, size: 16),
               label: Text(context.l10n.workerCancelJob),
               style: TextButton.styleFrom(
                 foregroundColor: c.error,
                 minimumSize: const Size.fromHeight(_hButton),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(_rButton)),
-                textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(_rButton),
+                ),
+                textStyle: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ),
@@ -929,7 +984,6 @@ class _InspectionLifecycleSection extends ConsumerWidget {
       ],
     );
   }
-
 }
 
 // ── Shared worker-cancel reason dialog (Standard/Bidding + Inspection) ────────
@@ -943,13 +997,13 @@ class _InspectionLifecycleSection extends ConsumerWidget {
 /// cancellation reason — exactly as before, only now it reads in the Ustaad's
 /// own language instead of always Roman Urdu.
 List<String> workerCancelReasons(AppLocalizations l10n) => [
-      l10n.workerCancelReasonEmergency,
-      l10n.workerCancelReasonTooFar,
-      l10n.workerCancelReasonNoTools,
-      l10n.workerCancelReasonSchedule,
-      l10n.workerCancelReasonCustomer,
-      l10n.workerCancelReasonOther,
-    ];
+  l10n.workerCancelReasonEmergency,
+  l10n.workerCancelReasonTooFar,
+  l10n.workerCancelReasonNoTools,
+  l10n.workerCancelReasonSchedule,
+  l10n.workerCancelReasonCustomer,
+  l10n.workerCancelReasonOther,
+];
 
 Future<void> _showWorkerCancelReasonDialog(
   BuildContext context,
@@ -1029,8 +1083,10 @@ class _CancelReasonDialogState extends State<_CancelReasonDialog> {
                 borderRadius: BorderRadius.circular(10),
                 borderSide: BorderSide(color: c.border),
               ),
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 10,
+              ),
             ),
             items: workerCancelReasons(l10n)
                 .map(
@@ -1065,14 +1121,17 @@ class _CancelReasonDialogState extends State<_CancelReasonDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context, null),
-          child: Text(l10n.workerKeepJob, style: TextStyle(color: c.textSecondary)),
+          child: Text(
+            l10n.workerKeepJob,
+            style: TextStyle(color: c.textSecondary),
+          ),
         ),
         TextButton(
           onPressed: _canConfirmFor(l10n)
               ? () => Navigator.pop(
-                    context,
-                    isOther ? _customCtrl.text.trim() : _selectedReason,
-                  )
+                  context,
+                  isOther ? _customCtrl.text.trim() : _selectedReason,
+                )
               : null,
           child: Text(
             l10n.workerYesCancel,
@@ -1168,8 +1227,10 @@ class _StatusCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
                   color: bg,
                   borderRadius: BorderRadius.circular(_rPill),
@@ -1199,10 +1260,9 @@ class _StatusCard extends StatelessWidget {
       return (c.successSoft, c.success);
     }
     return switch (s) {
-      BookingStatus.completed =>
-        (c.successSoft, c.success),
-      BookingStatus.cancelled || BookingStatus.rejected =>
-        (c.surfaceSubtle, c.error),
+      BookingStatus.completed => (c.successSoft, c.success),
+      BookingStatus.cancelled ||
+      BookingStatus.rejected => (c.surfaceSubtle, c.error),
       _ => (c.surfaceSubtle, c.textSecondary),
     };
   }
@@ -1267,8 +1327,9 @@ class _InfoRow extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
-        crossAxisAlignment:
-            multiline ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+        crossAxisAlignment: multiline
+            ? CrossAxisAlignment.start
+            : CrossAxisAlignment.center,
         children: [
           Icon(icon, size: 16, color: c.textSecondary),
           const SizedBox(width: 10),
@@ -1276,7 +1337,10 @@ class _InfoRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: TextStyle(fontSize: 11, color: c.textSecondary)),
+                Text(
+                  label,
+                  style: TextStyle(fontSize: 11, color: c.textSecondary),
+                ),
                 const SizedBox(height: 2),
                 Text(
                   value,
@@ -1306,9 +1370,15 @@ class _AttachmentsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.semanticColors;
-    final images = attachments.where((a) => a.type == AttachmentType.image).toList();
-    final videos = attachments.where((a) => a.type == AttachmentType.video).toList();
-    final audios = attachments.where((a) => a.type == AttachmentType.audio).toList();
+    final images = attachments
+        .where((a) => a.type == AttachmentType.image)
+        .toList();
+    final videos = attachments
+        .where((a) => a.type == AttachmentType.video)
+        .toList();
+    final audios = attachments
+        .where((a) => a.type == AttachmentType.audio)
+        .toList();
 
     return _Section(
       title: context.l10n.bookingAttachments,
@@ -1316,30 +1386,41 @@ class _AttachmentsSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (images.isNotEmpty) ...[
-            Text(context.l10n.inspectionPhotos,
-                style: TextStyle(fontSize: 12, color: c.textSecondary)),
+            Text(
+              context.l10n.inspectionPhotos,
+              style: TextStyle(fontSize: 12, color: c.textSecondary),
+            ),
             const SizedBox(height: 10),
             BookingImageGrid(images: images),
           ],
           if (videos.isNotEmpty) ...[
             if (images.isNotEmpty) const SizedBox(height: 14),
-            Text(context.l10n.workerAttachmentsVideos,
-                style: TextStyle(fontSize: 12, color: c.textSecondary)),
+            Text(
+              context.l10n.workerAttachmentsVideos,
+              style: TextStyle(fontSize: 12, color: c.textSecondary),
+            ),
             const SizedBox(height: 8),
-            ...videos.map((v) => Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: BookingVideoTile(attachment: v),
-                )),
+            ...videos.map(
+              (v) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: BookingVideoTile(attachment: v),
+              ),
+            ),
           ],
           if (audios.isNotEmpty) ...[
-            if (images.isNotEmpty || videos.isNotEmpty) const SizedBox(height: 14),
-            Text(context.l10n.workerAttachmentsVoiceNotes,
-                style: TextStyle(fontSize: 12, color: c.textSecondary)),
+            if (images.isNotEmpty || videos.isNotEmpty)
+              const SizedBox(height: 14),
+            Text(
+              context.l10n.workerAttachmentsVoiceNotes,
+              style: TextStyle(fontSize: 12, color: c.textSecondary),
+            ),
             const SizedBox(height: 8),
-            ...audios.map((a) => Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: BookingAudioPlayerCard(attachment: a),
-                )),
+            ...audios.map(
+              (a) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: BookingAudioPlayerCard(attachment: a),
+              ),
+            ),
           ],
         ],
       ),
@@ -1352,7 +1433,7 @@ class _AttachmentsSection extends StatelessWidget {
 class _StatusHistorySection extends StatelessWidget {
   final List<BookingStatusHistoryEntry> history;
   final BookingReviewEntity? review;
-  const _StatusHistorySection({required this.history, this.review});
+  const _StatusHistorySection({super.key, required this.history, this.review});
 
   @override
   Widget build(BuildContext context) {
@@ -1401,13 +1482,19 @@ class _StatusHistorySection extends StatelessWidget {
                         if (entry.note != null && entry.note!.isNotEmpty)
                           Text(
                             entry.note!,
-                            style: TextStyle(fontSize: 11.5, color: c.textSecondary),
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              color: c.textSecondary,
+                            ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
                         Text(
                           DateFormat('d MMM, h:mm a').format(entry.createdAt),
-                          style: TextStyle(fontSize: 11, color: c.textSecondary),
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: c.textSecondary,
+                          ),
                         ),
                       ],
                     ),
@@ -1454,16 +1541,17 @@ class _StatusHistorySection extends StatelessWidget {
                                     ? Icons.star_rounded
                                     : Icons.star_outline_rounded,
                                 size: 12,
-                                color: i < r
-                                    ? c.warning
-                                    : c.border,
+                                color: i < r ? c.warning : c.border,
                               );
                             }),
                           ],
                         ),
                         Text(
                           DateFormat('d MMM, h:mm a').format(review!.createdAt),
-                          style: TextStyle(fontSize: 11, color: c.textSecondary),
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: c.textSecondary,
+                          ),
                         ),
                       ],
                     ),
@@ -1508,17 +1596,24 @@ class _CompleteJobBar extends ConsumerWidget {
               ? SizedBox(
                   width: 18,
                   height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: c.onPrimary),
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: c.onPrimary,
+                  ),
                 )
               : const Icon(Icons.check_circle_outline_rounded, size: 18),
-          label: Text(isLoading
-              ? context.l10n.workerCompleting
-              : context.l10n.workerMarkAsCompleted),
+          label: Text(
+            isLoading
+                ? context.l10n.workerCompleting
+                : context.l10n.workerMarkAsCompleted,
+          ),
           style: ElevatedButton.styleFrom(
             backgroundColor: c.primary,
             foregroundColor: c.onPrimary,
             elevation: 0,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(_rButton)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(_rButton),
+            ),
           ),
         ),
       ),
@@ -1542,8 +1637,10 @@ class _CompleteJobBar extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text(context.l10n.commonCancel,
-                style: TextStyle(color: c.textSecondary)),
+            child: Text(
+              context.l10n.commonCancel,
+              style: TextStyle(color: c.textSecondary),
+            ),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -1551,7 +1648,9 @@ class _CompleteJobBar extends ConsumerWidget {
               backgroundColor: c.primary,
               foregroundColor: c.onPrimary,
               elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
             child: Text(context.l10n.workerComplete),
           ),
@@ -1600,13 +1699,16 @@ class _ReviewSection extends StatelessWidget {
         children: [
           Row(
             children: [
-              ...List.generate(5, (i) => Icon(
-                i < review.rating ? Icons.star_rounded : Icons.star_outline_rounded,
-                size: 18,
-                color: i < review.rating
-                    ? c.warning
-                    : c.border,
-              )),
+              ...List.generate(
+                5,
+                (i) => Icon(
+                  i < review.rating
+                      ? Icons.star_rounded
+                      : Icons.star_outline_rounded,
+                  size: 18,
+                  color: i < review.rating ? c.warning : c.border,
+                ),
+              ),
               const SizedBox(width: 8),
               Text(
                 context.l10n.workerReviewRatingOutOfFive(review.rating),
@@ -1634,7 +1736,11 @@ class _ReviewSection extends StatelessWidget {
             const SizedBox(height: 10),
             Row(
               children: [
-                Icon(Icons.person_outline_rounded, size: 13, color: c.textSecondary),
+                Icon(
+                  Icons.person_outline_rounded,
+                  size: 13,
+                  color: c.textSecondary,
+                ),
                 const SizedBox(width: 4),
                 Text(
                   clientName!,
@@ -1659,10 +1765,12 @@ Future<List<LatLng>?> _fetchRoadRoute(LatLng origin, LatLng dest) async {
   final key = AppConfig.googleMapsApiKey;
   if (key.isEmpty) return null;
   try {
-    final dio = Dio(BaseOptions(
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 10),
-    ));
+    final dio = Dio(
+      BaseOptions(
+        connectTimeout: const Duration(seconds: 10),
+        receiveTimeout: const Duration(seconds: 10),
+      ),
+    );
     final response = await dio.get<Map<String, dynamic>>(
       'https://maps.googleapis.com/maps/api/directions/json',
       queryParameters: {
@@ -1676,8 +1784,7 @@ Future<List<LatLng>?> _fetchRoadRoute(LatLng origin, LatLng dest) async {
     if (data == null) return null;
     final routes = data['routes'] as List<dynamic>?;
     if (data['status'] == 'OK' && routes != null && routes.isNotEmpty) {
-      final encoded =
-          routes[0]['overview_polyline']['points'] as String;
+      final encoded = routes[0]['overview_polyline']['points'] as String;
       return _decodePolyline(encoded);
     }
     debugPrint('[Directions] API status: ${data['status']}');
@@ -1769,7 +1876,11 @@ class _ClientCancelledBanner extends StatelessWidget {
                   const SizedBox(height: 3),
                   Text(
                     reason!,
-                    style: TextStyle(fontSize: 12.5, color: c.textSecondary, height: 1.4),
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: c.textSecondary,
+                      height: 1.4,
+                    ),
                   ),
                 ],
               ],
@@ -1815,7 +1926,11 @@ class _ApproximateLocationCard extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.location_on_outlined, size: 16, color: c.textSecondary),
+                Icon(
+                  Icons.location_on_outlined,
+                  size: 16,
+                  color: c.textSecondary,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -1835,7 +1950,11 @@ class _ApproximateLocationCard extends StatelessWidget {
               const SizedBox(height: 6),
               Row(
                 children: [
-                  Icon(Icons.near_me_outlined, size: 16, color: c.textSecondary),
+                  Icon(
+                    Icons.near_me_outlined,
+                    size: 16,
+                    color: c.textSecondary,
+                  ),
                   const SizedBox(width: 8),
                   Text(
                     context.l10n.workerDistanceLabel(distanceLabel),
@@ -1847,7 +1966,11 @@ class _ApproximateLocationCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               context.l10n.workerExactAddressAfterHire,
-              style: TextStyle(fontSize: 11.5, color: c.textSecondary, height: 1.4),
+              style: TextStyle(
+                fontSize: 11.5,
+                color: c.textSecondary,
+                height: 1.4,
+              ),
             ),
           ],
         ),
@@ -1883,18 +2006,15 @@ class _LocationSectionState extends ConsumerState<_LocationSection>
   static const _kReachedMeters = 50.0;
   static const _kDirCheckSecs = 5;
 
-  bool get _hasJobLoc =>
-      widget.job.latitude != 0 || widget.job.longitude != 0;
-  LatLng get _jobLatLng =>
-      LatLng(widget.job.latitude, widget.job.longitude);
+  bool get _hasJobLoc => widget.job.latitude != 0 || widget.job.longitude != 0;
+  LatLng get _jobLatLng => LatLng(widget.job.latitude, widget.job.longitude);
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     if (widget.openMapOnLoad && _hasJobLoc) {
-      WidgetsBinding.instance
-          .addPostFrameCallback((_) => _openFullScreenMap());
+      WidgetsBinding.instance.addPostFrameCallback((_) => _openFullScreenMap());
     }
   }
 
@@ -2049,7 +2169,8 @@ class _LocationSectionState extends ConsumerState<_LocationSection>
       _fitBoundsForPoints(route);
     } else {
       debugPrint(
-          '[Directions] Road route unavailable — straight-line emergency fallback active.');
+        '[Directions] Road route unavailable — straight-line emergency fallback active.',
+      );
     }
 
     _startDirTimer();
@@ -2173,7 +2294,8 @@ class _LocationSectionState extends ConsumerState<_LocationSection>
           markerId: const MarkerId('worker'),
           position: _workerPos!,
           icon: BitmapDescriptor.defaultMarkerWithHue(
-              BitmapDescriptor.hueAzure),
+            BitmapDescriptor.hueAzure,
+          ),
           infoWindow: InfoWindow(title: context.l10n.workerYourLocation),
         ),
     };
@@ -2334,8 +2456,7 @@ class _LocationSectionState extends ConsumerState<_LocationSection>
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed:
-                        _gettingLocation ? null : _startDirections,
+                    onPressed: _gettingLocation ? null : _startDirections,
                     icon: _gettingLocation
                         ? SizedBox(
                             width: 14,
@@ -2354,15 +2475,14 @@ class _LocationSectionState extends ConsumerState<_LocationSection>
                       _gettingLocation
                           ? context.l10n.workerGettingLocation
                           : context.l10n.workerDirections,
-                      style: TextStyle(
-                          color: c.primary, fontSize: 13),
+                      style: TextStyle(color: c.primary, fontSize: 13),
                     ),
                     style: OutlinedButton.styleFrom(
                       side: BorderSide(color: c.primary),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10)),
-                      padding:
-                          const EdgeInsets.symmetric(vertical: 9),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 9),
                     ),
                   ),
                 ),
@@ -2382,9 +2502,9 @@ class _LocationSectionState extends ConsumerState<_LocationSection>
                     style: OutlinedButton.styleFrom(
                       side: BorderSide(color: c.border),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10)),
-                      padding:
-                          const EdgeInsets.symmetric(vertical: 9),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 9),
                     ),
                   ),
                 ),
@@ -2396,15 +2516,20 @@ class _LocationSectionState extends ConsumerState<_LocationSection>
                 Expanded(
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 9),
+                      horizontal: 12,
+                      vertical: 9,
+                    ),
                     decoration: BoxDecoration(
                       color: c.softTeal,
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.navigation_rounded,
-                            size: 16, color: c.primary),
+                        Icon(
+                          Icons.navigation_rounded,
+                          size: 16,
+                          color: c.primary,
+                        ),
                         const SizedBox(width: 6),
                         Text(
                           context.l10n.workerDirectionsActive,
@@ -2424,9 +2549,12 @@ class _LocationSectionState extends ConsumerState<_LocationSection>
                   style: OutlinedButton.styleFrom(
                     side: BorderSide(color: c.error),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                     padding: const EdgeInsets.symmetric(
-                        vertical: 9, horizontal: 16),
+                      vertical: 9,
+                      horizontal: 16,
+                    ),
                   ),
                   child: Text(
                     context.l10n.inspFormStop,
@@ -2467,8 +2595,7 @@ class _FullScreenMapPage extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<_FullScreenMapPage> createState() =>
-      _FullScreenMapPageState();
+  ConsumerState<_FullScreenMapPage> createState() => _FullScreenMapPageState();
 }
 
 class _FullScreenMapPageState extends ConsumerState<_FullScreenMapPage>
@@ -2483,8 +2610,7 @@ class _FullScreenMapPageState extends ConsumerState<_FullScreenMapPage>
   static const _kReachedMeters = 50.0;
   static const _kDirCheckSecs = 5;
 
-  LatLng get _jobLatLng =>
-      LatLng(widget.job.latitude, widget.job.longitude);
+  LatLng get _jobLatLng => LatLng(widget.job.latitude, widget.job.longitude);
 
   @override
   void initState() {
@@ -2616,7 +2742,8 @@ class _FullScreenMapPageState extends ConsumerState<_FullScreenMapPage>
       _fitBoundsForPoints(route);
     } else {
       debugPrint(
-          '[Directions/FS] Road route unavailable — straight-line emergency fallback active.');
+        '[Directions/FS] Road route unavailable — straight-line emergency fallback active.',
+      );
     }
 
     _startDirTimer();
@@ -2669,7 +2796,8 @@ class _FullScreenMapPageState extends ConsumerState<_FullScreenMapPage>
       _jobLatLng.longitude,
     );
     debugPrint(
-        '[DirectionsMode/FS] Distance to job: ${dist.toStringAsFixed(1)}m');
+      '[DirectionsMode/FS] Distance to job: ${dist.toStringAsFixed(1)}m',
+    );
 
     if (dist <= _kReachedMeters) {
       debugPrint('[DirectionsMode/FS] Reached job — stopping directions.');
@@ -2738,7 +2866,8 @@ class _FullScreenMapPageState extends ConsumerState<_FullScreenMapPage>
           markerId: const MarkerId('worker'),
           position: _workerPos!,
           icon: BitmapDescriptor.defaultMarkerWithHue(
-              BitmapDescriptor.hueAzure),
+            BitmapDescriptor.hueAzure,
+          ),
           infoWindow: InfoWindow(title: context.l10n.workerYourLocation),
         ),
     };
@@ -2815,8 +2944,8 @@ class _FullScreenMapPageState extends ConsumerState<_FullScreenMapPage>
                     final pts = _routePoints.isNotEmpty
                         ? _routePoints
                         : (_workerPos != null
-                            ? [_workerPos!, _jobLatLng]
-                            : <LatLng>[]);
+                              ? [_workerPos!, _jobLatLng]
+                              : <LatLng>[]);
                     _fitBoundsForPoints(pts);
                   });
                 }
@@ -2861,8 +2990,9 @@ class _FullScreenMapPageState extends ConsumerState<_FullScreenMapPage>
                                 : context.l10n.workerDirections,
                             icon: Icons.directions_rounded,
                             color: c.primary,
-                            onPressed:
-                                _gettingLocation ? null : _startDirections,
+                            onPressed: _gettingLocation
+                                ? null
+                                : _startDirections,
                             loading: _gettingLocation,
                           ),
                         ),
@@ -2912,42 +3042,42 @@ class _MapButton extends StatelessWidget {
     return Opacity(
       opacity: onPressed == null && !loading ? 0.6 : 1,
       child: Material(
-      color: color,
-      borderRadius: BorderRadius.circular(_rButton),
-      elevation: 0,
-      child: InkWell(
+        color: color,
         borderRadius: BorderRadius.circular(_rButton),
-        onTap: onPressed,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (loading)
-                SizedBox(
-                  width: 15,
-                  height: 15,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
+        elevation: 0,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(_rButton),
+          onTap: onPressed,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (loading)
+                  SizedBox(
+                    width: 15,
+                    height: 15,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: c.onPrimary,
+                    ),
+                  )
+                else
+                  Icon(icon, size: 15, color: c.onPrimary),
+                const SizedBox(width: 7),
+                Text(
+                  label,
+                  style: TextStyle(
                     color: c.onPrimary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
                   ),
-                )
-              else
-                Icon(icon, size: 15, color: c.onPrimary),
-              const SizedBox(width: 7),
-              Text(
-                label,
-                style: TextStyle(
-                  color: c.onPrimary,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
-      ),
       ),
     );
   }
@@ -2972,7 +3102,11 @@ class _ErrorScreen extends StatelessWidget {
           children: [
             Icon(Icons.error_outline_rounded, size: 56, color: c.textSecondary),
             const SizedBox(height: 16),
-            Text(message, style: TextStyle(color: c.textSecondary, fontSize: 14), textAlign: TextAlign.center),
+            Text(
+              message,
+              style: TextStyle(color: c.textSecondary, fontSize: 14),
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: onRetry,
@@ -2980,7 +3114,9 @@ class _ErrorScreen extends StatelessWidget {
                 backgroundColor: c.primary,
                 foregroundColor: c.onPrimary,
                 elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
               child: Text(context.l10n.commonRetry),
             ),

@@ -1,14 +1,20 @@
+import 'package:dio/dio.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:handygo_app/core/errors/failures.dart';
 import 'package:handygo_app/core/l10n/app_locale.dart';
 import 'package:handygo_app/core/l10n/l10n_config.dart';
+import 'package:handygo_app/core/storage/local_cache_service.dart';
+import 'package:handygo_app/core/storage/secure_storage_service.dart';
 import 'package:handygo_app/features/bookings/data/models/booking_model.dart';
 import 'package:handygo_app/features/bookings/domain/entities/booking_entity.dart';
 import 'package:handygo_app/features/worker/domain/entities/worker_payment_report_entity.dart';
+import 'package:handygo_app/features/worker/data/datasources/worker_remote_datasource.dart';
 import 'package:handygo_app/features/worker/presentation/providers/worker_job_providers.dart';
 import 'package:handygo_app/features/worker/presentation/widgets/worker_payment_section.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// FIX 1 + FIX 3 — the Ustaad is shown the money that actually arrived, and
 /// can say so when it did not. Every number here is the server's; the only
@@ -102,6 +108,57 @@ Widget _wrap(BookingEntity job, {_FakeReportNotifier? notifier}) {
 }
 
 void main() {
+  test(
+    'short-payment datasource posts the real endpoint and server fact',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final dio = Dio(BaseOptions(baseUrl: 'https://example.test'))
+        ..interceptors.add(
+          InterceptorsWrapper(
+            onRequest: (options, handler) {
+              expect(options.method, 'POST');
+              expect(options.path, '/workers/jobs/job-1/report-payment');
+              expect(options.data, {'receivedCashTotal': 2500});
+              handler.resolve(
+                Response<Map<String, dynamic>>(
+                  requestOptions: options,
+                  statusCode: 200,
+                  data: {
+                    'success': true,
+                    'data': {
+                      'settlementId': 'settlement-1',
+                      'bookingId': 'job-1',
+                      'expectedTotal': 2700,
+                      'receivedCashTotal': 2500,
+                      'partsPaid': 1700,
+                      'labourPaid': 800,
+                      'feePaid': 0,
+                      'commission': 144,
+                      'munafa': 656,
+                      'shortfall': 200,
+                    },
+                  },
+                ),
+              );
+            },
+          ),
+        );
+      final datasource = WorkerRemoteDatasourceImpl(
+        dio,
+        LocalCacheService(prefs),
+        const SecureStorageService(FlutterSecureStorage()),
+      );
+
+      final report = await datasource.reportReceivedPayment('job-1', 2500);
+
+      expect(report.receivedCashTotal, 2500);
+      expect(report.shortfall, 200);
+      expect(report.commission, 144);
+      expect(report.munafa, 656);
+    },
+  );
+
   // ── The wire ─────────────────────────────────────────────────────────────
 
   group('BookingModel settlement parsing', () {
@@ -184,10 +241,7 @@ void main() {
 
     expect(find.byKey(const Key('worker-payment-shortfall')), findsOneWidget);
     // Nothing left to declare once a settlement exists.
-    expect(
-      find.byKey(const Key('worker-report-payment-button')),
-      findsNothing,
-    );
+    expect(find.byKey(const Key('worker-report-payment-button')), findsNothing);
   });
 
   testWidgets('a fully paid job shows no shortfall row', (tester) async {
@@ -255,10 +309,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(
-      find.byKey(const Key('worker-report-payment-button')),
-      findsNothing,
-    );
+    expect(find.byKey(const Key('worker-report-payment-button')), findsNothing);
   });
 
   // ── "Kam paisa mila" ─────────────────────────────────────────────────────
@@ -294,6 +345,43 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(notifier.calls, [(jobId: 'job-1', amount: 2500)]);
+  });
+
+  testWidgets('keyboard Done submits the real short-payment action', (
+    tester,
+  ) async {
+    final notifier = _FakeReportNotifier();
+    await tester.pumpWidget(
+      _wrap(
+        _job(
+          paymentDisplayStatus: PaymentDisplayStatus.unpaid,
+          receivedAmount: null,
+          expectedAmount: null,
+          remainingAmount: null,
+          commission: null,
+          munafa: null,
+        ),
+        notifier: notifier,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('worker-report-payment-button')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('worker-report-payment-field')),
+      '2500',
+    );
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pumpAndSettle();
+
+    expect(notifier.calls, [(jobId: 'job-1', amount: 2500)]);
+    expect(
+      find.text(
+        'Payment recorded. HandyGo will follow up on anything still owed.',
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('refuses an empty amount without a round trip', (tester) async {

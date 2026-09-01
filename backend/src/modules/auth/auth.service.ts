@@ -553,8 +553,12 @@ export class AuthService {
     };
   }
 
-  async saveFcmToken(userId: string, token: string): Promise<void> {
-    await this.authRepository.saveFcmToken(userId, token);
+  async saveFcmToken(
+    userId: string,
+    token: string,
+    locale?: string,
+  ): Promise<void> {
+    await this.authRepository.saveFcmToken(userId, token, locale);
   }
 
   /** Get the current avatar URL for any user (client or worker). */
@@ -977,7 +981,10 @@ export class AuthService {
    * number, a soft-deleted account — returns the SAME privacy-safe rejection,
    * so the response can never be used to probe which role owns a number.
    */
-  async clientOtpLogin(rawPhone: string, otp: string): Promise<AuthResponseDto> {
+  async clientOtpLogin(
+    rawPhone: string,
+    otp: string,
+  ): Promise<AuthResponseDto> {
     this._assertNotSupportAccount(rawPhone);
     const normalized = normalizePakistaniPhone(rawPhone);
     if (!normalized) {
@@ -1000,7 +1007,11 @@ export class AuthService {
     // Nonexistent, Worker-owned and soft-deleted are deliberately
     // indistinguishable here — the same rejection `clientPasswordLogin` gives,
     // and the same one `checkClientPhoneStatus` implies by reporting 'NEW'.
-    if (!existing || existing.role === Role.WORKER || existing.deletedAt !== null) {
+    if (
+      !existing ||
+      existing.role === Role.WORKER ||
+      existing.deletedAt !== null
+    ) {
       throw this._phoneNotRegisteredError();
     }
     if (!existing.isActive) {
@@ -1414,9 +1425,8 @@ export class AuthService {
     if (registrationToken !== undefined) {
       // The token is bound to the number it was issued for, so it cannot be
       // used to register a different one.
-      const tokenPhone = this._phoneFromWorkerRegistrationToken(
-        registrationToken,
-      );
+      const tokenPhone =
+        this._phoneFromWorkerRegistrationToken(registrationToken);
       if (tokenPhone !== normalized) {
         throw new UnauthorizedException({
           message: '',

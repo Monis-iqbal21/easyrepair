@@ -15,7 +15,7 @@ abstract class NotificationRemoteDatasource {
   Future<int> getUnreadCount();
   Future<void> markRead(String id);
   Future<void> markAllRead();
-  Future<void> saveFcmToken(String token);
+  Future<void> saveFcmToken(String token, {required String locale});
 }
 
 class NotificationRemoteDatasourceImpl implements NotificationRemoteDatasource {
@@ -49,8 +49,9 @@ class NotificationRemoteDatasourceImpl implements NotificationRemoteDatasource {
 
   @override
   Future<int> getUnreadCount() async {
-    final response =
-        await _dio.get<Map<String, dynamic>>('/notifications/unread-count');
+    final response = await _dio.get<Map<String, dynamic>>(
+      '/notifications/unread-count',
+    );
     final data = response.data!['data'] as Map<String, dynamic>;
     return data['count'] as int? ?? 0;
   }
@@ -66,16 +67,19 @@ class NotificationRemoteDatasourceImpl implements NotificationRemoteDatasource {
   }
 
   @override
-  Future<void> saveFcmToken(String token) async {
-    await _dio.post<void>('/auth/fcm-token', data: {'token': token});
+  Future<void> saveFcmToken(String token, {required String locale}) async {
+    await _dio.post<void>(
+      '/auth/fcm-token',
+      data: {'token': token, 'locale': locale},
+    );
   }
 }
 
 final notificationRemoteDatasourceProvider =
     Provider<NotificationRemoteDatasource>((ref) {
-  return NotificationRemoteDatasourceImpl(
-    ref.watch(dioProvider),
-    ref.watch(localCacheServiceProvider),
-    ref.watch(secureStorageServiceProvider),
-  );
-});
+      return NotificationRemoteDatasourceImpl(
+        ref.watch(dioProvider),
+        ref.watch(localCacheServiceProvider),
+        ref.watch(secureStorageServiceProvider),
+      );
+    });

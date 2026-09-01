@@ -6,6 +6,10 @@ import {
   CreateNotificationData,
   NotificationsRepository,
 } from './notifications.repository';
+import {
+  getNotificationTemplate,
+  hasLocalizedNotificationTemplate,
+} from './notification-templates';
 
 export interface NotifyOptions {
   userId: string;
@@ -19,6 +23,8 @@ export interface NotifyOptions {
   entityType?: string;
   entityId?: string;
   payload?: Record<string, unknown>;
+  /** Dynamic values interpolated by the centralized localized template. */
+  templateParams?: Record<string, string | number>;
   /** Unique lifecycle event that caused this notification. */
   complaintEventId?: string;
   /**
@@ -47,8 +53,8 @@ export class NotificationsService {
   async notify(options: NotifyOptions): Promise<void> {
     const {
       userId,
-      title,
-      body,
+      title: fallbackTitle,
+      body: fallbackBody,
       eventKey,
       bookingId,
       route,
@@ -58,7 +64,28 @@ export class NotificationsService {
       entityId,
       payload,
       complaintEventId,
+      templateParams,
     } = options;
+
+    let title = fallbackTitle;
+    let body = fallbackBody;
+    if (hasLocalizedNotificationTemplate(eventKey)) {
+      try {
+        const locale =
+          await this.notificationsRepository.findUserNotificationLocale(userId);
+        ({ title, body } = getNotificationTemplate(
+          eventKey,
+          templateParams,
+          locale,
+        ));
+      } catch (err) {
+        // Locale lookup is an enhancement, never a reason to lose a booking
+        // notification. Keep the caller's legacy copy on lookup failure.
+        this.logger.warn(
+          `Failed to resolve notification locale for userId=${userId}: ${err}`,
+        );
+      }
+    }
 
     const data: CreateNotificationData = {
       userId,

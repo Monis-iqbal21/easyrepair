@@ -78,6 +78,14 @@ export class NotificationsRepository {
     return user?.fcmToken ?? null;
   }
 
+  async findUserNotificationLocale(userId: string): Promise<string> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { notificationLocale: true },
+    });
+    return user?.notificationLocale ?? 'ur_Latn';
+  }
+
   /**
    * Removes a permanently-invalid FCM token (Firebase reported it
    * unregistered/invalid — e.g. after app uninstall) from whichever User row

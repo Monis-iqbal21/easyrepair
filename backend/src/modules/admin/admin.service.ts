@@ -347,6 +347,7 @@ export class AdminService {
         eventKey,
         title: 'Profile mein tabdeeli darkaar hai',
         body,
+        templateParams: trimmedReason ? { reason: trimmedReason } : undefined,
         route: '/worker/profile-completion',
         entityType: 'worker_profile',
         entityId: workerProfileId,

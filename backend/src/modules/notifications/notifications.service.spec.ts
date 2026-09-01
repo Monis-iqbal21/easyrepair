@@ -10,6 +10,7 @@ describe('NotificationsService', () => {
     notificationsRepository = {
       create: jest.fn().mockResolvedValue({ id: 'notif-1' }),
       findUserFcmToken: jest.fn().mockResolvedValue('token-abc'),
+      findUserNotificationLocale: jest.fn().mockResolvedValue('ur_Latn'),
       clearFcmTokenByValue: jest.fn().mockResolvedValue(undefined),
     };
     firebase = { sendPush: jest.fn().mockResolvedValue(undefined) };
@@ -125,8 +126,69 @@ describe('NotificationsService', () => {
       expect(Object.keys(notificationsRepository)).toEqual([
         'create',
         'findUserFcmToken',
+        'findUserNotificationLocale',
         'clearFcmTokenByValue',
       ]);
+    });
+  });
+
+  describe('selected notification language', () => {
+    it.each([
+      ['en', 'Payment received', 'The client paid Rs 2500 in full.'],
+      [
+        'ur_Latn',
+        'Payment mil gayi hai',
+        'Client ne poore Rs 2500 de diye hain.',
+      ],
+      ['ur', 'ادائیگی موصول ہو گئی', 'کلائنٹ نے پورے 2500 روپے دے دیے ہیں۔'],
+    ])(
+      'renders both title and body in %s',
+      async (locale, title, bodyStart) => {
+        notificationsRepository.findUserNotificationLocale.mockResolvedValue(
+          locale,
+        );
+
+        await service.notify({
+          userId: 'worker-1',
+          eventKey: 'payment.received',
+          title: 'legacy mixed title',
+          body: 'legacy mixed body',
+          templateParams: { received: 2500 },
+        });
+
+        expect(notificationsRepository.create).toHaveBeenLastCalledWith(
+          expect.objectContaining({
+            title,
+            body: expect.stringContaining(bodyStart),
+          }),
+        );
+        expect(chatGateway.emitAppBanner).toHaveBeenLastCalledWith(
+          'worker-1',
+          expect.objectContaining({
+            title,
+            body: expect.stringContaining(bodyStart),
+          }),
+        );
+      },
+    );
+
+    it('leaves client-only notification copy on its existing path', async () => {
+      await service.notify({
+        userId: 'client-1',
+        eventKey: 'bid.received',
+        title: 'Ali sent an offer',
+        body: 'Ali offered PKR 2500',
+      });
+
+      expect(
+        notificationsRepository.findUserNotificationLocale,
+      ).not.toHaveBeenCalled();
+      expect(notificationsRepository.create).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          title: 'Ali sent an offer',
+          body: 'Ali offered PKR 2500',
+        }),
+      );
     });
   });
 });

@@ -223,7 +223,11 @@ export class AuthRepository {
    * the same phone. Both statements run in one transaction so a reader can
    * never observe the token attached to two users at once.
    */
-  async saveFcmToken(userId: string, token: string): Promise<void> {
+  async saveFcmToken(
+    userId: string,
+    token: string,
+    locale?: string,
+  ): Promise<void> {
     await this.prisma.$transaction([
       this.prisma.user.updateMany({
         where: { fcmToken: token, id: { not: userId } },
@@ -231,7 +235,10 @@ export class AuthRepository {
       }),
       this.prisma.user.update({
         where: { id: userId },
-        data: { fcmToken: token },
+        data: {
+          fcmToken: token,
+          ...(locale ? { notificationLocale: locale } : {}),
+        },
       }),
     ]);
   }
@@ -389,7 +396,12 @@ export class AuthRepository {
     purpose: AuthOtpPurpose,
   ): Promise<AuthOtp | null> {
     return this.prisma.authOtp.findFirst({
-      where: { phone, purpose, consumedAt: null, expiresAt: { gt: new Date() } },
+      where: {
+        phone,
+        purpose,
+        consumedAt: null,
+        expiresAt: { gt: new Date() },
+      },
       orderBy: { createdAt: 'desc' },
     });
   }

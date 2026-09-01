@@ -18,16 +18,16 @@ extension WorkerJobFilterX on WorkerJobFilter {
   // Visible wording: workerJobFilterLabel() in presentation/utils/worker_labels.dart.
 
   String? get apiValue => switch (this) {
-        WorkerJobFilter.all => null,
-        WorkerJobFilter.active => 'active',
-        // Account history derived from this worker's own Bid rows — see
-        // WorkersService.getWorkerJobs. Never gated by ONLINE/OFFLINE and
-        // never disappears just because the job was later assigned to
-        // someone else (see job-visibility task).
-        WorkerJobFilter.applied => 'applied',
-        WorkerJobFilter.completed => 'completed',
-        WorkerJobFilter.cancelled => 'cancelled',
-      };
+    WorkerJobFilter.all => null,
+    WorkerJobFilter.active => 'active',
+    // Account history derived from this worker's own Bid rows — see
+    // WorkersService.getWorkerJobs. Never gated by ONLINE/OFFLINE and
+    // never disappears just because the job was later assigned to
+    // someone else (see job-visibility task).
+    WorkerJobFilter.applied => 'applied',
+    WorkerJobFilter.completed => 'completed',
+    WorkerJobFilter.cancelled => 'cancelled',
+  };
 }
 
 // ── Jobs list notifier ────────────────────────────────────────────────────────
@@ -83,31 +83,39 @@ class WorkerJobsNotifier extends AsyncNotifier<List<BookingEntity>> {
 
 final workerJobsProvider =
     AsyncNotifierProvider<WorkerJobsNotifier, List<BookingEntity>>(
-  WorkerJobsNotifier.new,
-);
+      WorkerJobsNotifier.new,
+    );
 
 // ── Single job detail ─────────────────────────────────────────────────────────
 
 /// True while [workerJobDetailProvider] for a given job id is showing the
 /// last cached detail because the live fetch failed.
-final workerJobDetailIsOfflineProvider =
-    StateProvider.family<bool, String>((ref, jobId) => false);
+final workerJobDetailIsOfflineProvider = StateProvider.family<bool, String>(
+  (ref, jobId) => false,
+);
 
-final workerJobDetailProvider =
-    FutureProvider.family<BookingEntity, String>((ref, jobId) async {
+final workerJobDetailProvider = FutureProvider.family<BookingEntity, String>((
+  ref,
+  jobId,
+) async {
   debugPrint('[workerJobDetailProvider] fetching job detail for jobId=$jobId');
-  final result =
-      await ref.read(workerRepositoryProvider).getWorkerJobById(jobId);
+  final result = await ref
+      .read(workerRepositoryProvider)
+      .getWorkerJobById(jobId);
   return result.fold(
     (f) {
-      debugPrint('[workerJobDetailProvider] failed for jobId=$jobId error=${f.message}');
+      debugPrint(
+        '[workerJobDetailProvider] failed for jobId=$jobId error=${f.message}',
+      );
       throw f;
     },
     (cached) {
       ref.read(workerJobDetailIsOfflineProvider(jobId).notifier).state =
           cached.isStale;
       final job = cached.data;
-      debugPrint('[workerJobDetailProvider] success jobId=$jobId status=${job.status}');
+      debugPrint(
+        '[workerJobDetailProvider] success jobId=$jobId status=${job.status}',
+      );
       return job;
     },
   );
@@ -121,24 +129,25 @@ class CompleteJobNotifier extends AsyncNotifier<void> {
 
   Future<void> complete(String jobId) async {
     state = const AsyncLoading();
-    final result =
-        await ref.read(workerRepositoryProvider).completeWorkerJob(jobId);
-    result.fold(
-      (failure) => state = AsyncError(failure, StackTrace.current),
-      (_) {
-        state = const AsyncData(null);
-        // Refresh list and detail so UI reflects COMPLETED immediately.
-        ref.invalidate(workerJobsProvider);
-        ref.invalidate(workerJobDetailProvider(jobId));
-        // Worker profile stats (completedJobs count) may have changed.
-        ref.invalidate(workerProfileProvider);
-      },
-    );
+    final result = await ref
+        .read(workerRepositoryProvider)
+        .completeWorkerJob(jobId);
+    result.fold((failure) => state = AsyncError(failure, StackTrace.current), (
+      _,
+    ) {
+      state = const AsyncData(null);
+      // Refresh list and detail so UI reflects COMPLETED immediately.
+      ref.invalidate(workerJobsProvider);
+      ref.invalidate(workerJobDetailProvider(jobId));
+      // Worker profile stats (completedJobs count) may have changed.
+      ref.invalidate(workerProfileProvider);
+    });
   }
 }
 
-final completeJobProvider =
-    AsyncNotifierProvider<CompleteJobNotifier, void>(CompleteJobNotifier.new);
+final completeJobProvider = AsyncNotifierProvider<CompleteJobNotifier, void>(
+  CompleteJobNotifier.new,
+);
 
 // ── "Kam paisa mila" — report the cash actually received ─────────────────────
 
@@ -156,6 +165,10 @@ class ReportReceivedPaymentNotifier
   /// to fish out: the sheet needs THIS attempt's error, and re-reading a
   /// provider nothing is listening to is not a reliable way to get it.
   Future<Failure?> report(String jobId, int receivedCashTotal) async {
+    if (state.isLoading) {
+      return const ValidationFailure('');
+    }
+    state = const AsyncLoading();
     final result = await ref
         .read(workerRepositoryProvider)
         .reportReceivedPayment(jobId, receivedCashTotal);
@@ -222,9 +235,10 @@ class NewJobsNotifier extends AsyncNotifier<List<NewJobEntity>> {
       // Strictly Bidding-lane only — a reopened ("Find Other Ustaad")
       // Inspection job is bid-actionable (see isDirectAssignLane) but must
       // still never surface under this Standard/Inspection-excluding filter.
-      NewJobFilter.notBidYet => jobs
-          .where((j) => j.lane == BookingLane.bidding && !j.hasMyBid)
-          .toList(),
+      NewJobFilter.notBidYet =>
+        jobs
+            .where((j) => j.lane == BookingLane.bidding && !j.hasMyBid)
+            .toList(),
       NewJobFilter.all => jobs,
     };
   }
@@ -251,5 +265,5 @@ class NewJobsNotifier extends AsyncNotifier<List<NewJobEntity>> {
 
 final newJobsProvider =
     AsyncNotifierProvider<NewJobsNotifier, List<NewJobEntity>>(
-  NewJobsNotifier.new,
-);
+      NewJobsNotifier.new,
+    );

@@ -6,6 +6,7 @@ import 'package:handygo_app/core/errors/failures.dart';
 import 'package:handygo_app/features/bookings/domain/entities/booking_entity.dart';
 import 'package:handygo_app/features/bookings/domain/entities/cash_payment_confirmation_entity.dart';
 import 'package:handygo_app/features/bookings/domain/repositories/booking_repository.dart';
+import 'package:handygo_app/features/bookings/domain/entities/update_booking_request.dart';
 import 'package:handygo_app/features/bookings/presentation/providers/booking_providers.dart';
 import 'package:handygo_app/features/bookings/presentation/widgets/cash_payment_confirmation_card.dart';
 import 'package:handygo_app/features/bookings/presentation/widgets/review_modal.dart';
@@ -36,6 +37,8 @@ BookingEntity _booking({double? receivedAmount}) => BookingEntity(
 
 class _CashRepository implements BookingRepository {
   final List<int> submittedAmounts = <int>[];
+  final List<ReviewRequest> submittedReviews = <ReviewRequest>[];
+  bool paymentConfirmed = false;
 
   @override
   Future<Either<Failure, CashPaymentConfirmationEntity>> confirmCashPayment(
@@ -43,6 +46,7 @@ class _CashRepository implements BookingRepository {
     int receivedCashTotal,
   ) async {
     submittedAmounts.add(receivedCashTotal);
+    paymentConfirmed = true;
     return Right(
       CashPaymentConfirmationEntity(
         settlementId: 'settlement-1',
@@ -55,6 +59,18 @@ class _CashRepository implements BookingRepository {
         isCurrent: true,
       ),
     );
+  }
+
+  @override
+  Future<Either<Failure, List<BookingEntity>>> getPendingReviews() async =>
+      Right(paymentConfirmed && submittedReviews.isEmpty ? [_booking()] : []);
+
+  @override
+  Future<Either<Failure, BookingEntity>> submitReview(
+    ReviewRequest request,
+  ) async {
+    submittedReviews.add(request);
+    return Right(_booking(receivedAmount: 2500));
   }
 
   @override
@@ -125,7 +141,7 @@ void main() {
   });
 
   testWidgets(
-    'shared modal submits existing provider and never overlaps review',
+    'post-cash CTA opens the canonical review flow and persists the review',
     (tester) async {
       final repository = await _pumpHarness(tester, _booking());
 
@@ -141,6 +157,16 @@ void main() {
       await tester.tap(find.text('Continue to review'));
       await tester.pumpAndSettle();
       expect(find.byType(CashPaymentConfirmationCard), findsNothing);
+      expect(find.byType(ReviewModal), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.star_rounded).at(4));
+      await tester.tap(find.byKey(const Key('review-submit-button')));
+      await tester.pumpAndSettle();
+
+      expect(repository.submittedReviews, hasLength(1));
+      expect(repository.submittedReviews.single.bookingId, _bookingId);
+      expect(repository.submittedReviews.single.rating, 5);
+      expect(find.byType(ReviewModal), findsNothing);
     },
   );
 

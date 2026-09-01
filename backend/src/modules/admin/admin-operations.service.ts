@@ -270,6 +270,11 @@ export class AdminOperationsService {
         eventKey,
         title,
         body,
+        templateParams: {
+          received: settlement.received,
+          shortfall,
+          expected: settlement.expectedTotal,
+        },
         bookingId: booking.id,
         // Same worker deep link every other job notification uses, so an old
         // APK that has never heard of these two event keys still lands on the

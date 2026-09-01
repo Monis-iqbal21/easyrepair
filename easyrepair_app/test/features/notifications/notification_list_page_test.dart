@@ -116,8 +116,10 @@ class _FakeNotificationRepository implements NotificationRepository {
   }
 
   @override
-  Future<Either<Failure, void>> saveFcmToken(String token) async =>
-      const Right(null);
+  Future<Either<Failure, void>> saveFcmToken(
+    String token, {
+    required String locale,
+  }) async => const Right(null);
 }
 
 class _FakeAuthStateNotifier extends AuthStateNotifier {
