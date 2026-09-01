@@ -62,6 +62,12 @@
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="handygo_bookings_v2" />
 
+        <!-- Android small icons are monochrome masks; never point this at the
+             full-colour launcher icon or a legacy orange brand resource. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_stat_handygo" />
+
         <!-- Google Maps API key -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"

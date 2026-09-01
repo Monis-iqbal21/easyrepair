@@ -17,7 +17,7 @@ import 'package:handygo_app/features/auth/presentation/providers/auth_providers.
 /// that an authenticated user is never trapped on it, and that it survives
 /// every phone size and text scale without overflowing.
 ///
-/// The screen is a full-bleed `primary` canvas carrying the wrench mark plus
+/// The screen is a full-bleed `primary` canvas carrying the approved logo plus
 /// the "HandyGo" wordmark and "Har maslay ka ustaad" tagline as REAL TEXT —
 /// the old decorative artwork and the baked-in logo lockup are gone. The
 /// colour group at the bottom pins that every pixel still comes from the
@@ -173,7 +173,7 @@ void main() {
           .map((img) => (img.image as AssetImage).assetName)
           .toList();
 
-      expect(assets, contains('assets/images/logo-only.png'));
+      expect(assets, contains('assets/images/logo-final.png'));
       expect(assets, isNot(contains('assets/images/background.png')));
       expect(assets, isNot(contains('assets/images/handygo_logo.png')));
     });

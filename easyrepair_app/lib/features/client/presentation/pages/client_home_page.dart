@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
 import '../../../../core/theme/app_semantic_colors.dart';
 import '../../../../core/theme/theme_mode_provider.dart';
+import '../../../../core/widgets/handygo_brand_lockup.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../../notifications/presentation/providers/notification_providers.dart';
 import '../widgets/service_card.dart';
@@ -269,11 +270,7 @@ class _Header extends StatelessWidget {
     );
     return Row(
       children: [
-        Icon(
-          Icons.home_repair_service_rounded,
-          color: colors.primary,
-          size: 31,
-        ),
+        const HandyGoBrandMark(size: 31, semanticLabel: 'HandyGo'),
         const SizedBox(width: 10),
         Expanded(
           child: Column(
@@ -388,7 +385,7 @@ class _UrgentBanner extends StatelessWidget {
       color: colors.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: colors.urgent),
+        side: BorderSide(color: colors.primary),
       ),
       child: InkWell(
         onTap: onTap,
@@ -399,8 +396,8 @@ class _UrgentBanner extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 19,
-                backgroundColor: colors.urgent,
-                foregroundColor: colors.surface,
+                backgroundColor: colors.primary,
+                foregroundColor: colors.onPrimary,
                 child: const Icon(Icons.bolt_rounded),
               ),
               const SizedBox(width: 11),
@@ -416,7 +413,7 @@ class _UrgentBanner extends StatelessWidget {
                         Text(
                           context.l10n.clientHomeUrgentTitle,
                           style: TextStyle(
-                            color: colors.urgent,
+                            color: colors.primary,
                             fontWeight: FontWeight.w800,
                             fontSize: 15,
                           ),
@@ -427,13 +424,13 @@ class _UrgentBanner extends StatelessWidget {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: colors.urgent,
+                            color: colors.primary,
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
                             '24/7',
                             style: TextStyle(
-                              color: colors.surface,
+                              color: colors.onPrimary,
                               fontSize: 10,
                               fontWeight: FontWeight.w800,
                             ),
@@ -456,8 +453,8 @@ class _UrgentBanner extends StatelessWidget {
               const SizedBox(width: 8),
               CircleAvatar(
                 radius: 18,
-                backgroundColor: colors.urgent,
-                foregroundColor: colors.surface,
+                backgroundColor: colors.primary,
+                foregroundColor: colors.onPrimary,
                 child: const Icon(Icons.arrow_forward_rounded, size: 18),
               ),
             ],

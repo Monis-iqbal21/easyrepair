@@ -52,6 +52,38 @@ void main() {
     expect(match!.group(1), LocalNotificationService.channelId);
   });
 
+  test('foreground and FCM notifications use the monochrome HandyGo icon', () {
+    expect(
+      LocalNotificationService.androidSmallIcon,
+      '@drawable/ic_stat_handygo',
+    );
+
+    final manifest = read('android/app/src/main/AndroidManifest.xml');
+    expect(
+      manifest,
+      contains(
+        'android:name="com.google.firebase.messaging.default_notification_icon"',
+      ),
+    );
+    expect(manifest, contains('android:resource="@drawable/ic_stat_handygo"'));
+
+    for (final density in <String>[
+      'mdpi',
+      'hdpi',
+      'xhdpi',
+      'xxhdpi',
+      'xxxhdpi',
+    ]) {
+      expect(
+        File(
+          'android/app/src/main/res/drawable-$density/ic_stat_handygo.png',
+        ).existsSync(),
+        isTrue,
+        reason: 'missing $density notification drawable',
+      );
+    }
+  });
+
   test('no retired id is still referenced by the manifest', () {
     final manifest = read('android/app/src/main/AndroidManifest.xml');
     for (final retired in LocalNotificationService.retiredChannelIds) {

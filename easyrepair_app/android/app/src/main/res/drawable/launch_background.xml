@@ -2,8 +2,8 @@
 <!--
   HandyGo launch screen (pre-API 21).
 
-  Composition, deliberately minimal: the startup teal filling the whole
-  window, plus the off-white wrench centred on it. Nothing else - no
+  Composition, deliberately minimal: the startup off-white filling the whole
+  window, plus the approved full-colour logo centred on it. Nothing else - no
   wordmark, no tagline, no spinner, no card. The wordmark and tagline are
   real Flutter text on the screen that follows.
 
@@ -11,7 +11,7 @@
   single place it is defined. Do not inline a hex value here.
 
   The bitmap is @drawable/handygo_splash_logo, generated from
-  assets/images/logo-only.png at a 120dp square per density bucket, so it is
+  assets/images/logo-final.png at a 120dp square per density bucket, so it is
   drawn at its natural size and aspect ratio and is never stretched.
 -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">

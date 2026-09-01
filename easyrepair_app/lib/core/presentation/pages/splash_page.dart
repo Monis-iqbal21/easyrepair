@@ -14,19 +14,20 @@ import '../../../core/widgets/handygo_brand_lockup.dart';
 /// confirmed session goes to the right home, and a confirmed logout goes to
 /// [WelcomePage]. There are no timers here and never should be.
 ///
-/// It renders the SAME full-bleed primary canvas and the SAME
-/// [HandyGoBrandLockup] as the welcome screen, at the same size and position,
-/// so the sequence native launch screen → splash → welcome shows no flash and
-/// no logo jump: only the button fades in at the end. The one thing that
-/// differs is what sits below the lockup — a spinner while resolving, or a
-/// Retry when the very first check failed outright.
+/// It renders the approved logo on the same off-white canvas as the native
+/// launch screen. The one thing below the lockup is a spinner while resolving,
+/// or a Retry when the very first check failed outright.
 class SplashPage extends ConsumerWidget {
   const SplashPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authStateProvider);
-    final colors = context.semanticColors;
+    // Startup branding is intentionally fixed to the light off-white palette,
+    // even when the saved app preference is dark. This matches both native
+    // launch screens and prevents the approved opaque logo from flashing as a
+    // pale square against the old dark-teal canvas.
+    const colors = AppSemanticColors.light;
 
     // A transient failure (no internet, timeout, backend 5xx) on the very
     // first session check, with nothing previously confirmed to fall back
@@ -43,13 +44,13 @@ class SplashPage extends ConsumerWidget {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light, // Android
-        statusBarBrightness: Brightness.dark, // iOS
-        systemNavigationBarColor: colors.primary,
-        systemNavigationBarIconBrightness: Brightness.light,
+        statusBarIconBrightness: Brightness.dark, // Android
+        statusBarBrightness: Brightness.light, // iOS
+        systemNavigationBarColor: colors.background,
+        systemNavigationBarIconBrightness: Brightness.dark,
       ),
       child: Scaffold(
-        backgroundColor: colors.primary,
+        backgroundColor: colors.background,
         body: SafeArea(
           child: LayoutBuilder(
             builder: (context, constraints) {
@@ -60,8 +61,7 @@ class SplashPage extends ConsumerWidget {
 
               // Identical sizing maths to WelcomePage, so the lockup does not
               // resize or move when this screen hands over to it.
-              final contentWidth =
-                  usableWidth > 460.0 ? 460.0 : usableWidth;
+              final contentWidth = usableWidth > 460.0 ? 460.0 : usableWidth;
 
               return SingleChildScrollView(
                 child: ConstrainedBox(
@@ -77,6 +77,7 @@ class SplashPage extends ConsumerWidget {
                             child: HandyGoBrandLockup(
                               widthBudget: contentWidth,
                               heightBudget: maxHeight,
+                              colorPalette: colors,
                             ),
                           ),
                           const Spacer(flex: 5),
@@ -92,7 +93,7 @@ class SplashPage extends ConsumerWidget {
                               height: 22,
                               child: CircularProgressIndicator(
                                 valueColor: AlwaysStoppedAnimation<Color>(
-                                  colors.onPrimary,
+                                  colors.primary,
                                 ),
                                 strokeWidth: 2.5,
                               ),

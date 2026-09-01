@@ -23,6 +23,11 @@ class LocalNotificationService {
 
   final _plugin = FlutterLocalNotificationsPlugin();
 
+  /// Android's status-bar icon must be a white silhouette on transparency.
+  /// This drawable is derived from the approved logo solely for that platform
+  /// requirement; normal branding always uses the full-colour logo asset.
+  static const androidSmallIcon = '@drawable/ic_stat_handygo';
+
   // Android notification-channel names and descriptions. These are rendered
   // by the OS settings screen, not by this app's widget tree, and they are
   // registered from main() before any BuildContext or locale exists. They are
@@ -91,8 +96,7 @@ class LocalNotificationService {
   // ── Init ─────────────────────────────────────────────────────────────────
 
   Future<void> init() async {
-    const androidSettings =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings = AndroidInitializationSettings(androidSmallIcon);
     // Permissions are already requested via FirebaseMessaging.requestPermission.
     const iosSettings = DarwinInitializationSettings(
       requestAlertPermission: false,
@@ -101,10 +105,7 @@ class LocalNotificationService {
     );
 
     await _plugin.initialize(
-      const InitializationSettings(
-        android: androidSettings,
-        iOS: iosSettings,
-      ),
+      const InitializationSettings(android: androidSettings, iOS: iosSettings),
       onDidReceiveNotificationResponse: _handleResponse,
       // Background isolate tap on Android (app is in background, not terminated)
       onDidReceiveBackgroundNotificationResponse: _backgroundHandler,
@@ -114,7 +115,8 @@ class LocalNotificationService {
     if (Platform.isAndroid) {
       final androidPlugin = _plugin
           .resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>();
+            AndroidFlutterLocalNotificationsPlugin
+          >();
       // Create the current channels BEFORE retiring the old ones, so a push
       // arriving mid-upgrade always has somewhere to land.
       await androidPlugin?.createNotificationChannel(
@@ -194,7 +196,7 @@ class LocalNotificationService {
           channelDescription: androidChannelDesc,
           importance: Importance.high,
           priority: Priority.high,
-          icon: '@mipmap/ic_launcher',
+          icon: androidSmallIcon,
           playSound: true,
           enableVibration: true,
         ),

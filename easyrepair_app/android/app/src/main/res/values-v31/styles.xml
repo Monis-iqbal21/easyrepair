@@ -7,11 +7,8 @@
       than a reproduction of the Flutter screen.
 
       windowSplashScreenAnimatedIcon is @drawable/handygo_splash_icon: the
-      off-white wrench padded to ~66% of a square canvas. The platform masks
-      this icon to a circle and only guarantees the inner two thirds, so the
-      padding is what keeps the wrench whole. It is deliberately the wrench
-      ALONE - no wordmark, no tagline - which is also why it is not the
-      launcher icon.
+      approved full-colour logo resized proportionally for the platform
+      canvas. Android applies its required system mask.
 
       The background colour is the shared value from values/colors.xml - the
       single place it is defined. Not duplicated as a hex literal here.

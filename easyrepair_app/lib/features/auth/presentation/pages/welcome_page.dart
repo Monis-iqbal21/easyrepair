@@ -40,9 +40,9 @@ class WelcomePage extends StatelessWidget {
   /// hands off to the existing Client/Ustaad role picker.
   static const languageRoute = '/auth/language';
 
-  /// The wrench mark. Re-exported from [HandyGoBrandLockup] so the splash
+  /// The approved logo. Re-exported from [HandyGoBrandLockup] so the splash
   /// screen and the tests have one name to reference.
-  static const logoAsset = HandyGoBrandLockup.wrenchAsset;
+  static const logoAsset = HandyGoBrandLockup.logoAsset;
 
   @override
   Widget build(BuildContext context) {
@@ -110,6 +110,7 @@ class _WelcomeContent extends StatelessWidget {
                       child: HandyGoBrandLockup(
                         widthBudget: contentWidth,
                         heightBudget: maxHeight,
+                        onPrimaryBackground: true,
                       ),
                     ),
                     // Larger gap below the lockup so it reads slightly above
@@ -166,9 +167,7 @@ class _ShuruKareinButton extends StatelessWidget {
         // 48dp accessible minimum.
         minimumSize: const Size.fromHeight(56),
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
       child: Stack(
         alignment: Alignment.center,

@@ -130,8 +130,8 @@ flutter:
 
 flutter_launcher_icons:
   android: "ic_launcher"
-  ios: false
-  image_path: "assets/images/logo-green.png"
+  ios: true
+  image_path: "assets/images/logo-final.png"
   background_color: "#FFFEFB"
   adaptive_icon_background: "#FFFEFB"
-  adaptive_icon_foreground: "assets/images/logo-green.png"
+  adaptive_icon_foreground: "assets/images/logo-final.png"

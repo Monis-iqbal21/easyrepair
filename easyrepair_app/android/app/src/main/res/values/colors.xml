@@ -14,12 +14,8 @@
         * values-v31/styles.xml                   (Android 12+ splash API)
         * values-night/styles.xml                 (via the same drawables)
 
-      WHY THIS VALUE: #082B28 is HandyGo's startup teal - the deep end of the
-      brand teal that the primary #11645D sits in. The native launch screen
-      shows this colour with the off-white wrench centred on it and NOTHING
-      else: no wordmark, no tagline, no spinner. Flutter then paints its own
-      loading/welcome screen in the primary teal, so the hand-off is one step
-      within a single hue rather than a flash between unrelated colours.
+      The startup background aliases the existing launcher off-white so the
+      approved opaque logo blends cleanly into both launch surfaces.
 
       Native launch resources cannot read Flutter's runtime theme, so this
       literal is deliberate and correct here - it is the platform counterpart
@@ -27,5 +23,5 @@
       Its Flutter-side sibling is lib/core/theme/app_semantic_colors.dart and
       its iOS counterpart is ios/Runner/Base.lproj/LaunchScreen.storyboard.
     -->
-    <color name="handygo_splash_background">#082B28</color>
+    <color name="handygo_splash_background">@color/ic_launcher_background</color>
 </resources>
