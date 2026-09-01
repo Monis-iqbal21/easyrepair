@@ -162,7 +162,9 @@ void main() {
     expect(find.text(_bannerText), findsOneWidget);
     expect(find.byType(HandyGoBrandMark), findsOneWidget);
     expect(
-      find.image(const AssetImage('assets/images/logo-final.png')),
+      find.image(
+        const AssetImage('assets/images/logo-primary-transparent.png'),
+      ),
       findsOneWidget,
     );
   });

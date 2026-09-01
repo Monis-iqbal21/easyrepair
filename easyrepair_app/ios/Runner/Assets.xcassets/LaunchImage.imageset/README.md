@@ -1,7 +1,7 @@
 # HandyGo launch image
 
 `LaunchImage.png` / `@2x` / `@3x` are the HandyGo **wrench mark alone**,
-generated from `assets/images/logo-final.png` at 120 / 240 / 360 px. The source
+generated from `assets/images/logo-primary-transparent.png` at 120 / 240 / 360 px. The source
 is trimmed to the mark and re-padded to an exact square, so all three sizes are
 the same 120pt square, centred, at the asset's own aspect ratio — never
 stretched. The mark keeps its transparency and its off-white colour, so it sits

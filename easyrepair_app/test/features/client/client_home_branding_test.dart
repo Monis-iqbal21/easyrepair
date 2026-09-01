@@ -47,7 +47,9 @@ void main() {
 
       expect(find.byType(HandyGoBrandMark), findsOneWidget);
       expect(
-        find.image(const AssetImage('assets/images/logo-final.png')),
+        find.image(
+          const AssetImage('assets/images/logo-primary-transparent.png'),
+        ),
         findsOneWidget,
       );
       expect(find.byIcon(Icons.home_repair_service_rounded), findsNothing);

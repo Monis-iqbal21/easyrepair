@@ -151,7 +151,9 @@ void main() {
     expect(_renderedNames(tester).first, 'HandyGo Support');
     expect(find.byType(HandyGoBrandMark), findsOneWidget);
     expect(
-      find.image(const AssetImage('assets/images/logo-final.png')),
+      find.image(
+        const AssetImage('assets/images/logo-primary-transparent.png'),
+      ),
       findsOneWidget,
     );
   });

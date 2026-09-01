@@ -25,7 +25,7 @@ class LocalNotificationService {
 
   /// Android's status-bar icon must be a white silhouette on transparency.
   /// This drawable is derived from the approved logo solely for that platform
-  /// requirement; normal branding always uses the full-colour logo asset.
+  /// requirement; normal branding uses the primary-teal transparent asset.
   static const androidSmallIcon = '@drawable/ic_stat_handygo';
 
   // Android notification-channel names and descriptions. These are rendered

@@ -111,6 +111,7 @@ class _WelcomeContent extends StatelessWidget {
                         widthBudget: contentWidth,
                         heightBudget: maxHeight,
                         onPrimaryBackground: true,
+                        logoSurfaceColor: AppSemanticColors.light.background,
                       ),
                     ),
                     // Larger gap below the lockup so it reads slightly above

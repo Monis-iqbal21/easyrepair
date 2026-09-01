@@ -34,7 +34,9 @@ void main() {
     expect(find.text('HandyGo'), findsWidgets);
     expect(find.byType(HandyGoBrandMark), findsOneWidget);
     expect(
-      find.image(const AssetImage('assets/images/logo-final.png')),
+      find.image(
+        const AssetImage('assets/images/logo-primary-transparent.png'),
+      ),
       findsOneWidget,
     );
   });

@@ -7,7 +7,7 @@
       than a reproduction of the Flutter screen.
 
       windowSplashScreenAnimatedIcon is @drawable/handygo_splash_icon: the
-      approved full-colour logo resized proportionally for the platform
+      transparent primary-colour logo resized proportionally for the platform
       canvas. Android applies its required system mask.
 
       The background colour is the shared value from values/colors.xml - the

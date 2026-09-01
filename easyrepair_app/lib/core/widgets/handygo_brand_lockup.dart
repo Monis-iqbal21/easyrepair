@@ -12,15 +12,15 @@ import '../theme/app_semantic_colors.dart';
 /// ## Text, not artwork
 ///
 /// The wordmark and tagline are real [Text] widgets. Only the wrench comes
-/// from an image ([wrenchAsset]) — so the type scales with the device and the
+/// from an image ([logoAsset]) — so the type scales with the device and the
 /// user's text-size setting instead of pixelating, and screen readers get
 /// words rather than a label bolted onto a bitmap.
 ///
 /// ## Colour
 ///
-/// Every colour is [AppSemanticColors.onPrimary]; the lockup assumes it is
-/// drawn on an [AppSemanticColors.primary] background. There is no literal
-/// here, so the light/dark palettes drive it like everything else.
+/// Text colours and the optional contrast surface come from semantic tokens.
+/// The PNG carries the locked primary teal; Flutter widgets add no raw brand
+/// literals.
 class HandyGoBrandLockup extends StatelessWidget {
   const HandyGoBrandLockup({
     super.key,
@@ -28,6 +28,7 @@ class HandyGoBrandLockup extends StatelessWidget {
     required this.heightBudget,
     this.onPrimaryBackground = false,
     this.colorPalette,
+    this.logoSurfaceColor,
   });
 
   /// The width and height of the screen area the lockup has to live in.
@@ -47,8 +48,13 @@ class HandyGoBrandLockup extends StatelessWidget {
   /// dark-mode preference before the app has finished loading.
   final AppSemanticColors? colorPalette;
 
-  /// The single approved HandyGo brand/app logo. It is always rendered as-is.
-  static const logoAsset = 'assets/images/logo-final.png';
+  /// Optional contrast surface behind the transparent logo. Welcome/Auth uses
+  /// this on its teal canvas; normal in-app marks and off-white splash screens
+  /// leave it null so the asset stays visually transparent.
+  final Color? logoSurfaceColor;
+
+  /// The normal HandyGo brand mark: primary-teal wrench on true transparency.
+  static const logoAsset = 'assets/images/logo-primary-transparent.png';
 
   // l10n-ignore: the brand name and its Roman Urdu tagline are the same in
   // every supported language — the same treatment as the "Shuru karein" CTA.
@@ -86,15 +92,24 @@ class HandyGoBrandLockup extends StatelessWidget {
       children: [
         SizedBox.square(
           dimension: logoSize,
-          child: Image.asset(
-            logoAsset,
-            // `contain` on a square box: the mark keeps its aspect ratio and
-            // is never stretched.
-            fit: BoxFit.contain,
-            // Decorative: the brand name is right underneath it as real text,
-            // so labelling the mark too would make a screen reader say
-            // "HandyGo" twice.
-            excludeFromSemantics: true,
+          child: DecoratedBox(
+            key: const Key('handygo-brand-logo-surface'),
+            decoration: BoxDecoration(
+              color: logoSurfaceColor,
+              borderRadius: logoSurfaceColor == null
+                  ? null
+                  : BorderRadius.circular(16),
+            ),
+            child: Image.asset(
+              logoAsset,
+              // `contain` on a square box: the mark keeps its aspect ratio and
+              // is never stretched.
+              fit: BoxFit.contain,
+              // Decorative: the brand name is right underneath it as real
+              // text, so labelling the mark too would make a screen reader say
+              // "HandyGo" twice.
+              excludeFromSemantics: true,
+            ),
           ),
         ),
         SizedBox(height: logoSize * 0.18),

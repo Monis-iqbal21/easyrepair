@@ -17,26 +17,29 @@ class _LoadingAuthState extends AuthStateNotifier {
 }
 
 void main() {
-  testWidgets('startup stays off-white and uses logo-final in dark mode', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [authStateProvider.overrideWith(_LoadingAuthState.new)],
-        child: localizedApp(const SplashPage(), theme: AppTheme.darkTheme),
-      ),
-    );
-    await tester.pump();
+  testWidgets(
+    'startup stays off-white and uses the primary logo in dark mode',
+    (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [authStateProvider.overrideWith(_LoadingAuthState.new)],
+          child: localizedApp(const SplashPage(), theme: AppTheme.darkTheme),
+        ),
+      );
+      await tester.pump();
 
-    final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
-    expect(scaffold.backgroundColor, AppSemanticColors.light.background);
-    expect(
-      find.image(const AssetImage('assets/images/logo-final.png')),
-      findsOneWidget,
-    );
+      final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
+      expect(scaffold.backgroundColor, AppSemanticColors.light.background);
+      expect(
+        find.image(
+          const AssetImage('assets/images/logo-primary-transparent.png'),
+        ),
+        findsOneWidget,
+      );
 
-    final wordmark = tester.widget<Text>(find.text('HandyGo'));
-    expect(wordmark.style!.color, AppSemanticColors.light.textPrimary);
-    expect(tester.takeException(), isNull);
-  });
+      final wordmark = tester.widget<Text>(find.text('HandyGo'));
+      expect(wordmark.style!.color, AppSemanticColors.light.textPrimary);
+      expect(tester.takeException(), isNull);
+    },
+  );
 }

@@ -173,7 +173,10 @@ void main() {
           .map((img) => (img.image as AssetImage).assetName)
           .toList();
 
-      expect(assets, contains('assets/images/logo-final.png'));
+      expect(
+        assets,
+        contains('assets/images/logo-primary-transparent.png'),
+      );
       expect(assets, isNot(contains('assets/images/background.png')));
       expect(assets, isNot(contains('assets/images/handygo_logo.png')));
     });
@@ -185,6 +188,19 @@ void main() {
       final context = tester.element(find.byType(ElevatedButton));
       final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
       expect(scaffold.backgroundColor, context.semanticColors.primary);
+    });
+
+    testWidgets('the transparent primary logo has the minimum off-white '
+        'contrast surface on the teal canvas', (tester) async {
+      await _pump(tester);
+
+      final surface = tester.widget<DecoratedBox>(
+        find.byKey(const Key('handygo-brand-logo-surface')),
+      );
+      final decoration = surface.decoration as BoxDecoration;
+      expect(decoration.color, AppSemanticColors.light.background);
+      expect(decoration.borderRadius, BorderRadius.circular(16));
+      expect(tester.getSize(find.byType(Image).first), const Size.square(120));
     });
 
     testWidgets('shows the Shuru karein button with a trailing arrow',
