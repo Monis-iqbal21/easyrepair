@@ -129,11 +129,20 @@ class ViewInspectionReportButton extends ConsumerWidget {
   /// must be const, so the fallback is resolved in [build] instead.
   final String? label;
 
+  /// Renders the filled `primary` button instead of the outlined one.
+  ///
+  /// The client booking detail page opts in: there the report is the main
+  /// thing to do next, so it carries primary weight. Everywhere else it sits
+  /// beside a stronger CTA and stays secondary, which is why this defaults to
+  /// false rather than flipping the shared widget.
+  final bool filled;
+
   const ViewInspectionReportButton({
     super.key,
     required this.bookingId,
     required this.route,
     this.label,
+    this.filled = false,
   });
 
   @override
@@ -142,12 +151,19 @@ class ViewInspectionReportButton extends ConsumerWidget {
     final buttonLabel = label ?? context.l10n.discoveryViewInspectionReport;
 
     return reportAsync.when(
-      data: (_) => BookingSecondaryButton(
-        key: const Key('view-inspection-report-button'),
-        label: buttonLabel,
-        icon: Icons.description_outlined,
-        onPressed: () => context.push(route),
-      ),
+      data: (_) => filled
+          ? BookingPrimaryButton(
+              key: const Key('view-inspection-report-button'),
+              label: buttonLabel,
+              icon: Icons.description_outlined,
+              onPressed: () => context.push(route),
+            )
+          : BookingSecondaryButton(
+              key: const Key('view-inspection-report-button'),
+              label: buttonLabel,
+              icon: Icons.description_outlined,
+              onPressed: () => context.push(route),
+            ),
       loading: () => const SizedBox.shrink(),
       error: (_, _) => const SizedBox.shrink(),
     );

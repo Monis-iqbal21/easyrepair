@@ -3906,13 +3906,12 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     // Which lanes a category allows is a property OF THAT CATEGORY, so until
     // it has actually been resolved there is nothing truthful to render.
     //
-    // This is the bug that made Appliances Repair show all three options: the
-    // rule used to read `category?.inspectionOnly ?? false`, so an
-    // unresolvable category (backend list not loaded yet, request failed, or
-    // the category genuinely missing from /categories) silently degraded to
-    // "every lane is allowed" — the least safe possible default — while the
-    // same null simultaneously disabled the Inspection card via
-    // `inspectionFee != null`. Guessing is now refused outright.
+    // This is the bug that made Appliances Repair show every option: the rule
+    // used to read the restriction off `category?` with a permissive default,
+    // so an unresolvable category (backend list not loaded yet, request
+    // failed, or the category genuinely missing from /categories) silently
+    // degraded to "every lane is allowed" — the least safe possible default.
+    // Guessing is now refused outright.
     if (category == null) {
       // Still fetching: a brief spinner, which resolves into the real options
       // the moment the list arrives. Once the list HAS arrived and the
@@ -3937,12 +3936,15 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     }
 
     final inspectionFee = category.inspectionFee;
-    final inspectionOnly = category.inspectionOnly;
     final feeLabel = inspectionFee == null ? '—' : formatPkr(inspectionFee);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
+    // A lane-restricted category (ServiceCategory.soleLane) offers ONE lane,
+    // so the others are not rendered at all rather than rendered greyed out —
+    // there is nothing the client could do to unlock them, and the backend
+    // rejects them outright. An unrestricted category keeps all three cards
+    // exactly as before, with `enabled` still deciding the greyed states.
+    final laneCards = <Widget>[
+      if (category.allowsLane(BookingLane.standard))
         _buildReferenceLaneCard(
           lane: BookingLane.standard,
           icon: Icons.build_outlined,
@@ -3950,7 +3952,6 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
           subtitle: context.l10n.postJobLaneFixedSubtitle,
           action: context.l10n.postJobLaneFixedAction,
           minimumHeight: 114,
-          enabled: !inspectionOnly,
           body: [
             _laneBodyText(
               context.l10n.postJobLaneFixedBody,
@@ -3958,7 +3959,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
             ),
           ],
         ),
-        const SizedBox(height: 10),
+      if (category.allowsLane(BookingLane.inspection))
         _buildReferenceLaneCard(
           lane: BookingLane.inspection,
           icon: Icons.search_rounded,
@@ -3966,6 +3967,8 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
           subtitle: context.l10n.postJobLaneInspectionSubtitle,
           action: context.l10n.postJobLaneInspectionAction,
           minimumHeight: 164,
+          // Unchanged: on an unrestricted category the inspection lane is
+          // still offered only where the backend set a fee.
           enabled: inspectionFee != null,
           body: [
             _laneBodyText(
@@ -3978,19 +3981,27 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
             ),
           ],
         ),
-        const SizedBox(height: 10),
+      if (category.allowsLane(BookingLane.bidding))
         _buildReferenceLaneCard(
           lane: BookingLane.bidding,
           icon: Icons.chat_bubble_outline_rounded,
           title: context.l10n.postJobLaneCustomTitle,
           action: context.l10n.postJobLaneCustomAction,
           minimumHeight: 136,
-          enabled: !inspectionOnly,
           body: [
             _laneBodyText(context.l10n.postJobLaneCustomBody),
             _laneBodyText(context.l10n.postJobLaneCustomRatesBody),
           ],
         ),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (var i = 0; i < laneCards.length; i++) ...[
+          if (i > 0) const SizedBox(height: 10),
+          laneCards[i],
+        ],
         const SizedBox(height: 10),
         Container(
           width: double.infinity,

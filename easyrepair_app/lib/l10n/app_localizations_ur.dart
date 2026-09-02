@@ -5842,7 +5842,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get bookingFindAnotherUstaad => 'Doosra Ustaad dhoondein';
 
   @override
-  String get bookingSelectedServices => 'Muntakhab services';
+  String get bookingSelectedServices => 'Selected services';
 
   @override
   String bookingServiceQuantity(String name, int quantity) {
@@ -7457,7 +7457,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get inspFormLabourCostRequired => 'Mazdoori ki laagat *';
 
   @override
-  String get inspFormNotesOptional => 'Notes (ikhtiyari)';
+  String get inspFormNotesOptional => 'Notes (optional)';
 
   @override
   String get inspFormPartName => 'Purze ka naam';
@@ -7469,7 +7469,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get inspFormUnitPrice => 'Fi adad qeemat';
 
   @override
-  String get inspFormWarrantyOptional => 'Warranty / guarantee (ikhtiyari)';
+  String get inspFormWarrantyOptional => 'Warranty / guarantee (optional)';
 
   @override
   String get inspFormPartsTotal => 'Purzon ki kul raqam';

@@ -84,6 +84,21 @@ extension BookingLaneX on BookingLane {
       _ => BookingLane.bidding,
     };
   }
+
+  /// Like [fromRaw], but null stays null and an unrecognised value does too.
+  ///
+  /// [fromRaw] falls back to BIDDING because every booking HAS a lane. A
+  /// category's `soleLane` is genuinely optional — absent means "not
+  /// restricted" — so it must never be coerced into a lane that would silently
+  /// restrict the category to one.
+  static BookingLane? fromRawOrNull(String? raw) {
+    return switch (raw?.toUpperCase()) {
+      'STANDARD' => BookingLane.standard,
+      'INSPECTION' => BookingLane.inspection,
+      'BIDDING' => BookingLane.bidding,
+      _ => null,
+    };
+  }
 }
 
 /// Worker-facing lifecycle action for a STANDARD-lane assigned job — the

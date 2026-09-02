@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { ServiceAvailabilityStatus } from '@prisma/client';
+import { BookingLane, ServiceAvailabilityStatus } from '@prisma/client';
 import { CategoriesRepository } from './categories.repository';
 
 export interface CategoryDto {
@@ -13,6 +13,10 @@ export interface CategoryDto {
   inspectionOnly: boolean;
   /** Additive for older clients, which safely ignore unknown response keys. */
   availabilityStatus: ServiceAvailabilityStatus;
+  /// The single lane this category offers, or null when it is unrestricted.
+  /// The client app renders only this lane; the rule itself is enforced
+  /// server-side. See ServiceCategory.soleLane and category-lanes.ts.
+  soleLane: BookingLane | null;
 }
 
 export interface StandardServiceDto {

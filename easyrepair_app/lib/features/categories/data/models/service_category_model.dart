@@ -1,3 +1,5 @@
+import '../../../bookings/domain/entities/booking_entity.dart'
+    show BookingLane, BookingLaneX;
 import '../../domain/entities/service_category_entity.dart';
 
 class ServiceCategoryModel {
@@ -6,7 +8,7 @@ class ServiceCategoryModel {
   final String? description;
   final String? iconUrl;
   final double? inspectionFee;
-  final bool inspectionOnly;
+  final BookingLane? soleLane;
 
   const ServiceCategoryModel({
     required this.id,
@@ -14,7 +16,7 @@ class ServiceCategoryModel {
     this.description,
     this.iconUrl,
     this.inspectionFee,
-    this.inspectionOnly = false,
+    this.soleLane,
   });
 
   factory ServiceCategoryModel.fromJson(Map<String, dynamic> json) {
@@ -24,9 +26,11 @@ class ServiceCategoryModel {
       description: json['description'] as String?,
       iconUrl: json['iconUrl'] as String?,
       inspectionFee: (json['inspectionFee'] as num?)?.toDouble(),
-      // Defaults false when absent so an older backend (or a cached payload
-      // written before this field existed) keeps every lane, exactly as before.
-      inspectionOnly: json['inspectionOnly'] as bool? ?? false,
+      // Null when absent, so an older backend — or a cached payload written
+      // before this field existed — leaves the category unrestricted and keeps
+      // every lane, exactly as before. An unrecognised lane string is treated
+      // the same way rather than guessing a restriction.
+      soleLane: BookingLaneX.fromRawOrNull(json['soleLane'] as String?),
     );
   }
 
@@ -36,6 +40,6 @@ class ServiceCategoryModel {
         description: description,
         iconUrl: iconUrl,
         inspectionFee: inspectionFee,
-        inspectionOnly: inspectionOnly,
+        soleLane: soleLane,
       );
 }

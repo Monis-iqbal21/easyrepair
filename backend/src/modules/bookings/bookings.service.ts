@@ -52,6 +52,7 @@ import { calculatePlatformFee } from '../../common/utils/commission.util';
 import { deriveInspectionFeePaid } from '../../common/utils/inspection-fee.util';
 import { JobBroadcastService } from '../matching/job-broadcast.service';
 import { JobCompletionNotifierService } from '../matching/job-completion-notifier.service';
+import { assertLaneAllowed } from '../categories/category-lanes';
 
 /** 72 hours in milliseconds â€” auto-expiry window for PENDING bookings, all lanes. */
 const BOOKING_EXPIRY_MS = 72 * 60 * 60 * 1000;
@@ -255,16 +256,10 @@ export class BookingsService {
     let inspectionFeeSnapshot: number | undefined;
     let estimatedPrice: number | undefined;
 
-    // Inspection-only categories (see ServiceCategory.inspectionOnly) accept
-    // the INSPECTION lane and nothing else. The client app already hides the
-    // other lanes, but the rule is enforced here because the server owns it —
-    // an older build, a replayed request or a direct API call must not be able
-    // to open a STANDARD or BIDDING booking on such a category.
-    if (category.inspectionOnly && lane !== BookingLane.INSPECTION) {
-      throw new BadRequestException(
-        `"${category.name}" is available for inspection bookings only.`,
-      );
-    }
+    // A category restricted to one lane (ServiceCategory.soleLane) rejects
+    // every other lane. The client app already hides them, but the rule is
+    // enforced here because the server owns it.
+    assertLaneAllowed(category, lane);
 
     if (lane === BookingLane.STANDARD) {
       // standardServiceIds (multi-select) takes precedence over the legacy
@@ -545,6 +540,10 @@ export class BookingsService {
         );
       }
       categoryId = category.id;
+      // Lane is not editable here, so changing the CATEGORY must not smuggle
+      // a booking into a category that does not offer the lane it is already
+      // in — the same rule createBooking applies, applied to the new pairing.
+      assertLaneAllowed(category, booking.lane);
     }
 
     // Reject 0,0 coordinates if caller is explicitly updating them.

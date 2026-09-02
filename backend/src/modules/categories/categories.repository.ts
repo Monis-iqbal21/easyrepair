@@ -9,6 +9,7 @@ const CATEGORY_SELECT = {
   iconUrl: true,
   inspectionFee: true,
   inspectionOnly: true,
+  soleLane: true,
   availabilityStatus: true,
 } satisfies Prisma.ServiceCategorySelect;
 

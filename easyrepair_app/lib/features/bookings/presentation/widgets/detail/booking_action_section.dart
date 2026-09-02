@@ -91,7 +91,11 @@ class BookingActionSection extends ConsumerWidget {
     // ACCEPTED only) — the redesign moves the button, never the rule.
     if (booking.canClientCancel) {
       children.add(
-        BookingSecondaryButton(
+        // Filled on `error` (never an outline): cancelling is the one
+        // destructive thing the client can do here, and it must read as such
+        // at a glance. Colours come from BookingPrimaryButton's destructive
+        // branch — `colors.error` on `colors.onPrimary`.
+        BookingPrimaryButton(
           key: const Key('cancel-booking-button'),
           label: context.l10n.bookingCancelBooking,
           icon: Icons.close_rounded,

@@ -1,4 +1,8 @@
-import { PrismaClient, ServiceAvailabilityStatus } from '@prisma/client';
+import {
+  BookingLane,
+  PrismaClient,
+  ServiceAvailabilityStatus,
+} from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -22,6 +26,8 @@ const SERVICE_CATEGORIES: {
   inspectionFee: number | null;
   inspectionOnly?: boolean;
   availabilityStatus: ServiceAvailabilityStatus;
+  /// Restricts the category to a single lane. Omitted means unrestricted.
+  soleLane?: BookingLane;
 }[] = [
   {
     name: 'AC Technician',
@@ -84,16 +90,20 @@ const SERVICE_CATEGORIES: {
     availabilityStatus: ServiceAvailabilityStatus.SOON,
   },
   {
-    // Inspection-only: an appliance fault cannot be quoted or priced from a
-    // catalog before somebody has actually looked at the machine, so this
-    // category deliberately offers the INSPECTION lane alone. Enforced
-    // server-side by BookingsService.createBooking.
+    // Bidding-only: an appliance fault cannot be quoted or priced from a fixed
+    // catalog, and the platform does not sell a paid inspection visit for it
+    // either — the client describes the fault and Ustaads quote against it.
+    // Enforced server-side by assertLaneAllowed (categories/category-lanes.ts).
     name: 'Appliances Repair',
     description:
       'Washing machine, fridge, microwave & home appliance diagnosis and repair',
+    // The stored inspectionFee is left exactly as it is: soleLane, not the
+    // fee, decides the lanes, and rewriting a fee column is money config this
+    // change has no business touching. It is inert while soleLane is BIDDING.
     inspectionFee: 500,
-    inspectionOnly: true,
+    inspectionOnly: false,
     availabilityStatus: ServiceAvailabilityStatus.ACTIVE,
+    soleLane: BookingLane.BIDDING,
   },
 ];
 
@@ -138,6 +148,7 @@ async function main() {
         description: category.description,
         inspectionFee: category.inspectionFee ?? undefined,
         inspectionOnly: category.inspectionOnly ?? false,
+        soleLane: category.soleLane ?? null,
       },
       create: {
         name: category.name,
@@ -146,6 +157,7 @@ async function main() {
         availabilityStatus: category.availabilityStatus,
         inspectionFee: category.inspectionFee ?? undefined,
         inspectionOnly: category.inspectionOnly ?? false,
+        soleLane: category.soleLane ?? null,
       },
     });
     categoryIdByName.set(result.name, result.id);

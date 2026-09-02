@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/network/api_client.dart';
+import '../../../bookings/domain/entities/booking_entity.dart' show BookingLane;
 import '../../data/datasources/categories_remote_datasource.dart';
 import '../../domain/entities/service_category_entity.dart';
 import '../../domain/entities/standard_service_entity.dart';
@@ -66,16 +67,19 @@ const _kFallbackNames = [
   'Gardener',
 ];
 
-/// Categories whose LANE RULE must survive even the offline stub, so an
-/// inspection-only category can never be rendered with Standard/Bidding just
-/// because the category request failed. The fee still comes from the backend.
-const _kFallbackInspectionOnlyNames = ['Appliances Repair'];
+/// Categories whose LANE RULE must survive even the offline stub, so a
+/// lane-restricted category can never be rendered with the lanes it does not
+/// offer just because the category request failed. The fee still comes from
+/// the backend.
+const _kFallbackSoleLaneNames = <String, BookingLane>{
+  'Appliances Repair': BookingLane.bidding,
+};
 
 List<ServiceCategoryEntity> _buildFallback() {
   return [
     for (final name in _kFallbackNames)
       ServiceCategoryEntity(id: '', name: name),
-    for (final name in _kFallbackInspectionOnlyNames)
-      ServiceCategoryEntity(id: '', name: name, inspectionOnly: true),
+    for (final entry in _kFallbackSoleLaneNames.entries)
+      ServiceCategoryEntity(id: '', name: entry.key, soleLane: entry.value),
   ];
 }
