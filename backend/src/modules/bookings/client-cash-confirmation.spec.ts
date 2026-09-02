@@ -208,6 +208,8 @@ describe('AdminOperationsService client cash confirmation', () => {
       expect.objectContaining({
         expectedParts: 900,
         expectedLabour: 100,
+        expectedFee: 0,
+        expectedTotal: 1000,
         partsPaid: 900,
         labourPaid: 50,
         commission: 9,
@@ -240,8 +242,44 @@ describe('AdminOperationsService client cash confirmation', () => {
   it('rejects overpayment through the authoritative calculator', async () => {
     await expect(
       service.confirmClientCashPayment('booking-1', 1001, clientUserId),
-    ).rejects.toThrow(BadRequestException);
+    ).rejects.toThrow('Received cash cannot exceed the payable total');
     expect(repository.createSettlement).not.toHaveBeenCalled();
+  });
+
+  it('rejects a negative amount even when called below DTO validation', async () => {
+    await expect(
+      service.confirmClientCashPayment('booking-1', -1, clientUserId),
+    ).rejects.toThrow('Settlement money values must be finite and non-negative');
+    expect(repository.createSettlement).not.toHaveBeenCalled();
+  });
+
+  it('keeps a closed inspection fee-only with no repair price in settlement', async () => {
+    repository.findBooking.mockResolvedValue({
+      ...baseBooking,
+      lane: BookingLane.INSPECTION,
+      finalPrice: 900,
+      inspectionFeeSnapshot: 900,
+      inspectionReport: {
+        decisionStatus: InspectionDecisionStatus.CLOSED_AFTER_INSPECTION,
+        partsTotal: 7000,
+        labourCost: 3000,
+      },
+    });
+
+    await service.confirmClientCashPayment('booking-1', 900, clientUserId);
+
+    expect(repository.createSettlement).toHaveBeenCalledWith(
+      expect.objectContaining({
+        expectedParts: 0,
+        expectedLabour: 0,
+        expectedFee: 900,
+        expectedTotal: 900,
+        feePaid: 900,
+        commission: 0,
+      }),
+      [],
+      clientUserId,
+    );
   });
 
   it('returns the existing authoritative row for the same CLIENT retry', async () => {

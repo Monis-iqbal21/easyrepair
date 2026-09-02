@@ -163,6 +163,39 @@ class _BackendDrivenHarness extends ConsumerWidget {
 }
 
 void main() {
+  testWidgets('over-price input is blocked with an immediate semantic error', (
+    tester,
+  ) async {
+    final repository = await _pumpHarness(tester, _booking());
+
+    await tester.enterText(find.byType(TextFormField), '2501');
+    await tester.pump();
+
+    final error = tester.widget<Text>(
+      find.text('Amount cannot exceed the booking price.'),
+    );
+    final context = tester.element(find.byType(TextFormField));
+    expect(error.style?.color, Theme.of(context).colorScheme.error);
+
+    await tester.tap(find.byKey(const Key('cash-payment-submit-button')));
+    await tester.pump();
+    expect(repository.submittedAmounts, isEmpty);
+  });
+
+  testWidgets('negative input is blocked with an immediate semantic error', (
+    tester,
+  ) async {
+    final repository = await _pumpHarness(tester, _booking());
+
+    await tester.enterText(find.byType(TextFormField), '-1');
+    await tester.pump();
+
+    expect(find.text('Amount cannot be negative.'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('cash-payment-submit-button')));
+    await tester.pump();
+    expect(repository.submittedAmounts, isEmpty);
+  });
+
   testWidgets(
     'COMPLETED outstanding auto-opens once across repeated rebuilds',
     (tester) async {

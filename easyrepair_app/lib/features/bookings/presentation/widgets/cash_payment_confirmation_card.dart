@@ -89,7 +89,7 @@ class CashPaymentPromptController {
       final confirmation = await showCashPaymentConfirmationDialog(
         context,
         bookingId: booking.id,
-        expectedAmount: booking.canonicalPrice,
+        expectedAmount: booking.cashConfirmationPrice,
         onSettlementOnFile: () => settlementOnFile = true,
       );
       if (settlementOnFile) {
@@ -283,20 +283,41 @@ class _CashPaymentConfirmationCardState
                     TextFormField(
                       controller: _amountController,
                       enabled: !state.isLoading,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      keyboardType: const TextInputType.numberWithOptions(
+                        signed: true,
+                        decimal: false,
+                      ),
+                      inputFormatters: [
+                        TextInputFormatter.withFunction((oldValue, newValue) {
+                          return RegExp(r'^-?\d*$').hasMatch(newValue.text)
+                              ? newValue
+                              : oldValue;
+                        }),
+                      ],
+                      autovalidateMode: AutovalidateMode.onUserInteraction,
                       decoration: InputDecoration(
                         labelText: context.l10n.cashPaymentInputLabel,
                         hintText: context.l10n.cashPaymentInputHint,
                         prefixText: 'PKR ',
+                        errorStyle: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
                       ),
                       validator: (value) {
                         final text = value?.trim() ?? '';
                         if (text.isEmpty) {
                           return context.l10n.cashPaymentRequired;
                         }
+                        final amount = int.tryParse(text);
+                        if (amount != null && amount < 0) {
+                          return context.l10n.cashPaymentNegative;
+                        }
                         if (!RegExp(r'^\d+$').hasMatch(text)) {
                           return context.l10n.cashPaymentWholeRupees;
+                        }
+                        if (widget.expectedAmount != null &&
+                            amount! > widget.expectedAmount!) {
+                          return context.l10n.cashPaymentExceedsBookingPrice;
                         }
                         return null;
                       },

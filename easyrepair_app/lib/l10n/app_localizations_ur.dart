@@ -2195,6 +2195,14 @@ class AppLocalizationsUr extends AppLocalizations {
   String get inspectionFeePaid => 'معائنہ فیس ادا ہو گئی';
 
   @override
+  String inspectionFeePaidAmount(Object amount) {
+    return 'معائنہ فیس ادا ہو گئی: $amount';
+  }
+
+  @override
+  String get inspectionFeeWaivedOff => 'معائنہ فیس معاف کر دی گئی';
+
+  @override
   String get inspectionFeeNotPaid => 'معائنہ فیس ادا نہیں ہوئی';
 
   @override
@@ -3787,6 +3795,13 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get cashPaymentWholeRupees => 'اعشاریہ کے بغیر پوری PKR رقم لکھیں۔';
+
+  @override
+  String get cashPaymentNegative => 'رقم منفی نہیں ہو سکتی۔';
+
+  @override
+  String get cashPaymentExceedsBookingPrice =>
+      'رقم بکنگ کی قیمت سے زیادہ نہیں ہو سکتی۔';
 
   @override
   String get cashPaymentConfirmedTitle => 'نقد ادائیگی کی تصدیق ہو گئی';
@@ -6511,6 +6526,14 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get inspectionFeePaid => 'Muaina fee paid';
 
   @override
+  String inspectionFeePaidAmount(Object amount) {
+    return 'Muaina fee paid: $amount';
+  }
+
+  @override
+  String get inspectionFeeWaivedOff => 'Muaina fee waived off';
+
+  @override
   String get inspectionFeeNotPaid => 'Muaina fee paid nahi';
 
   @override
@@ -8129,6 +8152,13 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   @override
   String get cashPaymentWholeRupees =>
       'Decimal ke baghair poori PKR amount likhein.';
+
+  @override
+  String get cashPaymentNegative => 'Raqam negative nahi ho sakti.';
+
+  @override
+  String get cashPaymentExceedsBookingPrice =>
+      'Raqam booking price se zyada nahi ho sakti.';
 
   @override
   String get cashPaymentConfirmedTitle => 'Cash payment confirm ho gayi';

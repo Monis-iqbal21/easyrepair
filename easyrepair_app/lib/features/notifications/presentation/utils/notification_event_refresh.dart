@@ -36,6 +36,8 @@ const _workerLiveSyncEventKeys = {
   'booking.inspection.quote_accepted',
   'booking.inspection.closed',
   'booking.review.created',
+  'payment.received',
+  'payment.short',
 };
 
 Set<NotificationRefreshTarget> notificationRefreshTargets(

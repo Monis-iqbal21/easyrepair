@@ -678,7 +678,7 @@ class _ReportBody extends ConsumerWidget {
     final cashConfirmation = await showCashPaymentConfirmationDialog(
       context,
       bookingId: inspectionBooking.id,
-      expectedAmount: inspectionBooking.canonicalPrice,
+      expectedAmount: inspectionBooking.cashConfirmationPrice,
     );
     if (cashConfirmation == null || !context.mounted) return;
 

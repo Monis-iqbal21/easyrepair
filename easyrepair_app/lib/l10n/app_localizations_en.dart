@@ -2220,6 +2220,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get inspectionFeePaid => 'Inspection fee paid';
 
   @override
+  String inspectionFeePaidAmount(Object amount) {
+    return 'Inspection fee paid: $amount';
+  }
+
+  @override
+  String get inspectionFeeWaivedOff => 'Inspection fee waived off';
+
+  @override
   String get inspectionFeeNotPaid => 'Inspection fee not paid';
 
   @override
@@ -3864,6 +3872,13 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get cashPaymentWholeRupees =>
       'Enter a whole PKR amount without decimals.';
+
+  @override
+  String get cashPaymentNegative => 'Amount cannot be negative.';
+
+  @override
+  String get cashPaymentExceedsBookingPrice =>
+      'Amount cannot exceed the booking price.';
 
   @override
   String get cashPaymentConfirmedTitle => 'Cash payment confirmed';

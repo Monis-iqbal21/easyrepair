@@ -651,25 +651,33 @@ void main() {
       expect(find.text('Inspection completed by'), findsNothing);
     });
 
-    testWidgets('the accepted repair quote replaces the fee as the price', (
+    testWidgets('completed accepted repair shows final price and waived fee', (
       tester,
     ) async {
       await _pumpDetail(
         tester,
         _booking(
           lane: BookingLane.inspection,
-          status: BookingStatus.inProgress,
+          status: BookingStatus.completed,
           worker: _worker,
           inspectingWorker: _worker,
           inspectionFeeSnapshot: 900,
           finalPrice: 7400,
           inspectionReportSubmitted: true,
           inspectionDecisionStatus: InspectionDecisionStatus.acceptedRepair,
+          inspectionFeePaid: true,
+          payment: PaymentDisplayStatus.paid,
+          receivedAmount: 7400,
+          expectedAmount: 7400,
+          remainingAmount: 0,
         ),
       );
 
-      expect(find.text('Rs 7,400'), findsOneWidget);
+      expect(find.text('Final Price'), findsOneWidget);
+      expect(find.text('Rs 7,400'), findsWidgets);
       expect(find.text('Rs 900'), findsNothing);
+      expect(find.text('Inspection fee waived off'), findsOneWidget);
+      expect(find.textContaining('Inspection fee paid:'), findsNothing);
     });
 
     testWidgets('closed after inspection keeps the fee-only outcome', (
@@ -692,7 +700,8 @@ void main() {
 
       expect(find.text('Inspection Fee'), findsOneWidget);
       expect(find.text('Rs 900'), findsOneWidget);
-      expect(find.text('Inspection fee paid'), findsOneWidget);
+      expect(find.text('Inspection fee paid: Rs 900'), findsOneWidget);
+      expect(find.text('Inspection fee waived off'), findsNothing);
     });
 
     testWidgets('View Inspection Report appears only once a report exists', (

@@ -34,6 +34,7 @@ BookingEntity _job({
   double? munafa = 656,
   double? partsPaid = 1700,
   double? labourPaid = 800,
+  BookingReviewEntity? review,
 }) {
   return BookingEntity(
     id: 'job-1',
@@ -54,6 +55,7 @@ BookingEntity _job({
     settlementPartsPaid: partsPaid,
     settlementLabourPaid: labourPaid,
     settlementFeePaid: 0,
+    review: review,
   );
 }
 
@@ -190,7 +192,7 @@ void main() {
       expect(entity.settlementCommission, 144);
       expect(entity.settlementMunafa, 656);
       expect(entity.hasPaymentShortfall, isTrue);
-      expect(entity.canWorkerReportPayment, isFalse);
+      expect(entity.canWorkerReportPayment, isTrue);
     });
 
     test('an older payload without the settlement keys invents nothing', () {
@@ -201,8 +203,7 @@ void main() {
       expect(entity.settlementCommission, isNull);
       expect(entity.settlementMunafa, isNull);
       expect(entity.hasPaymentShortfall, isFalse);
-      // Nothing recorded yet, so the Ustaad may still declare what they got.
-      expect(entity.canWorkerReportPayment, isTrue);
+      expect(entity.canWorkerReportPayment, isFalse);
     });
 
     test('copyWith never resets a settled booking back to unpaid', () {
@@ -240,8 +241,10 @@ void main() {
     expect(find.text('Rs 656'), findsOneWidget); // server munafa
 
     expect(find.byKey(const Key('worker-payment-shortfall')), findsOneWidget);
-    // Nothing left to declare once a settlement exists.
-    expect(find.byKey(const Key('worker-report-payment-button')), findsNothing);
+    expect(
+      find.byKey(const Key('worker-report-payment-button')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('a fully paid job shows no shortfall row', (tester) async {
@@ -261,6 +264,7 @@ void main() {
 
     expect(find.byKey(const Key('worker-payment-shortfall')), findsNothing);
     expect(find.text('Rs 820'), findsOneWidget);
+    expect(find.byKey(const Key('worker-report-payment-button')), findsNothing);
   });
 
   testWidgets('never presents the quoted price as money received', (
@@ -287,6 +291,31 @@ void main() {
     // finalPrice is 2700 and must not leak in as a received amount.
     expect(find.text('Rs 2,700'), findsNothing);
     expect(find.text('Payment not recorded yet'), findsOneWidget);
+    expect(find.byKey(const Key('worker-report-payment-button')), findsNothing);
+  });
+
+  testWidgets('review state never changes short-payment action visibility', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_wrap(_job()));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const Key('worker-report-payment-button')),
+      findsOneWidget,
+    );
+
+    await tester.pumpWidget(
+      _wrap(
+        _job(
+          review: BookingReviewEntity(
+            id: 'review-1',
+            rating: 5,
+            createdAt: DateTime(2026, 9, 1),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
     expect(
       find.byKey(const Key('worker-report-payment-button')),
       findsOneWidget,
@@ -318,19 +347,7 @@ void main() {
     tester,
   ) async {
     final notifier = _FakeReportNotifier();
-    await tester.pumpWidget(
-      _wrap(
-        _job(
-          paymentDisplayStatus: PaymentDisplayStatus.unpaid,
-          receivedAmount: null,
-          expectedAmount: null,
-          remainingAmount: null,
-          commission: null,
-          munafa: null,
-        ),
-        notifier: notifier,
-      ),
-    );
+    await tester.pumpWidget(_wrap(_job(), notifier: notifier));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('worker-report-payment-button')));
@@ -351,19 +368,7 @@ void main() {
     tester,
   ) async {
     final notifier = _FakeReportNotifier();
-    await tester.pumpWidget(
-      _wrap(
-        _job(
-          paymentDisplayStatus: PaymentDisplayStatus.unpaid,
-          receivedAmount: null,
-          expectedAmount: null,
-          remainingAmount: null,
-          commission: null,
-          munafa: null,
-        ),
-        notifier: notifier,
-      ),
-    );
+    await tester.pumpWidget(_wrap(_job(), notifier: notifier));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('worker-report-payment-button')));
@@ -386,19 +391,7 @@ void main() {
 
   testWidgets('refuses an empty amount without a round trip', (tester) async {
     final notifier = _FakeReportNotifier();
-    await tester.pumpWidget(
-      _wrap(
-        _job(
-          paymentDisplayStatus: PaymentDisplayStatus.unpaid,
-          receivedAmount: null,
-          expectedAmount: null,
-          remainingAmount: null,
-          commission: null,
-          munafa: null,
-        ),
-        notifier: notifier,
-      ),
-    );
+    await tester.pumpWidget(_wrap(_job(), notifier: notifier));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('worker-report-payment-button')));
@@ -417,19 +410,7 @@ void main() {
     tester,
   ) async {
     final notifier = _FakeReportNotifier();
-    await tester.pumpWidget(
-      _wrap(
-        _job(
-          paymentDisplayStatus: PaymentDisplayStatus.unpaid,
-          receivedAmount: null,
-          expectedAmount: null,
-          remainingAmount: null,
-          commission: null,
-          munafa: null,
-        ),
-        notifier: notifier,
-      ),
-    );
+    await tester.pumpWidget(_wrap(_job(), notifier: notifier));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('worker-report-payment-button')));
@@ -454,19 +435,7 @@ void main() {
         code: FailureCode.invalidRequest,
       ),
     );
-    await tester.pumpWidget(
-      _wrap(
-        _job(
-          paymentDisplayStatus: PaymentDisplayStatus.unpaid,
-          receivedAmount: null,
-          expectedAmount: null,
-          remainingAmount: null,
-          commission: null,
-          munafa: null,
-        ),
-        notifier: notifier,
-      ),
-    );
+    await tester.pumpWidget(_wrap(_job(), notifier: notifier));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('worker-report-payment-button')));

@@ -4041,6 +4041,18 @@ abstract class AppLocalizations {
   /// **'Inspection fee paid'**
   String get inspectionFeePaid;
 
+  /// No description provided for @inspectionFeePaidAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Inspection fee paid: {amount}'**
+  String inspectionFeePaidAmount(Object amount);
+
+  /// No description provided for @inspectionFeeWaivedOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Inspection fee waived off'**
+  String get inspectionFeeWaivedOff;
+
   /// No description provided for @inspectionFeeNotPaid.
   ///
   /// In en, this message translates to:
@@ -6872,6 +6884,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Enter a whole PKR amount without decimals.'**
   String get cashPaymentWholeRupees;
+
+  /// No description provided for @cashPaymentNegative.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount cannot be negative.'**
+  String get cashPaymentNegative;
+
+  /// No description provided for @cashPaymentExceedsBookingPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount cannot exceed the booking price.'**
+  String get cashPaymentExceedsBookingPrice;
 
   /// No description provided for @cashPaymentConfirmedTitle.
   ///

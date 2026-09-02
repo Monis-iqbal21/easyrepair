@@ -1381,6 +1381,8 @@
   "urgentWithin2Hours": "Within 2 hours",
   "urgentWithin4Hours": "Within 4 hours",
   "inspectionFeePaid": "Inspection fee paid",
+  "inspectionFeePaidAmount": "Inspection fee paid: {amount}",
+  "inspectionFeeWaivedOff": "Inspection fee waived off",
   "inspectionFeeNotPaid": "Inspection fee not paid",
   "chooseWithinRadius": "within {km} km",
   "@chooseWithinRadius": {
@@ -2495,6 +2497,8 @@
   "cashPaymentInputHint": "Enter whole rupees, including 0",
   "cashPaymentRequired": "Enter the actual cash amount paid.",
   "cashPaymentWholeRupees": "Enter a whole PKR amount without decimals.",
+  "cashPaymentNegative": "Amount cannot be negative.",
+  "cashPaymentExceedsBookingPrice": "Amount cannot exceed the booking price.",
   "cashPaymentConfirmedTitle": "Cash payment confirmed",
   "cashPaymentPaid": "Cash paid: {amount}",
   "cashPaymentExpectedReceipt": "Expected amount: {amount}",

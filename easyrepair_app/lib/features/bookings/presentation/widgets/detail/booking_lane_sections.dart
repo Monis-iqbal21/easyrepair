@@ -187,23 +187,35 @@ class _ProblemSection extends StatelessWidget {
   }
 }
 
-/// INSPECTION-only fee state ("Inspection fee paid" / "not paid").
+/// INSPECTION-only fee outcome (waived / paid / not paid).
 ///
-/// Driven solely by [BookingEntity.inspectionFeePaid], which the backend
-/// derives from the ORIGINAL inspection work unit reaching COMPLETED — so it
-/// stays correct on the inspection booking AND on its linked repair booking,
-/// including the window where nobody is assigned.
+/// The accepted-repair decision is authoritative backend state and always
+/// wins: that settlement has expectedFee = 0, so the fee is waived rather
+/// than paid. Inspection-only outcomes continue to use the server-derived
+/// [BookingEntity.inspectionFeePaid] fact.
 class BookingInspectionFeeChip extends StatelessWidget {
   final BookingEntity booking;
 
   const BookingInspectionFeeChip({super.key, required this.booking});
 
-  /// Null `inspectionFeePaid` means no inspection is involved at all.
+  /// Null `inspectionFeePaid` means no inspection is involved unless the
+  /// server explicitly says this is an accepted inspection repair.
   static bool hasContentFor(BookingEntity booking) =>
+      booking.inspectionDecisionStatus ==
+          InspectionDecisionStatus.acceptedRepair ||
       booking.inspectionFeePaid != null;
 
   @override
   Widget build(BuildContext context) {
+    if (booking.inspectionDecisionStatus ==
+        InspectionDecisionStatus.acceptedRepair) {
+      return BookingStateBanner(
+        icon: Icons.check_circle_outline_rounded,
+        title: context.l10n.inspectionFeeWaivedOff,
+        tone: BookingBannerTone.positive,
+      );
+    }
+
     final label = inspectionFeeStatusLabel(
       context.l10n,
       booking.inspectionFeePaid,
@@ -213,7 +225,11 @@ class BookingInspectionFeeChip extends StatelessWidget {
     final paid = booking.inspectionFeePaid == true;
     return BookingStateBanner(
       icon: paid ? Icons.check_circle_outline_rounded : Icons.schedule_rounded,
-      title: label,
+      title: paid && booking.inspectionFeeSnapshot != null
+          ? context.l10n.inspectionFeePaidAmount(
+              formatPkr(booking.inspectionFeeSnapshot),
+            )
+          : label,
       tone: paid ? BookingBannerTone.positive : BookingBannerTone.attention,
     );
   }

@@ -351,6 +351,19 @@ extension BookingInspectionLifecycleX on BookingEntity {
     finalPrice: finalPrice,
   );
 
+  /// The server-authored booking price used as the upper bound for the
+  /// completed-job cash confirmation. This mirrors
+  /// AdminOperationsService.expectedMoney without rebuilding a quote on the
+  /// device: normal jobs use finalPrice, an accepted inspection repair uses
+  /// that same finalPrice, and an inspection-only close uses its fee snapshot.
+  double? get cashConfirmationPrice {
+    if (lane == BookingLane.inspection &&
+        inspectionDecisionStatus != InspectionDecisionStatus.acceptedRepair) {
+      return inspectionFeeSnapshot ?? finalPrice ?? 0;
+    }
+    return finalPrice;
+  }
+
   /// The single canonical (label, amount) pair for the "Qeemat" card on
   /// Booking Details — [canonicalPrice] plus which wording to use. A
   /// completed INSPECTION booking that ended CLOSED_AFTER_INSPECTION or
@@ -462,12 +475,13 @@ extension BookingClientActionsX on BookingEntity {
   /// server's `remainingAmount` — never `expected - received` computed here.
   bool get hasPaymentShortfall => (remainingAmount ?? 0) > 0;
 
-  /// The Ustaad may still declare what they were actually handed: the job is
-  /// done and nobody — client, Ustaad or Admin — has recorded a settlement
-  /// yet. Mirrors AdminOperationsService.reportUstaadCashPayment, which
-  /// requires COMPLETED and refuses a second differing amount.
+  /// The completed job has an authoritative short-payment settlement. The
+  /// action is driven only by the server's remaining amount; review state is
+  /// deliberately irrelevant.
   bool get canWorkerReportPayment =>
-      status == BookingStatus.completed && !hasSettlementRecord;
+      status == BookingStatus.completed &&
+      hasSettlementRecord &&
+      hasPaymentShortfall;
 
   /// The client still owes a cash confirmation: the job is done and no
   /// settlement has been recorded by anyone yet. Mirrors
