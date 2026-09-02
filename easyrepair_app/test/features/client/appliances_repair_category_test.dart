@@ -21,6 +21,7 @@ const _appliancesJson = {
   'description': 'Washing machine, fridge, microwave & home appliance repair',
   'iconUrl': null,
   'inspectionFee': 500,
+  'inspectionOnly': false,
   'soleLane': 'BIDDING',
 };
 
@@ -30,6 +31,7 @@ const _electricianJson = {
   'description': 'Electrical wiring, fuse boards, fixtures & repairs',
   'iconUrl': null,
   'inspectionFee': 500,
+  'inspectionOnly': false,
   'soleLane': null,
 };
 
@@ -61,6 +63,28 @@ void main() {
         ..remove('soleLane');
 
       expect(_fromApi(legacy).soleLane, isNull);
+      expect(_fromApi(legacy).effectiveSoleLane, isNull);
+    });
+
+    test('the legacy inspectionOnly flag is still carried across the wire, so '
+        'a response is readable by an older APK that knows only that field',
+        () {
+      expect(_fromApi(_appliancesJson).inspectionOnly, isFalse);
+      expect(_fromApi(_electricianJson).inspectionOnly, isFalse);
+    });
+
+    test('a payload carrying ONLY inspectionOnly still restricts to '
+        'INSPECTION, exactly as it did before soleLane existed', () {
+      final legacyOnly = Map<String, dynamic>.from(_electricianJson)
+        ..remove('soleLane')
+        ..['inspectionOnly'] = true;
+
+      final category = _fromApi(legacyOnly);
+      expect(category.soleLane, isNull);
+      expect(category.effectiveSoleLane, BookingLane.inspection);
+      expect(category.allowsLane(BookingLane.inspection), isTrue);
+      expect(category.allowsLane(BookingLane.standard), isFalse);
+      expect(category.allowsLane(BookingLane.bidding), isFalse);
     });
   });
 

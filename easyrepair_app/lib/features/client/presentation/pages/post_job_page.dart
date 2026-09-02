@@ -3938,13 +3938,22 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     final inspectionFee = category.inspectionFee;
     final feeLabel = inspectionFee == null ? '—' : formatPkr(inspectionFee);
 
-    // A lane-restricted category (ServiceCategory.soleLane) offers ONE lane,
-    // so the others are not rendered at all rather than rendered greyed out —
-    // there is nothing the client could do to unlock them, and the backend
-    // rejects them outright. An unrestricted category keeps all three cards
-    // exactly as before, with `enabled` still deciding the greyed states.
+    // A soleLane-restricted category offers ONE lane, so the others are not
+    // rendered at all rather than rendered greyed out — there is nothing the
+    // client could do to unlock them, and the backend rejects them outright.
+    //
+    // A LEGACY `inspectionOnly` category is deliberately NOT treated that way.
+    // It keeps its original presentation — all three cards, the two it does
+    // not support greyed — so nothing about those rows changes. `soleLane`
+    // still wins over the legacy flag wherever both are set; this only decides
+    // which of the two presentations a restricted category gets.
+    final soleLane = category.soleLane;
+    bool rendersCard(BookingLane lane) =>
+        soleLane == null || soleLane == lane;
+    final inspectionOnly = category.inspectionOnly;
+
     final laneCards = <Widget>[
-      if (category.allowsLane(BookingLane.standard))
+      if (rendersCard(BookingLane.standard))
         _buildReferenceLaneCard(
           lane: BookingLane.standard,
           icon: Icons.build_outlined,
@@ -3952,6 +3961,8 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
           subtitle: context.l10n.postJobLaneFixedSubtitle,
           action: context.l10n.postJobLaneFixedAction,
           minimumHeight: 114,
+          // Unchanged legacy behaviour for an inspectionOnly category.
+          enabled: !inspectionOnly,
           body: [
             _laneBodyText(
               context.l10n.postJobLaneFixedBody,
@@ -3959,7 +3970,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
             ),
           ],
         ),
-      if (category.allowsLane(BookingLane.inspection))
+      if (rendersCard(BookingLane.inspection))
         _buildReferenceLaneCard(
           lane: BookingLane.inspection,
           icon: Icons.search_rounded,
@@ -3981,13 +3992,15 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
             ),
           ],
         ),
-      if (category.allowsLane(BookingLane.bidding))
+      if (rendersCard(BookingLane.bidding))
         _buildReferenceLaneCard(
           lane: BookingLane.bidding,
           icon: Icons.chat_bubble_outline_rounded,
           title: context.l10n.postJobLaneCustomTitle,
           action: context.l10n.postJobLaneCustomAction,
           minimumHeight: 136,
+          // Unchanged legacy behaviour for an inspectionOnly category.
+          enabled: !inspectionOnly,
           body: [
             _laneBodyText(context.l10n.postJobLaneCustomBody),
             _laneBodyText(context.l10n.postJobLaneCustomRatesBody),

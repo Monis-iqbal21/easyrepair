@@ -24,10 +24,12 @@ const SERVICE_CATEGORIES: {
   name: string;
   description: string;
   inspectionFee: number | null;
+  /// Legacy INSPECTION-only restriction. Consulted only when soleLane is null.
   inspectionOnly?: boolean;
-  availabilityStatus: ServiceAvailabilityStatus;
-  /// Restricts the category to a single lane. Omitted means unrestricted.
+  /// Restricts the category to a single lane. Takes precedence over
+  /// inspectionOnly. Omitted means "fall through to inspectionOnly".
   soleLane?: BookingLane;
+  availabilityStatus: ServiceAvailabilityStatus;
 }[] = [
   {
     name: 'AC Technician',
@@ -101,9 +103,12 @@ const SERVICE_CATEGORIES: {
     // fee, decides the lanes, and rewriting a fee column is money config this
     // change has no business touching. It is inert while soleLane is BIDDING.
     inspectionFee: 500,
+    // soleLane would win regardless, but a row saying "inspection only" while
+    // behaving as bidding-only is a trap for the next reader, so the legacy
+    // flag is stated false rather than left at its previous true.
     inspectionOnly: false,
-    availabilityStatus: ServiceAvailabilityStatus.ACTIVE,
     soleLane: BookingLane.BIDDING,
+    availabilityStatus: ServiceAvailabilityStatus.ACTIVE,
   },
 ];
 

@@ -8,15 +8,17 @@ export interface CategoryDto {
   description: string | null;
   iconUrl: string | null;
   inspectionFee: number | null;
-  /// True when this category offers the INSPECTION lane only — the client app
-  /// skips the lane picker entirely for it. See ServiceCategory.inspectionOnly.
+  /// LEGACY INSPECTION-only flag, superseded by [soleLane] but deliberately
+  /// still returned: an older APK knows only this field, and dropping it from
+  /// the response would change what those builds render. Newer builds consult
+  /// [soleLane] first and fall back to this. See category-lanes.ts.
   inspectionOnly: boolean;
+  /// The single lane this category offers, or null to fall through to
+  /// [inspectionOnly]. The client app renders only the resolved lane; the rule
+  /// itself is enforced server-side. See ServiceCategory.soleLane.
+  soleLane: BookingLane | null;
   /** Additive for older clients, which safely ignore unknown response keys. */
   availabilityStatus: ServiceAvailabilityStatus;
-  /// The single lane this category offers, or null when it is unrestricted.
-  /// The client app renders only this lane; the rule itself is enforced
-  /// server-side. See ServiceCategory.soleLane and category-lanes.ts.
-  soleLane: BookingLane | null;
 }
 
 export interface StandardServiceDto {

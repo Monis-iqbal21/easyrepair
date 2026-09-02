@@ -709,15 +709,34 @@ model ServiceCategory {
   /// Null means inspection is not offered for this category.
   inspectionFee      Float?
   /// LEGACY lane restriction: when true this category offers the INSPECTION
-  /// lane and nothing else. Superseded by [soleLane], but retained for older
-  /// clients and consulted whenever [soleLane] is null.
+  /// lane and nothing else.
+  ///
+  /// Superseded by [soleLane], which can name any single lane, but retained
+  /// rather than dropped — it is still returned by /categories, and an older
+  /// APK that only knows this field must keep working. [soleLane] takes
+  /// precedence; this is consulted only when [soleLane] is null.
   inspectionOnly     Boolean                   @default(false)
   /// The ONE lane this category offers, when it is restricted to a single
-  /// lane. Null means fall through to [inspectionOnly], then to the existing
-  /// unrestricted lane behaviour. This generalises the legacy boolean so
-  /// Appliances Repair can be represented as BIDDING-only.
+  /// lane. Null — the default — means fall through to [inspectionOnly], and
+  /// failing that the category is unrestricted and its lanes are decided the
+  /// way they always were: BIDDING always, INSPECTION when [inspectionFee] is
+  /// set, STANDARD from its fixed-price catalog.
   ///
-  /// Resolution order: soleLane, then inspectionOnly, then normal behaviour.
+  /// This generalises [inspectionOnly], which could only ever say "inspection
+  /// and nothing else". Appliances Repair is BIDDING-only — an appliance
+  /// fault cannot be quoted from a catalog, and the platform no longer sells
+  /// a paid inspection for it — which that boolean cannot express.
+  ///
+  /// The resolution order is exactly:
+  ///
+  ///   1. soleLane set     → that lane, and nothing else.
+  ///   2. else inspectionOnly → INSPECTION only (legacy behaviour, verbatim).
+  ///   3. else             → unrestricted.
+  ///
+  /// The client app renders only the resolved lane; the rule is enforced
+  /// server-side (see `assertLaneAllowed` in categories/category-lanes.ts)
+  /// because an older build, a replayed request or a direct API call must not
+  /// be able to open a booking in a lane the category does not offer.
   soleLane           BookingLane?
   createdAt          DateTime                  @default(now())
   updatedAt          DateTime                  @updatedAt

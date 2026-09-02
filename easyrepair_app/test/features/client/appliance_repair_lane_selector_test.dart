@@ -15,16 +15,20 @@ import '../../support/l10n_test_app.dart';
 
 /// The lane step of the booking form for a LANE-RESTRICTED category.
 ///
-/// Appliances Repair is BIDDING-only: an appliance fault cannot be quoted
-/// from a fixed-price catalog, and the platform does not sell a paid
+/// Appliances Repair is BIDDING-only via `soleLane`: an appliance fault cannot
+/// be quoted from a fixed-price catalog, and the platform does not sell a paid
 /// inspection visit for it. The lanes it does not offer are not rendered at
 /// all — a greyed-out card the client can never unlock is noise, and the
 /// backend rejects those lanes outright anyway (`assertLaneAllowed`).
 ///
-/// Two regressions are guarded here. The first is the empty lane page: the
-/// rule is a property OF THE CATEGORY, so a category the form cannot resolve
-/// renders nothing rather than guessing. The second is blast radius — an
-/// unrestricted category must keep every lane it had.
+/// `soleLane` supersedes the legacy `inspectionOnly` boolean WITHOUT replacing
+/// it. A category still restricted the old way keeps its original
+/// presentation, greyed cards and all, so nothing about those rows changes.
+///
+/// Three regressions are guarded here: the empty lane page (the rule is a
+/// property OF THE CATEGORY, so a category the form cannot resolve renders
+/// nothing rather than guessing), blast radius on unrestricted categories, and
+/// backward compatibility for legacy `inspectionOnly` rows.
 
 const _romanUrdu = AppLocale.romanUrdu;
 
@@ -36,11 +40,13 @@ const _biddingLane = 'Custom Kaam';
 ServiceCategoryEntity _category({
   required String name,
   double? inspectionFee,
+  bool inspectionOnly = false,
   BookingLane? soleLane,
 }) => ServiceCategoryEntity(
   id: 'cat-${name.toLowerCase().replaceAll(' ', '-')}',
   name: name,
   inspectionFee: inspectionFee,
+  inspectionOnly: inspectionOnly,
   soleLane: soleLane,
 );
 
@@ -54,6 +60,13 @@ final _appliances = _category(
 );
 
 final _electrician = _category(name: 'Electrician', inspectionFee: 500);
+
+/// A category still restricted the OLD way: the legacy boolean, no soleLane.
+final _legacyInspectionOnly = _category(
+  name: 'Legacy Inspection Only',
+  inspectionFee: 500,
+  inspectionOnly: true,
+);
 
 class _SavedAddressNotifier extends SavedAddressesNotifier {
   @override
@@ -108,7 +121,7 @@ void main() {
       await _pumpLaneStep(
         tester,
         service: 'Appliances Repair',
-        categories: [_appliances, _electrician],
+        categories: [_appliances, _electrician, _legacyInspectionOnly],
       );
 
       expect(find.text(_biddingLane), findsOneWidget);
@@ -120,7 +133,7 @@ void main() {
       await _pumpLaneStep(
         tester,
         service: 'Appliances Repair',
-        categories: [_appliances, _electrician],
+        categories: [_appliances, _electrician, _legacyInspectionOnly],
       );
 
       final bidding = tester.widget<Semantics>(
@@ -136,7 +149,7 @@ void main() {
       await _pumpLaneStep(
         tester,
         service: 'Appliances Repair',
-        categories: [_appliances, _electrician],
+        categories: [_appliances, _electrician, _legacyInspectionOnly],
       );
 
       expect(find.text(_fixedPriceLane), findsNothing);
@@ -148,7 +161,7 @@ void main() {
       await _pumpLaneStep(
         tester,
         service: 'Appliances Repair',
-        categories: [_appliances, _electrician],
+        categories: [_appliances, _electrician, _legacyInspectionOnly],
       );
 
       expect(find.text(_inspectionLane), findsNothing);
@@ -162,7 +175,7 @@ void main() {
       await _pumpLaneStep(
         tester,
         service: 'Appliances Repair',
-        categories: [_appliances, _electrician],
+        categories: [_appliances, _electrician, _legacyInspectionOnly],
       );
 
       expect(find.text('OR'), findsNothing);
@@ -176,7 +189,7 @@ void main() {
       await _pumpLaneStep(
         tester,
         service: 'Electrician',
-        categories: [_appliances, _electrician],
+        categories: [_appliances, _electrician, _legacyInspectionOnly],
       );
 
       expect(find.text(_fixedPriceLane), findsOneWidget);
@@ -191,7 +204,7 @@ void main() {
       await _pumpLaneStep(
         tester,
         service: 'Electrician',
-        categories: [_appliances, _electrician],
+        categories: [_appliances, _electrician, _legacyInspectionOnly],
       );
 
       for (final lane in ['standard', 'inspection', 'bidding']) {
@@ -212,7 +225,7 @@ void main() {
       await _pumpLaneStep(
         tester,
         service: 'Cleaning',
-        categories: [_appliances, _electrician, cleaning],
+        categories: [_appliances, _electrician, _legacyInspectionOnly, cleaning],
       );
 
       expect(find.text(_inspectionLane), findsOneWidget);
@@ -225,6 +238,51 @@ void main() {
             .enabled,
         isFalse,
       );
+    });
+  });
+
+  group('legacy inspectionOnly categories behave exactly as before', () {
+    testWidgets('all three cards are still rendered — the legacy row keeps its '
+        'original presentation rather than adopting the soleLane one', (
+      tester,
+    ) async {
+      await _pumpLaneStep(
+        tester,
+        service: 'Legacy Inspection Only',
+        categories: [_appliances, _electrician, _legacyInspectionOnly],
+      );
+
+      expect(find.text(_fixedPriceLane), findsOneWidget);
+      expect(find.text(_inspectionLane), findsOneWidget);
+      expect(find.text(_biddingLane), findsOneWidget);
+    });
+
+    testWidgets('Standard and Custom stay greyed out, and Inspection stays '
+        'enabled — byte for byte the pre-soleLane behaviour', (tester) async {
+      await _pumpLaneStep(
+        tester,
+        service: 'Legacy Inspection Only',
+        categories: [_appliances, _electrician, _legacyInspectionOnly],
+      );
+
+      bool enabledOf(String lane) => tester
+          .widget<Semantics>(find.byKey(ValueKey('booking-lane-$lane')))
+          .properties
+          .enabled!;
+
+      expect(enabledOf('standard'), isFalse);
+      expect(enabledOf('bidding'), isFalse);
+      expect(enabledOf('inspection'), isTrue);
+    });
+
+    test('the legacy flag alone still resolves to INSPECTION-only', () {
+      expect(
+        _legacyInspectionOnly.effectiveSoleLane,
+        BookingLane.inspection,
+      );
+      expect(_legacyInspectionOnly.allowsLane(BookingLane.inspection), isTrue);
+      expect(_legacyInspectionOnly.allowsLane(BookingLane.standard), isFalse);
+      expect(_legacyInspectionOnly.allowsLane(BookingLane.bidding), isFalse);
     });
   });
 
@@ -260,9 +318,42 @@ void main() {
     });
 
     test('an unrestricted category allows every lane', () {
+      expect(_electrician.effectiveSoleLane, isNull);
       for (final lane in BookingLane.values) {
         expect(_electrician.allowsLane(lane), isTrue, reason: lane.name);
       }
+    });
+
+    test('soleLane wins over the legacy flag when a stale row sets both', () {
+      final contradictory = _category(
+        name: 'Contradictory',
+        inspectionFee: 500,
+        inspectionOnly: true,
+        soleLane: BookingLane.bidding,
+      );
+
+      expect(contradictory.effectiveSoleLane, BookingLane.bidding);
+      expect(contradictory.allowsLane(BookingLane.bidding), isTrue);
+      expect(contradictory.allowsLane(BookingLane.inspection), isFalse);
+    });
+
+    test('a payload carrying ONLY the legacy flag still restricts to '
+        'INSPECTION — an older backend that does not send soleLane yet must '
+        'keep working', () {
+      final parsed = ServiceCategoryModel.fromJson(const {
+        'id': 'cat-legacy',
+        'name': 'Legacy Inspection Only',
+        'description': null,
+        'iconUrl': null,
+        'inspectionFee': 500,
+        'inspectionOnly': true,
+      }).toEntity();
+
+      expect(parsed.soleLane, isNull);
+      expect(parsed.inspectionOnly, isTrue);
+      expect(parsed.effectiveSoleLane, BookingLane.inspection);
+      expect(parsed.allowsLane(BookingLane.inspection), isTrue);
+      expect(parsed.allowsLane(BookingLane.bidding), isFalse);
     });
 
     test('Appliances Repair arrives as BIDDING-only straight from the API '
@@ -277,6 +368,9 @@ void main() {
       }).toEntity();
 
       expect(parsed.soleLane, BookingLane.bidding);
+      // The legacy flag rides along in the response and is false here, so an
+      // older APK reading only that field sees an unrestricted category.
+      expect(parsed.inspectionOnly, isFalse);
       expect(parsed.allowsLane(BookingLane.bidding), isTrue);
       expect(parsed.allowsLane(BookingLane.standard), isFalse);
       expect(parsed.allowsLane(BookingLane.inspection), isFalse);
@@ -294,6 +388,7 @@ void main() {
       }).toEntity();
 
       expect(parsed.soleLane, isNull);
+      expect(parsed.inspectionOnly, isFalse);
       for (final lane in BookingLane.values) {
         expect(parsed.allowsLane(lane), isTrue, reason: lane.name);
       }
@@ -314,6 +409,22 @@ void main() {
       expect(parsed.allowsLane(BookingLane.bidding), isTrue);
     });
 
+    test('an unrecognised soleLane still falls through to the legacy flag '
+        'rather than skipping the restriction entirely', () {
+      final parsed = ServiceCategoryModel.fromJson(const {
+        'id': 'cat-future',
+        'name': 'Future Lane Category',
+        'description': null,
+        'iconUrl': null,
+        'inspectionFee': 500,
+        'inspectionOnly': true,
+        'soleLane': 'SOMETHING_NEW',
+      }).toEntity();
+
+      expect(parsed.soleLane, isNull);
+      expect(parsed.effectiveSoleLane, BookingLane.inspection);
+    });
+
     test('the offline stub keeps the lane rule even when /categories fails, '
         'so the fallback can never re-expose Standard or Inspection', () {
       const offline = ServiceCategoryEntity(
@@ -325,6 +436,16 @@ void main() {
       expect(offline.allowsLane(BookingLane.bidding), isTrue);
       expect(offline.allowsLane(BookingLane.standard), isFalse);
       expect(offline.allowsLane(BookingLane.inspection), isFalse);
+    });
+
+    test('a category with neither field set is unrestricted, not restricted '
+        'to nothing', () {
+      const bare = ServiceCategoryEntity(id: '', name: 'Bare');
+
+      expect(bare.effectiveSoleLane, isNull);
+      for (final lane in BookingLane.values) {
+        expect(bare.allowsLane(lane), isTrue, reason: lane.name);
+      }
     });
   });
 
