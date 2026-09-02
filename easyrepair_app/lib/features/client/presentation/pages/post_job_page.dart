@@ -691,6 +691,20 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     final generation = ++_addressResolutionGeneration;
     final query = value.trim();
 
+    // Once the customer has explicitly selected a saved/GPS/map location,
+    // edits here describe that same pin (building, apartment, floor, unit,
+    // etc.). Keep the confirmed coordinates and preserve the customer's text
+    // instead of trying to geocode sub-premise detail or clearing the pin.
+    if (_gpsLat != null && _gpsLng != null) {
+      setState(() {
+        _pickedAddress = query;
+        _selectedSavedAddressId = null;
+        _addressResolutionError = null;
+        _addressResolving = false;
+      });
+      return;
+    }
+
     setState(() {
       _gpsLat = null;
       _gpsLng = null;
@@ -721,26 +735,16 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
         return;
       }
 
-      final resolvedAddress =
-          await ref.read(bookingAddressLabelResolverProvider)(
-            location.latitude,
-            location.longitude,
-          ) ??
-          query;
-      if (!mounted || generation != _addressResolutionGeneration) return;
-
       setState(() {
         _gpsLat = location.latitude;
         _gpsLng = location.longitude;
-        _pickedAddress = resolvedAddress;
+        // Coordinates come from the resolver, but the booking address remains
+        // exactly what the customer entered so sub-premise detail is not lost.
+        _pickedAddress = query;
         _selectedCity = '';
         _selectedSavedAddressId = null;
         _addressResolving = false;
         _addressResolutionError = null;
-        _addressCtrl.value = TextEditingValue(
-          text: resolvedAddress,
-          selection: TextSelection.collapsed(offset: resolvedAddress.length),
-        );
       });
     } catch (_) {
       if (!mounted || generation != _addressResolutionGeneration) return;

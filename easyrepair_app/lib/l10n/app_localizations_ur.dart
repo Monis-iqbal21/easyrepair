@@ -916,7 +916,7 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get postJobAddressHint =>
-      'مثلاً مکان 12، گلی 5، ڈی ایچ اے فیز 6، کراچی';
+      'عمارت/مکان، اپارٹمنٹ/فلیٹ، منزل/یونٹ، علاقہ، کراچی';
 
   @override
   String get postJobAddLocationFirst =>
@@ -1281,7 +1281,15 @@ class AppLocalizationsUr extends AppLocalizations {
   String get locationSelected => 'منتخب کردہ لوکیشن';
 
   @override
-  String get locationSearchHint => 'علاقہ یا کوئی نشانی تلاش کریں…';
+  String get locationSearchHint => 'جگہ، علاقہ یا نشانی تلاش کریں…';
+
+  @override
+  String get locationNoSuggestions =>
+      'کوئی ملتی جگہ نہیں ملی۔ قریبی نشانی یا علاقے کا نام لکھیں۔';
+
+  @override
+  String get locationSearchFailed =>
+      'فی الحال جگہ کی تجاویز دستیاب نہیں۔ آپ پن خود منتقل کر سکتے ہیں۔';
 
   @override
   String get locationGettingAddress => 'پتہ حاصل کیا جا رہا ہے…';
@@ -3919,11 +3927,11 @@ class AppLocalizationsUr extends AppLocalizations {
       'پہلی بکنگ ہے — پتہ ایک بار لکھ دیں۔ اگلی بار کے لیے محفوظ کیا جا سکتا ہے۔';
 
   @override
-  String get postJobCompleteAddressLabel => 'اپنا مکمل پتہ لکھیں';
+  String get postJobCompleteAddressLabel => 'سروس کا مکمل پتہ لکھیں';
 
   @override
   String get postJobAddressLandmarkHelper =>
-      'قریبی نشانی سے استاد بغیر فون کیے سیدھا پہنچ سکتا ہے۔';
+      'عمارت/مکان، اپارٹمنٹ/فلیٹ، منزل/یونٹ اور قریبی نشانی لکھیں۔';
 
   @override
   String get postJobAddressResolving => 'اس پتے کو نقشے پر تلاش کیا جا رہا ہے…';
@@ -5208,7 +5216,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get postJobAddressHint =>
-      'Maslan House 12, Street 5, DHA Phase 6, Karachi';
+      'Building/ghar, apartment/flat, floor/unit, ilaqa, Karachi';
 
   @override
   String get postJobAddLocationFirst =>
@@ -5576,7 +5584,15 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get locationSelected => 'Muntakhab location';
 
   @override
-  String get locationSearchHint => 'Ilaqa ya koi nishani dhoondein…';
+  String get locationSearchHint => 'Jagah, ilaqa ya nishani dhoondein…';
+
+  @override
+  String get locationNoSuggestions =>
+      'Koi milti jagah nahi mili. Qareebi nishani ya ilaqay ka naam likhein.';
+
+  @override
+  String get locationSearchFailed =>
+      'Abhi jagah ki suggestions nahi mil rahin. Aap pin khud move kar sakte hain.';
 
   @override
   String get locationGettingAddress => 'Pata hasil kiya ja raha hai…';
@@ -8255,11 +8271,11 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
       'Pehli booking hai — pata aik dafa likh dein. Aage se save ho sakta hai.';
 
   @override
-  String get postJobCompleteAddressLabel => 'Apna complete address likhein';
+  String get postJobCompleteAddressLabel => 'Service ka poora address likhein';
 
   @override
   String get postJobAddressLandmarkHelper =>
-      'Nishani se Ustaad seedha pohanchta hai — phone karne ki zaroorat nahi.';
+      'Building/ghar, apartment/flat, floor/unit aur qareebi nishani likhein.';
 
   @override
   String get postJobAddressResolving =>

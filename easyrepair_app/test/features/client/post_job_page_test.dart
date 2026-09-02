@@ -295,7 +295,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final addressField = find.text('Enter your complete address');
+      final addressField = find.text('Enter your complete service address');
       final currentLocation = find.text('Current Location');
       final pickOnMap = find.text('Pick on Map');
       final mapPreview = find.text('MAP — TAP TO PLACE THE PIN');
@@ -395,7 +395,7 @@ void main() {
       expect(find.text('Inspection'), findsOneWidget);
     });
 
-    testWidgets('manual edits immediately clear a previously selected pin', (
+    testWidgets('building and apartment details preserve a selected pin', (
       tester,
     ) async {
       await tester.pumpWidget(
@@ -412,24 +412,21 @@ void main() {
 
       await tester.enterText(
         find.byType(TextFormField).first,
-        'A different unresolved address',
+        'House 1, Street 2, Lahore, Flat 4B, Floor 2',
       );
       await tester.pump();
 
       map = tester.widget<GoogleMap>(find.byType(GoogleMap));
-      expect(map.initialCameraPosition.target, const LatLng(24.8607, 67.0011));
-      expect(map.markers, isEmpty);
-      expect(find.text('MAP — TAP TO PLACE THE PIN'), findsOneWidget);
+      expect(map.initialCameraPosition.target, const LatLng(31.5204, 74.3587));
+      expect(map.markers, hasLength(1));
+      expect(
+        find.text('House 1, Street 2, Lahore, Flat 4B, Floor 2'),
+        findsWidgets,
+      );
 
       await tester.tap(find.text('Next'));
-      await tester.pump();
-      expect(
-        find.text(
-          "We couldn't find this address. Add more detail or choose it on the map.",
-        ),
-        findsOneWidget,
-      );
-      expect(find.text('Fixed-price services'), findsNothing);
+      await tester.pumpAndSettle();
+      expect(find.text('Fixed-price services'), findsOneWidget);
     });
 
     testWidgets(
@@ -456,7 +453,8 @@ void main() {
         final map = tester.widget<GoogleMap>(find.byType(GoogleMap));
         expect(map.initialCameraPosition.target, resolved);
         expect(map.markers, hasLength(1));
-        expect(find.text('123 Test Street, Karachi'), findsWidgets);
+        expect(find.text('123 Test Street'), findsWidgets);
+        expect(find.text('123 Test Street, Karachi'), findsNothing);
 
         await tester.tap(find.text('Next'));
         await tester.pumpAndSettle();
@@ -519,7 +517,7 @@ void main() {
       await tester.tap(find.text('Pick on Map'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Search for an area or landmark…'), findsOneWidget);
+      expect(find.text('Search places, areas, or landmarks…'), findsOneWidget);
       expect(
         find.text('Move the map or tap to pick a location'),
         findsOneWidget,
@@ -570,7 +568,7 @@ void main() {
         ),
         findsOneWidget,
       );
-      expect(find.text('Apna complete address likhein'), findsOneWidget);
+      expect(find.text('Service ka poora address likhein'), findsOneWidget);
       expect(find.text('Mojooda Location'), findsOneWidget);
       expect(find.text('Map par chunain'), findsOneWidget);
       expect(find.text('Aage'), findsOneWidget);

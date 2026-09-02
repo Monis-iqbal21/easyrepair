@@ -1,5 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:typed_data';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -75,6 +78,60 @@ const _savedAddresses = [
 
 /// The widths this app is expected to survive, per the design rules.
 const _widths = <double>[320, 360, 390, 430];
+
+class _GooglePlacesAdapter implements HttpClientAdapter {
+  final List<RequestOptions> requests = [];
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    requests.add(options);
+    final data = switch (options.path) {
+      final path when path.endsWith('/place/autocomplete/json') => {
+        'status': 'OK',
+        'predictions': [
+          {
+            'place_id': 'country-club-karachi',
+            'description': 'Country Club, Karachi, Pakistan',
+            'structured_formatting': {
+              'main_text': 'Country Club',
+              'secondary_text': 'Karachi, Pakistan',
+            },
+          },
+        ],
+      },
+      final path when path.endsWith('/place/details/json') => {
+        'status': 'OK',
+        'result': {
+          'formatted_address': 'Country Club Road, Karachi, Pakistan',
+          'geometry': {
+            'location': {'lat': 24.8732, 'lng': 67.0721},
+          },
+        },
+      },
+      final path when path.endsWith('/geocode/json') => {
+        'status': 'OK',
+        'results': [
+          {'formatted_address': 'Adjusted Pin, Karachi, Pakistan'},
+        ],
+      },
+      _ => <String, dynamic>{'status': 'ZERO_RESULTS'},
+    };
+    return ResponseBody.fromString(
+      jsonEncode(data),
+      200,
+      headers: {
+        Headers.contentTypeHeader: ['application/json'],
+      },
+    );
+  }
+
+  @override
+  void close({bool force = false}) {}
+}
 
 class _FakeSavedAddressesNotifier extends SavedAddressesNotifier {
   @override
@@ -191,6 +248,7 @@ Future<void> _pumpPickerAlone(
     longitude: 67.0987,
     address: _longAddress,
   ),
+  Dio? googleApiDio,
 }) async {
   tester.view.physicalSize = Size(width, 1400);
   tester.view.devicePixelRatio = 1;
@@ -212,7 +270,11 @@ Future<void> _pumpPickerAlone(
         body: Builder(
           builder: (context) => Center(
             child: ElevatedButton(
-              onPressed: () => showLocationPicker(context, initial: initial),
+              onPressed: () => showLocationPicker(
+                context,
+                initial: initial,
+                googleApiDio: googleApiDio,
+              ),
               child: const Text('open'),
             ),
           ),
@@ -567,6 +629,53 @@ void main() {
   });
 
   group('map picker sheet', () {
+    testWidgets(
+      'Country Club search shows a Karachi-biased suggestion that selects '
+      'the map location and still permits a final pin adjustment',
+      (tester) async {
+        final adapter = _GooglePlacesAdapter();
+        final dio = Dio()..httpClientAdapter = adapter;
+        addTearDown(dio.close);
+        await _pumpPickerAlone(tester, initial: null, googleApiDio: dio);
+
+        await tester.enterText(find.byType(TextField), 'Country Club');
+        await tester.pump(const Duration(milliseconds: 501));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Country Club'), findsNWidgets(2));
+        expect(find.text('Karachi, Pakistan'), findsOneWidget);
+        final autocomplete = adapter.requests.singleWhere(
+          (request) => request.path.endsWith('/place/autocomplete/json'),
+        );
+        expect(autocomplete.queryParameters['input'], 'Country Club');
+        expect(autocomplete.queryParameters['components'], 'country:pk');
+        expect(autocomplete.queryParameters['region'], 'pk');
+        expect(autocomplete.queryParameters['location'], '24.8607,67.0011');
+        expect(autocomplete.queryParameters['radius'], '25000');
+        expect(autocomplete.queryParameters['sessiontoken'], isNot(isEmpty));
+
+        await tester.tap(find.text('Country Club').last);
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('Country Club Road, Karachi, Pakistan'),
+          findsOneWidget,
+        );
+        var map = tester.widget<GoogleMap>(find.byType(GoogleMap));
+        expect(
+          map.initialCameraPosition.target,
+          const LatLng(24.8732, 67.0721),
+        );
+
+        map.onTap!(const LatLng(24.881, 67.091));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Adjusted Pin, Karachi, Pakistan'), findsOneWidget);
+        map = tester.widget<GoogleMap>(find.byType(GoogleMap));
+        expect(map.initialCameraPosition.target, const LatLng(24.881, 67.091));
+      },
+    );
+
     testWidgets('opens with a map, a search field, a GPS control and a '
         'disabled confirm', (tester) async {
       await _pumpPostJobAddressStep(tester);

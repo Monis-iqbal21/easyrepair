@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart' show Factory;
+import 'package:flutter/foundation.dart' show Factory, visibleForTesting;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
@@ -67,6 +67,7 @@ class _PlacePrediction {
 Future<PickedLocation?> showLocationPicker(
   BuildContext context, {
   PickedLocation? initial,
+  @visibleForTesting Dio? googleApiDio,
 }) {
   return showModalBottomSheet<PickedLocation>(
     context: context,
@@ -78,7 +79,8 @@ Future<PickedLocation?> showLocationPicker(
       borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
     ),
     clipBehavior: Clip.antiAlias,
-    builder: (_) => _LocationPickerSheet(initial: initial),
+    builder: (_) =>
+        _LocationPickerSheet(initial: initial, googleApiDio: googleApiDio),
   );
 }
 
@@ -86,7 +88,9 @@ Future<PickedLocation?> showLocationPicker(
 
 class _LocationPickerSheet extends StatefulWidget {
   final PickedLocation? initial;
-  const _LocationPickerSheet({this.initial});
+  final Dio? googleApiDio;
+
+  const _LocationPickerSheet({this.initial, this.googleApiDio});
 
   @override
   State<_LocationPickerSheet> createState() => _LocationPickerSheetState();
@@ -124,24 +128,33 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
   bool _searching = false;
   List<_PlacePrediction> _predictions = [];
   Timer? _debounce;
+  int _autocompleteGeneration = 0;
+  String? _lastCompletedQuery;
+  bool _searchFailed = false;
+  late String _placesSessionToken;
 
   // ── GPS ────────────────────────────────────────────────────────────────────
   bool _gpsLoading = false;
 
   // ── Bare Dio for Google APIs (no auth interceptors) ────────────────────────
   late final Dio _geoDio;
+  late final bool _ownsGeoDio;
 
   // ── Init / dispose ─────────────────────────────────────────────────────────
 
   @override
   void initState() {
     super.initState();
-    _geoDio = Dio(
-      BaseOptions(
-        connectTimeout: const Duration(seconds: 8),
-        receiveTimeout: const Duration(seconds: 8),
-      ),
-    );
+    _ownsGeoDio = widget.googleApiDio == null;
+    _geoDio =
+        widget.googleApiDio ??
+        Dio(
+          BaseOptions(
+            connectTimeout: const Duration(seconds: 8),
+            receiveTimeout: const Duration(seconds: 8),
+          ),
+        );
+    _placesSessionToken = _newPlacesSessionToken();
     if (widget.initial != null) {
       _picked = LatLng(widget.initial!.latitude, widget.initial!.longitude);
       _addressLabel = widget.initial!.address;
@@ -157,9 +170,12 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
     _debounce?.cancel();
     _geocodeDebounce?.cancel();
     _mapCtrl?.dispose();
-    _geoDio.close(force: true);
+    if (_ownsGeoDio) _geoDio.close(force: true);
     super.dispose();
   }
+
+  String _newPlacesSessionToken() =>
+      '${DateTime.now().microsecondsSinceEpoch}-${identityHashCode(this)}';
 
   // ── Karachi bounds ─────────────────────────────────────────────────────────
 
@@ -284,22 +300,39 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
 
   void _onSearchChanged(String query) {
     _debounce?.cancel();
-    if (query.trim().isEmpty) {
+    final generation = ++_autocompleteGeneration;
+    final trimmed = query.trim();
+    if (trimmed.isEmpty) {
       setState(() {
         _predictions = [];
         _searching = false;
+        _lastCompletedQuery = null;
+        _searchFailed = false;
       });
       return;
     }
+    setState(() {
+      _lastCompletedQuery = null;
+      _searchFailed = false;
+    });
+    if (trimmed.length < 3) return;
     _debounce = Timer(
       const Duration(milliseconds: 500),
-      () => _runAutocomplete(query.trim()),
+      () => _runAutocomplete(trimmed, generation),
     );
   }
 
-  Future<void> _runAutocomplete(String query) async {
+  Future<void> _runAutocomplete(
+    String query, [
+    int? requestedGeneration,
+  ]) async {
     if (!mounted) return;
-    setState(() => _searching = true);
+    final generation = requestedGeneration ?? ++_autocompleteGeneration;
+    final biasCenter = _cameraCenter ?? _picked ?? _kKarachiCenter;
+    setState(() {
+      _searching = true;
+      _searchFailed = false;
+    });
     try {
       final res = await _geoDio.get(
         'https://maps.googleapis.com/maps/api/place/autocomplete/json',
@@ -307,37 +340,67 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
           'input': query,
           'key': _kMapsApiKey,
           'components': 'country:pk',
-          'location':
-              '${_kKarachiCenter.latitude},${_kKarachiCenter.longitude}',
-          'radius': '50000',
+          // A smaller local bias lets named places/landmarks rank alongside
+          // street addresses. Follow the map's current center when available,
+          // with central Karachi as the initial fallback.
+          'location': '${biasCenter.latitude},${biasCenter.longitude}',
+          'origin': '${biasCenter.latitude},${biasCenter.longitude}',
+          'radius': '25000',
+          'region': 'pk',
           'language': 'en',
+          'sessiontoken': _placesSessionToken,
         },
       );
-      final raw = (res.data['predictions'] as List?) ?? [];
-      if (mounted) {
+      if (!mounted || generation != _autocompleteGeneration) return;
+      final status = res.data['status'] as String?;
+      if (status != 'OK' && status != 'ZERO_RESULTS') {
         setState(() {
-          _predictions = raw.take(5).map((p) {
-            final sf = p['structured_formatting'] as Map?;
-            return _PlacePrediction(
-              placeId: p['place_id'] as String,
-              mainText:
-                  (sf?['main_text'] as String?) ??
-                  (p['description'] as String? ?? ''),
-              secondaryText: (sf?['secondary_text'] as String?) ?? '',
-            );
-          }).toList();
+          _predictions = [];
+          _lastCompletedQuery = query;
+          _searchFailed = true;
+        });
+        return;
+      }
+      final raw = (res.data['predictions'] as List?) ?? [];
+      setState(() {
+        _predictions = raw
+            .whereType<Map>()
+            .take(5)
+            .map((p) {
+              final sf = p['structured_formatting'] as Map?;
+              final placeId = p['place_id'] as String?;
+              if (placeId == null || placeId.isEmpty) return null;
+              return _PlacePrediction(
+                placeId: placeId,
+                mainText:
+                    (sf?['main_text'] as String?) ??
+                    (p['description'] as String? ?? ''),
+                secondaryText: (sf?['secondary_text'] as String?) ?? '',
+              );
+            })
+            .whereType<_PlacePrediction>()
+            .toList();
+        _lastCompletedQuery = query;
+      });
+    } catch (_) {
+      if (mounted && generation == _autocompleteGeneration) {
+        setState(() {
+          _predictions = [];
+          _lastCompletedQuery = query;
+          _searchFailed = true;
         });
       }
-    } catch (_) {
-      if (mounted) setState(() => _predictions = []);
     } finally {
-      if (mounted) setState(() => _searching = false);
+      if (mounted && generation == _autocompleteGeneration) {
+        setState(() => _searching = false);
+      }
     }
   }
 
   // ── Place Details (on prediction tap) ─────────────────────────────────────
 
   Future<void> _selectPrediction(_PlacePrediction prediction) async {
+    _autocompleteGeneration++;
     _searchCtrl.clear();
     FocusScope.of(context).unfocus();
     setState(() {
@@ -352,6 +415,7 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
           'key': _kMapsApiKey,
           'fields': 'geometry,formatted_address',
           'language': 'en',
+          'sessiontoken': _placesSessionToken,
         },
       );
       final result = res.data['result'] as Map?;
@@ -385,6 +449,7 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
         _reverseGeocoding = false;
       });
       _moveMap(latlng);
+      _placesSessionToken = _newPlacesSessionToken();
     } catch (_) {
       if (mounted) _showSnack(context.l10n.locationResolveFailed);
     } finally {
@@ -436,6 +501,10 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
           _buildHandle(),
           _buildSearchBar(),
           if (_predictions.isNotEmpty) _buildPredictionList(),
+          if (_predictions.isEmpty &&
+              !_searching &&
+              _lastCompletedQuery == _searchCtrl.text.trim())
+            _buildSearchMessage(),
           Expanded(child: _buildMap()),
           _buildBottomPanel(),
         ],
@@ -468,7 +537,8 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
               onChanged: _onSearchChanged,
               textInputAction: TextInputAction.search,
               onSubmitted: (v) {
-                if (v.trim().isNotEmpty) _runAutocomplete(v.trim());
+                final query = v.trim();
+                if (query.length >= 3) _runAutocomplete(query);
               },
               style: TextStyle(fontSize: 14, color: _colors.textPrimary),
               decoration: InputDecoration(
@@ -502,8 +572,13 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
                           color: _colors.textSecondary,
                         ),
                         onPressed: () {
+                          _autocompleteGeneration++;
                           _searchCtrl.clear();
-                          setState(() => _predictions = []);
+                          setState(() {
+                            _predictions = [];
+                            _lastCompletedQuery = null;
+                            _searchFailed = false;
+                          });
                         },
                       )
                     : null,
@@ -555,6 +630,27 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSearchMessage() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: _colors.surface,
+          borderRadius: BorderRadius.circular(_rCard),
+          border: Border.all(color: _colors.border),
+        ),
+        child: Text(
+          _searchFailed
+              ? context.l10n.locationSearchFailed
+              : context.l10n.locationNoSuggestions,
+          style: TextStyle(fontSize: 13, color: _colors.textSecondary),
+        ),
       ),
     );
   }
@@ -908,5 +1004,4 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
       ),
     );
   }
-
 }

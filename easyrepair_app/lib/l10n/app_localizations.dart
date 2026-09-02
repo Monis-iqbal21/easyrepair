@@ -1752,7 +1752,7 @@ abstract class AppLocalizations {
   /// No description provided for @postJobAddressHint.
   ///
   /// In en, this message translates to:
-  /// **'e.g. House 12, Street 5, DHA Phase 6, Karachi'**
+  /// **'Building/house, apartment/flat, floor/unit, area, Karachi'**
   String get postJobAddressHint;
 
   /// No description provided for @postJobAddLocationFirst.
@@ -2406,8 +2406,20 @@ abstract class AppLocalizations {
   /// No description provided for @locationSearchHint.
   ///
   /// In en, this message translates to:
-  /// **'Search for an area or landmark…'**
+  /// **'Search places, areas, or landmarks…'**
   String get locationSearchHint;
+
+  /// No description provided for @locationNoSuggestions.
+  ///
+  /// In en, this message translates to:
+  /// **'No matching places found. Try a nearby landmark or area name.'**
+  String get locationNoSuggestions;
+
+  /// No description provided for @locationSearchFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Place suggestions are unavailable right now. You can still move the pin manually.'**
+  String get locationSearchFailed;
 
   /// No description provided for @locationGettingAddress.
   ///
@@ -7086,13 +7098,13 @@ abstract class AppLocalizations {
   /// No description provided for @postJobCompleteAddressLabel.
   ///
   /// In en, this message translates to:
-  /// **'Enter your complete address'**
+  /// **'Enter your complete service address'**
   String get postJobCompleteAddressLabel;
 
   /// No description provided for @postJobAddressLandmarkHelper.
   ///
   /// In en, this message translates to:
-  /// **'A nearby landmark helps your Ustaad arrive without needing to call.'**
+  /// **'Include building/house, apartment/flat, floor/unit, and a nearby landmark.'**
   String get postJobAddressLandmarkHelper;
 
   /// No description provided for @postJobAddressResolving.

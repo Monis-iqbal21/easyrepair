@@ -920,7 +920,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get postJobAddressHint =>
-      'e.g. House 12, Street 5, DHA Phase 6, Karachi';
+      'Building/house, apartment/flat, floor/unit, area, Karachi';
 
   @override
   String get postJobAddLocationFirst => 'Add your location to continue.';
@@ -1289,7 +1289,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get locationSelected => 'Selected location';
 
   @override
-  String get locationSearchHint => 'Search for an area or landmark…';
+  String get locationSearchHint => 'Search places, areas, or landmarks…';
+
+  @override
+  String get locationNoSuggestions =>
+      'No matching places found. Try a nearby landmark or area name.';
+
+  @override
+  String get locationSearchFailed =>
+      'Place suggestions are unavailable right now. You can still move the pin manually.';
 
   @override
   String get locationGettingAddress => 'Getting address…';
@@ -3996,11 +4004,12 @@ class AppLocalizationsEn extends AppLocalizations {
       'First booking? Add the address once — you can save it for next time.';
 
   @override
-  String get postJobCompleteAddressLabel => 'Enter your complete address';
+  String get postJobCompleteAddressLabel =>
+      'Enter your complete service address';
 
   @override
   String get postJobAddressLandmarkHelper =>
-      'A nearby landmark helps your Ustaad arrive without needing to call.';
+      'Include building/house, apartment/flat, floor/unit, and a nearby landmark.';
 
   @override
   String get postJobAddressResolving => 'Finding this address on the map…';
