@@ -5464,7 +5464,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
       'Foran Ustaad bhejte hain — rate wahi, koi extra charge nahi';
 
   @override
-  String get clientHomeWhatNeedsDoing => 'Kya karwana hai?';
+  String get clientHomeWhatNeedsDoing => 'Service select karein';
 
   @override
   String get clientHomeTrustMessage =>

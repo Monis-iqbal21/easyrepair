@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:handygo_app/core/l10n/app_locale.dart';
 import 'package:handygo_app/core/theme/app_semantic_colors.dart';
 import 'package:handygo_app/core/theme/app_theme.dart';
 import 'package:handygo_app/core/widgets/handygo_brand_lockup.dart';
@@ -22,7 +23,11 @@ class _SignedInClient extends AuthStateNotifier {
   );
 }
 
-Future<void> _pumpHome(WidgetTester tester, ThemeData theme) async {
+Future<void> _pumpHome(
+  WidgetTester tester,
+  ThemeData theme, {
+  AppLocale locale = AppLocale.english,
+}) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -30,7 +35,7 @@ Future<void> _pumpHome(WidgetTester tester, ThemeData theme) async {
         currentClientAreaProvider.overrideWith((ref) async => 'Lahore'),
         unreadNotificationCountProvider.overrideWith((ref) async => 0),
       ],
-      child: localizedApp(const ClientHomePage(), theme: theme),
+      child: localizedApp(const ClientHomePage(), theme: theme, locale: locale),
     ),
   );
   await tester.pumpAndSettle();
@@ -61,6 +66,16 @@ void main() {
       expect(title.style!.color, colors.primary);
       expect(badge.style!.color, colors.onPrimary);
 
+      final primaryOutlinedCards = tester
+          .widgetList<Material>(find.byType(Material))
+          .where((material) {
+            final shape = material.shape;
+            return material.color == colors.surface &&
+                shape is RoundedRectangleBorder &&
+                shape.side.color == colors.primary;
+          });
+      expect(primaryOutlinedCards, hasLength(1));
+
       final primaryAvatars = tester
           .widgetList<CircleAvatar>(find.byType(CircleAvatar))
           .where(
@@ -72,4 +87,14 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+
+  testWidgets('Roman Urdu home uses the requested service heading', (
+    tester,
+  ) async {
+    await _pumpHome(tester, AppTheme.lightTheme, locale: AppLocale.romanUrdu);
+
+    expect(find.text('Service select karein'), findsOneWidget);
+    expect(find.text('Kya karwana hai?'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
 }
