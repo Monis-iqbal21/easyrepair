@@ -66,6 +66,7 @@ BookingEntity _booking({
   bool? inspectionFeePaid,
   String? sourceInspectionBookingId,
   String? attachedInspectionBookingId,
+  List<BookingStatusHistoryEntry> statusHistory = const [],
 }) {
   return BookingEntity(
     id: _bookingId,
@@ -102,6 +103,7 @@ BookingEntity _booking({
     inspectionFeePaid: inspectionFeePaid,
     sourceInspectionBookingId: sourceInspectionBookingId,
     attachedInspectionBookingId: attachedInspectionBookingId,
+    statusHistory: statusHistory,
   );
 }
 
@@ -326,29 +328,67 @@ void main() {
       expect(find.byType(GoogleMap), findsNothing);
     });
 
-    testWidgets('worker-owned transitions are shown by the timeline and are '
-        'never client buttons', (tester) async {
+    testWidgets('actual Client page keeps Status ki history and removes the '
+        'separate Timeline', (tester) async {
+      await _pumpDetail(
+        tester,
+        _booking(
+          status: BookingStatus.accepted,
+          worker: _worker,
+          items: const [_acService],
+          statusHistory: [
+            BookingStatusHistoryEntry(
+              id: 'history-accepted',
+              status: BookingStatus.accepted,
+              createdAt: DateTime(2026, 8, 17, 10),
+            ),
+          ],
+        ),
+        locale: AppLocale.romanUrdu,
+      );
+
+      expect(
+        find.byKey(const Key('client-status-history-section')),
+        findsOneWidget,
+      );
+      expect(find.text('Status ki history'), findsOneWidget);
+      expect(find.byKey(const Key('booking-timeline-section')), findsNothing);
+      expect(find.text('Kaam ki status timeline'), findsNothing);
+    });
+
+    testWidgets('client keeps Status History without a duplicate Timeline or '
+        'worker-owned buttons', (tester) async {
       for (final (status, label) in const [
-        (BookingStatus.enRoute, 'On the way'),
+        (BookingStatus.enRoute, 'En Route'),
         (BookingStatus.arrived, 'Arrived'),
-        (BookingStatus.inProgress, 'Work started'),
+        (BookingStatus.inProgress, 'In Progress'),
       ]) {
         await _pumpDetail(
           tester,
-          _booking(status: status, worker: _worker, items: const [_acService]),
+          _booking(
+            status: status,
+            worker: _worker,
+            items: const [_acService],
+            statusHistory: [
+              BookingStatusHistoryEntry(
+                id: 'history-$label',
+                status: status,
+                createdAt: DateTime(2026, 8, 17, 11),
+              ),
+            ],
+          ),
         );
 
-        // Progress is stated by the read-only timeline. (The status badge may
-        // independently carry the same word — its wording is locked to the
-        // Bookings tab and is deliberately untouched here.)
+        expect(find.text('Status History'), findsOneWidget);
         expect(
           find.descendant(
-            of: find.byKey(const Key('booking-timeline-section')),
+            of: find.byKey(const Key('client-status-history-section')),
             matching: find.text(label),
           ),
           findsOneWidget,
-          reason: '$status must be shown as a read-only timeline step',
+          reason: '$status must be shown in the backend status history',
         );
+        expect(find.byKey(const Key('booking-timeline-section')), findsNothing);
         // Nothing that mutates EN_ROUTE / ARRIVED / IN_PROGRESS exists here.
         expect(find.widgetWithText(FilledButton, label), findsNothing);
         expect(find.widgetWithText(OutlinedButton, label), findsNothing);

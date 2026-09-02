@@ -24,7 +24,7 @@ import '../widgets/detail/booking_detail_summary.dart';
 import '../widgets/detail/booking_lane_sections.dart';
 import '../widgets/detail/booking_location_section.dart';
 import '../widgets/detail/booking_payment_section.dart';
-import '../widgets/detail/booking_timeline_section.dart';
+import '../widgets/detail/booking_status_history_section.dart';
 import '../widgets/detail/booking_worker_card.dart';
 import '../widgets/cash_payment_confirmation_card.dart';
 import '../widgets/inspection_report_card.dart';
@@ -308,12 +308,10 @@ class _DetailBodyState extends ConsumerState<_DetailBody>
           label: l10n.bookingInspectionCompletedBy,
         ),
 
-      // 7. Progress. A read-only view of the booking's existing status, with
-      //    lane-specific wording — and the ONLY place the current step is
-      //    stated, so it is never said twice on one screen. Every lane and
-      //    every status keeps its timeline, including terminal ones: those
-      //    freeze at the progress they really reached.
-      BookingTimelineSection(booking: booking),
+      // 7. Backend-recorded status history. This is the client's single
+      //    lifecycle history; do not duplicate it with a separate timeline.
+      if (booking.statusHistory.isNotEmpty)
+        BookingStatusHistorySection(history: booking.statusHistory),
 
       // 8. Inspection report entry point, then current actions. The report
       //    belongs to the BOOKING, so it survives "Find Other Ustaad" and any
