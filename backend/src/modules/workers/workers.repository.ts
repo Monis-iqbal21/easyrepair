@@ -7,6 +7,7 @@ import {
   CommissionStatus,
   InspectionDecisionStatus,
   Prisma,
+  ServiceAvailabilityStatus,
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
@@ -952,10 +953,13 @@ export class WorkersRepository {
     });
   }
 
-  /** Check that all provided categoryIds exist and are active. */
+  /** Check that all categoryIds remain selectable by Workers going forward. */
   async findCategoriesByIds(ids: string[]) {
     return this.prisma.serviceCategory.findMany({
-      where: { id: { in: ids }, isActive: true },
+      where: {
+        id: { in: ids },
+        availabilityStatus: ServiceAvailabilityStatus.ACTIVE,
+      },
       select: { id: true },
     });
   }

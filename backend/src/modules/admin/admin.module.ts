@@ -30,6 +30,8 @@ import { AdminReadonlyController } from './admin-readonly.controller';
 import { AdminReadonlyService } from './admin-readonly.service';
 import { AdminReadonlyGuard } from './admin-readonly.guard';
 import { AdminReadonlyAuditInterceptor } from './admin-readonly-audit.interceptor';
+import { CategoriesModule } from '../categories/categories.module';
+import { AdminServiceCategoriesController } from './admin-service-categories.controller';
 
 @Module({
   imports: [
@@ -38,6 +40,7 @@ import { AdminReadonlyAuditInterceptor } from './admin-readonly-audit.intercepto
     StorageModule,
     AdminOperationsModule,
     ComplaintsModule,
+    CategoriesModule,
   ],
   controllers: [
     AdminController,
@@ -50,6 +53,7 @@ import { AdminReadonlyAuditInterceptor } from './admin-readonly-audit.intercepto
     AdminSettlementCasesController,
     AdminCommissionCollectionsController,
     AdminReadonlyController,
+    AdminServiceCategoriesController,
   ],
   providers: [
     AdminService,

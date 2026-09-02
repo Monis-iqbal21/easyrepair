@@ -62,6 +62,9 @@ describe('AuthService — SMS OTP login/registration', () => {
       incrementAuthOtpAttempts: jest.fn().mockResolvedValue(undefined),
       findUserByPhoneVariants: jest.fn().mockResolvedValue(null),
       findUserByPhone: jest.fn().mockResolvedValue(null),
+      findWorkerRegistrationCategory: jest
+        .fn()
+        .mockResolvedValue({ id: 'selectable-category' }),
       createUserWithProfile: jest.fn(),
       createRefreshToken: jest.fn().mockResolvedValue(undefined),
       findClientProfile: jest
@@ -583,6 +586,28 @@ describe('AuthService — SMS OTP login/registration', () => {
       });
       expect(repository.createUserWithProfile).not.toHaveBeenCalled();
     });
+
+    it.each(['INACTIVE', 'SOON'])(
+      'rejects a tampered first-time selection of a %s service',
+      async () => {
+        const registrationToken = await token();
+        repository.findWorkerRegistrationCategory.mockResolvedValue(null);
+
+        await expect(
+          service.workerOtpRegister(
+            'Kamran Sheikh',
+            PHONE_RAW,
+            undefined,
+            'password123',
+            CATEGORY_ID,
+            registrationToken,
+          ),
+        ).rejects.toMatchObject({
+          response: { error: 'SERVICE_NOT_AVAILABLE' },
+        });
+        expect(repository.createUserWithProfile).not.toHaveBeenCalled();
+      },
+    );
 
     it('refuses an ACCESS token reused here — it carries no registration '
       + 'purpose', async () => {

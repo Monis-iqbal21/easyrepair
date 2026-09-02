@@ -1455,6 +1455,15 @@ export class AuthService {
       throw this._phoneAlreadyRegisteredError();
     }
 
+    const selectableCategory =
+      await this.authRepository.findWorkerRegistrationCategory(categoryId);
+    if (!selectableCategory) {
+      throw new BadRequestException({
+        message: 'Selected service is not available for Worker registration.',
+        error: 'SERVICE_NOT_AVAILABLE',
+      });
+    }
+
     const { firstName, lastName } = this._splitFullName(fullName);
     const passwordHash = await bcrypt.hash(password, 12);
 

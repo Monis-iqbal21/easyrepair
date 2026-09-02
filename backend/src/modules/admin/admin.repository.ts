@@ -8,6 +8,7 @@ import {
   TrainingStatus,
   AccountStatus,
   Role,
+  ServiceAvailabilityStatus,
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ListWorkersQueryDto } from './dto/list-workers-query.dto';
@@ -191,7 +192,10 @@ export class AdminRepository {
 
   async findCategoriesByIds(ids: string[]): Promise<{ id: string }[]> {
     return this.prisma.serviceCategory.findMany({
-      where: { id: { in: ids }, isActive: true },
+      where: {
+        id: { in: ids },
+        availabilityStatus: ServiceAvailabilityStatus.ACTIVE,
+      },
       select: { id: true },
     });
   }

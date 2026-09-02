@@ -9,6 +9,7 @@ import '../../../../core/errors/failure_messages.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
 import '../../../../core/permissions/media_permission_helper.dart';
 import '../../../../core/theme/app_semantic_colors.dart';
+import '../../../worker/domain/entities/category_entity.dart';
 import '../../../worker/presentation/providers/worker_providers.dart';
 import '../providers/auth_otp_providers.dart';
 import '../providers/ustaad_registration_draft.dart';
@@ -734,7 +735,11 @@ class _SkillsCard extends ConsumerWidget {
               spacing: 10,
               runSpacing: 10,
               children: [
-                for (final category in items)
+                for (final category in items.where(
+                  (category) =>
+                      category.availabilityStatus ==
+                      ServiceAvailabilityStatus.active,
+                ))
                   UstaadChoiceChip(
                     label: category.name,
                     selected: selected == category.id,

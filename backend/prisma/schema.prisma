@@ -48,6 +48,16 @@ enum WorkerStatus {
   SUSPENDED
 }
 
+/// Authoritative lifecycle for a service category when it is offered to new
+/// Workers during registration. `isActive` is retained as a legacy Client
+/// visibility mirror for older APKs; new Worker-selection logic reads only
+/// this enum.
+enum ServiceAvailabilityStatus {
+  ACTIVE
+  INACTIVE
+  SOON
+}
+
 enum VerificationStatus {
   PENDING
   VERIFIED
@@ -687,14 +697,17 @@ model WorkerDocument {
 }
 
 model ServiceCategory {
-  id             String   @id @default(uuid())
-  name           String   @unique
-  description    String?
-  iconUrl        String?
-  isActive       Boolean  @default(true)
+  id                 String                    @id @default(uuid())
+  name               String                    @unique
+  description        String?
+  iconUrl            String?
+  /// Legacy Client-list visibility retained for older APKs. Worker
+  /// registration uses availabilityStatus exclusively.
+  isActive           Boolean                   @default(true)
+  availabilityStatus ServiceAvailabilityStatus @default(ACTIVE)
   /// Fixed fee charged for an inspection-lane booking in this category.
   /// Null means inspection is not offered for this category.
-  inspectionFee  Float?
+  inspectionFee      Float?
   /// When true this category offers the INSPECTION lane and nothing else —
   /// the client is never asked to pick a lane, and STANDARD/BIDDING bookings
   /// are rejected server-side (see BookingsService.createBooking).
@@ -704,15 +717,16 @@ model ServiceCategory {
   /// category with this set must therefore also carry an inspectionFee.
   /// Defaults false, so every pre-existing category keeps all three lanes
   /// exactly as before.
-  inspectionOnly Boolean  @default(false)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  inspectionOnly     Boolean                   @default(false)
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
 
   bookings           Booking[]
   workerSkills       WorkerSkill[]
   standardServices   StandardService[]
   agreementTemplates AgreementTemplate[]
 
+  @@index([availabilityStatus])
   @@map("service_categories")
 }
 

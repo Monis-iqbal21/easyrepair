@@ -5,6 +5,7 @@ import {
   AuthOtpPurpose,
   PasswordResetOtp,
   Role,
+  ServiceAvailabilityStatus,
   User,
 } from '@prisma/client';
 import { phoneLookupVariants } from '../../common/utils/phone.util';
@@ -19,6 +20,19 @@ export class AuthRepository {
 
   async findUserById(id: string): Promise<User | null> {
     return this.prisma.user.findUnique({ where: { id } });
+  }
+
+  /** The category gate used only when a new Worker account is created. */
+  async findWorkerRegistrationCategory(
+    categoryId: string,
+  ): Promise<{ id: string } | null> {
+    return this.prisma.serviceCategory.findFirst({
+      where: {
+        id: categoryId,
+        availabilityStatus: ServiceAvailabilityStatus.ACTIVE,
+      },
+      select: { id: true },
+    });
   }
 
   async createUserWithProfile(data: {

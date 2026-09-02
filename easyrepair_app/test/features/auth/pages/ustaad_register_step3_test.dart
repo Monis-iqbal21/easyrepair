@@ -83,11 +83,16 @@ class _FakeWorkerRepository implements WorkerRepository {
     this.avatarSucceeds = true,
     this.saveSucceeds = true,
     this.skillsSucceed = true,
+    this.categoryResult = const Right([
+      CategoryEntity(id: 'c1', name: 'Electrician'),
+      CategoryEntity(id: 'c2', name: 'Plumber'),
+    ]),
   });
 
   final bool avatarSucceeds;
   final bool saveSucceeds;
   final bool skillsSucceed;
+  final Either<Failure, List<CategoryEntity>> categoryResult;
 
   int avatarUploads = 0;
   int saveCalls = 0;
@@ -118,14 +123,11 @@ class _FakeWorkerRepository implements WorkerRepository {
 
   @override
   Future<Either<Failure, List<CategoryEntity>>> getCategories() async =>
-      const Right([
-        CategoryEntity(id: 'c1', name: 'Electrician'),
-        CategoryEntity(id: 'c2', name: 'Plumber'),
-      ]);
+      categoryResult;
 
   @override
-  Future<Either<Failure, CachedResult<WorkerProfileEntity>>> getProfile() async =>
-      Right(CachedResult(profile));
+  Future<Either<Failure, CachedResult<WorkerProfileEntity>>>
+  getProfile() async => Right(CachedResult(profile));
 
   @override
   Future<Either<Failure, String>> uploadAvatar(File file) async {
@@ -326,6 +328,62 @@ Future<void> _pickPhoto(WidgetTester tester) async {
 }
 
 void main() {
+  group('Worker registration service availability', () {
+    testWidgets('renders ACTIVE only and hides INACTIVE/SOON', (tester) async {
+      final worker = _FakeWorkerRepository(
+        categoryResult: const Right([
+          CategoryEntity(id: 'active', name: 'Electrician'),
+          CategoryEntity(
+            id: 'inactive',
+            name: 'Disabled Trade',
+            availabilityStatus: ServiceAvailabilityStatus.inactive,
+          ),
+          CategoryEntity(
+            id: 'soon',
+            name: 'Future Trade',
+            availabilityStatus: ServiceAvailabilityStatus.soon,
+          ),
+        ]),
+      );
+      await tester.pumpWidget(
+        _app(auth: _FakeAuthRepository(), worker: worker, draft: _seed()),
+      );
+      await _settle(tester);
+
+      expect(find.text('Electrician'), findsOneWidget);
+      expect(find.text('Disabled Trade'), findsNothing);
+      expect(find.text('Future Trade'), findsNothing);
+    });
+
+    testWidgets('preserves the category error state', (tester) async {
+      final worker = _FakeWorkerRepository(
+        categoryResult: const Left(ServerFailure('offline')),
+      );
+      await tester.pumpWidget(
+        _app(auth: _FakeAuthRepository(), worker: worker, draft: _seed()),
+      );
+      await _settle(tester);
+
+      expect(
+        find.text('Skills load nahi ho sakin. Dobara koshish karein.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('preserves an empty service list without stale choices', (
+      tester,
+    ) async {
+      final worker = _FakeWorkerRepository(categoryResult: const Right([]));
+      await tester.pumpWidget(
+        _app(auth: _FakeAuthRepository(), worker: worker, draft: _seed()),
+      );
+      await _settle(tester);
+
+      expect(find.text('Electrician'), findsNothing);
+      expect(find.text('Plumber'), findsNothing);
+    });
+  });
+
   // The seeded photo has to survive the page's own initState hydration, so
   // tests that need it re-enter the page with it already in the draft.
   group('required fields', () {
@@ -334,9 +392,7 @@ void main() {
     ) async {
       final auth = _FakeAuthRepository();
       final worker = _FakeWorkerRepository();
-      await tester.pumpWidget(
-        _app(auth: auth, worker: worker, draft: _seed()),
-      );
+      await tester.pumpWidget(_app(auth: auth, worker: worker, draft: _seed()));
       await _settle(tester);
 
       await _tapText(tester, 'Aage');
@@ -362,9 +418,7 @@ void main() {
       // The photo and each address line get the shared "Zaroori hai".
       expect(find.text('Zaroori hai'), findsWidgets);
       expect(
-        find.text(
-          'Baraye meherbani neeche nishan zad khane mukammal karein.',
-        ),
+        find.text('Baraye meherbani neeche nishan zad khane mukammal karein.'),
         findsOneWidget,
         reason: 'and the snackbar points at them',
       );
@@ -405,10 +459,7 @@ void main() {
       await _settle(tester);
 
       await _tapText(tester, 'Electrician');
-      expect(
-        _container.read(ustaadRegistrationDraftProvider).categoryId,
-        'c1',
-      );
+      expect(_container.read(ustaadRegistrationDraftProvider).categoryId, 'c1');
 
       await _tapText(tester, 'Plumber');
       expect(
@@ -562,7 +613,8 @@ void main() {
       expect(
         find.text('STEP_4'),
         findsNothing,
-        reason: 'the upload result used to be discarded and the flow carried '
+        reason:
+            'the upload result used to be discarded and the flow carried '
             'on with no profile photo',
       );
       expect(

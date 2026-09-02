@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
+import { ServiceAvailabilityStatus } from '@prisma/client';
+import { CategoriesRepository } from './categories.repository';
 
 export interface CategoryDto {
   id: string;
@@ -10,6 +11,8 @@ export interface CategoryDto {
   /// True when this category offers the INSPECTION lane only — the client app
   /// skips the lane picker entirely for it. See ServiceCategory.inspectionOnly.
   inspectionOnly: boolean;
+  /** Additive for older clients, which safely ignore unknown response keys. */
+  availabilityStatus: ServiceAvailabilityStatus;
 }
 
 export interface StandardServiceDto {
@@ -23,46 +26,56 @@ export interface StandardServiceDto {
 
 @Injectable()
 export class CategoriesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly categoriesRepository: CategoriesRepository) {}
 
   async findAllActive(): Promise<CategoryDto[]> {
-    const rows = await this.prisma.serviceCategory.findMany({
-      where: { isActive: true },
-      orderBy: { name: 'asc' },
-      select: {
-        id: true,
-        name: true,
-        description: true,
-        iconUrl: true,
-        inspectionFee: true,
-        inspectionOnly: true,
-      },
-    });
-    return rows;
+    return this.categoriesRepository.findClientVisible();
+  }
+
+  async findWorkerRegistrationEligible(): Promise<CategoryDto[]> {
+    return this.categoriesRepository.findWorkerRegistrationEligible();
+  }
+
+  async findAllForAdmin() {
+    const categories = await this.categoriesRepository.findAllForAdmin();
+    return categories.map((category) => this._withAvailabilityLabel(category));
+  }
+
+  async updateAvailabilityStatus(
+    categoryId: string,
+    status: ServiceAvailabilityStatus,
+  ) {
+    const category = await this.categoriesRepository.findById(categoryId);
+    if (!category) throw new NotFoundException('Category not found');
+    const updated = await this.categoriesRepository.updateAvailabilityStatus(
+      categoryId,
+      status,
+    );
+    return this._withAvailabilityLabel(updated);
   }
 
   /** GET /categories/:id/standard-services — active fixed-price catalog for a category */
   async findStandardServices(
     categoryId: string,
   ): Promise<StandardServiceDto[]> {
-    const category = await this.prisma.serviceCategory.findUnique({
-      where: { id: categoryId },
-      select: { id: true },
-    });
+    const category =
+      await this.categoriesRepository.findStandardServiceCategory(categoryId);
     if (!category) throw new NotFoundException('Category not found');
 
-    const rows = await this.prisma.standardService.findMany({
-      where: { categoryId, isActive: true },
-      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
-      select: {
-        id: true,
-        categoryId: true,
-        name: true,
-        description: true,
-        price: true,
-        iconUrl: true,
-      },
-    });
-    return rows;
+    return this.categoriesRepository.findActiveStandardServices(categoryId);
+  }
+
+  private _withAvailabilityLabel<
+    T extends { availabilityStatus: ServiceAvailabilityStatus },
+  >(category: T): T & { availabilityLabel: string } {
+    const labels: Record<ServiceAvailabilityStatus, string> = {
+      [ServiceAvailabilityStatus.ACTIVE]: 'Active',
+      [ServiceAvailabilityStatus.INACTIVE]: 'Inactive',
+      [ServiceAvailabilityStatus.SOON]: 'Coming Soon',
+    };
+    return {
+      ...category,
+      availabilityLabel: labels[category.availabilityStatus],
+    };
   }
 }

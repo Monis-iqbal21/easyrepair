@@ -320,7 +320,9 @@ class WorkerRemoteDatasourceImpl implements WorkerRemoteDatasource {
 
   @override
   Future<List<CategoryModel>> getCategories() async {
-    final response = await _dio.get<Map<String, dynamic>>('/categories');
+    final response = await _dio.get<Map<String, dynamic>>(
+      '/categories/worker-registration',
+    );
     final list = response.data!['data'] as List<dynamic>;
     return list
         .map((e) => CategoryModel.fromJson(e as Map<String, dynamic>))

@@ -11,6 +11,12 @@ export class CategoriesController {
     return this.categoriesService.findAllActive();
   }
 
+  /** GET /categories/worker-registration — only skills selectable by new Workers. */
+  @Get('worker-registration')
+  findWorkerRegistrationEligible() {
+    return this.categoriesService.findWorkerRegistrationEligible();
+  }
+
   /** GET /categories/:id/standard-services — fixed-price catalog for a category */
   @Get(':id/standard-services')
   findStandardServices(@Param('id') categoryId: string) {
