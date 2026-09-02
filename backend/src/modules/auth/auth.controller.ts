@@ -35,6 +35,14 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { BypassClientSuspension } from '../../common/decorators/bypass-client-suspension.decorator';
 import { SaveFcmTokenDto } from './dto/save-fcm-token.dto';
+import { Role } from '../../common/enums/role.enum';
+
+const ACCOUNT_DELETE_CONFIRMATION = 'DELETE_MY_ACCOUNT';
+
+type AccountDeleteAuditOutcome =
+  | 'ATTEMPT_ACCEPTED'
+  | 'ATTEMPT_REJECTED'
+  | 'DELETION_SUCCESS';
 
 @Controller('auth')
 export class AuthController {
@@ -229,12 +237,71 @@ export class AuthController {
     return this.authService.forgotPasswordReset(dto);
   }
 
-  /** DELETE /auth/account — soft-delete the authenticated user's account */
+  private logAccountDeleteAudit(
+    user: { id: string; role: Role },
+    request: Request,
+    outcome: AccountDeleteAuditOutcome,
+  ): void {
+    const rawUserAgent = request.headers['user-agent'];
+    const userAgent =
+      typeof rawUserAgent === 'string'
+        ? rawUserAgent.replace(/[\r\n]/g, ' ').slice(0, 256)
+        : null;
+    const entry = {
+      userId: user.id,
+      role: user.role,
+      timestamp: new Date().toISOString(),
+      ip: request.ip ?? null,
+      userAgent,
+      path: request.path || request.url.split('?')[0],
+      outcome,
+    };
+
+    const message = JSON.stringify(entry);
+    if (outcome === 'ATTEMPT_REJECTED') {
+      this.logger.warn(message);
+    } else {
+      this.logger.log(message);
+    }
+  }
+
+  /**
+   * DELETE /auth/account — soft-delete the authenticated user's account.
+   *
+   * The literal confirmation body is deliberately checked here, before the
+   * service can be reached. Older app builds send a bare DELETE and therefore
+   * fail closed instead of being able to delete an account silently.
+   */
   @Delete('account')
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
-  deleteAccount(@CurrentUser() user: { id: string }) {
-    return this.authService.deleteAccount(user.id);
+  async deleteAccount(
+    @CurrentUser() user: { id: string; role: Role },
+    @Body() body: unknown,
+    @Req() request: Request,
+  ) {
+    const confirmed =
+      typeof body === 'object' &&
+      body !== null &&
+      (body as Record<string, unknown>).confirmation ===
+        ACCOUNT_DELETE_CONFIRMATION;
+
+    this.logAccountDeleteAudit(
+      user,
+      request,
+      confirmed ? 'ATTEMPT_ACCEPTED' : 'ATTEMPT_REJECTED',
+    );
+
+    if (!confirmed) {
+      throw new BadRequestException({
+        message: 'Explicit account-deletion confirmation is required.',
+        error: 'ACCOUNT_DELETE_CONFIRMATION_REQUIRED',
+      });
+    }
+
+    const result = await this.authService.deleteAccount(user.id);
+    this.logAccountDeleteAudit(user, request, 'DELETION_SUCCESS');
+    return result;
   }
 
   /** GET /auth/avatar — fetch current profile avatar URL */

@@ -169,7 +169,10 @@ class AuthRemoteDatasource {
   }
 
   Future<void> deleteAccount() async {
-    await _dio.delete('/auth/account');
+    await _dio.delete(
+      '/auth/account',
+      data: const {'confirmation': 'DELETE_MY_ACCOUNT'},
+    );
   }
 
   Future<String> checkClientPhoneStatus(String phone) async {
