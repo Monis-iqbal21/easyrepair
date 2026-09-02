@@ -13,6 +13,8 @@ import '../../../bids/domain/entities/bid_entity.dart';
 import '../../../bookings/domain/entities/booking_entity.dart';
 import '../../../bids/domain/repositories/bid_repository.dart';
 import '../../../bids/presentation/providers/bid_providers.dart';
+import '../../../bookings/presentation/widgets/inspection_report_card.dart';
+import '../../../bookings/presentation/widgets/media_attachment_widgets.dart';
 import '../../domain/entities/new_job_entity.dart';
 import '../providers/worker_job_providers.dart';
 import '../widgets/onboarding_gate.dart';
@@ -227,6 +229,21 @@ class _WorkerBidPageState extends ConsumerState<WorkerBidPage> {
 
           const SizedBox(height: 12),
 
+          // ── Customer-provided job context, BEFORE any bid ────────────────
+          // An Ustaad has to price the work before they are hired, so the
+          // photos/videos/voice notes the client attached — and the
+          // inspection report, when the job carries one — have to be readable
+          // here, not only on the detail screen they may never open (the New
+          // Jobs card's "Bid" button lands straight on this page).
+          //
+          // Deliberately read from the job DETAIL endpoint rather than the
+          // cached New Jobs list entry: the feed is a lightweight card
+          // payload with no attachments on it. The detail endpoint applies
+          // the same eligibility rules as the feed, so an Ustaad who cannot
+          // legitimately see this booking gets an error here and simply sees
+          // nothing extra — no new access is granted by rendering it.
+          _JobContextSection(jobId: widget.jobId),
+
           // ── Job location map preview ──────────────────────────────────────
           if (job != null)
             _JobLocationCard(job: job),
@@ -296,6 +313,63 @@ class _WorkerBidPageState extends ConsumerState<WorkerBidPage> {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ── Customer-provided job context (attachments + inspection report) ─────────
+
+/// Everything the client supplied with the job, shown on the bid screen so an
+/// Ustaad can see what they are pricing before they commit to a number.
+///
+/// Reuses the exact widgets the job detail screen uses — [BookingAttachmentsSection]
+/// for media and [ViewInspectionReportButton] for the report — so there is one
+/// viewer per media type across the app, not a second bid-screen copy.
+///
+/// Renders nothing while loading, on error, or when the job has neither
+/// attachments nor a report: authorization stays entirely server-side, and a
+/// worker who is not an eligible viewer for this booking simply sees the bid
+/// screen exactly as it was before.
+class _JobContextSection extends ConsumerWidget {
+  final String jobId;
+
+  const _JobContextSection({required this.jobId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final detail = ref.watch(workerJobDetailProvider(jobId)).valueOrNull;
+    if (detail == null) return const SizedBox.shrink();
+
+    // The report button resolves through this same booking id server-side for
+    // both origins — a "Find Other Ustaad" repair job linked back to its
+    // inspection, and an ordinary bidding job the client attached a past
+    // report to — so one condition covers both.
+    final showReport =
+        detail.inspectionReportSubmitted || detail.hasLinkedInspectionReport;
+
+    if (detail.attachments.isEmpty && !showReport) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (detail.attachments.isNotEmpty) ...[
+          BookingAttachmentsSection(
+            key: const Key('bid-job-attachments-section'),
+            attachments: detail.attachments,
+          ),
+          const SizedBox(height: 12),
+        ],
+        if (showReport) ...[
+          ViewInspectionReportButton(
+            bookingId: jobId,
+            route: '/worker/job/$jobId/inspection-report/view',
+            label: context.l10n.discoveryViewInspectionReport,
+          ),
+          const SizedBox(height: 12),
+        ],
+      ],
     );
   }
 }

@@ -533,7 +533,7 @@ class _JobBody extends ConsumerWidget {
 
                 // ── Attachments ───────────────────────────────────────────
                 if (job.attachments.isNotEmpty) ...[
-                  _AttachmentsSection(attachments: job.attachments),
+                  BookingAttachmentsSection(attachments: job.attachments),
                   const SizedBox(height: 16),
                 ],
 
@@ -1355,73 +1355,6 @@ class _InfoRow extends StatelessWidget {
               ],
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Attachments ───────────────────────────────────────────────────────────────
-
-class _AttachmentsSection extends StatelessWidget {
-  final List<BookingAttachmentEntity> attachments;
-  const _AttachmentsSection({required this.attachments});
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.semanticColors;
-    final images = attachments
-        .where((a) => a.type == AttachmentType.image)
-        .toList();
-    final videos = attachments
-        .where((a) => a.type == AttachmentType.video)
-        .toList();
-    final audios = attachments
-        .where((a) => a.type == AttachmentType.audio)
-        .toList();
-
-    return _Section(
-      title: context.l10n.bookingAttachments,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (images.isNotEmpty) ...[
-            Text(
-              context.l10n.inspectionPhotos,
-              style: TextStyle(fontSize: 12, color: c.textSecondary),
-            ),
-            const SizedBox(height: 10),
-            BookingImageGrid(images: images),
-          ],
-          if (videos.isNotEmpty) ...[
-            if (images.isNotEmpty) const SizedBox(height: 14),
-            Text(
-              context.l10n.workerAttachmentsVideos,
-              style: TextStyle(fontSize: 12, color: c.textSecondary),
-            ),
-            const SizedBox(height: 8),
-            ...videos.map(
-              (v) => Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: BookingVideoTile(attachment: v),
-              ),
-            ),
-          ],
-          if (audios.isNotEmpty) ...[
-            if (images.isNotEmpty || videos.isNotEmpty)
-              const SizedBox(height: 14),
-            Text(
-              context.l10n.workerAttachmentsVoiceNotes,
-              style: TextStyle(fontSize: 12, color: c.textSecondary),
-            ),
-            const SizedBox(height: 8),
-            ...audios.map(
-              (a) => Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: BookingAudioPlayerCard(attachment: a),
-              ),
-            ),
-          ],
         ],
       ),
     );

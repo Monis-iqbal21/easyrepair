@@ -113,7 +113,30 @@ const WORKER_JOB_INCLUDE = {
   },
   // Required by deriveInspectionFeePaid so the inspecting Ustaad sees the fee
   // status of the ORIGINAL inspection work unit, not of this repair booking.
-  sourceInspectionBooking: { select: { status: true } },
+  //
+  // `attachments` is here for a second reason: a "Find Other Ustaad" repair
+  // job is a FRESH child booking, so the photos/videos/voice notes the client
+  // uploaded when describing the problem live on the ORIGINAL inspection
+  // booking and were never copied across. Without this the bidders on the
+  // repair job see no customer-provided context at all, and the client would
+  // have to re-upload everything. Same client, same work unit, same booking
+  // chain — nothing new is exposed, it is only resolved through the link.
+  sourceInspectionBooking: {
+    select: {
+      status: true,
+      attachments: {
+        select: {
+          id: true,
+          type: true,
+          url: true,
+          fileName: true,
+          mimeType: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'asc' as const },
+      },
+    },
+  },
   // The one authoritative record of what the client ACTUALLY paid. Unlike the
   // client-facing include (BookingsRepository.BOOKING_INCLUDE), the Ustaad is
   // entitled to the commission/munafa allocation as well — it is their own

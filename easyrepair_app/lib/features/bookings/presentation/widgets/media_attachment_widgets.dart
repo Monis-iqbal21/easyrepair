@@ -673,3 +673,97 @@ class _VideoControls extends StatelessWidget {
     );
   }
 }
+
+// ═════════════════════════════════════════════════════════════════════════════
+// ATTACHMENTS SECTION
+// ═════════════════════════════════════════════════════════════════════════════
+
+/// The customer-provided job context — problem photos, videos and voice notes
+/// — rendered as one card, grouped by media type.
+///
+/// Lives here rather than inside a page so every surface that needs to show
+/// what the client attached to a job renders it identically: the Ustaad's job
+/// detail screen, and the bid screen they reach before ever being hired.
+/// Renders nothing at all when there is nothing attached.
+class BookingAttachmentsSection extends StatelessWidget {
+  final List<BookingAttachmentEntity> attachments;
+
+  const BookingAttachmentsSection({super.key, required this.attachments});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.semanticColors;
+    if (attachments.isEmpty) return const SizedBox.shrink();
+
+    final images = attachments
+        .where((a) => a.type == AttachmentType.image)
+        .toList();
+    final videos = attachments
+        .where((a) => a.type == AttachmentType.video)
+        .toList();
+    final audios = attachments
+        .where((a) => a.type == AttachmentType.audio)
+        .toList();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: c.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: c.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            context.l10n.bookingAttachments,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: c.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (images.isNotEmpty) ...[
+            Text(
+              context.l10n.inspectionPhotos,
+              style: TextStyle(fontSize: 12, color: c.textSecondary),
+            ),
+            const SizedBox(height: 10),
+            BookingImageGrid(images: images),
+          ],
+          if (videos.isNotEmpty) ...[
+            if (images.isNotEmpty) const SizedBox(height: 14),
+            Text(
+              context.l10n.workerAttachmentsVideos,
+              style: TextStyle(fontSize: 12, color: c.textSecondary),
+            ),
+            const SizedBox(height: 8),
+            ...videos.map(
+              (v) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: BookingVideoTile(attachment: v),
+              ),
+            ),
+          ],
+          if (audios.isNotEmpty) ...[
+            if (images.isNotEmpty || videos.isNotEmpty)
+              const SizedBox(height: 14),
+            Text(
+              context.l10n.workerAttachmentsVoiceNotes,
+              style: TextStyle(fontSize: 12, color: c.textSecondary),
+            ),
+            const SizedBox(height: 8),
+            ...audios.map(
+              (a) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: BookingAudioPlayerCard(attachment: a),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}

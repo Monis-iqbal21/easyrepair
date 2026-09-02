@@ -1177,7 +1177,20 @@ export class WorkersService {
     workerProfileId: string,
     workerCoords?: { lat: number | null; lng: number | null },
   ): WorkerJobResponseDto {
-    const attachments: WorkerJobAttachmentDto[] = job.attachments.map((a) => ({
+    // Customer-provided job context (problem photos/videos/voice notes).
+    //
+    // A "Find Other Ustaad" repair job is a fresh child booking that carries
+    // no attachments of its own — the client uploaded them once, onto the
+    // inspection booking this repair was spawned from. Inherit them through
+    // that link so an Ustaad deciding whether to bid sees the same context
+    // the inspection bidders saw, and the client never re-uploads anything.
+    //
+    // Own attachments always win: the moment this booking has any of its
+    // own, it is the authoritative set and nothing is inherited.
+    const sourceAttachments = job.sourceInspectionBooking?.attachments ?? [];
+    const attachmentSource =
+      job.attachments.length > 0 ? job.attachments : sourceAttachments;
+    const attachments: WorkerJobAttachmentDto[] = attachmentSource.map((a) => ({
       id: a.id,
       type: a.type,
       url: a.url,
