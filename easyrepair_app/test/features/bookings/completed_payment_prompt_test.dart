@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fpdart/fpdart.dart';
+import 'package:handygo_app/core/data/cached_result.dart';
 import 'package:handygo_app/core/errors/failures.dart';
 import 'package:handygo_app/features/bookings/domain/entities/booking_entity.dart';
 import 'package:handygo_app/features/bookings/domain/entities/cash_payment_confirmation_entity.dart';
@@ -15,30 +16,48 @@ import '../../support/l10n_test_app.dart';
 
 const _bookingId = 'booking-1';
 
-BookingEntity _booking({double? receivedAmount}) => BookingEntity(
-  id: _bookingId,
-  referenceId: '#ER-123456',
-  serviceCategory: 'AC Technician',
-  serviceEmoji: 'AC',
-  status: BookingStatus.completed,
-  urgency: BookingUrgency.normal,
-  createdAt: DateTime(2026, 8, 20),
-  lane: BookingLane.standard,
-  finalPrice: 2500,
-  receivedAmount: receivedAmount,
-  expectedAmount: receivedAmount == null ? null : 2500,
-  remainingAmount: receivedAmount == null ? null : 0,
-  assignedWorker: const AssignedWorkerEntity(
-    id: 'worker-1',
-    firstName: 'Ali',
-    lastName: 'Khan',
-  ),
-);
+BookingEntity _booking({double? receivedAmount, String id = _bookingId}) =>
+    BookingEntity(
+      id: id,
+      referenceId: '#ER-123456',
+      serviceCategory: 'AC Technician',
+      serviceEmoji: 'AC',
+      status: BookingStatus.completed,
+      urgency: BookingUrgency.normal,
+      createdAt: DateTime(2026, 8, 20),
+      lane: BookingLane.standard,
+      finalPrice: 2500,
+      receivedAmount: receivedAmount,
+      expectedAmount: receivedAmount == null ? null : 2500,
+      remainingAmount: receivedAmount == null ? null : 0,
+      assignedWorker: const AssignedWorkerEntity(
+        id: 'worker-1',
+        firstName: 'Ali',
+        lastName: 'Khan',
+      ),
+    );
 
 class _CashRepository implements BookingRepository {
   final List<int> submittedAmounts = <int>[];
   final List<ReviewRequest> submittedReviews = <ReviewRequest>[];
   bool paymentConfirmed = false;
+  int detailFetches = 0;
+
+  /// The server already holds a current settlement (the Ustaad reported the
+  /// cash first, say), so it refuses to write a second one.
+  bool alreadySettledOnServer = false;
+
+  /// Backend truth: once the settlement is recorded the booking comes back
+  /// carrying `receivedAmount`, which is what `canClientConfirmCash` reads.
+  @override
+  Future<Either<Failure, CachedResult<BookingEntity>>> getBookingById(
+    String bookingId,
+  ) async {
+    detailFetches++;
+    return Right(
+      CachedResult(_booking(receivedAmount: paymentConfirmed ? 2500 : null)),
+    );
+  }
 
   @override
   Future<Either<Failure, CashPaymentConfirmationEntity>> confirmCashPayment(
@@ -47,6 +66,11 @@ class _CashRepository implements BookingRepository {
   ) async {
     submittedAmounts.add(receivedCashTotal);
     paymentConfirmed = true;
+    if (alreadySettledOnServer) {
+      return const Left(
+        ConflictFailure('Booking already has a current settlement'),
+      );
+    }
     return Right(
       CashPaymentConfirmationEntity(
         settlementId: 'settlement-1',
@@ -114,6 +138,28 @@ Future<_CashRepository> _pumpHarness(
   );
   await tester.pumpAndSettle();
   return repository;
+}
+
+/// Renders whatever the backend currently says about the booking — the shape
+/// every real surface has (My Bookings, Booking Detail, Track Worker all feed
+/// the prompt from a provider, never from a captured entity).
+class _BackendDrivenHarness extends ConsumerWidget {
+  const _BackendDrivenHarness();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final booking = ref.watch(bookingDetailProvider(_bookingId));
+    return Scaffold(
+      body: booking.when(
+        loading: () => const SizedBox.shrink(),
+        error: (_, _) => const SizedBox.shrink(),
+        data: (value) {
+          scheduleAutomaticCashPaymentPrompt(context, ref, value);
+          return const Center(child: Text('BOOKING SURFACE'));
+        },
+      ),
+    );
+  }
 }
 
 void main() {
@@ -227,4 +273,112 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(CashPaymentConfirmationCard), findsNothing);
   });
+
+  testWidgets(
+    'a receipt closed without the CTA still refreshes settlement truth, so the '
+    'prompt cannot come back for that booking',
+    (tester) async {
+      // The recurrence: the payment IS persisted, but the dialog only reports
+      // the "Continue to review" CTA. Closing the receipt with the barrier
+      // therefore left every surface rendering a booking whose
+      // `receivedAmount` was still null — i.e. still owing cash — so the modal
+      // was free to open itself again the moment the session guard was gone
+      // (app restart, relogin, a rebuilt provider container).
+      final repository = _CashRepository();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [bookingRepositoryProvider.overrideWithValue(repository)],
+          child: localizedApp(const _BackendDrivenHarness()),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(CashPaymentConfirmationCard), findsOneWidget);
+
+      await tester.enterText(find.byType(TextFormField), '2500');
+      await tester.tap(find.byKey(const Key('cash-payment-submit-button')));
+      await tester.pumpAndSettle();
+      expect(repository.submittedAmounts, [2500]);
+      expect(find.text('Cash payment confirmed'), findsOneWidget);
+
+      // Dismiss the receipt instead of tapping "Continue to review".
+      await tester.tapAt(const Offset(2, 2));
+      await tester.pumpAndSettle();
+      expect(find.byType(CashPaymentConfirmationCard), findsNothing);
+
+      // The surface must now be rendering the settled booking, not the stale
+      // one it was built from.
+      final element = tester.element(find.text('BOOKING SURFACE'));
+      final booking = ProviderScope.containerOf(
+        element,
+      ).read(bookingDetailProvider(_bookingId)).requireValue;
+      expect(booking.receivedAmount, 2500);
+      expect(booking.canClientConfirmCash, isFalse);
+    },
+  );
+
+  testWidgets(
+    'a fresh session over the same settled booking never auto-opens, and an '
+    'unsettled sibling booking still does',
+    (tester) async {
+      // Restart / relogin: a brand new provider container, so nothing is left
+      // of the session guard. Suppression has to come from the backend's
+      // settlement record alone.
+      final repository = _CashRepository()..paymentConfirmed = true;
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [bookingRepositoryProvider.overrideWithValue(repository)],
+          child: localizedApp(const _BackendDrivenHarness()),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(CashPaymentConfirmationCard), findsNothing);
+
+      // Independence: another booking with no settlement of its own is
+      // unaffected by this one's.
+      await _pumpHarness(tester, _booking(id: 'booking-2'));
+      await tester.pumpAndSettle();
+      expect(find.byType(CashPaymentConfirmationCard), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'a 409 already-settled refusal refreshes settlement truth without faking '
+    'a success',
+    (tester) async {
+      // The server holds a settlement somebody else recorded, so it refuses to
+      // write a second one. Nothing was created or overwritten — but the
+      // booking IS settled, and the surface must stop asking for cash on it.
+      final repository = _CashRepository()..alreadySettledOnServer = true;
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [bookingRepositoryProvider.overrideWithValue(repository)],
+          child: localizedApp(const _BackendDrivenHarness()),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(CashPaymentConfirmationCard), findsOneWidget);
+
+      await tester.enterText(find.byType(TextFormField), '2500');
+      await tester.tap(find.byKey(const Key('cash-payment-submit-button')));
+      await tester.pumpAndSettle();
+
+      // Exactly one attempt, refused — and the refusal is shown as such.
+      expect(repository.submittedAmounts, [2500]);
+      expect(find.text('Cash payment confirmed'), findsNothing);
+      expect(
+        find.textContaining('Payment was already confirmed'),
+        findsOneWidget,
+      );
+
+      await tester.tapAt(const Offset(2, 2));
+      await tester.pumpAndSettle();
+
+      final element = tester.element(find.text('BOOKING SURFACE'));
+      final booking = ProviderScope.containerOf(
+        element,
+      ).read(bookingDetailProvider(_bookingId)).requireValue;
+      expect(booking.receivedAmount, 2500);
+      expect(booking.canClientConfirmCash, isFalse);
+    },
+  );
 }

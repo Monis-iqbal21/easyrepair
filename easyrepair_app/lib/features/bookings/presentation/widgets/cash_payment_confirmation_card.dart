@@ -18,6 +18,13 @@ Future<CashPaymentConfirmationEntity?> showCashPaymentConfirmationDialog(
   BuildContext context, {
   required String bookingId,
   required num? expectedAmount,
+
+  /// Fires as soon as the server says this booking has a current settlement,
+  /// BEFORE the customer decides what to do with the receipt. The dialog's own
+  /// return value only reports the "Continue to review" CTA, so it is null
+  /// whenever the receipt is closed with the back button or the barrier — and
+  /// a caller that keys off it alone never learns the payment is on file.
+  VoidCallback? onSettlementOnFile,
 }) {
   // Dismissible on purpose. This prompt opens by itself on every COMPLETED
   // booking that still owes cash, and a customer can easily have several — so
@@ -33,6 +40,7 @@ Future<CashPaymentConfirmationEntity?> showCashPaymentConfirmationDialog(
       child: CashPaymentConfirmationCard(
         bookingId: bookingId,
         expectedAmount: expectedAmount,
+        onSettlementOnFile: onSettlementOnFile,
         onConfirmed: (confirmation) =>
             Navigator.of(dialogContext).pop(confirmation),
       ),
@@ -71,18 +79,34 @@ class CashPaymentPromptController {
     _idleCompleter = Completer<void>();
     if (automatic) _automaticallyPrompted.add(booking.id);
     try {
+      // Set as soon as the server says a current settlement exists for this
+      // booking — this confirmation recorded one, or a 409 says one was
+      // already there. The dialog's return value cannot stand in for either:
+      // it reports the "Continue to review" CTA and is null when the receipt
+      // is closed with the back button or the barrier, and a refused
+      // confirmation never produces one at all.
+      var settlementOnFile = false;
       final confirmation = await showCashPaymentConfirmationDialog(
         context,
         bookingId: booking.id,
         expectedAmount: booking.canonicalPrice,
+        onSettlementOnFile: () => settlementOnFile = true,
       );
-      if (confirmation != null) {
+      if (settlementOnFile) {
         // The POST response is server-authored, then every visible booking
         // surface is refetched so settlement fields remain the rendering truth.
+        //
+        // Keyed on the settlement being on file rather than on the CTA on
+        // purpose. This refetch is what carries the settlement into
+        // `receivedAmount`, and `canClientConfirmCash` is derived from it — so
+        // skipping it left every surface believing the cash was still owed and
+        // re-offering this modal for a booking the backend had already
+        // settled.
         _ref.invalidate(bookingsNotifierProvider);
         _ref.invalidate(bookingDetailProvider(booking.id));
         _ref.invalidate(pendingReviewsProvider);
-
+      }
+      if (confirmation != null) {
         // The receipt's CTA explicitly says "Continue to review". Closing
         // the cash dialog is only the first half of that action: enqueue the
         // same canonical review controller used by Booking Detail,
@@ -146,11 +170,20 @@ class CashPaymentConfirmationCard extends ConsumerStatefulWidget {
     required this.bookingId,
     required this.expectedAmount,
     required this.onConfirmed,
+    this.onSettlementOnFile,
   });
 
   final String bookingId;
   final num? expectedAmount;
+
+  /// The customer accepted the receipt's "Continue to review" CTA.
   final ValueChanged<CashPaymentConfirmationEntity> onConfirmed;
+
+  /// The server holds a current settlement for this booking. Fires once —
+  /// before the receipt is shown, whatever the customer does with it
+  /// afterwards, and also when a confirmation is REFUSED because a settlement
+  /// was already there.
+  final VoidCallback? onSettlementOnFile;
 
   @override
   ConsumerState<CashPaymentConfirmationCard> createState() =>
@@ -177,7 +210,17 @@ class _CashPaymentConfirmationCardState
 
     try {
       await notifier.confirm(int.parse(_amountController.text));
-    } catch (_) {
+      widget.onSettlementOnFile?.call();
+    } catch (error) {
+      // A 409 is the server refusing to write a second settlement because it
+      // already holds a current one — whoever recorded it. Nothing was
+      // created or overwritten here, and the customer is shown the conflict
+      // rather than a success, but the booking IS settled, so the same
+      // refresh of authoritative state is owed. Every other failure says
+      // nothing about the settlement and must not trigger it.
+      if (error is Failure && error.code == FailureCode.conflict) {
+        widget.onSettlementOnFile?.call();
+      }
       // Provider state owns the controlled, localized error shown below.
     }
   }
