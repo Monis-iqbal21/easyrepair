@@ -18,7 +18,8 @@ class _LoadingAuthState extends AuthStateNotifier {
 
 void main() {
   testWidgets(
-    'startup stays off-white and uses the primary logo in dark mode',
+    'startup is the approved icon — brand teal carrying the off-white mark — '
+    'and stays that way in dark mode',
     (tester) async {
       await tester.pumpWidget(
         ProviderScope(
@@ -28,17 +29,31 @@ void main() {
       );
       await tester.pump();
 
+      // The loading screen takes over from a native launch screen painted in
+      // the brand teal that neither platform can theme, so it holds that
+      // colour whatever the saved dark-mode preference says.
       final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
-      expect(scaffold.backgroundColor, AppSemanticColors.light.background);
+      expect(scaffold.backgroundColor, AppSemanticColors.light.primary);
+
+      // The off-white mark from logo-final.png, drawn straight onto the teal.
       expect(
         find.image(
-          const AssetImage('assets/images/logo-primary-transparent.png'),
+          const AssetImage('assets/images/logo-onprimary-transparent.png'),
         ),
         findsOneWidget,
       );
 
+      // The inverse — a teal mark, which would need an off-white tile behind
+      // it to be legible here — is not HandyGo's startup branding.
+      expect(
+        find.image(
+          const AssetImage('assets/images/logo-primary-transparent.png'),
+        ),
+        findsNothing,
+      );
+
       final wordmark = tester.widget<Text>(find.text('HandyGo'));
-      expect(wordmark.style!.color, AppSemanticColors.light.textPrimary);
+      expect(wordmark.style!.color, AppSemanticColors.light.onPrimary);
       expect(tester.takeException(), isNull);
     },
   );

@@ -2,18 +2,23 @@
 <!--
   HandyGo launch screen (API 21-30).
 
-  Composition, deliberately minimal: the startup off-white filling the whole
-  window, plus the transparent primary-colour logo centred on it. Nothing else - no
-  wordmark, no tagline, no spinner, no card. The wordmark and tagline are
-  real Flutter text on the screen that follows.
+  Composition, deliberately minimal: the brand teal filling the whole window,
+  plus the off-white wrench centred on it. Nothing else - no wordmark, no
+  tagline, no spinner, no card. The wordmark and tagline are real Flutter text
+  on the screen that follows.
+
+  Together those two layers ARE assets/images/logo-final.png: the approved
+  icon's teal tile blown up to fill the window, carrying the approved icon's
+  off-white mark. The mark is never drawn teal on an off-white window - that
+  inversion is not HandyGo's branding.
 
   The colour is @color/handygo_splash_background from values/colors.xml, the
   single place it is defined. Do not inline a hex value here.
 
   The bitmap is @drawable/handygo_splash_logo, generated from
-  assets/images/logo-primary-transparent.png at a 120dp square per density
-  bucket, so it is
-  drawn at its natural size and aspect ratio and is never stretched.
+  assets/images/logo-onprimary-transparent.png at a 120dp square per density
+  bucket, so it is drawn at its natural size and aspect ratio and is never
+  stretched.
 
   On API 31+ this drawable is ignored by the platform in favour of the system
   splash API - see values-v31/styles.xml.

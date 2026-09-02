@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
+import '../theme/app_semantic_colors.dart';
+
 /// Handles visible local notifications for foreground FCM messages and
 /// provides unified tap-routing across all app lifecycle states.
 ///
@@ -23,10 +25,21 @@ class LocalNotificationService {
 
   final _plugin = FlutterLocalNotificationsPlugin();
 
-  /// Android's status-bar icon must be a white silhouette on transparency.
-  /// This drawable is derived from the approved logo solely for that platform
-  /// requirement; normal branding uses the primary-teal transparent asset.
+  /// Android's status-bar icon must be a white silhouette on transparency —
+  /// the system re-tints whatever it is given, so colour baked in is either
+  /// ignored or renders as a solid blob. This drawable is the wrench from
+  /// `assets/images/logo-final.png` stripped to its alpha channel: the
+  /// approved shape, meeting the platform rule. It is emphatically not a
+  /// leftover EasyRepair asset, and the manifest names the same drawable for
+  /// pushes that arrive while the app is not running.
   static const androidSmallIcon = '@drawable/ic_stat_handygo';
+
+  /// The accent Android draws the small icon and the app-name line in. The
+  /// silhouette above cannot carry brand colour, so this is where the shade
+  /// actually reaches the notification. Fixed to the light palette's value —
+  /// the notification is drawn by the OS, which cannot read the in-app
+  /// dark-mode preference, exactly as the native launch screens are.
+  static final androidAccent = AppSemanticColors.light.primary;
 
   // Android notification-channel names and descriptions. These are rendered
   // by the OS settings screen, not by this app's widget tree, and they are
@@ -197,6 +210,7 @@ class LocalNotificationService {
           importance: Importance.high,
           priority: Priority.high,
           icon: androidSmallIcon,
+          color: androidAccent,
           playSound: true,
           enableVibration: true,
         ),

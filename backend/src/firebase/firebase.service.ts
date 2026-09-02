@@ -2,6 +2,17 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as admin from 'firebase-admin';
 
+/**
+ * HandyGo's brand teal, as Android's notification accent.
+ *
+ * The backend has no design system of its own, so this is the one place the
+ * value is written on this side. It is the same #11645D as
+ * `AppSemanticColors.primary` in the Flutter app, as the launcher tile in
+ * `assets/images/logo-final.png`, and as `@color/ic_launcher_background` in
+ * the Android resources. Change it in all four or in none.
+ */
+const HANDYGO_NOTIFICATION_ACCENT = '#11645D';
+
 @Injectable()
 export class FirebaseService implements OnModuleInit {
   private readonly logger = new Logger(FirebaseService.name);
@@ -75,6 +86,13 @@ export class FirebaseService implements OnModuleInit {
         notification: {
           sound: 'default',
           channelId: androidChannelId,
+          // Brand accent for the small icon and the app-name line. The icon
+          // itself comes from the manifest's default_notification_icon
+          // (@drawable/ic_stat_handygo) and is a monochrome silhouette by
+          // platform rule, so this is the only place HandyGo's colour reaches
+          // a push that lands while the app is not running. Mirrors
+          // LocalNotificationService.androidAccent on the Flutter side.
+          color: HANDYGO_NOTIFICATION_ACCENT,
         },
       },
       apns: {

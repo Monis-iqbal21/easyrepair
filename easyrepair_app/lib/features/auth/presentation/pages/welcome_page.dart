@@ -19,11 +19,13 @@ import '../../../../core/widgets/handygo_brand_lockup.dart';
 ///
 /// A full-bleed [AppSemanticColors.primary] canvas carrying the
 /// [HandyGoBrandLockup] — wrench, "HandyGo", "Har maslay ka ustaad" — with
-/// the CTA anchored low. The previous decorative artwork
-/// (`assets/images/background.png`) and the baked-in logo lockup
-/// (`assets/images/handygo_logo.png`) are deliberately not used here: the
-/// wordmark and tagline are now real text, so they scale with the device and
-/// the user's text-size setting.
+/// the CTA anchored low. The teal canvas and the off-white wrench on it are
+/// the two halves of `assets/images/logo-final.png`, so this screen, the
+/// loading screen before it and both native launch screens are all showing
+/// the approved icon. The retired orange lockup bitmap that used to be
+/// stamped here is gone from the repo entirely: the wordmark and tagline are
+/// now real text, so they scale with the device and the user's text-size
+/// setting.
 ///
 /// ## Colour architecture
 ///
@@ -40,9 +42,10 @@ class WelcomePage extends StatelessWidget {
   /// hands off to the existing Client/Ustaad role picker.
   static const languageRoute = '/auth/language';
 
-  /// The approved logo. Re-exported from [HandyGoBrandLockup] so the splash
+  /// The approved logo as this screen draws it — the off-white mark for the
+  /// primary canvas. Re-exported from [HandyGoBrandLockup] so the splash
   /// screen and the tests have one name to reference.
-  static const logoAsset = HandyGoBrandLockup.logoAsset;
+  static const logoAsset = HandyGoBrandLockup.onPrimaryLogoAsset;
 
   @override
   Widget build(BuildContext context) {
@@ -111,7 +114,6 @@ class _WelcomeContent extends StatelessWidget {
                         widthBudget: contentWidth,
                         heightBudget: maxHeight,
                         onPrimaryBackground: true,
-                        logoSurfaceColor: AppSemanticColors.light.background,
                       ),
                     ),
                     // Larger gap below the lockup so it reads slightly above

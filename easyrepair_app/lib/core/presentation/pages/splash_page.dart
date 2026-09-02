@@ -14,19 +14,23 @@ import '../../../core/widgets/handygo_brand_lockup.dart';
 /// confirmed session goes to the right home, and a confirmed logout goes to
 /// [WelcomePage]. There are no timers here and never should be.
 ///
-/// It renders the approved logo on the same off-white canvas as the native
-/// launch screen. The one thing below the lockup is a spinner while resolving,
-/// or a Retry when the very first check failed outright.
+/// It renders the approved logo the way `assets/images/logo-final.png` draws
+/// it — the off-white wrench on the brand teal — which is precisely what the
+/// native launch screen it takes over from is showing, so the hand-off is
+/// invisible. The one thing below the lockup is a spinner while resolving, or
+/// a Retry when the very first check failed outright.
 class SplashPage extends ConsumerWidget {
   const SplashPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authStateProvider);
-    // Startup branding is intentionally fixed to the light off-white palette,
-    // even when the saved app preference is dark. This matches both native
-    // launch screens and prevents the approved opaque logo from flashing as a
-    // pale square against the old dark-teal canvas.
+    // Startup branding is intentionally fixed to one palette, even when the
+    // saved app preference is dark: the native launch screens cannot read that
+    // preference, so following it here would make the hand-off flash. Both of
+    // them paint the brand teal, and `primary` is the same value in either
+    // palette, so this screen continues the launch screen rather than
+    // replacing it.
     const colors = AppSemanticColors.light;
 
     // A transient failure (no internet, timeout, backend 5xx) on the very
@@ -44,13 +48,15 @@ class SplashPage extends ConsumerWidget {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark, // Android
-        statusBarBrightness: Brightness.light, // iOS
-        systemNavigationBarColor: colors.background,
-        systemNavigationBarIconBrightness: Brightness.dark,
+        // Dark teal canvas, so the OS bars need light icons — the same
+        // treatment WelcomePage uses, for the same reason.
+        statusBarIconBrightness: Brightness.light, // Android
+        statusBarBrightness: Brightness.dark, // iOS
+        systemNavigationBarColor: colors.primary,
+        systemNavigationBarIconBrightness: Brightness.light,
       ),
       child: Scaffold(
-        backgroundColor: colors.background,
+        backgroundColor: colors.primary,
         body: SafeArea(
           child: LayoutBuilder(
             builder: (context, constraints) {
@@ -77,6 +83,7 @@ class SplashPage extends ConsumerWidget {
                             child: HandyGoBrandLockup(
                               widthBudget: contentWidth,
                               heightBudget: maxHeight,
+                              onPrimaryBackground: true,
                               colorPalette: colors,
                             ),
                           ),
@@ -92,8 +99,10 @@ class SplashPage extends ConsumerWidget {
                               width: 22,
                               height: 22,
                               child: CircularProgressIndicator(
+                                // On the primary canvas a primary spinner
+                                // would be invisible.
                                 valueColor: AlwaysStoppedAnimation<Color>(
-                                  colors.primary,
+                                  colors.onPrimary,
                                 ),
                                 strokeWidth: 2.5,
                               ),

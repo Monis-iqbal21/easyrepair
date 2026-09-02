@@ -175,9 +175,11 @@ void main() {
 
       expect(
         assets,
-        contains('assets/images/logo-primary-transparent.png'),
+        contains('assets/images/logo-onprimary-transparent.png'),
       );
       expect(assets, isNot(contains('assets/images/background.png')));
+      // Retired with the orange branding, and deleted from assets/images
+      // entirely — not merely unreferenced.
       expect(assets, isNot(contains('assets/images/handygo_logo.png')));
     });
 
@@ -190,16 +192,21 @@ void main() {
       expect(scaffold.backgroundColor, context.semanticColors.primary);
     });
 
-    testWidgets('the transparent primary logo has the minimum off-white '
-        'contrast surface on the teal canvas', (tester) async {
+    testWidgets('the off-white mark sits directly on the teal canvas — no '
+        'contrast tile, because that tile WAS the inverted icon',
+        (tester) async {
       await _pump(tester);
 
-      final surface = tester.widget<DecoratedBox>(
-        find.byKey(const Key('handygo-brand-logo-surface')),
+      // The mark is legible because it is the off-white one from
+      // logo-final.png, not because a light square was slipped behind a teal
+      // one. Canvas + mark here are exactly the approved icon.
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('handygo-brand-logo')),
+          matching: find.byType(DecoratedBox),
+        ),
+        findsNothing,
       );
-      final decoration = surface.decoration as BoxDecoration;
-      expect(decoration.color, AppSemanticColors.light.background);
-      expect(decoration.borderRadius, BorderRadius.circular(16));
       expect(tester.getSize(find.byType(Image).first), const Size.square(120));
     });
 

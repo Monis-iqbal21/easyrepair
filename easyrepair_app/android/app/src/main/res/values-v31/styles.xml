@@ -7,8 +7,12 @@
       than a reproduction of the Flutter screen.
 
       windowSplashScreenAnimatedIcon is @drawable/handygo_splash_icon: the
-      transparent primary-colour logo resized proportionally for the platform
-      canvas. Android applies its required system mask.
+      off-white wrench from assets/images/logo-final.png on transparency, so
+      the platform composes it over the brand teal below and the result is the
+      approved icon. No icon background colour is set, which means Android
+      expects a 288dp canvas whose mark stays inside an inner 192dp circle -
+      the drawable is generated to exactly that, so no OEM mask clips the
+      wrench.
 
       The background colour is the shared value from values/colors.xml - the
       single place it is defined. Not duplicated as a hex literal here.

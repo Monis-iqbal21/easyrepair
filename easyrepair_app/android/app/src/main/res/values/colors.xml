@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ic_launcher_background">#FFFEFB</color>
+    <color name="ic_launcher_background">#11645D</color>
 
     <!--
       ============================================================
@@ -14,8 +14,13 @@
         * values-v31/styles.xml                   (Android 12+ splash API)
         * values-night/styles.xml                 (via the same drawables)
 
-      The startup background aliases the existing launcher off-white so the
-      approved opaque logo blends cleanly into both launch surfaces.
+      The startup background aliases the launcher tile colour, so the launch
+      screen IS the approved icon: the same brand teal behind the same
+      off-white wrench that assets/images/logo-final.png draws. The launch
+      drawables therefore carry the mark alone and never a tile of their own.
+
+      This is deliberately NOT off-white with a teal mark. That inversion is
+      not HandyGo's branding and must not be reintroduced here.
 
       Native launch resources cannot read Flutter's runtime theme, so this
       literal is deliberate and correct here - it is the platform counterpart

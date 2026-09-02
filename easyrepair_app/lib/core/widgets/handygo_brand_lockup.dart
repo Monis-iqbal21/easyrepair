@@ -18,8 +18,18 @@ import '../theme/app_semantic_colors.dart';
 ///
 /// ## Colour
 ///
-/// Text colours and the optional contrast surface come from semantic tokens.
-/// The PNG carries the locked primary teal; Flutter widgets add no raw brand
+/// Two marks, one source. Both are lifted from the approved
+/// `assets/images/logo-final.png` — a brand-teal tile carrying an off-white
+/// wrench — and neither is a recolour or an inversion of it:
+///
+///  * on the primary teal canvas ([onPrimaryBackground]) the wrench is drawn
+///    in its own off-white, straight onto the canvas. Canvas plus mark then
+///    reproduce `logo-final.png` exactly, which is what the native launch
+///    screens on both platforms show, so startup hands over without a jump.
+///  * on light in-app surfaces an off-white mark would be invisible, so the
+///    same silhouette is filled with the primary teal instead.
+///
+/// Text colours come from semantic tokens. Flutter widgets add no raw brand
 /// literals.
 class HandyGoBrandLockup extends StatelessWidget {
   const HandyGoBrandLockup({
@@ -28,7 +38,6 @@ class HandyGoBrandLockup extends StatelessWidget {
     required this.heightBudget,
     this.onPrimaryBackground = false,
     this.colorPalette,
-    this.logoSurfaceColor,
   });
 
   /// The width and height of the screen area the lockup has to live in.
@@ -48,13 +57,15 @@ class HandyGoBrandLockup extends StatelessWidget {
   /// dark-mode preference before the app has finished loading.
   final AppSemanticColors? colorPalette;
 
-  /// Optional contrast surface behind the transparent logo. Welcome/Auth uses
-  /// this on its teal canvas; normal in-app marks and off-white splash screens
-  /// leave it null so the asset stays visually transparent.
-  final Color? logoSurfaceColor;
-
-  /// The normal HandyGo brand mark: primary-teal wrench on true transparency.
+  /// The in-app HandyGo brand mark: primary-teal wrench on true transparency,
+  /// for the light surfaces it sits on inside the app.
   static const logoAsset = 'assets/images/logo-primary-transparent.png';
+
+  /// The startup brand mark: the off-white wrench exactly as it appears in
+  /// `assets/images/logo-final.png`, on true transparency, for the primary
+  /// teal canvas. The same asset the native launch screens draw.
+  static const onPrimaryLogoAsset =
+      'assets/images/logo-onprimary-transparent.png';
 
   // l10n-ignore: the brand name and its Roman Urdu tagline are the same in
   // every supported language — the same treatment as the "Shuru karein" CTA.
@@ -91,25 +102,20 @@ class HandyGoBrandLockup extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         SizedBox.square(
+          key: const Key('handygo-brand-logo'),
           dimension: logoSize,
-          child: DecoratedBox(
-            key: const Key('handygo-brand-logo-surface'),
-            decoration: BoxDecoration(
-              color: logoSurfaceColor,
-              borderRadius: logoSurfaceColor == null
-                  ? null
-                  : BorderRadius.circular(16),
-            ),
-            child: Image.asset(
-              logoAsset,
-              // `contain` on a square box: the mark keeps its aspect ratio and
-              // is never stretched.
-              fit: BoxFit.contain,
-              // Decorative: the brand name is right underneath it as real
-              // text, so labelling the mark too would make a screen reader say
-              // "HandyGo" twice.
-              excludeFromSemantics: true,
-            ),
+          // No surface square behind the mark. One used to sit here to keep a
+          // teal wrench legible on the teal canvas — which is exactly the
+          // off-white-tile inversion the approved icon is not.
+          child: Image.asset(
+            onPrimaryBackground ? onPrimaryLogoAsset : logoAsset,
+            // `contain` on a square box: the mark keeps its aspect ratio and
+            // is never stretched.
+            fit: BoxFit.contain,
+            // Decorative: the brand name is right underneath it as real
+            // text, so labelling the mark too would make a screen reader say
+            // "HandyGo" twice.
+            excludeFromSemantics: true,
           ),
         ),
         SizedBox(height: logoSize * 0.18),

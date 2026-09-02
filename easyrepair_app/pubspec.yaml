@@ -128,10 +128,24 @@ flutter:
   assets:
     - assets/images/
 
+# Regenerate with: dart run flutter_launcher_icons
+#
+# Every value below traces back to the approved assets/images/logo-final.png —
+# a teal tile carrying an off-white wrench. Both source images here are derived
+# from it by scripted extraction, not redrawn: logo-app-icon.png is the tile
+# reproduced edge-to-edge, and logo-adaptive-foreground.png is the same
+# off-white mark on transparency, pre-scaled by 72/108 so it lands inside
+# Android's adaptive-icon safe zone without an <inset> in ic_launcher.xml.
+#
+# The icon is NOT inverted. A teal mark on an off-white tile is not HandyGo's
+# app icon and must not be reintroduced here.
 flutter_launcher_icons:
   android: "ic_launcher"
   ios: true
-  image_path: "assets/images/logo-launcher-offwhite.png"
-  background_color: "#FFFEFB"
-  adaptive_icon_background: "#FFFEFB"
-  adaptive_icon_foreground: "assets/images/logo-primary-transparent.png"
+  image_path: "assets/images/logo-app-icon.png"
+  # iOS app icons may not carry an alpha channel; the tile's rounded corners
+  # are flattened onto the same brand teal, and iOS applies its own mask.
+  remove_alpha_ios: true
+  background_color_ios: "#11645D"
+  adaptive_icon_background: "#11645D"
+  adaptive_icon_foreground: "assets/images/logo-adaptive-foreground.png"

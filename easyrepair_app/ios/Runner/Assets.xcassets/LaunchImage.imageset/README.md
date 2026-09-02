@@ -1,11 +1,16 @@
 # HandyGo launch image
 
 `LaunchImage.png` / `@2x` / `@3x` are the HandyGo **wrench mark alone**,
-generated from `assets/images/logo-primary-transparent.png` at 120 / 240 / 360 px. The source
-is trimmed to the mark and re-padded to an exact square, so all three sizes are
-the same 120pt square, centred, at the asset's own aspect ratio — never
-stretched. The mark keeps its transparency and its off-white colour, so it sits
-directly on the launch screen's background with no box behind it.
+generated from `assets/images/logo-onprimary-transparent.png` at 120 / 240 /
+360 px — which is itself the off-white wrench lifted, unrecoloured, off the
+teal tile in the approved `assets/images/logo-final.png`. The source is trimmed
+to the mark and re-padded to an exact square, so all three sizes are the same
+120pt square, centred, at the asset's own aspect ratio — never stretched.
+
+The mark keeps its transparency and its off-white colour, so it sits directly
+on the storyboard's teal background with no box behind it. Background plus mark
+therefore reproduce `logo-final.png`. A teal mark on an off-white launch screen
+is the **inverse** of the approved icon and must not be reintroduced.
 
 Deliberately **no wordmark and no tagline**: "HandyGo" and "Har maslay ka
 ustaad" are real Flutter `Text` on the loading/welcome screen that follows, so
@@ -18,10 +23,10 @@ The iOS launch background colour is defined in exactly one place:
     ios/Runner/Base.lproj/LaunchScreen.storyboard
         -> the root view's `backgroundColor`
 
-It is **#082B28** (sRGB 0.03137, 0.16863, 0.15686) — HandyGo's startup teal,
-the deep end of the brand teal that the primary `#11645D` sits in. Flutter then
-paints its own loading/welcome screen in that primary teal, so the hand-off is
-one step within a single hue rather than a flash between unrelated colours.
+It is **#11645D** (sRGB 0.06667, 0.39216, 0.36471) — HandyGo's brand teal, the
+same value as the tile in `logo-final.png`. Flutter then paints its own
+loading/welcome screen in that same primary teal, so the hand-off from native
+launch to Flutter is invisible rather than a flash between two colours.
 
 Native launch resources cannot read Flutter's runtime theme, so this literal is
 deliberate and correct here: it is the platform counterpart of
