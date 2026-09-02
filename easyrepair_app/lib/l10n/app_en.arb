@@ -1498,6 +1498,11 @@
   "workerGoOfflineConfirmYes": "Yes, Go Offline",
   "workerFindNewWork": "New Complaints",
   "workerViewNewJobs": "Dekhein",
+  "workerNewComplaintsCount": "{count, plural, =1{1 new} other{{count} new}}",
+  "@workerNewComplaintsCount": {
+    "description": "Ustaad Home \"New Complaints\" tile subtitle when there are unread new jobs. Replaces the plain \"View\" line; the number is the same unread count the Naye Kaam tab badge shows.",
+    "placeholders": { "count": { "type": "int" } }
+  },
   "workerActiveJobCaps": "ACTIVE JOB",
   "workerMap": "Map",
   "workerViewDetails": "View details →",

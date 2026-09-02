@@ -560,6 +560,20 @@ model WorkerProfile {
   /// ONLINE lease (see WORKER_ONLINE_STALE_HOURS) independently of GPS
   /// freshness, which remains a separate, stricter check.
   lastSeenAt         DateTime?                              @db.Timestamptz(3)
+  /// When this Worker last OPENED the "Naye Kaam" (New Jobs) screen.
+  ///
+  /// Not presence and not GPS: this is the read-marker the Naye Kaam badge
+  /// counts against. A matching job created after this instant is unread; one
+  /// created before it is not. Nullable and defaulted to NULL on purpose —
+  /// an existing Worker who has never opened the screen since this column
+  /// shipped simply has every job in the 24h window unread, which is the
+  /// truthful answer, not a migration artefact.
+  ///
+  /// Stamped only by POST /workers/jobs/new/seen, i.e. by the Worker's own
+  /// act of opening the screen. Nothing else writes it — not a background
+  /// job, not a fan-out, not the Client side — so it can never drift away
+  /// from what the Worker has actually looked at.
+  newJobsSeenAt      DateTime?                              @db.Timestamptz(3)
   currentlyWorking   Boolean                                @default(false)
   currentLat         Float?
   currentLng         Float?

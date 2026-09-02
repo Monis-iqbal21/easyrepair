@@ -223,6 +223,17 @@ class WorkerRepositoryImpl implements WorkerRepository {
   }
 
   @override
+  Future<Either<Failure, DateTime>> markNewJobsSeen() async {
+    try {
+      return Right(await _datasource.markNewJobsSeen());
+    } on DioException catch (e) {
+      return Left(dioExceptionToFailure(e));
+    } catch (e) {
+      return Left(ServerFailure('', code: FailureCode.unknown, diagnostic: e.toString()));
+    }
+  }
+
+  @override
   Future<Either<Failure, void>> updateLocationOnly({
     required double lat,
     required double lng,

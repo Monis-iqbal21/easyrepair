@@ -2385,6 +2385,17 @@ class AppLocalizationsUr extends AppLocalizations {
   String get workerViewNewJobs => 'دیکھیں';
 
   @override
+  String workerNewComplaintsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count نئی',
+      one: '1 نئی',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get workerActiveJobCaps => 'جاری کام';
 
   @override
@@ -6714,6 +6725,17 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get workerViewNewJobs => 'Dekhein';
+
+  @override
+  String workerNewComplaintsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count nayi',
+      one: '1 nayi',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get workerActiveJobCaps => 'JARI KAAM';

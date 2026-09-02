@@ -199,6 +199,23 @@ export class WorkersRepository {
     });
   }
 
+  /**
+   * Stamp `newJobsSeenAt` — the Worker just opened the New Jobs screen.
+   *
+   * Returns the instant written so the caller can hand the client the exact
+   * value that is now in the row, rather than a second `new Date()` that
+   * would be a few milliseconds off and could leave a job straddling the
+   * boundary looking unread on one side and read on the other.
+   */
+  async markNewJobsSeen(workerProfileId: string, seenAt: Date): Promise<Date> {
+    const updated = await this.prisma.workerProfile.update({
+      where: { id: workerProfileId },
+      data: { newJobsSeenAt: seenAt },
+      select: { newJobsSeenAt: true },
+    });
+    return updated.newJobsSeenAt ?? seenAt;
+  }
+
   /** Find a WorkerProfile by userId (includes skills). */
   async findByUserId(userId: string): Promise<WorkerProfileWithSkills | null> {
     return this.prisma.workerProfile.findUnique({

@@ -268,6 +268,19 @@ export class WorkersController {
   }
 
   /**
+   * POST /workers/jobs/new/seen
+   * Stamps `newJobsSeenAt` — called when the Worker opens the New Jobs
+   * screen. Everything matching them from that instant on counts as unread
+   * again for the Naye Kaam badge. Takes no body: the server, not the
+   * device, decides what "now" is.
+   * Must be defined BEFORE /workers/jobs/:id so the router matches correctly.
+   */
+  @Post('jobs/new/seen')
+  markNewJobsSeen(@CurrentUser() user: { id: string }) {
+    return this.workersService.markNewJobsSeen(user.id);
+  }
+
+  /**
    * GET /workers/jobs?filter=active|completed|cancelled|applied
    * Returns this worker's own job relationships: 'active'/'completed'/
    * 'cancelled' are bookings actually assigned to them; 'applied' is their

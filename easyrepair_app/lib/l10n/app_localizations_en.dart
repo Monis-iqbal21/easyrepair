@@ -2420,6 +2420,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workerViewNewJobs => 'Dekhein';
 
   @override
+  String workerNewComplaintsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count new',
+      one: '1 new',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get workerActiveJobCaps => 'ACTIVE JOB';
 
   @override

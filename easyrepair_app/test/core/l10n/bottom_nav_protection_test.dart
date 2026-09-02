@@ -1,9 +1,11 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:handygo_app/core/l10n/app_locale.dart';
 import 'package:handygo_app/features/client/presentation/widgets/client_bottom_nav_bar.dart';
+import 'package:handygo_app/features/worker/presentation/providers/worker_nav_indicator_providers.dart';
 import 'package:handygo_app/features/worker/presentation/widgets/worker_bottom_nav_bar.dart';
 import 'package:handygo_app/l10n/app_localizations.dart';
 
@@ -34,13 +36,25 @@ List<String> workerTabs(AppLocalizations l) => [
   l.clientProfileTitle,
 ];
 
+/// Both bars are pumped with every Ustaad nav indicator forced quiet.
+///
+/// This file protects *layout* — tab order, icons, reading direction — and a
+/// badge is state, not layout. Pinning the indicators to "nothing to report"
+/// keeps these assertions about the bar itself; the badges have their own
+/// tests in test/features/worker/worker_nav_indicators_test.dart.
 Future<void> _pumpNav(
   WidgetTester tester,
   Widget navBar,
   AppLocale locale,
 ) async {
   await tester.pumpWidget(
-    localizedApp(Scaffold(bottomNavigationBar: navBar), locale: locale),
+    ProviderScope(
+      overrides: [
+        workerUnreadConversationCountProvider.overrideWithValue(0),
+        workerHasOngoingJobProvider.overrideWithValue(false),
+      ],
+      child: localizedApp(Scaffold(bottomNavigationBar: navBar), locale: locale),
+    ),
   );
   await tester.pumpAndSettle();
 }

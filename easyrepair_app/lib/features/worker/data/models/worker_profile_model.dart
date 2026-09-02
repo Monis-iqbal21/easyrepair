@@ -43,6 +43,7 @@ class WorkerProfileModel {
   final DateTime? submittedForReviewAt;
   final String? changesRequiredReason;
   final String? rejectionReason;
+  final DateTime? newJobsSeenAt;
 
   const WorkerProfileModel({
     required this.id,
@@ -82,6 +83,7 @@ class WorkerProfileModel {
     this.submittedForReviewAt,
     this.changesRequiredReason,
     this.rejectionReason,
+    this.newJobsSeenAt,
   });
 
   factory WorkerProfileModel.fromJson(Map<String, dynamic> json) {
@@ -136,6 +138,11 @@ class WorkerProfileModel {
           : null,
       changesRequiredReason: json['changesRequiredReason'] as String?,
       rejectionReason: json['rejectionReason'] as String?,
+      // Always compared in UTC — a job's createdAt is parsed the same
+      // way, so the unread cutoff never depends on the device's zone.
+      newJobsSeenAt: json['newJobsSeenAt'] != null
+          ? DateTime.tryParse(json['newJobsSeenAt'] as String)?.toUtc()
+          : null,
     );
   }
 
@@ -178,6 +185,7 @@ class WorkerProfileModel {
       submittedForReviewAt: submittedForReviewAt,
       changesRequiredReason: changesRequiredReason,
       rejectionReason: rejectionReason,
+      newJobsSeenAt: newJobsSeenAt,
     );
   }
 }

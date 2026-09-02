@@ -581,6 +581,7 @@ workerGoOfflineConfirmBody,Ustaad,You will stop appearing to nearby clients.,آ�
 workerGoOfflineConfirmYes,Ustaad,"Yes, Go Offline",ہاں، آف لائن کریں,"Haan, offline karein",
 workerFindNewWork,Ustaad,Find New Work,نیا کام ڈھونڈیں,Naya Kaam Dhondain,
 workerViewNewJobs,Ustaad,View New Jobs,نئے کام دیکھیں,Naye kaam dekhein,
+workerNewComplaintsCount,Ustaad,"{count, plural, =1{1 new} other{{count} new}}","{count, plural, =1{1 نئی} other{{count} نئی}}","{count, plural, =1{1 nayi} other{{count} nayi}}",Home "New Complaints" tile subtitle when unread new jobs exist; same count as the Naye Kaam tab badge
 workerActiveJobCaps,Ustaad,ACTIVE JOB,جاری کام,JARI KAAM,
 workerMap,Ustaad,Map,نقشہ,Map,
 workerViewDetails,Ustaad,View details →,تفصیلات دیکھیں ←,Tafseelat dekhein →,

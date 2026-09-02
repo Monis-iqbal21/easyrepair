@@ -597,6 +597,11 @@ export class WorkersService {
       submittedForReviewAt: profile.submittedForReviewAt,
       changesRequiredReason: profile.changesRequiredReason,
       rejectionReason: profile.rejectionReason,
+      // The read-marker the Naye Kaam badge counts against. It rides on the
+      // profile the Worker's app already fetches rather than on a dedicated
+      // endpoint — it is a WorkerProfile field, and a second round trip to
+      // read one timestamp would be a second thing that can disagree.
+      newJobsSeenAt: profile.newJobsSeenAt,
       stats,
       ongoingJob: ongoingJob
         ? {
@@ -627,6 +632,26 @@ export class WorkersService {
           }
         : null,
     };
+  }
+
+  /**
+   * Record that this Worker just opened the New Jobs screen.
+   *
+   * Everything created before the returned instant is read; everything after
+   * it is unread again. The server owns the clock deliberately — a device
+   * whose time is wrong (or set forward) must not be able to mark jobs read
+   * that it has not been shown.
+   */
+  async markNewJobsSeen(userId: string): Promise<{ newJobsSeenAt: string }> {
+    const profile = await this.workersRepository.findByUserId(userId);
+    if (!profile) {
+      throw new NotFoundException('Worker profile not found');
+    }
+    const seenAt = await this.workersRepository.markNewJobsSeen(
+      profile.id,
+      new Date(),
+    );
+    return { newJobsSeenAt: seenAt.toISOString() };
   }
 
   /** Update worker availability status and location. */

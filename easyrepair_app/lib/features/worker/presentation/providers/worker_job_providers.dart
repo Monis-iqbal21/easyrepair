@@ -205,6 +205,22 @@ enum NewJobFilter { all, myBids, notBidYet }
 /// live fetch failed.
 final newJobsIsOfflineProvider = StateProvider<bool>((ref) => false);
 
+/// The last fetch's FULL eligibility result, before the screen's own
+/// all/myBids/notBidYet chip is applied.
+///
+/// [newJobsProvider]'s state is the *visible* list, which is the eligibility
+/// result minus whichever chip the Ustaad happens to have tapped. The Naye
+/// Kaam badge must not move when they tap a chip, so it counts this instead.
+/// Same fetch, same eligibility rules, same rows — the filter is presentation
+/// and stops at the list.
+///
+/// Written from [NewJobsNotifier] alongside [newJobsIsOfflineProvider], which
+/// is the existing house pattern for a fact that falls out of a fetch but is
+/// not the fetch's own value.
+final newJobsUnfilteredProvider = StateProvider<List<NewJobEntity>>(
+  (ref) => const [],
+);
+
 /// Fetches PENDING bookings matching the worker's skills via GET /workers/jobs/new.
 /// Auto-refreshes every 30 s while the provider is alive.
 class NewJobsNotifier extends AsyncNotifier<List<NewJobEntity>> {
@@ -225,6 +241,7 @@ class NewJobsNotifier extends AsyncNotifier<List<NewJobEntity>> {
     final result = await ref.read(workerRepositoryProvider).getNewJobs();
     return result.fold((f) => throw f, (cached) {
       ref.read(newJobsIsOfflineProvider.notifier).state = cached.isStale;
+      ref.read(newJobsUnfilteredProvider.notifier).state = cached.data;
       return _applyFilter(cached.data);
     });
   }
@@ -267,3 +284,31 @@ final newJobsProvider =
     AsyncNotifierProvider<NewJobsNotifier, List<NewJobEntity>>(
       NewJobsNotifier.new,
     );
+
+// ── "I have looked at Naye Kaam" marker ──────────────────────────────────────
+
+/// Stamps the server-side `newJobsSeenAt` marker the Naye Kaam badge counts
+/// against, then re-reads the profile that carries it so the badge clears.
+///
+/// Fire-and-forget by design, and deliberately silent on failure: the Ustaad
+/// asked to see new jobs, not to be told that a read-marker did not save. A
+/// failed stamp leaves the badge showing, which is the safe direction to
+/// fail — it can only ever make them look again.
+///
+/// The `catch` is not defensive padding. This is called from `initState`, and
+/// resolving the repository can throw *synchronously* (an unconfigured
+/// dependency, for one). Without it, a read-marker — the least important
+/// thing on the screen — would take the whole New Jobs page down with it.
+final markNewJobsSeenProvider = Provider<Future<void> Function()>((ref) {
+  return () async {
+    try {
+      final result = await ref.read(workerRepositoryProvider).markNewJobsSeen();
+      result.fold(
+        (_) {},
+        (_) => ref.invalidate(workerProfileProvider),
+      );
+    } catch (_) {
+      // Swallowed for the reason above.
+    }
+  };
+});

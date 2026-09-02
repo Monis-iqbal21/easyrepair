@@ -725,6 +725,7 @@
   "workerGoOfflineConfirmYes": "Haan, offline karein",
   "workerFindNewWork": "Nayi Shikayat",
   "workerViewNewJobs": "Dekhein",
+  "workerNewComplaintsCount": "{count, plural, =1{1 nayi} other{{count} nayi}}",
   "workerActiveJobCaps": "JARI KAAM",
   "workerMap": "Map",
   "workerViewDetails": "Tafseelat dekhein →",

@@ -66,6 +66,12 @@ class _WorkerNewJobsPageState extends ConsumerState<WorkerNewJobsPage>
     // while refetching, and catches any assignment missed by the realtime
     // push handlers in app.dart.
     ref.read(newJobsProvider.notifier).refresh();
+    // Opening this screen IS the act of reading the new jobs, so this is the
+    // one place the marker is stamped. Everything that arrives after the
+    // server's "now" goes back to being unread, which is why it is stamped on
+    // open rather than on leave: an Ustaad who sits on this list should still
+    // be told when something lands while they are looking at it.
+    ref.read(markNewJobsSeenProvider)();
   }
 
   @override

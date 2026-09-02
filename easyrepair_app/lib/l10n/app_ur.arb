@@ -725,6 +725,7 @@
   "workerGoOfflineConfirmYes": "ہاں، آف لائن کریں",
   "workerFindNewWork": "نئی شکایات",
   "workerViewNewJobs": "دیکھیں",
+  "workerNewComplaintsCount": "{count, plural, =1{1 نئی} other{{count} نئی}}",
   "workerActiveJobCaps": "جاری کام",
   "workerMap": "نقشہ",
   "workerViewDetails": "تفصیلات دیکھیں ←",

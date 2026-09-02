@@ -78,6 +78,14 @@ class WorkerProfileEntity {
   final String? changesRequiredReason;
   final String? rejectionReason;
 
+  /// When this Ustaad last OPENED the Naye Kaam screen, as decided by the
+  /// server. Null means never — every matching job in the 24h window is
+  /// unread, which is what a brand-new Ustaad (and every Ustaad the day this
+  /// shipped) should see. The badge is derived from this in
+  /// presentation/providers/worker_nav_indicator_providers.dart; nothing
+  /// reads it directly.
+  final DateTime? newJobsSeenAt;
+
   const WorkerProfileEntity({
     required this.id,
     required this.userId,
@@ -116,6 +124,7 @@ class WorkerProfileEntity {
     this.submittedForReviewAt,
     this.changesRequiredReason,
     this.rejectionReason,
+    this.newJobsSeenAt,
   });
 
   /// The single gate for hireability — go online, matching, bidding, hire.
@@ -212,6 +221,7 @@ class WorkerProfileEntity {
       submittedForReviewAt: submittedForReviewAt,
       changesRequiredReason: changesRequiredReason,
       rejectionReason: rejectionReason,
+      newJobsSeenAt: newJobsSeenAt,
     );
   }
 }

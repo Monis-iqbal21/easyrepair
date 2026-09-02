@@ -4371,6 +4371,12 @@ abstract class AppLocalizations {
   /// **'Dekhein'**
   String get workerViewNewJobs;
 
+  /// Ustaad Home "New Complaints" tile subtitle when there are unread new jobs. Replaces the plain "View" line; the number is the same unread count the Naye Kaam tab badge shows.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 new} other{{count} new}}'**
+  String workerNewComplaintsCount(int count);
+
   /// No description provided for @workerActiveJobCaps.
   ///
   /// In en, this message translates to:

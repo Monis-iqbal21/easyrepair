@@ -19,6 +19,7 @@ import '../../domain/entities/worker_profile_entity.dart';
 import '../../domain/entities/ongoing_job_entity.dart';
 import '../../domain/entities/category_entity.dart';
 import '../../domain/entities/worker_review_entity.dart';
+import '../providers/worker_nav_indicator_providers.dart';
 import '../providers/worker_providers.dart';
 import '../providers/worker_review_providers.dart';
 import 'earning_history_page.dart';
@@ -219,7 +220,7 @@ class _HomeBody extends ConsumerWidget {
           // The prototype's two-up tile grid. "New Complaints" carries the
           // route the full-width CTA button used to carry — same destination,
           // same call, different shape.
-          SliverToBoxAdapter(child: _QuickTiles(profile: profile)),
+          SliverToBoxAdapter(child: WorkerQuickTiles(profile: profile)),
           // Today section
           SliverToBoxAdapter(child: _TodaySection(profile: profile)),
           // Performance section
@@ -880,13 +881,23 @@ class _AvailabilityCard extends ConsumerWidget {
 // a route entry would be changing navigation structure rather than reusing it.
 // Approved by Anzal on 25 Aug after he found the tile did nothing.
 
-class _QuickTiles extends StatelessWidget {
+/// Public, unlike every other section on this page, so the one contract that
+/// spans two screens can actually be tested: the "Nayi Shikayat" tile and the
+/// Naye Kaam tab badge must show the same number, from the same provider. A
+/// test that could only reach this through the whole Home page would be
+/// testing Geolocator and the reviews feed as well.
+class WorkerQuickTiles extends ConsumerWidget {
   final WorkerProfileEntity profile;
-  const _QuickTiles({required this.profile});
+  const WorkerQuickTiles({super.key, required this.profile});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
+    // The SAME provider the Naye Kaam tab badge reads — see
+    // presentation/providers/worker_nav_indicator_providers.dart. Home and
+    // the bottom bar cannot disagree because neither of them counts
+    // anything: there is one count, and they both render it.
+    final unreadNewJobs = ref.watch(workerNewJobsUnreadCountProvider);
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, _gap, 20, 0),
       // NOT CrossAxisAlignment.stretch. This Row sits in a sliver, where the
@@ -901,7 +912,17 @@ class _QuickTiles extends StatelessWidget {
             child: _TileCard(
               icon: Icons.work_outline_rounded,
               title: l10n.workerFindNewWork,
-              subtitle: l10n.workerViewNewJobs,
+              // The count replaces the plain "Dekhein" line only when there
+              // is something to report; at zero the tile goes back to being
+              // an invitation rather than announcing "0 new".
+              subtitle: unreadNewJobs > 0
+                  ? l10n.workerNewComplaintsCount(unreadNewJobs)
+                  : l10n.workerViewNewJobs,
+              // The one tile on Home that is a call to action rather than a
+              // report: it is where an Ustaad goes to find work. Filling it
+              // with `primary` is what makes it read that way against the
+              // plain `surface` cards around it.
+              highlighted: true,
               onTap: () => context.go('/worker/new-jobs'),
             ),
           ),
@@ -929,6 +950,11 @@ class _TileCard extends StatelessWidget {
   final String title;
   final String subtitle;
 
+  /// Fills the whole tile with `primary` and moves every mark on it onto the
+  /// `onPrimary` family. Only one tile in a row may claim this — two teal
+  /// blocks side by side single out neither.
+  final bool highlighted;
+
   /// Null means the tile only reports; it does not navigate.
   final VoidCallback? onTap;
 
@@ -936,19 +962,36 @@ class _TileCard extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.subtitle,
+    this.highlighted = false,
     this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final c = context.semanticColors;
+    // Every one of these is a palette token, both here and in the plain
+    // branch — a highlighted tile is a different set of tokens, never a
+    // literal colour or an alpha derived from one.
+    final surface = highlighted ? c.primary : c.surface;
+    // On a `primary` fill the hairline has to disappear into the fill
+    // itself; a `border` grey line around a teal block reads as a mistake.
+    final outline = highlighted ? c.primary : c.border;
+    // `primaryPressed` is the one token that is a step off `primary` in the
+    // same hue, so the icon circle stays visible on the fill in both themes.
+    final iconWell = highlighted ? c.primaryPressed : c.softTeal;
+    final iconInk = highlighted ? c.onPrimary : c.primary;
+    final titleInk = highlighted ? c.onPrimary : c.textPrimary;
+    // `onPrimaryMuted` exists exactly for this: the quieter voice on a
+    // `primary` fill, measured to clear AA in both palettes.
+    final subtitleInk = highlighted ? c.onPrimaryMuted : c.textSecondary;
+
     final card = Container(
       constraints: const BoxConstraints(minHeight: 96),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: c.surface,
+        color: surface,
         borderRadius: BorderRadius.circular(_rCard),
-        border: Border.all(color: c.border),
+        border: Border.all(color: outline),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -959,10 +1002,10 @@ class _TileCard extends StatelessWidget {
             height: 46,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: c.softTeal,
+              color: iconWell,
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, size: 23, color: c.primary),
+            child: Icon(icon, size: 23, color: iconInk),
           ),
           const SizedBox(height: 9),
           Text(
@@ -970,14 +1013,14 @@ class _TileCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w700,
-              color: c.textPrimary,
+              color: titleInk,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
           Text(
             subtitle,
-            style: TextStyle(fontSize: 14, color: c.textSecondary),
+            style: TextStyle(fontSize: 14, color: subtitleInk),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),

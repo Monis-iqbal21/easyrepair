@@ -69,6 +69,9 @@ abstract class WorkerRemoteDatasource {
 
   Future<CachedResult<List<Map<String, dynamic>>>> getNewJobs();
 
+  /// POST /workers/jobs/new/seen — no body; the server decides "now".
+  Future<DateTime> markNewJobsSeen();
+
   Future<Map<String, dynamic>> updateAvailability({
     required String status,
     double? lat,
@@ -174,6 +177,18 @@ class WorkerRemoteDatasourceImpl implements WorkerRemoteDatasource {
       data: body,
     );
     return response.data!['data'] as Map<String, dynamic>;
+  }
+
+  @override
+  Future<DateTime> markNewJobsSeen() async {
+    final response =
+        await _dio.post<Map<String, dynamic>>('/workers/jobs/new/seen');
+    // Deliberately not `DateTime.now()` on a parse miss: a wrong-but-plausible
+    // local timestamp would silently mark real jobs read. Falling back to the
+    // epoch keeps them unread, and the next successful stamp fixes it.
+    final raw = response.data?['data']?['newJobsSeenAt'] as String?;
+    return DateTime.tryParse(raw ?? '')?.toUtc() ??
+        DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
   }
 
   @override

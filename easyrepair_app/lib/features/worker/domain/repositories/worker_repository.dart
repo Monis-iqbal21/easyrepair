@@ -75,6 +75,11 @@ abstract class WorkerRepository {
 
   Future<Either<Failure, CachedResult<List<NewJobEntity>>>> getNewJobs();
 
+  /// Stamps the server-side "this Ustaad opened Naye Kaam" marker and
+  /// returns the instant the server actually wrote, which is what the unread
+  /// count is measured against. The device's own clock is never used for it.
+  Future<Either<Failure, DateTime>> markNewJobsSeen();
+
   Future<Either<Failure, CachedResult<List<BookingEntity>>>> getWorkerJobs(
     String? statusFilter,
   );
