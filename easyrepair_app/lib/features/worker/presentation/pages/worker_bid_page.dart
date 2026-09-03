@@ -366,6 +366,9 @@ class _JobContextSection extends ConsumerWidget {
             bookingId: jobId,
             route: '/worker/job/$jobId/inspection-report/view',
             label: context.l10n.discoveryViewInspectionReport,
+            // Secondary on the worker side — the report is context for the
+            // bid below it, not the CTA. Only client detail screens fill it.
+            filled: false,
           ),
           const SizedBox(height: 12),
         ],

@@ -320,8 +320,9 @@ class _DetailBodyState extends ConsumerState<_DetailBody>
         ViewInspectionReportButton(
           bookingId: booking.id,
           route: BookingActionSection.inspectionReportRoute(booking),
-          // Primary weight on this page only — see ViewInspectionReportButton.
-          filled: true,
+          // Filled `primary` — the shared default for every client detail
+          // surface. Not restated here, so this page and Track Worker can
+          // never drift apart.
         ),
       if (BookingActionSection.hasContentFor(booking))
         BookingActionSection(booking: booking),

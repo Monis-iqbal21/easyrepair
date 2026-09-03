@@ -368,6 +368,9 @@ class _JobBody extends ConsumerWidget {
                   ViewInspectionReportButton(
                     bookingId: job.id,
                     route: '/worker/job/${job.id}/inspection-report/view',
+                    // Secondary on the worker side — see the client detail
+                    // screens for the filled treatment.
+                    filled: false,
                   )
                 // ── The report lives on another booking — either a linked
                 // post-inspection repair job (Find Other Ustaad) or a
@@ -385,6 +388,7 @@ class _JobBody extends ConsumerWidget {
                     bookingId: job.id,
                     route: '/worker/job/${job.id}/inspection-report/view',
                     label: context.l10n.discoveryViewInspectionReport,
+                    filled: false,
                   ),
 
                 // ── Location ─────────────────────────────────────────────

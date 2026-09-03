@@ -32,6 +32,8 @@ const _bookingId = 'booking-1';
 BookingEntity _booking({
   BookingLane lane = BookingLane.inspection,
   BookingStatus status = BookingStatus.pending,
+  String? sourceInspectionBookingId,
+  String? attachedInspectionBookingId,
 }) => BookingEntity(
   id: _bookingId,
   referenceId: '#ER-123456',
@@ -46,6 +48,8 @@ BookingEntity _booking({
   city: 'Lahore',
   lane: lane,
   inspectionFeeSnapshot: 500,
+  sourceInspectionBookingId: sourceInspectionBookingId,
+  attachedInspectionBookingId: attachedInspectionBookingId,
 );
 
 final _report = InspectionReportEntity(
@@ -212,6 +216,32 @@ void main() {
       expect(button.onPressed, isNotNull);
     });
 
+    // Standard, Inspection and Bidding all render through this one detail
+    // route, and all three must show the SAME filled red cancel — the bug
+    // this guards is a lane quietly falling back to an outline.
+    for (final lane in BookingLane.values) {
+      testWidgets('is filled red on the ${lane.name} lane', (tester) async {
+        await _pumpDetail(
+          tester,
+          _booking(lane: lane, status: BookingStatus.pending),
+        );
+
+        const key = Key('cancel-booking-button');
+        expect(find.byKey(key), findsOneWidget);
+
+        final colors = _colorsOf(tester);
+        final fill = _fillOf(tester, key);
+
+        expect(fill.background, colors.error);
+        expect(fill.foreground, colors.onPrimary);
+        expect(
+          find.descendant(of: find.byKey(key), matching: _anyOutlinedButton),
+          findsNothing,
+          reason: 'cancel must be filled on every lane, never outlined',
+        );
+      });
+    }
+
     testWidgets('resolves from the dark palette too — no baked-in literal', (
       tester,
     ) async {
@@ -248,6 +278,54 @@ void main() {
         findsNothing,
         reason: 'the report CTA must be fully filled, not outlined',
       );
+    });
+
+    // A BIDDING job the client attached a past report to, and a STANDARD
+    // repair spawned by "Find Other Ustaad", both offer this same action.
+    // Neither may render it as an outline.
+    testWidgets('is filled teal on a bidding job carrying an attached report', (
+      tester,
+    ) async {
+      await _pumpDetail(
+        tester,
+        _booking(
+          lane: BookingLane.bidding,
+          status: BookingStatus.pending,
+          attachedInspectionBookingId: 'other-booking',
+        ),
+      );
+
+      const key = Key('view-inspection-report-button');
+      expect(find.byKey(key), findsOneWidget);
+
+      final colors = _colorsOf(tester);
+      final fill = _fillOf(tester, key);
+
+      expect(fill.background, colors.primary);
+      expect(fill.foreground, colors.onPrimary);
+      expect(
+        find.descendant(of: find.byKey(key), matching: _anyOutlinedButton),
+        findsNothing,
+      );
+    });
+
+    testWidgets('is filled teal on a repair linked back to an inspection', (
+      tester,
+    ) async {
+      await _pumpDetail(
+        tester,
+        _booking(
+          lane: BookingLane.standard,
+          status: BookingStatus.accepted,
+          sourceInspectionBookingId: 'inspection-booking',
+        ),
+      );
+
+      final colors = _colorsOf(tester);
+      final fill = _fillOf(tester, const Key('view-inspection-report-button'));
+
+      expect(fill.background, colors.primary);
+      expect(fill.foreground, colors.onPrimary);
     });
 
     testWidgets('still navigates to the report page', (tester) async {

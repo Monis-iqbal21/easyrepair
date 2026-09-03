@@ -176,7 +176,10 @@ class _TrackBody extends ConsumerWidget {
           const SizedBox(height: 16),
           _ProgressTimeline(booking: booking),
           if (booking.lane == BookingLane.inspection) ...[
-            const SizedBox(height: 8),
+            // 16 to match every other gap in this column — this is a
+            // full-weight filled CTA (the shared client detail treatment),
+            // not the outlined afterthought it used to be.
+            const SizedBox(height: 16),
             ViewInspectionReportButton(
               bookingId: booking.id,
               route: '/client/booking/${booking.id}/inspection-report',

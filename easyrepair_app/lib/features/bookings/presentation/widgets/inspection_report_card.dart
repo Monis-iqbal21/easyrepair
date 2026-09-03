@@ -131,10 +131,16 @@ class ViewInspectionReportButton extends ConsumerWidget {
 
   /// Renders the filled `primary` button instead of the outlined one.
   ///
-  /// The client booking detail page opts in: there the report is the main
-  /// thing to do next, so it carries primary weight. Everywhere else it sits
-  /// beside a stronger CTA and stays secondary, which is why this defaults to
-  /// false rather than flipping the shared widget.
+  /// Defaults to TRUE, because every CLIENT detail surface — Booking Detail
+  /// (Standard / Inspection / Bidding alike) and Track Worker — must show
+  /// this action with the same primary weight: `colors.primary` fill,
+  /// `colors.onPrimary` label. Reading the report is the thing the client is
+  /// there to do, and an outlined variant of it on one screen and a filled
+  /// one on another is exactly the inconsistency this default removes.
+  ///
+  /// Worker-side surfaces pass `filled: false` explicitly: there the report
+  /// is read-only supporting context sitting beside a stronger CTA (bid,
+  /// start job), so it stays secondary.
   final bool filled;
 
   const ViewInspectionReportButton({
@@ -142,7 +148,7 @@ class ViewInspectionReportButton extends ConsumerWidget {
     required this.bookingId,
     required this.route,
     this.label,
-    this.filled = false,
+    this.filled = true,
   });
 
   @override
