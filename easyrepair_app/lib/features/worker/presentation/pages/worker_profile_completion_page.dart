@@ -193,10 +193,11 @@ class _WorkerProfileCompletionPageState
     // Opening the viewer is optional. When the Ustaad ticks a row they have
     // not opened, the evidence is built from the template they were shown —
     // the same documentType/version/sourceHash/locale/trade the backend
-    // seals — with the tick itself as the timestamp. Viewing first simply
-    // means that timestamp is the earlier moment the document was rendered.
+    // seals — but with NO viewedAt, because nothing was viewed. The record
+    // says "accepted, not viewed" rather than claiming a reading that never
+    // happened; opening the viewer is what supplies a real timestamp.
     final existing =
-        _evidenceFor(template) ?? template.evidenceViewedAt(DateTime.now());
+        _evidenceFor(template) ?? template.evidenceUnviewed();
     setState(() {
       _evidence[template.documentType] =
           existing.copyWith(checkboxAccepted: value);

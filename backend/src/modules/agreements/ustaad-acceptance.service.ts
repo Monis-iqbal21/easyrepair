@@ -58,7 +58,8 @@ export interface AgreementAcceptanceEvidence {
   sourceHash: string;
   agreementLocale: string;
   applicableTrade: string | null;
-  viewedAt: string;
+  /** Null/absent when the Ustaad accepted without opening the document. */
+  viewedAt?: string | null;
   checkboxAccepted: boolean;
 }
 
@@ -120,7 +121,6 @@ export class AgreementSubmissionError extends BadRequestException {
       | 'MISSING_PROFILE_DATA'
       | 'UNSUPPORTED_TRADE'
       | 'STALE_DOCUMENT'
-      | 'NOT_VIEWED'
       | 'NOT_ACCEPTED'
       | 'MISSING_EVIDENCE'
       | 'SOURCE_UNAVAILABLE',
@@ -417,13 +417,10 @@ export class UstaadAcceptanceService {
         { documentType },
       );
     }
-    if (!item.viewedAt) {
-      throw new AgreementSubmissionError(
-        'NOT_VIEWED',
-        'The agreement must be opened before it can be accepted.',
-        { documentType },
-      );
-    }
+    // Deliberately NOT checked: whether the document was opened. Reading is
+    // offered, never required, so a missing viewedAt is a fact to record —
+    // "accepted, not viewed" — not a reason to reject. The checkbox below is
+    // still mandatory, and is what makes the acceptance binding.
     if (item.checkboxAccepted !== true) {
       throw new AgreementSubmissionError(
         'NOT_ACCEPTED',
@@ -452,12 +449,23 @@ export class UstaadAcceptanceService {
     }
   }
 
+  /**
+   * The real moment this document was opened, or null when it never was.
+   *
+   * Never invents a timestamp. `documentViewedAt` is the audit's answer to
+   * "did this Ustaad actually read it?", so a row accepted unopened must store
+   * null — a fabricated now() would make the record claim a reading that did
+   * not happen. An unparseable value is treated the same way rather than
+   * sealed as an Invalid Date.
+   */
   private _viewedAt(
     evidence: AgreementAcceptanceEvidence[],
     documentType: UstaadDocumentType,
-  ): Date {
+  ): Date | null {
     const item = evidence.find((e) => e.documentType === documentType)!;
-    return new Date(item.viewedAt);
+    if (!item.viewedAt) return null;
+    const parsed = new Date(item.viewedAt);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
   }
 
   private _personalizationData(

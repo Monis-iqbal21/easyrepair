@@ -19,7 +19,8 @@ import {
 } from '../../agreements/source/agreement-source.types';
 
 /**
- * Evidence that ONE of the three documents was actually opened and accepted.
+ * Evidence that ONE of the three documents was accepted, and whether it was
+ * opened first.
  *
  * Everything here describes what the Ustaad saw — never who they are. Identity,
  * timestamps, hashes and the acceptance id are all resolved server-side; a
@@ -53,9 +54,19 @@ export class AgreementEvidenceDto {
   @IsIn(TRADE_CODES as unknown as string[])
   applicableTrade?: string | null;
 
-  /** When the viewer finished loading this exact document. */
+  /**
+   * When the viewer finished loading this exact document, if it was opened.
+   *
+   * Optional, and absent means exactly one thing: this document was never
+   * opened. Accepting without reading is allowed, so the audit record must be
+   * able to say "accepted, not viewed" rather than carry a timestamp invented
+   * to satisfy a required field. Older clients that always open before ticking
+   * keep sending a real timestamp and are unaffected — this only widens what
+   * the endpoint accepts, so no released app version breaks.
+   */
+  @IsOptional()
   @IsISO8601()
-  viewedAt!: string;
+  viewedAt?: string | null;
 
   @IsBoolean()
   checkboxAccepted!: boolean;

@@ -267,7 +267,15 @@ void main() {
     );
     for (final evidence in repo.lastAgreements!) {
       expect(evidence.checkboxAccepted, isTrue);
-      expect(evidence.viewedAt, isNotNull);
+      // Nothing was opened, so nothing claims to have been read. The
+      // acceptance is still fully identified by the document it names.
+      expect(
+        evidence.viewedAt,
+        isNull,
+        reason: 'an unopened document must not carry an invented viewedAt',
+      );
+      expect(evidence.version, '1.0');
+      expect(evidence.sourceHash, 'hash-${evidence.documentType}');
     }
     expect(
       find.text('WORKER_HOME'),
@@ -458,14 +466,84 @@ void main() {
 
     expect(repo.submitCalls, 1);
     expect(repo.lastAgreements!.length, 3);
-    // The electronic acceptance record is unchanged in shape: the document's
-    // own identity, a viewedAt the backend can seal, and the explicit tick.
+    // The electronic acceptance record keeps its shape: the document's own
+    // identity and the explicit tick, on every row.
     for (final evidence in repo.lastAgreements!) {
       expect(evidence.checkboxAccepted, isTrue);
-      expect(evidence.viewedAt, isNotNull);
       expect(evidence.version, '1.0');
       expect(evidence.agreementLocale, 'ur_Latn');
       expect(evidence.sourceHash, 'hash-${evidence.documentType}');
+    }
+
+    // viewedAt is per-document and truthful: only the one that was actually
+    // opened carries a timestamp.
+    final opened = repo.lastAgreements!
+        .firstWhere((e) => e.documentType == kUstaadGeneralAgreement);
+    expect(opened.viewedAt, isNotNull, reason: 'this one was really rendered');
+    expect(opened.wasViewed, isTrue);
+    for (final evidence in repo.lastAgreements!
+        .where((e) => e.documentType != kUstaadGeneralAgreement)) {
+      expect(
+        evidence.viewedAt,
+        isNull,
+        reason: 'these two were accepted without ever being opened',
+      );
+      expect(evidence.wasViewed, isFalse);
+    }
+  });
+
+  testWidgets('the evidence sent for an unopened agreement carries no '
+      'viewedAt on the wire either', (tester) async {
+    tester.view.physicalSize = const Size(390, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    final repo = _FakeWorkerRepository(
+      profile: _profile(
+        cnicFrontUrl: 'https://cdn/f.jpg',
+        cnicBackUrl: 'https://cdn/b.jpg',
+        liveSelfieUrl: 'https://cdn/s.jpg',
+      ),
+    );
+    await tester.pumpWidget(_app(repo, await _prefs()));
+    await _settle(tester);
+
+    await _openAndClose(tester, 0);
+    await _acceptAll(tester);
+
+    final cta = find.widgetWithText(
+      ElevatedButton,
+      'Verification ke liye bhejein',
+    );
+    await tester.ensureVisible(cta);
+    await _settle(tester);
+    await tester.tap(cta);
+    await tester.pumpAndSettle();
+
+    // What actually reaches POST /workers/profile-completion/submit.
+    final json = {
+      for (final e in repo.lastAgreements!) e.documentType: e.toJson(),
+    };
+    expect(
+      json[kUstaadGeneralAgreement]!['viewedAt'],
+      isA<String>(),
+      reason: 'opened — a real ISO timestamp the backend may seal',
+    );
+    expect(
+      json[kUstaadTradeAgreement]!['viewedAt'],
+      isNull,
+      reason: 'never opened — the field is null, not a fabricated now()',
+    );
+    expect(
+      json[kUstaadBackgroundEvsNotice]!['viewedAt'],
+      isNull,
+    );
+    // The rest of the evidence is unchanged by any of this.
+    for (final row in json.values) {
+      expect(row['checkboxAccepted'], isTrue);
+      expect(row['version'], '1.0');
+      expect(row['agreementLocale'], 'ur_Latn');
+      expect(row['sourceHash'], isNotNull);
     }
   });
 

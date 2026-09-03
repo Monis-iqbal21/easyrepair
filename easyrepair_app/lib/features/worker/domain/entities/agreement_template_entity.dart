@@ -74,9 +74,25 @@ class AgreementTemplateEntity {
         viewedAt: viewedAt,
         checkboxAccepted: false,
       );
+
+  /// Evidence for a document that was NOT opened.
+  ///
+  /// Identical in every respect except that it carries no [viewedAt]: the
+  /// Ustaad may accept without reading, but the record must not claim a
+  /// reading that never happened. The document's identity — type, version,
+  /// hash, locale, trade — is still exactly what they were shown.
+  AgreementEvidence evidenceUnviewed() => AgreementEvidence(
+        documentType: documentType,
+        version: version,
+        sourceHash: sourceHash,
+        agreementLocale: agreementLocale,
+        applicableTrade: applicableTrade,
+        viewedAt: null,
+        checkboxAccepted: false,
+      );
 }
 
-/// Proof that one specific document was viewed, and then accepted.
+/// Proof that one specific document was accepted, and whether it was opened.
 ///
 /// Carries the identity of the document only. Who the Ustaad is, when the
 /// acceptance happened and every hash on the sealed record are resolved by the
@@ -88,9 +104,14 @@ class AgreementEvidence {
   final String agreementLocale;
   final String? applicableTrade;
 
-  /// When the viewer finished loading this exact document. A page that opened
-  /// and failed to load never produces one.
-  final DateTime viewedAt;
+  /// When the viewer finished loading this exact document.
+  ///
+  /// Null means it was never opened — either because the Ustaad accepted it
+  /// without reading (their right), or because a page opened and failed to
+  /// load. Never back-filled with the acceptance time: the backend stores this
+  /// as `documentViewedAt`, and a value there is a claim that the document was
+  /// actually read.
+  final DateTime? viewedAt;
   final bool checkboxAccepted;
 
   const AgreementEvidence({
@@ -102,6 +123,9 @@ class AgreementEvidence {
     required this.viewedAt,
     required this.checkboxAccepted,
   });
+
+  /// True when this document was actually opened and rendered.
+  bool get wasViewed => viewedAt != null;
 
   AgreementEvidence copyWith({bool? checkboxAccepted}) => AgreementEvidence(
         documentType: documentType,
@@ -131,7 +155,9 @@ class AgreementEvidence {
         'sourceHash': sourceHash,
         'agreementLocale': agreementLocale,
         'applicableTrade': applicableTrade,
-        'viewedAt': viewedAt.toUtc().toIso8601String(),
+        // Null travels as null — the endpoint accepts an absent viewedAt and
+        // stores it as "not viewed" rather than rejecting the acceptance.
+        'viewedAt': viewedAt?.toUtc().toIso8601String(),
         'checkboxAccepted': checkboxAccepted,
       };
 }

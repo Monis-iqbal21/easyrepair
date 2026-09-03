@@ -338,6 +338,50 @@ describe('SubmitProfileCompletionDto', () => {
     const errors = await errorsFor({ agreements: evidenceForElectrician() });
     expect(errors.some((e) => e.property === 'submissionAttemptId')).toBe(true);
   });
+
+  // viewedAt is optional: accepting without opening is allowed, and the
+  // record must be able to say so instead of carrying an invented time.
+  it('accepts evidence with viewedAt omitted', async () => {
+    const agreements = evidenceForElectrician().map(
+      ({ viewedAt: _viewedAt, ...rest }) => rest,
+    );
+    expect(
+      await errorsFor({ submissionAttemptId: 'a', agreements }),
+    ).toHaveLength(0);
+  });
+
+  it('accepts evidence with an explicitly null viewedAt', async () => {
+    const agreements = evidenceForElectrician();
+    (agreements[1] as { viewedAt: string | null }).viewedAt = null;
+    expect(
+      await errorsFor({ submissionAttemptId: 'a', agreements }),
+    ).toHaveLength(0);
+  });
+
+  it('still accepts a real viewedAt, so released clients keep working',
+    async () => {
+    expect(
+      await errorsFor({
+        submissionAttemptId: 'a',
+        agreements: evidenceForElectrician(),
+      }),
+    ).toHaveLength(0);
+  });
+
+  it('still rejects a viewedAt that is present but not a timestamp', async () => {
+    const agreements = evidenceForElectrician();
+    (agreements[0] as { viewedAt: string }).viewedAt = 'yesterday';
+    const errors = await errorsFor({ submissionAttemptId: 'a', agreements });
+    expect(errors.length).toBeGreaterThan(0);
+  });
+
+  it('still requires checkboxAccepted on every row', async () => {
+    const agreements = evidenceForElectrician().map(
+      ({ checkboxAccepted: _accepted, ...rest }) => rest,
+    );
+    const errors = await errorsFor({ submissionAttemptId: 'a', agreements });
+    expect(errors.length).toBeGreaterThan(0);
+  });
 });
 
 // ── Secure list / download ──────────────────────────────────────────────────

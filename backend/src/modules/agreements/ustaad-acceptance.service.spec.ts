@@ -1,4 +1,5 @@
 import {
+  AgreementAcceptanceEvidence,
   AgreementSubmissionError,
   UstaadAcceptanceInput,
   UstaadAcceptanceService,
@@ -11,7 +12,9 @@ import { findUnresolvedContent } from './source/agreement-validation.util';
  * behaviour: exactly three immutable documents, the Customer document
  * unreachable, idempotent retries, and no orphaned PDFs when anything fails.
  */
-function evidenceFor(trade: string | null = 'ELECTRICIAN') {
+function evidenceFor(
+  trade: string | null = 'ELECTRICIAN',
+): AgreementAcceptanceEvidence[] {
   const general = loadSourceText('USTAAD_SERVICE_PROVIDER_AGREEMENT', 'ur_Latn', null);
   const evs = loadSourceText('BACKGROUND_VERIFICATION_EVS_PRIVACY_NOTICE', 'ur_Latn', null);
   const tradeDoc = loadSourceText(
@@ -155,6 +158,80 @@ describe('UstaadAcceptanceService', () => {
     });
   });
 
+  describe('documentViewedAt tells the truth', () => {
+    it('records the real viewedAt for a document that WAS opened', async () => {
+      const { service, created } = makeService();
+      await service.acceptAll(makeInput());
+
+      for (const row of created) {
+        expect(row.documentViewedAt).toEqual(
+          new Date('2026-08-03T09:00:00.000Z'),
+        );
+      }
+    });
+
+    it('stores NULL for a row accepted without opening, and never the '
+      + 'acceptance time', async () => {
+      const { service, created } = makeService();
+      const evidence = evidenceFor();
+      evidence[1].viewedAt = null;
+
+      await service.acceptAll(makeInput({ evidence }));
+
+      const unopened = created.find(
+        (r) => r.agreementType === 'TRADE_SPECIFIC',
+      )!;
+      expect(unopened.documentViewedAt).toBeNull();
+      // The acceptance itself is untouched and fully provable.
+      expect(unopened.agreementVersion).toBeTruthy();
+      expect(unopened.sourceDocumentHash).toMatch(/^[0-9a-f]{64}$/);
+      expect(unopened.acceptedDocumentHash).toMatch(/^[0-9a-f]{64}$/);
+      expect(unopened.effectiveAt).toBeInstanceOf(Date);
+
+      // The two the Ustaad did open keep their real timestamps — this is
+      // per-document, not a flag on the submission.
+      for (const row of created.filter((r) => r !== unopened)) {
+        expect(row.documentViewedAt).toEqual(
+          new Date('2026-08-03T09:00:00.000Z'),
+        );
+      }
+    });
+
+    it('stores NULL rather than an Invalid Date for an unparseable value',
+      async () => {
+      const { service, created } = makeService();
+      const evidence = evidenceFor();
+      evidence[0].viewedAt = 'not-a-date';
+
+      await service.acceptAll(makeInput({ evidence }));
+
+      const row = created.find((r) => r.agreementType === 'GENERAL_USTAAD')!;
+      expect(row.documentViewedAt).toBeNull();
+    });
+
+    it('still refuses an unticked checkbox on an unopened document', async () => {
+      const { service } = makeService();
+      const evidence = evidenceFor();
+      evidence[1].viewedAt = null;
+      evidence[1].checkboxAccepted = false;
+
+      await expect(service.acceptAll(makeInput({ evidence }))).rejects.toMatchObject(
+        { code: 'NOT_ACCEPTED' },
+      );
+    });
+
+    it('still refuses a stale document that was never opened', async () => {
+      const { service } = makeService();
+      const evidence = evidenceFor();
+      evidence[1].viewedAt = null;
+      evidence[1].sourceHash = 'f'.repeat(64);
+
+      await expect(service.acceptAll(makeInput({ evidence }))).rejects.toMatchObject(
+        { code: 'STALE_DOCUMENT' },
+      );
+    });
+  });
+
   describe('what gets sealed', () => {
     it('stores Roman Urdu locale, hashes, snapshot and viewed time', async () => {
       const { service, created } = makeService();
@@ -167,6 +244,7 @@ describe('UstaadAcceptanceService', () => {
         expect(row.acceptedPdfHash).toMatch(/^[0-9a-f]{64}$/);
         // The personalized snapshot differs from the blank source.
         expect(row.acceptedDocumentHash).not.toBe(row.sourceDocumentHash);
+        // Every row in this fixture WAS opened, so each carries a real time.
         expect(row.documentViewedAt).toBeInstanceOf(Date);
         expect(row.pdfMadeAvailableAt).toBeInstanceOf(Date);
         expect(row.acceptancePdfStorageKey).toBeTruthy();
@@ -319,14 +397,15 @@ describe('UstaadAcceptanceService', () => {
       );
     });
 
-    it('rejects a document that was never viewed', async () => {
-      const { service } = makeService();
+    it('accepts a document that was never opened', async () => {
+      const { service, created } = makeService();
       const evidence = evidenceFor();
-      evidence[1].viewedAt = '';
+      evidence[1].viewedAt = null;
 
-      await expect(service.acceptAll(makeInput({ evidence }))).rejects.toMatchObject(
-        { code: 'NOT_VIEWED' },
-      );
+      await expect(
+        service.acceptAll(makeInput({ evidence })),
+      ).resolves.toHaveLength(3);
+      expect(created).toHaveLength(3);
     });
 
     it('rejects an unticked checkbox even if the client says otherwise', async () => {

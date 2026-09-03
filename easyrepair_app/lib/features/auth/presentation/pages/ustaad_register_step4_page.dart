@@ -45,7 +45,8 @@ import '../widgets/ustaad_register_widgets.dart';
 ///    records the moment the document actually rendered — offered, never
 ///    required. Ticking is the Ustaad's own act: a row they did not open is
 ///    accepted against the very same template they were shown, so the record
-///    still names the exact documentType/version/sourceHash/locale/trade;
+///    still names the exact documentType/version/sourceHash/locale/trade, and
+///    carries no viewedAt rather than a fabricated one;
 ///  * evidence is invalidated the moment it stops describing the currently
 ///    loaded template, which is what drops a stale tick when the trade
 ///    changes;
@@ -101,12 +102,14 @@ class _UstaadRegisterStep4PageState
   ///
   /// When there is no evidence yet, it is built from the template the Ustaad
   /// was shown — the same documentType/version/sourceHash/locale/trade the
-  /// backend seals — with the tick itself as the timestamp. Opening the viewer
-  /// first simply means that timestamp is the earlier moment the document was
-  /// rendered. Nothing here ticks a box on the Ustaad's behalf.
+  /// backend seals — but with NO viewedAt, because nothing was viewed. The
+  /// acceptance is fully valid; the audit record simply says "accepted, not
+  /// viewed" instead of carrying an invented timestamp. Opening the viewer is
+  /// what supplies a real one. Nothing here ticks a box on the Ustaad's
+  /// behalf.
   void _setAccepted(AgreementTemplateEntity template, bool value) {
     final existing =
-        _evidenceFor(template) ?? template.evidenceViewedAt(DateTime.now());
+        _evidenceFor(template) ?? template.evidenceUnviewed();
     setState(() {
       _evidence[template.documentType] =
           existing.copyWith(checkboxAccepted: value);

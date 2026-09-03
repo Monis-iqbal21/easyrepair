@@ -1559,7 +1559,10 @@ model AgreementAcceptance {
   acceptedDocumentSnapshot String?
 
   /// When the Ustaad actually opened this exact document/version/locale.
-  /// Required before the checkbox may be ticked.
+  /// NULL means it was accepted without being opened — reading is offered,
+  /// never required, and this column is never back-filled with the acceptance
+  /// time to hide that. Acceptance itself is proven by acceptedAt plus the
+  /// version/hash snapshot columns, not by this one.
   documentViewedAt   DateTime?
   acceptanceMethod   AgreementAcceptanceMethod @default(ELECTRONIC_IN_APP)
   /// When the agreement takes effect — normally the acceptance timestamp.
