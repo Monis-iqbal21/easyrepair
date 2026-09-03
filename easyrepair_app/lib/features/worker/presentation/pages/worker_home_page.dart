@@ -918,11 +918,8 @@ class WorkerQuickTiles extends ConsumerWidget {
               subtitle: unreadNewJobs > 0
                   ? l10n.workerNewComplaintsCount(unreadNewJobs)
                   : l10n.workerViewNewJobs,
-              // The one tile on Home that is a call to action rather than a
-              // report: it is where an Ustaad goes to find work. Filling it
-              // with `primary` is what makes it read that way against the
-              // plain `surface` cards around it.
-              highlighted: true,
+              highlighted: unreadNewJobs > 0,
+              primaryText: true,
               onTap: () => context.go('/worker/new-jobs'),
             ),
           ),
@@ -954,6 +951,7 @@ class _TileCard extends StatelessWidget {
   /// `onPrimary` family. Only one tile in a row may claim this — two teal
   /// blocks side by side single out neither.
   final bool highlighted;
+  final bool primaryText;
 
   /// Null means the tile only reports; it does not navigate.
   final VoidCallback? onTap;
@@ -963,6 +961,7 @@ class _TileCard extends StatelessWidget {
     required this.title,
     required this.subtitle,
     this.highlighted = false,
+    this.primaryText = false,
     this.onTap,
   });
 
@@ -980,10 +979,14 @@ class _TileCard extends StatelessWidget {
     // same hue, so the icon circle stays visible on the fill in both themes.
     final iconWell = highlighted ? c.primaryPressed : c.softTeal;
     final iconInk = highlighted ? c.onPrimary : c.primary;
-    final titleInk = highlighted ? c.onPrimary : c.textPrimary;
+    final titleInk = highlighted
+        ? c.onPrimary
+        : (primaryText ? c.primary : c.textPrimary);
     // `onPrimaryMuted` exists exactly for this: the quieter voice on a
     // `primary` fill, measured to clear AA in both palettes.
-    final subtitleInk = highlighted ? c.onPrimaryMuted : c.textSecondary;
+    final subtitleInk = highlighted
+        ? c.onPrimaryMuted
+        : (primaryText ? c.primary : c.textSecondary);
 
     final card = Container(
       constraints: const BoxConstraints(minHeight: 96),

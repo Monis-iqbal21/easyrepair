@@ -71,7 +71,9 @@ class _WorkerNewJobsPageState extends ConsumerState<WorkerNewJobsPage>
     // server's "now" goes back to being unread, which is why it is stamped on
     // open rather than on leave: an Ustaad who sits on this list should still
     // be told when something lands while they are looking at it.
-    ref.read(markNewJobsSeenProvider)();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) ref.read(markNewJobsSeenProvider)();
+    });
   }
 
   @override

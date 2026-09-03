@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../bookings/domain/entities/booking_entity.dart';
 import '../../data/repositories/worker_repository_impl.dart';
 import '../../../../core/errors/failures.dart';
+import '../../../../core/services/chat_socket_service.dart';
 import '../../domain/entities/new_job_entity.dart';
 import '../../domain/entities/worker_payment_report_entity.dart';
 import 'worker_providers.dart'; // for workerProfileProvider
@@ -222,7 +223,7 @@ final newJobsUnfilteredProvider = StateProvider<List<NewJobEntity>>(
 );
 
 /// Fetches PENDING bookings matching the worker's skills via GET /workers/jobs/new.
-/// Auto-refreshes every 30 s while the provider is alive.
+/// Refreshes on socket reconnect and existing notification/resume events.
 class NewJobsNotifier extends AsyncNotifier<List<NewJobEntity>> {
   NewJobFilter _filter = NewJobFilter.all;
 
@@ -230,16 +231,21 @@ class NewJobsNotifier extends AsyncNotifier<List<NewJobEntity>> {
 
   @override
   Future<List<NewJobEntity>> build() {
-    final timer = Timer.periodic(const Duration(seconds: 30), (_) {
-      if (!state.isLoading) ref.invalidateSelf();
-    });
-    ref.onDispose(timer.cancel);
-    return _fetch();
+    final connectedSub = ref
+        .watch(chatSocketServiceProvider)
+        .onConnected
+        .listen((_) => ref.invalidateSelf());
+    ref.onDispose(connectedSub.cancel);
+    var active = true;
+    ref.onDispose(() => active = false);
+    return _fetch(() => active);
   }
 
-  Future<List<NewJobEntity>> _fetch() async {
+  Future<List<NewJobEntity>> _fetch(bool Function() isCurrent) async {
     final result = await ref.read(workerRepositoryProvider).getNewJobs();
     return result.fold((f) => throw f, (cached) {
+      // A superseded GET must not overwrite the shared unfiltered feed.
+      if (!isCurrent()) return _applyFilter(cached.data);
       ref.read(newJobsIsOfflineProvider.notifier).state = cached.isStale;
       ref.read(newJobsUnfilteredProvider.notifier).state = cached.data;
       return _applyFilter(cached.data);
@@ -287,28 +293,30 @@ final newJobsProvider =
 
 // ── "I have looked at Naye Kaam" marker ──────────────────────────────────────
 
-/// Stamps the server-side `newJobsSeenAt` marker the Naye Kaam badge counts
-/// against, then re-reads the profile that carries it so the badge clears.
-///
-/// Fire-and-forget by design, and deliberately silent on failure: the Ustaad
-/// asked to see new jobs, not to be told that a read-marker did not save. A
-/// failed stamp leaves the badge showing, which is the safe direction to
-/// fail — it can only ever make them look again.
-///
-/// The `catch` is not defensive padding. This is called from `initState`, and
-/// resolving the repository can throw *synchronously* (an unconfigured
-/// dependency, for one). Without it, a read-marker — the least important
-/// thing on the screen — would take the whole New Jobs page down with it.
+/// The current visit's cutoff, then the server-confirmed timestamp. Both nav
+/// and Home read it through workerNewJobsUnreadCountProvider. Keeping the
+/// confirmed value until logout also protects it from an older profile fetch.
+final newJobsSeenAtOverrideProvider = StateProvider<DateTime?>((ref) => null);
+
+/// Opening the tab clears both surfaces immediately. The server timestamp
+/// replaces the provisional cutoff; a failed write restores the previous one.
 final markNewJobsSeenProvider = Provider<Future<void> Function()>((ref) {
   return () async {
+    final marker = ref.read(newJobsSeenAtOverrideProvider.notifier);
+    final previous = marker.state;
+    final openedAt = DateTime.now().toUtc();
+    marker.state = openedAt;
+    var disposed = false;
+    ref.onDispose(() => disposed = true);
     try {
       final result = await ref.read(workerRepositoryProvider).markNewJobsSeen();
-      result.fold(
-        (_) {},
-        (_) => ref.invalidate(workerProfileProvider),
-      );
+      if (disposed || marker.state != openedAt) return;
+      result.fold((_) => marker.state = previous, (seenAt) {
+        marker.state = seenAt.toUtc();
+        ref.invalidate(workerProfileProvider);
+      });
     } catch (_) {
-      // Swallowed for the reason above.
+      if (!disposed && marker.state == openedAt) marker.state = previous;
     }
   };
 });

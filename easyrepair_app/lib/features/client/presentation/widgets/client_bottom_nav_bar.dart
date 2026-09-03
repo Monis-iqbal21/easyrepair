@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../chat/presentation/providers/chat_providers.dart';
+import '../../../../core/widgets/navigation_count_badge.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/l10n/l10n_extensions.dart';
@@ -6,7 +9,7 @@ import '../../../../core/presentation/responsive_utils.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../core/theme/app_semantic_colors.dart';
 
-class ClientBottomNavBar extends StatelessWidget {
+class ClientBottomNavBar extends ConsumerWidget {
   final int currentIndex;
 
   const ClientBottomNavBar({super.key, required this.currentIndex});
@@ -39,7 +42,8 @@ class ClientBottomNavBar extends StatelessWidget {
   ];
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final unreadChats = ref.watch(unreadConversationCountProvider);
     final bottomInset = MediaQuery.of(context).padding.bottom;
     final l10n = context.l10n;
     final colors = context.semanticColors;
@@ -85,12 +89,21 @@ class ClientBottomNavBar extends StatelessWidget {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(
-                            tab.icon,
-                            size: iconSize,
-                            color: isActive
-                                ? colors.primary
-                                : colors.textSecondary,
+                          Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              Icon(
+                                tab.icon,
+                                size: iconSize,
+                                color: isActive ? colors.primary : colors.textSecondary,
+                              ),
+                              if (tab.route == '/client/chat' && unreadChats > 0)
+                                Positioned(
+                                  top: -4,
+                                  right: -6,
+                                  child: NavigationCountBadge(count: unreadChats),
+                                ),
+                            ],
                           ),
                           SizedBox(height: gap),
                           Text(

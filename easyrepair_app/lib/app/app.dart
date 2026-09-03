@@ -291,6 +291,8 @@ class _EasyRepairAppState extends ConsumerState<EasyRepairApp>
     );
     for (final target in targets) {
       switch (target) {
+        case NotificationRefreshTarget.conversations:
+          ref.invalidate(chatConversationsProvider);
         case NotificationRefreshTarget.bookings:
           ref.invalidate(bookingsNotifierProvider);
         case NotificationRefreshTarget.bookingDetail:
@@ -363,8 +365,16 @@ class _EasyRepairAppState extends ConsumerState<EasyRepairApp>
       _registerFcmToken();
     });
 
-    ref.listen(authStateProvider, (_, next) {
+    ref.listen(authStateProvider, (previous, next) {
       final user = next.valueOrNull;
+      if (previous?.valueOrNull?.id != user?.id) {
+        ref.invalidate(chatConversationsProvider);
+        ref.invalidate(newJobsProvider);
+        ref.invalidate(newJobsUnfilteredProvider);
+        ref.invalidate(workerProfileProvider);
+        ref.invalidate(markNewJobsSeenProvider);
+        ref.invalidate(newJobsSeenAtOverrideProvider);
+      }
 
       if (user != null) {
         // Connect chat socket on login.

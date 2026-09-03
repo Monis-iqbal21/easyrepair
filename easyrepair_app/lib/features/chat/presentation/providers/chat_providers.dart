@@ -57,46 +57,36 @@ List<ConversationEntity> normalizeChatConversations(
   return <ConversationEntity>[?support, ...normal];
 }
 
+/// This subscription outlives inbox rebuilds. Binding it inside the async
+/// notifier's build leaves a gap between invalidate/dispose and the next
+/// build, losing messages that arrive while an earlier GET is in flight.
+final _chatRealtimeSyncProvider = StreamProvider<int>((ref) {
+  final socket = ref.watch(chatSocketServiceProvider);
+  final revisions = StreamController<int>();
+  var revision = 0;
+  void refresh() => revisions.add(++revision);
+  final subscriptions = <StreamSubscription<dynamic>>[
+    // Personal-room updates arrive on Home too, without an unreadCount.
+    socket.onConversationUpdated.listen((_) => refresh()),
+    socket.onNewMessage.listen((_) => refresh()),
+    // Refresh only after the server has persisted the seen receipt.
+    socket.onMessageSeen.listen((_) => refresh()),
+    socket.onConnected.listen((_) => refresh()),
+  ];
+  ref.onDispose(() {
+    for (final subscription in subscriptions) {
+      subscription.cancel();
+    }
+    revisions.close();
+  });
+  return revisions.stream;
+});
+
 class ChatConversationsNotifier
     extends AsyncNotifier<List<ConversationEntity>> {
-  StreamSubscription<Map<String, dynamic>>? _socketSub;
-
   @override
   Future<List<ConversationEntity>> build() async {
-    _socketSub?.cancel();
-
-    // Listen for conversation_updated events (e.g. new message preview).
-    _socketSub = ChatSocketService.instance.onConversationUpdated.listen((
-      data,
-    ) {
-      final conversationId = data['conversationId'] as String?;
-      if (conversationId == null) return;
-      final current = state.valueOrNull ?? [];
-      final idx = current.indexWhere((c) => c.id == conversationId);
-      if (idx == -1) return;
-      final c = current[idx];
-      // Preserve unreadCount from socket payload if provided, else keep current.
-      final socketUnread = data['unreadCount'] as int?;
-      final updated = ConversationEntity(
-        id: c.id,
-        clientUserId: c.clientUserId,
-        workerUserId: c.workerUserId,
-        createdByUserId: c.createdByUserId,
-        lastMessageAt: data['lastMessageAt'] as String?,
-        lastMessagePreview: data['lastMessagePreview'] as String?,
-        createdAt: c.createdAt,
-        updatedAt: c.updatedAt,
-        otherParticipant: c.otherParticipant,
-        unreadCount: socketUnread ?? c.unreadCount,
-        // A socket update must not silently demote the support thread to an
-        // ordinary chat — it would lose its pin and its avatar.
-        isSupport: c.isSupport,
-      );
-      upsertConversation(updated);
-    });
-
-    ref.onDispose(() => _socketSub?.cancel());
-
+    ref.watch(_chatRealtimeSyncProvider);
     return _fetch();
   }
 
@@ -115,8 +105,12 @@ class ChatConversationsNotifier
   }
 
   Future<void> refresh() async {
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(_fetch);
+    ref.invalidateSelf();
+    try {
+      await future;
+    } catch (_) {
+      // The previous inbox remains visible on a background refresh failure.
+    }
   }
 
   /// Inserts or updates a conversation while preserving the canonical order.
@@ -141,6 +135,12 @@ final chatConversationsProvider =
     AsyncNotifierProvider<ChatConversationsNotifier, List<ConversationEntity>>(
       ChatConversationsNotifier.new,
     );
+
+/// Shared by Client and Worker navigation; kept alive across tab changes.
+final unreadConversationCountProvider = Provider<int>((ref) {
+  final conversations = ref.watch(chatConversationsProvider).valueOrNull;
+  return conversations?.where((c) => c.unreadCount > 0).length ?? 0;
+});
 
 // ── Messages notifier ──────────────────────────────────────────────────────────
 
@@ -171,8 +171,16 @@ class ChatMessagesNotifier
     _editedSub?.cancel();
     _deletedSub?.cancel();
 
+    final connectedSub = ref
+        .read(chatSocketServiceProvider)
+        .onConnected
+        .listen((_) => ref.invalidateSelf());
+    ref.onDispose(connectedSub.cancel);
+
     // ── new_message ──────────────────────────────────────────────────────────
-    _newMsgSub = ChatSocketService.instance.onNewMessage.listen((data) {
+    _newMsgSub = ref.read(chatSocketServiceProvider).onNewMessage.listen((
+      data,
+    ) {
       // Ignore messages for other conversations.
       if ((data['conversationId'] as String?) != arg) return;
       try {
@@ -185,7 +193,7 @@ class ChatMessagesNotifier
     });
 
     // ── message_seen ─────────────────────────────────────────────────────────
-    _seenSub = ChatSocketService.instance.onMessageSeen.listen((data) {
+    _seenSub = ref.read(chatSocketServiceProvider).onMessageSeen.listen((data) {
       final messageId = data['messageId'] as String?;
       final seenAt = data['seenAt'] as String?;
       if (messageId == null || seenAt == null) return;
@@ -198,7 +206,9 @@ class ChatMessagesNotifier
     });
 
     // ── message_edited ───────────────────────────────────────────────────────
-    _editedSub = ChatSocketService.instance.onMessageEdited.listen((data) {
+    _editedSub = ref.read(chatSocketServiceProvider).onMessageEdited.listen((
+      data,
+    ) {
       if ((data['conversationId'] as String?) != arg) return;
       try {
         final updated = MessageModel.fromJson(data).toEntity();
@@ -212,7 +222,9 @@ class ChatMessagesNotifier
     });
 
     // ── message_deleted ──────────────────────────────────────────────────────
-    _deletedSub = ChatSocketService.instance.onMessageDeleted.listen((data) {
+    _deletedSub = ref.read(chatSocketServiceProvider).onMessageDeleted.listen((
+      data,
+    ) {
       final messageId = data['messageId'] as String?;
       final deletedAt = data['deletedAt'] as String?;
       if (messageId == null || deletedAt == null) return;

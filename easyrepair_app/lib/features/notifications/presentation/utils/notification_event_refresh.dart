@@ -4,6 +4,7 @@
 /// cannot drift, and so event-to-refresh behaviour can be tested without
 /// booting Firebase or a Socket.IO connection.
 enum NotificationRefreshTarget {
+  conversations,
   bookings,
   bookingDetail,
   inspectionReport,
@@ -13,6 +14,14 @@ enum NotificationRefreshTarget {
   newJobs,
   workerProfile,
 }
+
+const _newJobEventKeys = {
+  'new_job',
+  'booking.standard.worker_listed',
+  'booking.inspection.available',
+  'booking.bidding.available',
+  'booking.inspection.find_other_ustaad_available',
+};
 
 const _assignedJobEventKeys = {'booking.assigned', 'bid.accepted'};
 
@@ -45,8 +54,11 @@ Set<NotificationRefreshTarget> notificationRefreshTargets(
   required bool isWorker,
   required bool hasBookingId,
 }) {
+  if (eventKey == 'chat.message') {
+    return const {NotificationRefreshTarget.conversations};
+  }
   if (isWorker) {
-    if (eventKey == 'new_job') {
+    if (_newJobEventKeys.contains(eventKey)) {
       return const {NotificationRefreshTarget.newJobs};
     }
     if (_assignedJobEventKeys.contains(eventKey)) {

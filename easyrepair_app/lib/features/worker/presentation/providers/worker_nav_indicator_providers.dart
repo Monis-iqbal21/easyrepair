@@ -1,17 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../chat/presentation/providers/chat_providers.dart';
 import 'worker_job_providers.dart';
 import 'worker_providers.dart';
 
-/// The Ustaad bottom-navigation indicators, in one place.
-///
-/// Every provider here is *derived* — none of them fetches, polls or holds
-/// state of its own. They read the same providers the screens behind each tab
-/// already read, so an indicator can never disagree with the screen it points
-/// at, and it refreshes through exactly the mechanisms those providers already
-/// have (socket pushes, FCM invalidation, app-resume invalidation in
-/// `app.dart`). Nothing new is scheduled.
+/// Navigation indicators derived from the existing conversation/profile/feed
+/// providers. A local 24-hour expiry updates the jobs count without a fetch.
 
 // ── Chat tab ─────────────────────────────────────────────────────────────────
 
@@ -27,11 +23,7 @@ import 'worker_providers.dart';
 ///
 /// While the list is loading or failed this is 0 — a badge is an alert, and an
 /// alert must never be guessed at.
-final workerUnreadConversationCountProvider = Provider<int>((ref) {
-  final conversations = ref.watch(chatConversationsProvider).valueOrNull;
-  if (conversations == null) return 0;
-  return conversations.where((c) => c.unreadCount > 0).length;
-});
+final workerUnreadConversationCountProvider = unreadConversationCountProvider;
 
 // ── My Jobs tab ──────────────────────────────────────────────────────────────
 
@@ -77,30 +69,48 @@ const newJobsUnreadWindow = Duration(hours: 24);
 /// Both sides refresh through mechanisms that already exist: the jobs list
 /// via its own fetch and `app.dart`'s FCM/socket/resume invalidation of
 /// `newJobsProvider`, the marker via the same invalidation of
-/// `workerProfileProvider`. Nothing here schedules anything.
+/// `workerProfileProvider`, plus the current visit marker confirmed by the server.
 final workerNewJobsUnreadCountProvider = Provider<int>((ref) {
-  // Watched for its lifecycle, not its value: this is what makes the feed
-  // load for an Ustaad sitting on Home or Chat who has not opened Naye Kaam
-  // yet. It adds no polling — `newJobsProvider` is not autoDispose, so its
-  // existing 30 s timer already runs for the rest of the session once the
-  // feed has been touched at all; this only moves when that starts.
+  // Keep the eligible feed available on every tab; updates are event-driven.
   ref.watch(newJobsProvider);
   // The value comes from the UNFILTERED list, so the screen's filter chip
   // cannot move the badge.
   final jobs = ref.watch(newJobsUnfilteredProvider);
   if (jobs.isEmpty) return 0;
 
-  final seenAt = ref
+  final persistedSeenAt = ref
       .watch(workerProfileProvider)
       .valueOrNull
       ?.newJobsSeenAt
       ?.toUtc();
-  final windowStart = DateTime.now().toUtc().subtract(newJobsUnreadWindow);
+  final localSeenAt = ref.watch(newJobsSeenAtOverrideProvider);
+  final seenAt =
+      localSeenAt != null &&
+          (persistedSeenAt == null || localSeenAt.isAfter(persistedSeenAt))
+      ? localSeenAt
+      : persistedSeenAt;
+  final now = DateTime.now().toUtc();
+  final windowStart = now.subtract(newJobsUnreadWindow);
   // Whichever cutoff is later wins: the 24h window caps how far back "new"
   // can reach, and the seen marker caps it further once the Ustaad has looked.
   final cutoff = (seenAt != null && seenAt.isAfter(windowStart))
       ? seenAt
       : windowStart;
 
-  return jobs.where((j) => j.createdAt.toUtc().isAfter(cutoff)).length;
+  final unread = jobs
+      .where((j) => j.createdAt.toUtc().isAfter(cutoff))
+      .toList();
+  if (unread.isNotEmpty) {
+    final oldest = unread
+        .map((j) => j.createdAt.toUtc())
+        .reduce((a, b) => a.isBefore(b) ? a : b);
+    // One local expiry, not a network poll: stop counting a job at 24 hours
+    // even if no other socket or lifecycle event arrives in the meantime.
+    final expiry = Timer(
+      oldest.add(newJobsUnreadWindow).difference(now),
+      ref.invalidateSelf,
+    );
+    ref.onDispose(expiry.cancel);
+  }
+  return unread.length;
 });

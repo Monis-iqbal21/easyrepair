@@ -1,10 +1,15 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 import '../config/app_config.dart';
 import '../constants/socket_events.dart';
+
+final chatSocketServiceProvider = Provider<ChatSocketService>(
+  (ref) => ChatSocketService.instance,
+);
 
 /// Singleton Socket.IO client for the /chat namespace.
 ///
@@ -62,6 +67,9 @@ class ChatSocketService {
       _messageDeletedCtrl.stream;
   Stream<Map<String, dynamic>> get onAppBanner => _appBannerCtrl.stream;
 
+  final _connectedCtrl = StreamController<void>.broadcast();
+  Stream<void> get onConnected => _connectedCtrl.stream;
+
   bool get isConnected => _socket?.connected ?? false;
 
   // ── Lifecycle ──────────────────────────────────────────────────────────────
@@ -87,6 +95,7 @@ class ChatSocketService {
     _socket!
       ..on('connect', (_) {
         debugPrint('[ChatSocket] connected');
+        _connectedCtrl.add(null);
         // Re-join every conversation room that was active before this
         // (re)connect — see _activeConversationIds doc comment above.
         for (final id in _activeConversationIds) {

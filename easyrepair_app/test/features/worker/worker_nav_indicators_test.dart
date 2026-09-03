@@ -336,11 +336,13 @@ void main() {
   group('the Nayi Shikayat tile is painted from the palette', () {
     testWidgets('the whole card is primary with onPrimary marks on it',
         (tester) async {
-      await _pump(tester, _overrides());
+      await _pump(tester, _overrides(newJobs: [
+        _newJob('fresh', createdAt: DateTime.now().toUtc()),
+      ]));
 
       expect(_hasBoxPainted(tester, _c.primary), isTrue);
       expect(_styleOf(tester, l10n.workerFindNewWork).color, _c.onPrimary);
-      expect(_styleOf(tester, l10n.workerViewNewJobs).color, _c.onPrimaryMuted);
+      expect(_styleOf(tester, l10n.workerNewComplaintsCount(1)).color, _c.onPrimaryMuted);
     });
 
     testWidgets('the tile beside it is untouched', (tester) async {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/widgets/navigation_count_badge.dart';
 import '../../../../core/l10n/l10n_extensions.dart';
 import '../../../../core/presentation/responsive_utils.dart';
 import '../../../../core/theme/app_semantic_colors.dart';
@@ -142,13 +143,13 @@ class WorkerBottomNavBar extends ConsumerWidget {
         final count = ref.watch(workerUnreadConversationCountProvider);
         if (count == 0) return const [];
         return [
-          Positioned(top: -4, right: -6, child: _CountBadge(count: count)),
+          Positioned(top: -4, right: -6, child: NavigationCountBadge(count: count)),
         ];
       case _NavIndicator.unreadNewJobCount:
         final count = ref.watch(workerNewJobsUnreadCountProvider);
         if (count == 0) return const [];
         return [
-          Positioned(top: -4, right: -6, child: _CountBadge(count: count)),
+          Positioned(top: -4, right: -6, child: NavigationCountBadge(count: count)),
         ];
       case _NavIndicator.ongoingJobDot:
         if (!ref.watch(workerHasOngoingJobProvider)) return const [];
@@ -173,41 +174,6 @@ enum _NavIndicator {
   /// My Jobs — a presence dot for "you have a job in hand right now". No
   /// number: an Ustaad works one job at a time, so a count would always read 1.
   ongoingJobDot,
-}
-
-/// The numeric pill. Sized from its own text and capped at "9+", so a busy
-/// inbox can never widen the tab it sits on.
-class _CountBadge extends StatelessWidget {
-  final int count;
-  const _CountBadge({required this.count});
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.semanticColors;
-    return Container(
-      constraints: const BoxConstraints(minWidth: 17),
-      height: 17,
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        // `urgent` is the attention accent, the same one the Home notification
-        // bell already uses for its count. The `surface` ring keeps the pill
-        // legible where it overlaps the icon beneath it.
-        color: c.urgent,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: c.surface, width: 1.5),
-      ),
-      child: Text(
-        count > 9 ? '9+' : '$count',
-        style: TextStyle(
-          fontSize: 10,
-          height: 1,
-          fontWeight: FontWeight.w700,
-          color: c.onPrimary,
-        ),
-      ),
-    );
-  }
 }
 
 /// The "job in hand" dot. `success`, not `urgent`: having work is a good

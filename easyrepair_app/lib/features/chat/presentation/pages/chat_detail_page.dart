@@ -55,6 +55,7 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
   static const _bottomThreshold = 80.0;
   static const _loadOlderThreshold = 120.0;
 
+  late final ChatSocketService _socket;
   final _controller = TextEditingController();
   final _inputFocusNode = FocusNode();
 
@@ -88,7 +89,8 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
   @override
   void initState() {
     super.initState();
-    ChatSocketService.instance.joinConversation(widget.conversationId);
+    _socket = ref.read(chatSocketServiceProvider);
+    _socket.joinConversation(widget.conversationId);
     // Reads the live list, so the note after a finished one is found against
     // the conversation as currently rendered — including after pagination
     // prepends an older page and shifts every index.
@@ -156,7 +158,7 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
     _inputFocusNode.dispose();
     _voicePlayback.dispose();
     _scrollController.dispose();
-    ChatSocketService.instance.leaveConversation(widget.conversationId);
+    _socket.leaveConversation(widget.conversationId);
     super.dispose();
   }
 
@@ -173,13 +175,13 @@ class _ChatDetailPageState extends ConsumerState<ChatDetailPage> {
     for (int i = messages.length - 1; i >= 0; i--) {
       final msg = messages[i];
       if (msg.senderUserId != currentUserId && msg.seenAt == null) {
-        ChatSocketService.instance.markSeen(widget.conversationId, msg.id);
+        _socket.markSeen(widget.conversationId, msg.id);
         markedAny = true;
       }
     }
     if (markedAny) {
-      // Clear chat unread counts and any related notification badges.
-      ref.invalidate(chatConversationsProvider);
+      // The conversations source refreshes on the persisted message_seen
+      // receipt. Do not race the server write with an immediate GET here.
       ref.invalidate(unreadNotificationCountProvider);
     }
   }
