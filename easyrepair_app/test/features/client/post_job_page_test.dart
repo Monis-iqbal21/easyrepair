@@ -65,13 +65,13 @@ const _inspectionOption = {
 
 const _standardOption = {
   AppLocale.english: 'Fixed-price services',
-  AppLocale.romanUrdu: 'Fixed-price services',
+  AppLocale.romanUrdu: 'Fixed price',
   AppLocale.urdu: 'مقررہ قیمت کی سروسز',
 };
 
 const _customOption = {
   AppLocale.english: 'Custom Work',
-  AppLocale.romanUrdu: 'Custom Kaam',
+  AppLocale.romanUrdu: 'Custom kaam',
   AppLocale.urdu: 'کسٹم کام',
 };
 
@@ -568,9 +568,9 @@ void main() {
         ),
         findsOneWidget,
       );
-      expect(find.text('Service ka poora address likhein'), findsOneWidget);
-      expect(find.text('Mojooda Location'), findsOneWidget);
-      expect(find.text('Map par chunain'), findsOneWidget);
+      expect(find.text('Poora pata likhein'), findsOneWidget);
+      expect(find.text('Current location'), findsOneWidget);
+      expect(find.text('Map par lagayein'), findsOneWidget);
       expect(find.text('Aage'), findsOneWidget);
     });
   });
@@ -698,7 +698,7 @@ void main() {
       await _goToLaneSelectStep(tester, locale: AppLocale.romanUrdu);
 
       for (final text in [
-        'Choose a booking option',
+        'Kaam kaise karwana hai?',
         'Service aur price pehle se fixed',
         'Booking se pehle final price dekhein.',
         'Services aur prices dekhein →',
@@ -707,7 +707,7 @@ void main() {
         'Ustaad masla check karke report aur final quote app mein bhejega.',
         'Kaam karwa liya to ye Rs 500 maaf — sirf repair ka rate dena hai.',
         'Inspection book karein →',
-        'Custom Kaam',
+        'Custom kaam',
         'Chhote repair, fitting ya replacement ki details aur photos bhejein.',
         'Qareebi Ustaads apne rates bhejenge.',
         'Kaam ki details dein →',
@@ -1185,7 +1185,7 @@ void main() {
         standardServices: _standardServices,
       );
 
-      expect(find.text('Fixed Price Services'), findsOneWidget);
+      expect(find.text('Fixed price services'), findsOneWidget);
       expect(find.text('Step 3 / 4 · Electrician'), findsOneWidget);
       expect(
         find.text('Ye rate final hai. Darwazay par nahi badlega.'),

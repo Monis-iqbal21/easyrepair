@@ -33,9 +33,9 @@ import '../../support/l10n_test_app.dart';
 const _romanUrdu = AppLocale.romanUrdu;
 
 // Copy taken from app_ur_Latn.arb — the locale these tests render in.
-const _fixedPriceLane = 'Fixed-price services';
+const _fixedPriceLane = 'Fixed price';
 const _inspectionLane = 'Inspection';
-const _biddingLane = 'Custom Kaam';
+const _biddingLane = 'Custom kaam';
 
 ServiceCategoryEntity _category({
   required String name,

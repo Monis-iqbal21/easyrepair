@@ -1,6 +1,6 @@
 Key,Screen/Context,English,Urdu,Roman Urdu,Notes
 languageSectionTitle,Settings / Language selector,Settings,سیٹنگز,Settings,Settings section heading above the language row
-languageRowLabel,Settings / Language selector,Language,زبان,Zaban,Settings row that opens the language selector
+languageRowLabel,Settings / Language selector,Language,زبان,Language,Settings row that opens the language selector
 languageSheetTitle,Settings / Language selector,Choose your language,اپنی زبان منتخب کریں,Apni zaban chunein,Title of the language selector bottom sheet
 authRoleQuestion,Authentication,What would you like to do?,آپ کیا کرنا چاہتے ہیں؟,Aap kya karna chahte hain?,Role selection screen heading
 authRoleSubtitle,Authentication,Choose an option,اپنا آپشن منتخب کریں,Aik chunein,Role selection screen supporting line under the heading
@@ -110,7 +110,7 @@ distanceMetersAway,Core / Distance formatting,{meters} m away,{meters} میٹر 
 distanceKmAway,Core / Distance formatting,{km} km away,{km} کلومیٹر دور,{km} km door,Placeholders: {km}
 distanceUnderOneKm,Core / Distance formatting,< 1 km away,1 کلومیٹر سے کم,1 km se kam,
 notificationsTitle,Notifications,Notifications,اطلاعات,Notifications,
-notificationsMarkAllRead,Notifications,Mark all read,سب پڑھا ہوا نشان زد کریں,Sab read mark karein,
+notificationsMarkAllRead,Notifications,Mark all read,سب پڑھا ہوا نشان زد کریں,Sab read kar dein,
 notificationsEmptyTitle,Notifications,No notifications yet,ابھی کوئی اطلاع نہیں,Abhi koi notification nahi,
 notificationsEmptySubtitle,Notifications,"You will be notified about job updates,
 reviews, and more.",کام کی اپ ڈیٹس، ریویوز اور دیگر معلومات یہاں نظر آئیں گی۔,"Kaam ki updates, reviews aur mazeed ki ittila aap ko di jayegi.",
@@ -225,7 +225,7 @@ postJobStepAddress,Uncategorised,Address,پتہ,Pata,
 postJobStepLaneSelection,Uncategorised,Choose Type,قسم منتخب کریں,Qisam Chunein,
 postJobStepDetails,Uncategorised,Details,تفصیلات,Tafseelat,
 postJobStepTimeSelection,Uncategorised,Time Selection,وقت کا انتخاب,Time ka intekhab,
-postJobStepIndicator,Uncategorised,Step {current} of {total}  ·  {title},مرحلہ {total} میں سے {current}  ·  {title},Step {total} mein se {current}  ·  {title},"Placeholders: {current}, {title}, {total}"
+postJobStepIndicator,Uncategorised,Step {current} of {total}  ·  {title},مرحلہ {total} میں سے {current}  ·  {title},Step {current} / {total}  ·  {title},"Placeholders: {current}, {title}, {total}"
 postJobProgressBarTime,Uncategorised,Time,وقت,Time,Short label under segment 4 of the booking-form progress bar
 postJobRecommendedBadge,Uncategorised,RECOMMENDED,بہتر,Behtar,Small badge on the inspection lane card in booking-form lane selection
 trackLiveBadge,Uncategorised,LIVE,لائیو,Live,Small badge shown over the live map on the Track Worker screen
@@ -300,9 +300,9 @@ slotEveningRange,Uncategorised,4 PM – 8 PM,شام 4 – رات 8,4 PM – 8 PM
 slotNightRange,Uncategorised,8 PM – 11 PM,رات 8 – رات 11,8 PM – 11 PM,
 postJobSelectDate,Uncategorised,Select date,تاریخ منتخب کریں,Date chunain,
 postJobLocationAdded,Uncategorised,Location added,لوکیشن شامل کر دی گئی,Location shamil kar di gayi,
-postJobCurrentLocation,Uncategorised,Current Location,موجودہ لوکیشن,Mojooda Location,
+postJobCurrentLocation,Uncategorised,Current Location,موجودہ لوکیشن,Current location,
 postJobMapLocationAdded,Uncategorised,Map location added,نقشے سے لوکیشن شامل کر دی گئی,Map se location shamil kar di gayi,
-postJobPickOnMap,Uncategorised,Pick on Map,نقشے پر منتخب کریں,Map par chunain,
+postJobPickOnMap,Uncategorised,Pick on Map,نقشے پر منتخب کریں,Map par lagayein,
 postJobMapPrefix,Uncategorised,Map: {address},نقشہ: {address},Map: {address},Placeholders: {address}
 postJobGpsPrefix,Uncategorised,Pinned Location,لوکیشن پن کر دی گئی,Pin Location,
 postJobBookService,Uncategorised,Book Service,سروس بک کریں,Service book karein,
@@ -953,7 +953,7 @@ customerAgreementIAgree,Uncategorised,I Agree,میں رضامند ہوں,Main Ra
 customerAgreementViewDownloadPdf,Uncategorised,View/Download PDF,پی ڈی ایف دیکھیں/ڈاؤن لوڈ کریں,PDF Dekhein/Download Karein,
 customerAgreementSaveFailed,Uncategorised,Acceptance could not be saved. Please try again.,منظوری محفوظ نہیں ہو سکی۔ دوبارہ کوشش کریں۔,Acceptance save nahi ho saki. Dobara koshish karein.,
 customerAgreementEffectiveDateNote,Uncategorised,Effective from the date you accept below.,یہ آپ کی نیچے دی گئی منظوری کی تاریخ سے مؤثر ہے۔,Yeh aap ki neeche di gayi acceptance ki tareekh se effective hai.,
-customerAgreementHistoryTitle,Uncategorised,Accepted Agreements,منظور شدہ معاہدے,Manzoor Shuda Muahiday,
+customerAgreementHistoryTitle,Uncategorised,Accepted Agreements,منظور شدہ معاہدے,Aap ke agreements,
 workerSubmittedDetails,Ustaad,Submitted Details,جمع کرائی گئی تفصیلات,Jama karai gayi tafseelat,
 workerViewSubmittedDetails,Ustaad,View Submitted Details,جمع کرائی گئی تفصیلات دیکھیں,Jama karai gayi tafseelat dekhein,
 workerDetailsReadOnlyNotice,Ustaad,Your profile is approved. These details are locked and cannot be changed.,آپ کی پروفائل منظور ہو چکی ہے۔ یہ تفصیلات مقفل ہیں اور تبدیل نہیں کی جا سکتیں۔,Aap ki profile manzoor ho chuki hai. Yeh tafseelat lock hain aur tabdeel nahi ki ja sakti.,

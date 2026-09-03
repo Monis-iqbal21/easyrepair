@@ -4329,7 +4329,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get languageSectionTitle => 'Settings';
 
   @override
-  String get languageRowLabel => 'Zaban';
+  String get languageRowLabel => 'Language';
 
   @override
   String get languageSheetTitle => 'Apni zaban chunein';
@@ -4994,7 +4994,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get notificationsTitle => 'Notifications';
 
   @override
-  String get notificationsMarkAllRead => 'Sab read mark karein';
+  String get notificationsMarkAllRead => 'Sab read kar dein';
 
   @override
   String get notificationsEmptyTitle => 'Abhi koi notification nahi';
@@ -5404,7 +5404,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String postJobStepIndicator(int current, int total, String title) {
-    return 'Step $total mein se $current  ·  $title';
+    return 'Step $current / $total  ·  $title';
   }
 
   @override
@@ -5674,13 +5674,13 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get postJobLocationAdded => 'Location shamil kar di gayi';
 
   @override
-  String get postJobCurrentLocation => 'Mojooda Location';
+  String get postJobCurrentLocation => 'Current location';
 
   @override
   String get postJobMapLocationAdded => 'Map se location shamil kar di gayi';
 
   @override
-  String get postJobPickOnMap => 'Map par chunain';
+  String get postJobPickOnMap => 'Map par lagayein';
 
   @override
   String postJobMapPrefix(String address) {
@@ -7979,7 +7979,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
       'Yeh aap ki neeche di gayi acceptance ki tareekh se effective hai.';
 
   @override
-  String get customerAgreementHistoryTitle => 'Manzoor Shuda Muahiday';
+  String get customerAgreementHistoryTitle => 'Aap ke agreements';
 
   @override
   String get customerAgreementHistoryEmptyTitle =>
@@ -8227,7 +8227,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get postJobCustomVoiceRequired =>
-      'Custom Kaam ke liye aage barhne se pehle voice note lagayen.';
+      'Custom kaam ke liye aage barhne se pehle voice note lagayein.';
 
   @override
   String get postJobCompleteAddressBeforeSaving =>
@@ -8320,7 +8320,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
       'Pehli booking hai — pata aik dafa likh dein. Aage se save ho sakta hai.';
 
   @override
-  String get postJobCompleteAddressLabel => 'Service ka poora address likhein';
+  String get postJobCompleteAddressLabel => 'Poora pata likhein';
 
   @override
   String get postJobAddressLandmarkHelper =>
@@ -8341,7 +8341,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get postJobMapPreviewEmpty => 'Map — pin lagane ke liye tap karein';
 
   @override
-  String get postJobLanePageTitle => 'Choose a booking option';
+  String get postJobLanePageTitle => 'Kaam kaise karwana hai?';
 
   @override
   String postJobLaneStepIndicator(String service) {
@@ -8349,7 +8349,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   }
 
   @override
-  String get postJobLaneFixedTitle => 'Fixed-price services';
+  String get postJobLaneFixedTitle => 'Fixed price';
 
   @override
   String get postJobLaneFixedSubtitle => 'Service aur price pehle se fixed';
@@ -8364,7 +8364,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get postJobLaneFixedCta => 'Services aur prices dekhein';
 
   @override
-  String get postJobFixedPricePageTitle => 'Fixed Price Services';
+  String get postJobFixedPricePageTitle => 'Fixed price services';
 
   @override
   String postJobFixedPriceStepIndicator(String service) {
@@ -8398,7 +8398,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get postJobLaneInspectionCta => 'Inspection book karein';
 
   @override
-  String get postJobLaneCustomTitle => 'Custom Kaam';
+  String get postJobLaneCustomTitle => 'Custom kaam';
 
   @override
   String get postJobLaneCustomBody =>
