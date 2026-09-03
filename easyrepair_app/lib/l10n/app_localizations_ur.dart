@@ -6438,10 +6438,10 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get searchBookingsHint => 'Bookings, services dhoondein...';
 
   @override
-  String get cancelReasonTitle => 'Booking Cancel Karne Ki Wajah';
+  String get cancelReasonTitle => 'Booking cancel karne ki wajah';
 
   @override
-  String get cancelReasonRequired => 'Barah-e-karam wajah batayein.';
+  String get cancelReasonRequired => 'Wajah batayein.';
 
   @override
   String get cancelReasonSelect => 'Wajah select karein';
@@ -7045,7 +7045,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get inspFormWhatWasIssueRequired => 'Masla kya nikla? *';
 
   @override
-  String get inspFormRecommendedRepair => 'Behtar Tareeqa';
+  String get inspFormRecommendedRepair => 'Behtar tareeqa';
 
   @override
   String get inspFormRecommendedRepairRequired => 'Behtar Tareeqa *';
@@ -7516,10 +7516,10 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get inspFormWarrantyOptional => 'Warranty / guarantee (optional)';
 
   @override
-  String get inspFormPartsTotal => 'Purzon ki kul raqam';
+  String get inspFormPartsTotal => 'Parts ka total';
 
   @override
-  String get inspFormLabour => 'Mazdoori';
+  String get inspFormLabour => 'Labour';
 
   @override
   String get inspFormMicPermanentlyDenied =>
