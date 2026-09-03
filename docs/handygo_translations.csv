@@ -163,11 +163,11 @@ authSkillsLoadFailed,Authentication,Skills could not load. Please try again.,م�
 authSkillRequired,Authentication,Please select a skill.,کوئی مہارت منتخب کریں۔,Skill select karein.,
 authConfirmNewPasswordButton,Authentication,Confirm New Password,نیا پاس ورڈ کنفرم کریں,Naya Password Confirm Karein,
 postJobOffersSoon,Uncategorised,You will start getting Ustaad offers within minutes.,چند ہی منٹ میں آپ کو استادوں کی آفرز ملنا شروع ہو جائیں گی۔,Chand hi minute mein aap ko Ustaad ki offers milna shuru ho jayengi.,
-postJobSelectDateTimeFirst,Uncategorised,Select date and time to continue.,آگے بڑھنے کے لیے تاریخ اور وقت منتخب کریں۔,Aage barhne ke liye date aur time chunain.,
+postJobSelectDateTimeFirst,Uncategorised,Select date and time to continue.,آگے بڑھنے کے لیے تاریخ اور وقت منتخب کریں۔,Aage barhne ke liye date aur time chunein.,
 postJobGoesLiveAt,Uncategorised,Job goes live at {time} on {date} — 1 hour before the Ustaad arrival time.,کام {date} کو {time} بجے لائیو ہوگا — استاد کے پہنچنے کے وقت سے ایک گھنٹہ پہلے۔,Kaam {date} ko {time} baje live hoga — Ustaad ke pohanchne ke waqt se ek ghanta pehle.,"Placeholders: {date}, {time}"
 postJobAddPhotoVideo,Uncategorised,Photo/Video,تصویر/ویڈیو,Photo/Video,
-postJobChoosePhoto,Uncategorised,Choose Photo,تصویر منتخب کریں,Photo chunain,
-postJobChooseVideo,Uncategorised,Choose Video - 30 sec,ویڈیو منتخب کریں - 30 سیکنڈ,Video chunain - 30 sec,
+postJobChoosePhoto,Uncategorised,Choose Photo,تصویر منتخب کریں,Photo chunein,
+postJobChooseVideo,Uncategorised,Choose Video - 30 sec,ویڈیو منتخب کریں - 30 سیکنڈ,Video chunein - 30 sec,
 postJobCamera,Uncategorised,Camera,کیمرہ,Camera,
 postJobRecordVideo30,Uncategorised,Record Video - 30 sec,ویڈیو بنائیں - 30 سیکنڈ,Video banayein - 30 sec,
 errorNoInternet,Core / Errors,No internet connection. Please check your network.,انٹرنیٹ کنکشن نہیں ہے۔ اپنا نیٹ ورک چیک کریں۔,Internet connection nahi hai. Apna network check karein.,
@@ -175,7 +175,7 @@ postJobSaveFailed,Uncategorised,Unable to save booking. Please try again.,بکن
 postJobBookingUpdatedTitle,Uncategorised,Booking Updated!,بکنگ اپ ڈیٹ ہو گئی!,Booking update ho gayi!,
 postJobBookingUpdatedBody,Uncategorised,Your booking details have been updated successfully.,آپ کی بکنگ کی تفصیلات کامیابی سے اپ ڈیٹ ہو گئی ہیں۔,Aap ki booking ki details kamyabi se update ho gayi hain.,
 postJobViewBooking,Uncategorised,View Booking,بکنگ دیکھیں,Booking dekhein,
-postJobSelectService,Uncategorised,Select Service,سروس منتخب کریں,Service chunain,
+postJobSelectService,Uncategorised,Select Service,سروس منتخب کریں,Service chunein,
 postJobServicesLoadFailed,Uncategorised,Failed to load services. Please restart the app.,سروسز لوڈ نہیں ہو سکیں۔ ایپ دوبارہ کھولیں۔,Services load nahi ho sakin. App dobara kholein.,
 postJobBookingType,Uncategorised,Booking Type,بکنگ کی قسم,Booking ki qism,
 postJobNormal,Uncategorised,Normal,عام,Normal,
@@ -197,21 +197,21 @@ postJobAttachmentsWillBeRemoved,Uncategorised,"{count, plural, =1{{count} existi
 postJobTapToRecord,Uncategorised,Tap to record — describe the problem in your own words,ریکارڈ کرنے کے لیے دبائیں — مسئلہ اپنے الفاظ میں بتائیں,Record karne ke liye dabayein — masla apne alfaz mein batayein,
 postJobService,Uncategorised,Service,سروس,Service,
 postJobWhatDoYouNeed,Uncategorised,What do you need?,آپ کو کیا چاہیے؟,Aap ko kya chahiye?,
-postJobChooseOneOption,Uncategorised,Choose one option,ایک آپشن چنیں,Ek option chunain,
+postJobChooseOneOption,Uncategorised,Choose one option,ایک آپشن چنیں,Ek option chunein,
 postJobUnderstandingIsOurJob,Uncategorised,Understanding the problem is our job — not yours.,مسئلہ سمجھنا ہمارا کام ہے — آپ کا نہیں۔,Masla samajhna hamara kaam hai — aapka nahi.,
 postJobStandardWork,Uncategorised,Standard work,اسٹینڈرڈ کام,Standard kaam,
 postJobStandardWorkSubtitle,Uncategorised,Work and price are clear upfront.,کام اور قیمت پہلے سے واضح۔,Kaam aur qeemat pehle se clear.,
 postJobIKnowThePart,Uncategorised,I know the exact part,مجھے پرزہ بالکل معلوم ہے,Mujhe exact part pata hai,
-postJobIKnowThePartSubtitle,Uncategorised,"Ustaads send their rate, you choose",استاد اپنا ریٹ بھیجیں گے، آپ چنیں,"Ustaad rate bhejenge, aap chunain",
-postJobIKnowThePartWarning,Uncategorised,"Only choose this if you are completely sure about the part. If it turns out wrong, the Ustaad visit is wasted and a new rate will apply.",یہ صرف اسی صورت میں چنیں جب پرزے کا پورا یقین ہو۔ غلط نکلا تو استاد کا چکر ضائع جائے گا اور نیا ریٹ لگے گا۔,Sirf tab chunain jab part ka poora yaqeen ho. Ghalat nikla to Ustaad ka chakkar zaya jayega aur naya rate lagega.,
+postJobIKnowThePartSubtitle,Uncategorised,"Ustaads send their rate, you choose",استاد اپنا ریٹ بھیجیں گے، آپ چنیں,"Ustaad rate bhejenge, aap chunein",
+postJobIKnowThePartWarning,Uncategorised,"Only choose this if you are completely sure about the part. If it turns out wrong, the Ustaad visit is wasted and a new rate will apply.",یہ صرف اسی صورت میں چنیں جب پرزے کا پورا یقین ہو۔ غلط نکلا تو استاد کا چکر ضائع جائے گا اور نیا ریٹ لگے گا۔,Sirf tab chunein jab part ka poora yaqeen ho. Ghalat nikla to Ustaad ka chakkar zaya jayega aur naya rate lagega.,
 postJobSomethingIsBroken,Uncategorised,Something is broken,کچھ خراب ہے,Kuch kharab hai,
 postJobDontKnowIssue,Uncategorised,I do not know what the problem is,مسئلہ کیا ہے، یہ معلوم نہیں,"Masla kya hai, ye pata nahi",
 postJobInspectionFeeTitle,Uncategorised,Inspection Fee,معائنہ فیس,Inspection fee,
-postJobChooseStandardService,Uncategorised,Choose a standard service,اسٹینڈرڈ سروس منتخب کریں,Standard service chunain,
+postJobChooseStandardService,Uncategorised,Choose a standard service,اسٹینڈرڈ سروس منتخب کریں,Standard service chunein,
 postJobServicesUnavailable,Uncategorised,Unable to load services. Please go back and try again.,سروسز لوڈ نہیں ہو سکیں۔ واپس جا کر دوبارہ کوشش کریں۔,Services load nahi ho sakin. Wapas jaa kar dobara koshish karein.,
-postJobSelectCategoryFirst,Uncategorised,Select a service category first.,پہلے سروس کیٹیگری منتخب کریں۔,Pehle service category chunain.,
+postJobSelectCategoryFirst,Uncategorised,Select a service category first.,پہلے سروس کیٹیگری منتخب کریں۔,Pehle service category chunein.,
 postJobStandardServicesUnavailable,Uncategorised,Unable to load standard services.,اسٹینڈرڈ سروسز لوڈ نہیں ہو سکیں۔,Standard services load nahi ho sakin.,
-postJobNoStandardServices,Uncategorised,No standard services are available for this service yet. Please choose another option above.,اس سروس کے لیے ابھی کوئی اسٹینڈرڈ سروس دستیاب نہیں۔ اوپر سے کوئی اور آپشن منتخب کریں۔,Is service ke liye abhi koi standard service available nahi. Ooper se koi aur option chunain.,
+postJobNoStandardServices,Uncategorised,No standard services are available for this service yet. Please choose another option above.,اس سروس کے لیے ابھی کوئی اسٹینڈرڈ سروس دستیاب نہیں۔ اوپر سے کوئی اور آپشن منتخب کریں۔,Is service ke liye abhi koi standard service available nahi. Ooper se koi aur option chunein.,
 postJobMultiSelectHint,Uncategorised,You can choose more than one service.,آپ ایک سے زیادہ سروسز چن سکتے ہیں۔,Aap ek se zyada services chun sakte hain.,
 postJobTotal,Uncategorised,Total,کل,Total,
 postJobInspectionFeeLower,Uncategorised,Inspection fee,معائنہ فیس,Inspection fee,
@@ -222,7 +222,7 @@ postJobWhatDoYouSeeHint,Uncategorised,e.g. AC turns on but room stays hot…,م�
 postJobBack,Uncategorised,Back,پیچھے,Wapas,
 postJobNext,Uncategorised,Next,آگے,Aage,
 postJobStepAddress,Uncategorised,Address,پتہ,Pata,
-postJobStepLaneSelection,Uncategorised,Choose Type,قسم منتخب کریں,Qisam Chunein,
+postJobStepLaneSelection,Uncategorised,Choose Type,قسم منتخب کریں,Qism chunein,
 postJobStepDetails,Uncategorised,Details,تفصیلات,Details,
 postJobStepTimeSelection,Uncategorised,Time Selection,وقت کا انتخاب,Time chunein,
 postJobStepIndicator,Uncategorised,Step {current} of {total}  ·  {title},مرحلہ {total} میں سے {current}  ·  {title},Step {current} / {total}  ·  {title},"Placeholders: {current}, {title}, {total}"
@@ -247,7 +247,7 @@ serviceMoversPackers,Uncategorised,Movers & Packers,مووَرز اینڈ پیک
 clientHomeNoServicesFound,Client,No services found,کوئی سروس نہیں ملی,Koi service nahi mili,
 clientHomeSearchResults,Client,Search Results,تلاش کے نتائج,Search ke nataij,
 clientHomeBookUrgently,Client,Book Urgently,فوری بک کریں,Foran book karein,
-clientHomeChooseServiceHelp,Client,Choose a service to get help right away.,فوری مدد کے لیے کوئی سروس منتخب کریں۔,Foran madad ke liye koi service chunain.,
+clientHomeChooseServiceHelp,Client,Choose a service to get help right away.,فوری مدد کے لیے کوئی سروس منتخب کریں۔,Foran madad ke liye koi service chunein.,
 clientHomeGreeting,Client,Hi {name} 👋,سلام {name} 👋,Hi {name} 👋,Placeholders: {name}
 clientHomeBeatTheHeat,Client,Beat the Karachi Heat ☀️,کراچی کی گرمی کا مقابلہ کریں ☀️,Karachi ki garmi ka muqabla karein ☀️,
 clientHomeAcServiceBanner,Client,"Get your AC serviced
@@ -298,7 +298,7 @@ slotMorningRange,Uncategorised,9 AM – 12 PM,صبح 9 – دوپہر 12,9 AM �
 slotAfternoonRange,Uncategorised,12 PM – 4 PM,دوپہر 12 – شام 4,12 PM – 4 PM,
 slotEveningRange,Uncategorised,4 PM – 8 PM,شام 4 – رات 8,4 PM – 8 PM,
 slotNightRange,Uncategorised,8 PM – 11 PM,رات 8 – رات 11,8 PM – 11 PM,
-postJobSelectDate,Uncategorised,Select date,تاریخ منتخب کریں,Date chunain,
+postJobSelectDate,Uncategorised,Select date,تاریخ منتخب کریں,Date chunein,
 postJobLocationAdded,Uncategorised,Location added,لوکیشن شامل کر دی گئی,Location shamil kar di gayi,
 postJobCurrentLocation,Uncategorised,Current Location,موجودہ لوکیشن,Current location,
 postJobMapLocationAdded,Uncategorised,Map location added,نقشے سے لوکیشن شامل کر دی گئی,Map se location shamil kar di gayi,
@@ -360,7 +360,7 @@ bookingFindAnotherUstaadFailed,Bookings,Failed to find another Ustaad.,دوسر�
 bookingFindAnotherUstaad,Bookings,Find Another Ustaad,دوسرا استاد تلاش کریں,Doosra Ustaad dhoondein,
 bookingSelectedServices,Bookings,Selected Services,منتخب سروسز,Muntakhab services,
 bookingServiceQuantity,Bookings,{name} x{quantity},{name} x{quantity},{name} x{quantity},"Placeholders: {name}, {quantity}"
-bookingChooseUstaad,Bookings,Choose Ustaad,استاد منتخب کریں,Ustaad chunain,
+bookingChooseUstaad,Bookings,Choose Ustaad,استاد منتخب کریں,Ustaad chunein,
 bookingSeeWorkerBids,Bookings,See Worker Offers,استادوں کی آفرز دیکھیں,Ustaad ki offers dekhein,
 bookingTrackWorker,Bookings,Track Worker,استاد کو ٹریک کریں,Ustaad ko track karein,
 bookingReviewWorker,Bookings,Review Worker,استاد کو ریویو دیں,Ustaad ko review dein,
@@ -473,7 +473,7 @@ chooseNoUstaadAvailable,Uncategorised,No verified Ustaad available right now.,ا
 chooseAutoRefreshNote,Uncategorised,The list refreshes automatically every 45 seconds.,فہرست ہر 45 سیکنڈ بعد خود بخود ریفریش ہوتی ہے۔,List har 45 seconds mein khud-ba-khud refresh hoti hai.,
 chooseRefreshOrWait,Uncategorised,You can refresh or wait a little — checking available Ustaads…,آپ ریفریش کر سکتے ہیں یا تھوڑا انتظار کریں — دستیاب استاد دیکھے جا رہے ہیں…,Aap refresh kar sakte hain ya thora intezar karein — available Ustaad check ho rahe hain…,
 chooseNewBadge,Uncategorised,New,نیا,Naya,
-chooseSelect,Uncategorised,Select,منتخب کریں,Chunain,
+chooseSelect,Uncategorised,Select,منتخب کریں,Chunein,
 chooseRecommended,Uncategorised,Recommended,تجویز کردہ,Recommended,
 chooseSkills,Uncategorised,Skills,مہارتیں,Skills,
 myBookingsLoadFailed,Uncategorised,Unable to load your bookings. Please try again.,آپ کی بکنگز لوڈ نہیں ہو سکیں۔ دوبارہ کوشش کریں۔,Aap ki bookings load nahi ho sakin. Dobara koshish karein.,
@@ -597,8 +597,8 @@ workerReviews,Ustaad,Reviews,ریویوز,Reviews,
 workerSeeAll,Ustaad,See all →,سب دیکھیں ←,Sab dekhein →,
 workerNoReviewsYet,Ustaad,No reviews yet,ابھی کوئی ریویو نہیں,Abhi koi review nahi,
 workerReviewsAppearHint,Ustaad,Client reviews will appear here after your completed jobs.,آپ کے مکمل کاموں کے بعد کلائنٹس کے ریویوز یہاں نظر آئیں گے۔,Aap ke mukammal kaamon ke baad clients ke reviews yahan nazar aayenge.,
-workerSelectMainSkill,Ustaad,Select your main skill,اپنی بنیادی مہارت منتخب کریں,Apni main skill chunain,
-workerSelectMainSkillHint,Ustaad,Select your main skill to start receiving work,کام ملنا شروع کرنے کے لیے اپنی بنیادی مہارت منتخب کریں,Kaam milna shuru karne ke liye apni main skill chunain,
+workerSelectMainSkill,Ustaad,Select your main skill,اپنی بنیادی مہارت منتخب کریں,Apni main skill chunein,
+workerSelectMainSkillHint,Ustaad,Select your main skill to start receiving work,کام ملنا شروع کرنے کے لیے اپنی بنیادی مہارت منتخب کریں,Kaam milna shuru karne ke liye apni main skill chunein,
 workerCategoriesLoadFailed,Ustaad,Failed to load categories: {error},کیٹیگریز لوڈ نہیں ہو سکیں: {error},Categories load nahi ho sakin: {error},Placeholders: {error}
 workerSkillsSaveFailed,Ustaad,Failed to save skills. Please try again.,مہارتیں محفوظ نہیں ہو سکیں۔ دوبارہ کوشش کریں۔,Skills save nahi ho sakin. Dobara koshish karein.,
 workerSaveAndGoOnline,Ustaad,Save & Go Online,محفوظ کریں اور آن لائن ہوں,Save karein aur online hon,
@@ -671,7 +671,7 @@ their reviews will appear here.","جب کلائنٹس آپ کے مکمل کام�
 wo yahan nazar aayenge.",
 reviewsRatingSummary,Reviews & ratings,"{rating} · {count, plural, =1{{count} review} other{{count} reviews}}",{rating} · {count} ریویوز,{rating} · {count} reviews,"Placeholders: {count}, {rating} | ICU plural — keep the plural syntax intact"
 reviewsHighestLowest,Reviews & ratings,Highest: {max} ★  ·  Lowest: {min} ★,زیادہ سے زیادہ: {max} ★  ·  کم سے کم: {min} ★,Highest: {max} ★  ·  Lowest: {min} ★,"Placeholders: {max}, {min}"
-inspFormChooseFromGallery,Uncategorised,Choose from Gallery,گیلری سے منتخب کریں,Gallery se chunain,
+inspFormChooseFromGallery,Uncategorised,Choose from Gallery,گیلری سے منتخب کریں,Gallery se chunein,
 inspFormSubmitted,Uncategorised,Report submitted. Waiting for client decision.,رپورٹ جمع ہو گئی۔ کلائنٹ کے فیصلے کا انتظار ہے۔,Report jama ho gayi. Client ke faisle ka intezar hai.,
 inspFormSubmitFailed,Uncategorised,Failed to submit report.,رپورٹ جمع نہیں ہو سکی۔,Report jama nahi ho saki.,
 inspFormWhatWasIssue,Uncategorised,What was the issue?,مسئلہ کیا نکلا؟,Masla kya nikla?,
@@ -1114,7 +1114,7 @@ timelineStepWorkCompleted,Client / Booking Detail timeline,Work completed,کام
 timelineStepInspectionCompleted,Client / Booking Detail timeline,Inspection completed,انسپیکشن مکمل,Inspection complete,INSPECTION step 5 - the inspection is finished
 timelineWaitingForUstaadTitle,Client / Booking Detail timeline,Waiting for an Ustaad,استاد کا انتظار,Ustaad ka intezaar,Shown instead of steps for a BIDDING job with nobody hired yet
 timelineWaitingForUstaadBody,Client / Booking Detail timeline,Work starts once you hire an Ustaad for this job.,جیسے ہی آپ اس کام کے لیے استاد ہائر کریں گے، کام شروع ہو جائے گا۔,"Jaise hi aap is kaam ke liye Ustaad hire karenge, kaam shuru ho jayega.",Explains that the timeline starts once an Ustaad is hired
-reportDetailsHelper,Client / Report a problem,A short description helps our team act on your report.,مختصر تفصیل سے ہماری ٹیم آپ کی شکایت پر جلد کارروائی کر سکتی ہے۔,Mukhtasar tafseel se hamari team aap ki shikayat par jald action le sakti hai.,Helper under the required description field on the report form
+reportDetailsHelper,Client / Report a problem,A short description helps our team act on your report.,مختصر تفصیل سے ہماری ٹیم آپ کی شکایت پر جلد کارروائی کر سکتی ہے۔,Thori si detail se hamari team aap ki shikayat par jald action le sakti hai.,Helper under the required description field on the report form
 reportDetailsRequiredError,Client / Report a problem,Please describe the problem in at least 10 characters.,براہِ کرم مسئلہ کم از کم 10 حروف میں بیان کریں۔,Barae meherbani masla kam az kam 10 harf mein bayan karein.,Shown when the description is missing or shorter than 10 characters
 workerPaymentPartsLabel,Ustaad / Job detail - Payment,Parts recovered,پرزہ جات کی رقم,Purza jaat ki raqam,Row label for the parts money recovered from the customer
 workerPaymentLabourLabel,Ustaad / Job detail - Payment,Labour received,مزدوری موصول,Mazdoori wasool,Row label for the labour money actually received

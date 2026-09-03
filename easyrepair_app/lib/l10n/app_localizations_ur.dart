@@ -5160,7 +5160,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get postJobSelectDateTimeFirst =>
-      'Aage barhne ke liye date aur time chunain.';
+      'Aage barhne ke liye date aur time chunein.';
 
   @override
   String postJobGoesLiveAt(String time, String date) {
@@ -5171,10 +5171,10 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get postJobAddPhotoVideo => 'Photo/Video';
 
   @override
-  String get postJobChoosePhoto => 'Photo chunain';
+  String get postJobChoosePhoto => 'Photo chunein';
 
   @override
-  String get postJobChooseVideo => 'Video chunain - 30 sec';
+  String get postJobChooseVideo => 'Video chunein - 30 sec';
 
   @override
   String get postJobCamera => 'Camera';
@@ -5201,7 +5201,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get postJobViewBooking => 'Booking dekhein';
 
   @override
-  String get postJobSelectService => 'Service chunain';
+  String get postJobSelectService => 'Service chunein';
 
   @override
   String get postJobServicesLoadFailed =>
@@ -5277,7 +5277,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get postJobWhatDoYouNeed => 'Aap ko kya chahiye?';
 
   @override
-  String get postJobChooseOneOption => 'Ek option chunain';
+  String get postJobChooseOneOption => 'Ek option chunein';
 
   @override
   String get postJobUnderstandingIsOurJob =>
@@ -5293,11 +5293,11 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get postJobIKnowThePart => 'Mujhe exact part pata hai';
 
   @override
-  String get postJobIKnowThePartSubtitle => 'Ustaad rate bhejenge, aap chunain';
+  String get postJobIKnowThePartSubtitle => 'Ustaad rate bhejenge, aap chunein';
 
   @override
   String get postJobIKnowThePartWarning =>
-      'Sirf tab chunain jab part ka poora yaqeen ho. Ghalat nikla to Ustaad ka chakkar zaya jayega aur naya rate lagega.';
+      'Sirf tab chunein jab part ka poora yaqeen ho. Ghalat nikla to Ustaad ka chakkar zaya jayega aur naya rate lagega.';
 
   @override
   String get postJobSomethingIsBroken => 'Kuch kharab hai';
@@ -5343,14 +5343,14 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   }
 
   @override
-  String get postJobChooseStandardService => 'Standard service chunain';
+  String get postJobChooseStandardService => 'Standard service chunein';
 
   @override
   String get postJobServicesUnavailable =>
       'Services load nahi ho sakin. Wapas jaa kar dobara koshish karein.';
 
   @override
-  String get postJobSelectCategoryFirst => 'Pehle service category chunain.';
+  String get postJobSelectCategoryFirst => 'Pehle service category chunein.';
 
   @override
   String get postJobStandardServicesUnavailable =>
@@ -5358,7 +5358,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get postJobNoStandardServices =>
-      'Is service ke liye abhi koi standard service available nahi. Ooper se koi aur option chunain.';
+      'Is service ke liye abhi koi standard service available nahi. Ooper se koi aur option chunein.';
 
   @override
   String get postJobMultiSelectHint =>
@@ -5395,7 +5395,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get postJobStepAddress => 'Pata';
 
   @override
-  String get postJobStepLaneSelection => 'Qisam Chunein';
+  String get postJobStepLaneSelection => 'Qism chunein';
 
   @override
   String get postJobStepDetails => 'Details';
@@ -5476,7 +5476,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get clientHomeChooseServiceHelp =>
-      'Foran madad ke liye koi service chunain.';
+      'Foran madad ke liye koi service chunein.';
 
   @override
   String clientHomeHello(String name) {
@@ -5669,7 +5669,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get slotNightRange => '8 PM – 11 PM';
 
   @override
-  String get postJobSelectDate => 'Date chunain';
+  String get postJobSelectDate => 'Date chunein';
 
   @override
   String get postJobLocationAdded => 'Location shamil kar di gayi';
@@ -5875,7 +5875,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   }
 
   @override
-  String get bookingChooseUstaad => 'Ustaad chunain';
+  String get bookingChooseUstaad => 'Ustaad chunein';
 
   @override
   String get bookingSeeWorkerBids => 'Ustaad ki offers dekhein';
@@ -6243,7 +6243,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get chooseNewBadge => 'Naya';
 
   @override
-  String get chooseSelect => 'Chunain';
+  String get chooseSelect => 'Chunein';
 
   @override
   String get chooseRecommended => 'Recommended';
@@ -6786,11 +6786,11 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
       'Aap ke mukammal kaamon ke baad clients ke reviews yahan nazar aayenge.';
 
   @override
-  String get workerSelectMainSkill => 'Apni main skill chunain';
+  String get workerSelectMainSkill => 'Apni main skill chunein';
 
   @override
   String get workerSelectMainSkillHint =>
-      'Kaam milna shuru karne ke liye apni main skill chunain';
+      'Kaam milna shuru karne ke liye apni main skill chunein';
 
   @override
   String workerCategoriesLoadFailed(String error) {
@@ -7029,7 +7029,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   }
 
   @override
-  String get inspFormChooseFromGallery => 'Gallery se chunain';
+  String get inspFormChooseFromGallery => 'Gallery se chunein';
 
   @override
   String get inspFormSubmitted =>
@@ -8332,7 +8332,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get postJobAddressUnresolved =>
-      'Yeh address nahi mila. Mazeed tafseel likhein ya map par chunain.';
+      'Yeh address nahi mila. Mazeed tafseel likhein ya map par chunein.';
 
   @override
   String get postJobAddressRequired => 'Aage barhne se pehle address likhein.';
@@ -8645,7 +8645,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get reportDetailsHelper =>
-      'Mukhtasar tafseel se hamari team aap ki shikayat par jald action le sakti hai.';
+      'Thori si detail se hamari team aap ki shikayat par jald action le sakti hai.';
 
   @override
   String get reportDetailsRequiredError =>
