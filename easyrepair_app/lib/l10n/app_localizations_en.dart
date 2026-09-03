@@ -1928,7 +1928,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chooseNewBadge => 'New';
 
   @override
-  String get chooseSelect => 'Chunain';
+  String get chooseSelect => 'Chunein';
 
   @override
   String get chooseRecommended => 'Recommended';
@@ -3938,7 +3938,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get postJobCustomVoiceRequired =>
-      'Add a voice note before continuing with Custom Kaam.';
+      'Add a voice note before continuing with Custom Work.';
 
   @override
   String get postJobCompleteAddressBeforeSaving =>

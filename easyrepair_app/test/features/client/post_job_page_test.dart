@@ -1515,7 +1515,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.text('Add a voice note before continuing with Custom Kaam.'),
+        find.text('Add a voice note before continuing with Custom Work.'),
         findsOneWidget,
       );
       expect(find.textContaining(_biddingMarker), findsOneWidget);

@@ -3534,7 +3534,7 @@ abstract class AppLocalizations {
   /// No description provided for @chooseSelect.
   ///
   /// In en, this message translates to:
-  /// **'Chunain'**
+  /// **'Chunein'**
   String get chooseSelect;
 
   /// No description provided for @chooseRecommended.
@@ -6972,7 +6972,7 @@ abstract class AppLocalizations {
   /// No description provided for @postJobCustomVoiceRequired.
   ///
   /// In en, this message translates to:
-  /// **'Add a voice note before continuing with Custom Kaam.'**
+  /// **'Add a voice note before continuing with Custom Work.'**
   String get postJobCustomVoiceRequired;
 
   /// No description provided for @postJobCompleteAddressBeforeSaving.
