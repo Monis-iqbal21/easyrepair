@@ -222,7 +222,7 @@ void main() {
         categories: [_appliances, _electrician, _legacyInspectionOnly],
       );
 
-      expect(find.text('OR'), findsNothing);
+      expect(find.text('ya'), findsNothing);
     });
   });
 
@@ -239,7 +239,7 @@ void main() {
       expect(find.text(_fixedPriceLane), findsOneWidget);
       expect(find.text(_inspectionLane), findsOneWidget);
       expect(find.text(_biddingLane), findsOneWidget);
-      expect(find.text('OR'), findsNothing);
+      expect(find.text('ya'), findsNothing);
     });
 
     testWidgets('a normal category leaves every lane enabled and unselected', (
@@ -343,7 +343,7 @@ void main() {
       expect(find.text(_fixedPriceLane), findsNothing);
       expect(find.text(_inspectionLane), findsNothing);
       expect(find.text(_biddingLane), findsNothing);
-      expect(find.text('OR'), findsNothing);
+      expect(find.text('ya'), findsNothing);
       expect(
         find.text('Services load nahi ho sakin. Wapas jaa kar dobara koshish karein.'),
         findsOneWidget,

@@ -247,7 +247,7 @@ void main() {
       _elapseResendCooldown();
       // The page repaints on its own 1s ticker, not on the provider.
       await tester.pump(const Duration(seconds: 2));
-      await tester.tap(find.text('Resend'));
+      await tester.tap(find.text('Dobara bhejein'));
       await _settle(tester);
 
       expect(repo.requests, hasLength(1));
@@ -339,7 +339,7 @@ void main() {
 
       _elapseResendCooldown();
       await tester.pump(const Duration(seconds: 2));
-      await tester.tap(find.text('Resend'));
+      await tester.tap(find.text('Dobara bhejein'));
       await _settle(tester);
 
       expect(

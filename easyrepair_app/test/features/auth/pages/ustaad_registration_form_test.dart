@@ -215,12 +215,12 @@ void main() {
           tester.widget<EditableText>(find.byType(EditableText).at(password));
       expect(field().obscureText, isTrue);
 
-      await tester.ensureVisible(find.text('Show'));
+      await tester.ensureVisible(find.text('Dikhayein'));
       await _settle(tester);
-      await tester.tap(find.text('Show'));
+      await tester.tap(find.text('Dikhayein'));
       await _settle(tester);
       expect(field().obscureText, isFalse);
-      expect(find.text('Hide'), findsOneWidget);
+      expect(find.text('Chupayein'), findsOneWidget);
       expect(
         _shown(tester, password),
         'password123',
@@ -236,10 +236,10 @@ void main() {
         reason: 'and it must still be editable once revealed',
       );
 
-      await tester.tap(find.text('Hide'));
+      await tester.tap(find.text('Chupayein'));
       await _settle(tester);
       expect(field().obscureText, isTrue);
-      expect(find.text('Show'), findsOneWidget);
+      expect(find.text('Dikhayein'), findsOneWidget);
       expect(_shown(tester, password), 'newpassword456');
       expect(repository.requestOtpCalls, 0);
       expect(find.byType(UstaadRegisterStep1Page), findsOneWidget);

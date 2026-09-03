@@ -255,7 +255,7 @@ void main() {
         find.text('Apna registered mobile number likhein.'),
         findsOneWidget,
       );
-      expect(find.text('Mobile Number'), findsOneWidget);
+      expect(find.text('Mobile number'), findsOneWidget);
       expect(find.text('OTP bhejein'), findsOneWidget);
       // Authentication only — nothing about identity is asked for.
       expect(find.text('Poora Naam · CNIC ke mutabiq'), findsNothing);
@@ -334,7 +334,7 @@ void main() {
       expect(find.textContaining('mein expire hoga'), findsOneWidget);
       // A code was just sent, so the backend cooldown is running.
       expect(find.textContaining('Code dobara bhejein ('), findsOneWidget);
-      expect(find.text('Resend'), findsNothing);
+      expect(find.text('Dobara bhejein'), findsNothing);
     });
 
     testWidgets('Verify is disabled below six digits and enabled at six',
@@ -373,7 +373,7 @@ void main() {
       await _toCodeStep(tester, repo: repo);
       expect(repo.forgotRequestCalls, 1);
 
-      await _tap(tester, find.text('Resend'));
+      await _tap(tester, find.text('Dobara bhejein'));
 
       expect(repo.forgotRequestCalls, 2);
       // Still on the code step — a resend must not skip ahead.

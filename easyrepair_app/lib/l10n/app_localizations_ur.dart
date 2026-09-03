@@ -4338,34 +4338,33 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get languageOnboardingTitle => 'Zabaan chunein';
 
   @override
-  String get languageOnboardingSubtitle =>
-      'Aap kis zabaan mein application use karna chahte hain?';
+  String get languageOnboardingSubtitle => 'App kis zabaan mein chalayein?';
 
   @override
-  String get languageOptionRomanUrduSubtitle =>
-      'Asaan alfaaz, samajhne mein aasan';
+  String get languageOptionRomanUrduSubtitle => 'Aasan alfaaz mein';
 
   @override
-  String get languageOptionEnglishSubtitle => 'Poori application English mein';
+  String get languageOptionEnglishSubtitle => 'Sab kuch English mein';
 
   @override
   String get authRoleQuestion => 'Aap kya karna chahte hain?';
 
   @override
-  String get authRoleSubtitle => 'Apna option select karein';
+  String get authRoleSubtitle => 'Aik chunein';
 
   @override
   String get authRoleClientTitle => 'Ghar ka kaam karwana hai';
 
   @override
   String get authRoleClientSubtitle =>
-      'Repair, service ya installation ke liye Ustaad book karein.';
+      'Marammat, safai ya nayi cheez lagwane ke liye Ustaad bulwayein.';
 
   @override
   String get authRoleWorkerTitle => 'Main Ustaad hoon';
 
   @override
-  String get authRoleWorkerSubtitle => 'Kaam lene ke liye register karein.';
+  String get authRoleWorkerSubtitle =>
+      'Kaam dhoondne ke liye account banayein.';
 
   @override
   String get authWorkerTypeQuestion => 'Aap pehle se HandyGo\nUstaad hain?';
@@ -4422,7 +4421,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get authFieldMobileNumber => 'Mobile number';
 
   @override
-  String get authFieldMobileNumberTitle => 'Mobile Number';
+  String get authFieldMobileNumberTitle => 'Mobile number';
 
   @override
   String get authFieldPassword => 'Password';
@@ -4445,14 +4444,15 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get authValidationPasswordTooShort =>
-      'Password kam az kam 8 characters ka hona chahiye.';
+      'Password kam az kam 8 harf ka ho.';
 
   @override
   String get authValidationConfirmPasswordRequired =>
       'Password dobara likhein.';
 
   @override
-  String get authValidationPasswordsDoNotMatch => 'Passwords match nahi karte.';
+  String get authValidationPasswordsDoNotMatch =>
+      'Dono password aik jaise nahi.';
 
   @override
   String get authClientLoginTitle => 'Ustaad book karne ke liye\nlogin karein';
@@ -4498,23 +4498,22 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get authErrorOtpSendFailed =>
-      'OTP filhal send nahi ho saka. Password se continue karein ya thori dair baad dobara koshish karein.';
+      'Code filhal nahi bheja ja saka. Password se aage barhein ya thori dair baad koshish karein.';
 
   @override
-  String get authClientLoginHeading => 'Welcome Back';
+  String get authClientLoginHeading => 'Khush aamdeed';
 
   @override
-  String get authClientLoginSubtitle =>
-      'Mobile number aur password se Login karein.';
+  String get authClientLoginSubtitle => 'Apna number aur password daalein.';
 
   @override
-  String get authClientPasswordShow => 'Show';
+  String get authClientPasswordShow => 'Dikhayein';
 
   @override
-  String get authClientPasswordHide => 'Hide';
+  String get authClientPasswordHide => 'Chupayein';
 
   @override
-  String get authClientForgotPassword => 'Forgot Password?';
+  String get authClientForgotPassword => 'Password bhool gaye?';
 
   @override
   String get authClientLoginButton => 'Login';
@@ -4523,14 +4522,14 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get authClientLoginAction => 'Login karein';
 
   @override
-  String get authClientOtpLoginButton => 'Login with OTP';
+  String get authClientOtpLoginButton => 'Code se login karein';
 
   @override
-  String get authClientLoginWithPassword => 'Login with Password';
+  String get authClientLoginWithPassword => 'Password se login karein';
 
   @override
   String get authClientNoAccountFound =>
-      'Is number ka Client account nahi mila. Create Account karein.';
+      'Is number ka Client account nahi mila. Account banayein.';
 
   @override
   String get ustaadLoginBrandSubtitle => 'HandyGo par kaam lein';
@@ -4727,31 +4726,30 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
       'CNIC, police verification aur reference check ki ijazat.';
 
   @override
-  String get authClientOtpHelp =>
-      'OTP aapke registered mobile number par bheja jayega.';
+  String get authClientOtpHelp => 'Code aap ke number par SMS aa jayega.';
 
   @override
-  String get authClientNewHere => 'New here?';
+  String get authClientNewHere => 'Naye hain?';
 
   @override
   String get authClientRegisterSubtitle =>
-      'Sirf aik dafa. Phir mobile number aur password se Login karein.';
+      'Sirf aik dafa. Aage se number aur password kaafi.';
 
   @override
-  String get authClientCreatePasswordLabel => 'Create password';
+  String get authClientCreatePasswordLabel => 'Password banayein';
 
   @override
   String get authClientPasswordHint => 'Kam az kam 8 harf';
 
   @override
-  String get authClientConfirmPasswordLabel => 'Confirm password';
+  String get authClientConfirmPasswordLabel => 'Password dobara';
 
   @override
   String get authClientConfirmPasswordHint => 'Password dobara likhein';
 
   @override
   String get authClientAddressNotice =>
-      'Address abhi nahi chahiye. Pehli booking ke waqt poochenge.';
+      'Pata abhi nahi chahiye. Pehli booking par poochenge.';
 
   @override
   String get authClientHaveAccount => 'Pehle se account hai?';
@@ -4763,7 +4761,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get authClientResendPrompt => 'Code nahi mila?';
 
   @override
-  String get authClientResendAction => 'Resend';
+  String get authClientResendAction => 'Dobara bhejein';
 
   @override
   String get authClientVerifyButton => 'Verify & Create Account';
@@ -4787,13 +4785,13 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   }
 
   @override
-  String get authClientCreateAccountTitle => 'Create Account';
+  String get authClientCreateAccountTitle => 'Account banayein';
 
   @override
-  String get authClientFullNameLabel => 'Full name';
+  String get authClientFullNameLabel => 'Poora naam';
 
   @override
-  String get authClientSendOtpButton => 'Send OTP';
+  String get authClientSendOtpButton => 'Code bhejein';
 
   @override
   String get authClientGoHome => 'Go to Home';
@@ -4910,7 +4908,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get weekdaySun => 'Itwar';
 
   @override
-  String get commonContinue => 'Aage Barhein';
+  String get commonContinue => 'Aage barhein';
 
   @override
   String get commonNotNow => 'Abhi nahi';
@@ -4964,10 +4962,10 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get generalCurrentPassword => 'Mojooda Password';
 
   @override
-  String get generalNewPassword => 'Naya Password';
+  String get generalNewPassword => 'Naya password';
 
   @override
-  String get generalConfirmNewPassword => 'Naya Password Dobara Likhein';
+  String get generalConfirmNewPassword => 'Naya password dobara';
 
   @override
   String get generalChangePasswordComingSoon =>
@@ -5120,16 +5118,16 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
       'Aap ka password kamyabi se badal diya gaya hai.';
 
   @override
-  String get authForgotPasswordPrompt => 'Apna registered mobile number dalain';
+  String get authForgotPasswordPrompt => 'Apna mobile number likhein';
 
   @override
-  String get authSendOtp => 'OTP Bhejein';
+  String get authSendOtp => 'Code bhejein';
 
   @override
   String get authNewPasswordRequired => 'Naya password likhein.';
 
   @override
-  String get authOr => 'OR';
+  String get authOr => 'ya';
 
   @override
   String get authLoginWithPassword => 'Password Se Login Karein';
@@ -7596,11 +7594,10 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get authForgotPasswordTitle => 'Password bhool\ngaye?';
 
   @override
-  String get authSetNewPasswordTitle => 'Naya password\nset karein';
+  String get authSetNewPasswordTitle => 'Naya password\nbanayein';
 
   @override
-  String get authEnterCodeSentToNumber =>
-      'Apne number par bheja gaya code darj karein.';
+  String get authEnterCodeSentToNumber => 'Number par aaya code likhein.';
 
   @override
   String get authForgotPasswordClientOnly =>

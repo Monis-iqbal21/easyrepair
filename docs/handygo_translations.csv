@@ -3,11 +3,11 @@ languageSectionTitle,Settings / Language selector,Settings,سیٹنگز,Settings
 languageRowLabel,Settings / Language selector,Language,زبان,Zaban,Settings row that opens the language selector
 languageSheetTitle,Settings / Language selector,Choose your language,اپنی زبان منتخب کریں,Apni zaban chunein,Title of the language selector bottom sheet
 authRoleQuestion,Authentication,What would you like to do?,آپ کیا کرنا چاہتے ہیں؟,Aap kya karna chahte hain?,Role selection screen heading
-authRoleSubtitle,Authentication,Choose an option,اپنا آپشن منتخب کریں,Apna option select karein,Role selection screen supporting line under the heading
+authRoleSubtitle,Authentication,Choose an option,اپنا آپشن منتخب کریں,Aik chunein,Role selection screen supporting line under the heading
 authRoleClientTitle,Authentication,I need a home service,گھر کا کام کروانا ہے,Ghar ka kaam karwana hai,Client role card title
-authRoleClientSubtitle,Authentication,"Book an Ustaad for repair, service, or installation.",مرمت، سروس یا انسٹالیشن کے لیے استاد بک کریں۔,"Repair, service ya installation ke liye Ustaad book karein.",Client role card supporting line
+authRoleClientSubtitle,Authentication,"Book an Ustaad for repair, service, or installation.",مرمت، سروس یا انسٹالیشن کے لیے استاد بک کریں۔,"Marammat, safai ya nayi cheez lagwane ke liye Ustaad bulwayein.",Client role card supporting line
 authRoleWorkerTitle,Authentication,I am an Ustaad,میں استاد ہوں,Main Ustaad hoon,Ustaad role card title
-authRoleWorkerSubtitle,Authentication,Register to find and accept jobs.,کام لینے کے لیے رجسٹر کریں۔,Kaam lene ke liye register karein.,Ustaad role card supporting line
+authRoleWorkerSubtitle,Authentication,Register to find and accept jobs.,کام لینے کے لیے رجسٹر کریں۔,Kaam dhoondne ke liye account banayein.,Ustaad role card supporting line
 authWorkerTypeQuestion,Authentication,"Are you already a HandyGo
 Ustaad?","کیا آپ پہلے سے HandyGo
 استاد ہیں؟","Aap pehle se HandyGo
@@ -26,16 +26,16 @@ authFieldFullName,Authentication,Your full name,آپ کا پورا نام,Aap ka
 authFieldFullNameShort,Authentication,Full name,پورا نام,Pura Naam,
 authHintFullName,Authentication,Enter your full name,اپنا پورا نام لکھیں,Aap ka poora naam,
 authFieldMobileNumber,Authentication,Mobile number,موبائل نمبر,Mobile number,
-authFieldMobileNumberTitle,Authentication,Mobile Number,موبائل نمبر,Mobile Number,
+authFieldMobileNumberTitle,Authentication,Mobile Number,موبائل نمبر,Mobile number,
 authFieldPassword,Authentication,Password,پاس ورڈ,Password,
 authFieldConfirmPassword,Authentication,Re-enter password,پاس ورڈ دوبارہ لکھیں,Password Dobara Likhein,
 authValidationNameRequired,Authentication,Please enter your name.,اپنا نام لکھیں۔,Poora naam likhein.,
 authValidationPhoneRequired,Authentication,Please enter a mobile number.,موبائل نمبر لکھیں۔,Mobile number likhein.,
 authValidationPhoneInvalid,Authentication,Please enter a valid Pakistani mobile number.,درست پاکستانی موبائل نمبر لکھیں۔,Sahi Pakistani mobile number likhein.,
 authValidationPasswordRequired,Authentication,Please enter a password.,پاس ورڈ لکھیں۔,Password likhein.,
-authValidationPasswordTooShort,Authentication,Password must be at least 8 characters.,پاس ورڈ کم از کم 8 حروف کا ہونا چاہیے۔,Password kam az kam 8 characters ka hona chahiye.,
+authValidationPasswordTooShort,Authentication,Password must be at least 8 characters.,پاس ورڈ کم از کم 8 حروف کا ہونا چاہیے۔,Password kam az kam 8 harf ka ho.,
 authValidationConfirmPasswordRequired,Authentication,Please re-enter your password.,پاس ورڈ دوبارہ لکھیں۔,Password dobara likhein.,
-authValidationPasswordsDoNotMatch,Authentication,Passwords do not match.,پاس ورڈ آپس میں نہیں ملتے۔,Passwords match nahi karte.,
+authValidationPasswordsDoNotMatch,Authentication,Passwords do not match.,پاس ورڈ آپس میں نہیں ملتے۔,Dono password aik jaise nahi.,
 authClientLoginTitle,Authentication,"Log in to book
 an Ustaad","استاد بک کرنے کے لیے
 لاگ اِن کریں","Ustaad book karne ke liye
@@ -52,7 +52,7 @@ authButtonContinueWithOtp,Authentication,Continue with OTP,OTP سے آگے بڑ�
 authButtonContinueWithPassword,Authentication,Continue with password,پاس ورڈ سے آگے بڑھیں,Password se Continue,
 authButtonUstaadLogin,Authentication,Ustaad Login,استاد لاگ اِن,Ustaad Login,
 authErrorGeneric,Authentication,Something went wrong.,کچھ غلط ہو گیا۔,Kuch ghalat ho gaya.,
-authErrorOtpSendFailed,Authentication,"The OTP could not be sent right now. Continue with your password, or try again shortly.",OTP فی الحال نہیں بھیجا جا سکا۔ پاس ورڈ سے آگے بڑھیں یا تھوڑی دیر بعد دوبارہ کوشش کریں۔,OTP filhal send nahi ho saka. Password se continue karein ya thori dair baad dobara koshish karein.,
+authErrorOtpSendFailed,Authentication,"The OTP could not be sent right now. Continue with your password, or try again shortly.",OTP فی الحال نہیں بھیجا جا سکا۔ پاس ورڈ سے آگے بڑھیں یا تھوڑی دیر بعد دوبارہ کوشش کریں۔,Code filhal nahi bheja ja saka. Password se aage barhein ya thori dair baad koshish karein.,
 commonCancel,Shared,Cancel,منسوخ کریں,Cancel,
 commonSave,Shared,Save,محفوظ کریں,Save,
 commonDelete,Shared,Delete,ڈیلیٹ کریں,Delete,
@@ -84,7 +84,7 @@ weekdayThu,Core / Date formatting,Thu,جمعرات,Jumeraat,
 weekdayFri,Core / Date formatting,Fri,جمعہ,Juma,
 weekdaySat,Core / Date formatting,Sat,ہفتہ,Hafta,
 weekdaySun,Core / Date formatting,Sun,اتوار,Itwar,
-commonContinue,Shared,Continue,آگے بڑھیں,Aage Barhein,
+commonContinue,Shared,Continue,آگے بڑھیں,Aage barhein,
 commonNotNow,Shared,Not now,ابھی نہیں,Abhi nahi,
 commonToday,Shared,Today,آج,Aaj,
 commonOpenSettings,Shared,Open Settings,سیٹنگز کھولیں,Settings kholein,
@@ -101,8 +101,8 @@ generalNamePhoneLocked,Settings / General info,Name and phone are managed by you
 generalSecuritySection,Settings / General info,Security,سیکیورٹی,Security,
 generalChangePassword,Settings / General info,Change Password,پاس ورڈ تبدیل کریں,Password Change Karein,
 generalCurrentPassword,Settings / General info,Current Password,موجودہ پاس ورڈ,Mojooda Password,
-generalNewPassword,Settings / General info,New Password,نیا پاس ورڈ,Naya Password,
-generalConfirmNewPassword,Settings / General info,Re-enter new password,نیا پاس ورڈ دوبارہ لکھیں,Naya Password Dobara Likhein,
+generalNewPassword,Settings / General info,New Password,نیا پاس ورڈ,Naya password,
+generalConfirmNewPassword,Settings / General info,Re-enter new password,نیا پاس ورڈ دوبارہ لکھیں,Naya password dobara,
 generalChangePasswordComingSoon,Settings / General info,Changing your password in the app is coming soon. Contact support if you need help right away.,ایپ میں پاس ورڈ تبدیل کرنے کی سہولت جلد آ رہی ہے۔ فوری مدد کے لیے سپورٹ سے رابطہ کریں۔,App mein password change karne ki sahulat jald aa rahi hai. Foran madad ke liye support se raabta karein.,
 generalUpdatePassword,Settings / General info,Update Password,پاس ورڈ اپ ڈیٹ کریں,Password Update Karein,
 distanceAtYourLocation,Core / Distance formatting,Right at your location,بالکل آپ کی جگہ پر,Bilkul aap ki jagah par,
@@ -147,10 +147,10 @@ monthNov,Core / Date formatting,Nov,نومبر,Nov,
 monthDec,Core / Date formatting,Dec,دسمبر,Dec,
 dateDayMonthYear,Core / Date formatting,{day} {month} {year},{day} {month} {year},{day} {month} {year},"Placeholders: {day}, {month}, {year}"
 authPasswordResetSuccess,Authentication,Your password has been changed successfully.,آپ کا پاس ورڈ کامیابی سے تبدیل ہو گیا ہے۔,Aap ka password kamyabi se badal diya gaya hai.,
-authForgotPasswordPrompt,Authentication,Enter your registered mobile number,اپنا رجسٹرڈ موبائل نمبر لکھیں,Apna registered mobile number dalain,
-authSendOtp,Authentication,Send OTP,OTP بھیجیں,OTP Bhejein,
+authForgotPasswordPrompt,Authentication,Enter your registered mobile number,اپنا رجسٹرڈ موبائل نمبر لکھیں,Apna mobile number likhein,
+authSendOtp,Authentication,Send OTP,OTP بھیجیں,Code bhejein,
 authNewPasswordRequired,Authentication,Please enter a new password.,نیا پاس ورڈ لکھیں۔,Naya password likhein.,
-authOr,Authentication,OR,یا پھر,OR,
+authOr,Authentication,OR,یا پھر,ya,
 authLoginWithPassword,Authentication,Log In With Password,پاس ورڈ سے لاگ اِن کریں,Password Se Login Karein,
 authWorkerRegisterTitle,Authentication,"Create a new Ustaad
 account","نیا استاد اکاؤنٹ
@@ -846,8 +846,8 @@ gaye?","Forgot-password screen, step 1 heading"
 authSetNewPasswordTitle,Authentication,"Set a new
 password","نیا پاس ورڈ
 سیٹ کریں","Naya password
-set karein","Forgot-password screen, step 2 heading"
-authEnterCodeSentToNumber,Authentication,Enter the code sent to your number.,اپنے نمبر پر بھیجا گیا کوڈ درج کریں۔,Apne number par bheja gaya code darj karein.,"Forgot-password screen, step 2 subtitle"
+banayein","Forgot-password screen, step 2 heading"
+authEnterCodeSentToNumber,Authentication,Enter the code sent to your number.,اپنے نمبر پر بھیجا گیا کوڈ درج کریں۔,Number par aaya code likhein.,"Forgot-password screen, step 2 subtitle"
 authForgotPasswordClientOnly,Authentication,For Client accounts only. A code will be sent to the registered number.,صرف کلائنٹ اکاؤنٹ کے لیے۔ رجسٹرڈ نمبر پر کوڈ بھیجا جائے گا۔,Sirf Client account ke liye. Registered number par code bheja jayega.,Client forgot-password screen subtitle
 authForgotPasswordWorkerOnly,Authentication,For Ustaad accounts only. A code will be sent to the registered number.,صرف استاد اکاؤنٹ کے لیے۔ رجسٹرڈ نمبر پر کوڈ بھیجا جائے گا۔,Sirf Ustaad account ke liye. Registered number par code bheja jayega.,Ustaad forgot-password screen subtitle
 authErrorCodeSendFailed,Authentication,The code could not be sent.,کوڈ نہیں بھیجا جا سکا۔,Code bhejne mein masla hua.,Snackbar when an OTP request fails
@@ -996,42 +996,42 @@ aboutAppDescription,About HandyGo page,HandyGo connects clients with nearby veri
 aboutWebsiteLabel,About HandyGo page,Website,ویب سائٹ,Website,Label above the official HandyGo website link on the About page
 aboutVersionValue,About HandyGo page / Settings,Version {version} ({build}),ورژن {version} ({build}),Version {version} ({build}),Runtime app version/build shown on the About page and Settings row
 languageOnboardingTitle,Onboarding / Language selection,Choose Language,زبان منتخب کریں,Zabaan chunein,Heading of the onboarding language screen shown after the Welcome screen
-languageOnboardingSubtitle,Onboarding / Language selection,Which language would you like to use the app in?,آپ کس زبان میں ایپ استعمال کرنا چاہتے ہیں؟,Aap kis zabaan mein application use karna chahte hain?,Supporting line under the heading
-languageOptionRomanUrduSubtitle,Onboarding / Language selection,"Simple words, easy to understand",آسان الفاظ، سمجھنے میں آسان,"Asaan alfaaz, samajhne mein aasan",Supporting line on the Roman Urdu card
-languageOptionEnglishSubtitle,Onboarding / Language selection,Full application in English,پوری ایپ انگریزی میں,Poori application English mein,Supporting line on the English card
+languageOnboardingSubtitle,Onboarding / Language selection,Which language would you like to use the app in?,آپ کس زبان میں ایپ استعمال کرنا چاہتے ہیں؟,App kis zabaan mein chalayein?,Supporting line under the heading
+languageOptionRomanUrduSubtitle,Onboarding / Language selection,"Simple words, easy to understand",آسان الفاظ، سمجھنے میں آسان,Aasan alfaaz mein,Supporting line on the Roman Urdu card
+languageOptionEnglishSubtitle,Onboarding / Language selection,Full application in English,پوری ایپ انگریزی میں,Sab kuch English mein,Supporting line on the English card
 serviceAppliancesRepair,Client home / Service categories,Appliances Repair,گھریلو آلات کی مرمت,Appliances Repair,Inspection-only service category (Rs. 500 inspection fee)
-authClientLoginHeading,Client authentication,Welcome Back,خوش آمدید,Welcome Back,Client login heading
-authClientLoginSubtitle,Client authentication,Login with your mobile number and password.,موبائل نمبر اور پاس ورڈ سے لاگ ان کریں۔,Mobile number aur password se Login karein.,Client login supporting line
-authClientPasswordShow,Client authentication,Show,دکھائیں,Show,In-field action that reveals the typed password
-authClientPasswordHide,Client authentication,Hide,چھپائیں,Hide,Action that obscures a currently visible password
-authClientForgotPassword,Client authentication,Forgot Password?,پاس ورڈ بھول گئے؟,Forgot Password?,Client login link to password reset
+authClientLoginHeading,Client authentication,Welcome Back,خوش آمدید,Khush aamdeed,Client login heading
+authClientLoginSubtitle,Client authentication,Login with your mobile number and password.,موبائل نمبر اور پاس ورڈ سے لاگ ان کریں۔,Apna number aur password daalein.,Client login supporting line
+authClientPasswordShow,Client authentication,Show,دکھائیں,Dikhayein,In-field action that reveals the typed password
+authClientPasswordHide,Client authentication,Hide,چھپائیں,Chupayein,Action that obscures a currently visible password
+authClientForgotPassword,Client authentication,Forgot Password?,پاس ورڈ بھول گئے؟,Password bhool gaye?,Client login link to password reset
 authClientLoginButton,Client authentication,Login,لاگ ان,Login,Client login primary button
 authClientLoginAction,Client authentication,Login,لاگ ان کریں,Login karein,Client registration footer action back to login
-authClientOtpLoginButton,Client authentication,Login with OTP,OTP سے لاگ ان کریں,Login with OTP,"Client login secondary button, opens OTP login"
-authClientOtpHelp,Client authentication,An OTP will be sent to your registered mobile number.,OTP آپ کے رجسٹرڈ موبائل نمبر پر بھیجا جائے گا۔,OTP aapke registered mobile number par bheja jayega.,Helper line under the OTP login button
-authClientNewHere,Client authentication,New here?,نئے ہیں؟,New here?,Client login footer prompt before Create Account
-authClientRegisterSubtitle,Client authentication,"Create your account once. After that, login with your mobile number and password.",صرف ایک بار۔ اس کے بعد موبائل نمبر اور پاس ورڈ سے لاگ ان کریں۔,Sirf aik dafa. Phir mobile number aur password se Login karein.,Client registration step 1 supporting line
-authClientCreatePasswordLabel,Client authentication,Create password,پاس ورڈ بنائیں,Create password,Client registration new-password label
+authClientOtpLoginButton,Client authentication,Login with OTP,OTP سے لاگ ان کریں,Code se login karein,"Client login secondary button, opens OTP login"
+authClientOtpHelp,Client authentication,An OTP will be sent to your registered mobile number.,OTP آپ کے رجسٹرڈ موبائل نمبر پر بھیجا جائے گا۔,Code aap ke number par SMS aa jayega.,Helper line under the OTP login button
+authClientNewHere,Client authentication,New here?,نئے ہیں؟,Naye hain?,Client login footer prompt before Create Account
+authClientRegisterSubtitle,Client authentication,"Create your account once. After that, login with your mobile number and password.",صرف ایک بار۔ اس کے بعد موبائل نمبر اور پاس ورڈ سے لاگ ان کریں۔,Sirf aik dafa. Aage se number aur password kaafi.,Client registration step 1 supporting line
+authClientCreatePasswordLabel,Client authentication,Create password,پاس ورڈ بنائیں,Password banayein,Client registration new-password label
 authClientPasswordHint,Client authentication,At least 8 characters,کم از کم 8 حروف,Kam az kam 8 harf,Client registration new-password placeholder
-authClientConfirmPasswordLabel,Client authentication,Confirm password,پاس ورڈ کی تصدیق کریں,Confirm password,Client registration confirm-password label
+authClientConfirmPasswordLabel,Client authentication,Confirm password,پاس ورڈ کی تصدیق کریں,Password dobara,Client registration confirm-password label
 authClientConfirmPasswordHint,Client authentication,Enter your password again,پاس ورڈ دوبارہ لکھیں,Password dobara likhein,Client registration confirm-password placeholder
-authClientAddressNotice,Client authentication,We do not need your address yet. We will ask for it when you make your first booking.,ابھی پتہ درکار نہیں۔ پہلی بکنگ کے وقت پوچھیں گے۔,Address abhi nahi chahiye. Pehli booking ke waqt poochenge.,Client registration reassurance box about address
+authClientAddressNotice,Client authentication,We do not need your address yet. We will ask for it when you make your first booking.,ابھی پتہ درکار نہیں۔ پہلی بکنگ کے وقت پوچھیں گے۔,Pata abhi nahi chahiye. Pehli booking par poochenge.,Client registration reassurance box about address
 authClientHaveAccount,Client authentication,Already have an account?,پہلے سے اکاؤنٹ ہے؟,Pehle se account hai?,Client registration footer prompt before the login action
 authClientVerifyHeading,Client authentication,Verify Mobile Number,موبائل نمبر کی تصدیق کریں,Verify Mobile Number,Client registration OTP heading
 authClientVerifySentTo,Client authentication,A {count}-digit code was sent to +92 {phone}.,{count} ہندسوں کا کوڈ +92 {phone} پر بھیجا گیا۔,{count}-digit code +92 {phone} par bheja gaya.,count is the OTP length the backend issues; phone is the grouped national number
 authClientResendPrompt,Client authentication,Didn't receive the code?,کوڈ نہیں ملا؟,Code nahi mila?,Client registration OTP resend prompt
-authClientResendAction,Client authentication,Resend,دوبارہ بھیجیں,Resend,Client registration OTP resend action
+authClientResendAction,Client authentication,Resend,دوبارہ بھیجیں,Dobara bhejein,Client registration OTP resend action
 authClientVerifyButton,Client authentication,Verify & Create Account,تصدیق کرکے اکاؤنٹ بنائیں,Verify & Create Account,Client registration OTP primary button
 authClientReadyHeading,Client authentication,Your account is ready,اکاؤنٹ تیار ہے,Account ready hai,Client registration success heading
 authClientReadySubtitle,Client authentication,Welcome to HandyGo. You can now book a service.,HandyGo میں خوش آمدید۔ اب آپ سروس بک کر سکتے ہیں۔,Welcome to HandyGo. Ab aap service book kar sakte hain.,Client registration success supporting line
 authClientAccountCardLabel,Client authentication,YOUR ACCOUNT,آپ کا اکاؤنٹ,AAP KA ACCOUNT,Label above the new account details on the success screen
 authClientRoleCustomer,Client authentication,Customer,کسٹمر,Customer,Role shown beside the phone number on the success screen
-authClientCreateAccountTitle,Client authentication,Create Account,اکاؤنٹ بنائیں,Create Account,Client registration heading / login footer action
-authClientFullNameLabel,Client authentication,Full name,پورا نام,Full name,Client full-name field label
-authClientSendOtpButton,Client authentication,Send OTP,OTP بھیجیں,Send OTP,Client registration primary button
+authClientCreateAccountTitle,Client authentication,Create Account,اکاؤنٹ بنائیں,Account banayein,Client registration heading / login footer action
+authClientFullNameLabel,Client authentication,Full name,پورا نام,Poora naam,Client full-name field label
+authClientSendOtpButton,Client authentication,Send OTP,OTP بھیجیں,Code bhejein,Client registration primary button
 authClientGoHome,Client authentication,Go to Home,ہوم پر جائیں,Go to Home,Client registration success primary button
-authClientLoginWithPassword,Client authentication,Login with Password,پاس ورڈ سے لاگ ان کریں,Login with Password,Client login action that returns the page to password mode
-authClientNoAccountFound,Client authentication,No Client account was found for this number. Create an account.,اس نمبر کا کلائنٹ اکاؤنٹ نہیں ملا۔ اکاؤنٹ بنائیں۔,Is number ka Client account nahi mila. Create Account karein.,Client OTP login: no Client account for this number
+authClientLoginWithPassword,Client authentication,Login with Password,پاس ورڈ سے لاگ ان کریں,Password se login karein,Client login action that returns the page to password mode
+authClientNoAccountFound,Client authentication,No Client account was found for this number. Create an account.,اس نمبر کا کلائنٹ اکاؤنٹ نہیں ملا۔ اکاؤنٹ بنائیں۔,Is number ka Client account nahi mila. Account banayein.,Client OTP login: no Client account for this number
 ustaadLoginBrandSubtitle,Ustaad authentication,Work with HandyGo,HandyGo کے ساتھ کام کریں,HandyGo par kaam lein,Supporting line beside the Ustaad header
 ustaadLoginSubtitle,Ustaad authentication,Login with your mobile number to find work.,کام لینے کے لیے اپنے نمبر سے لاگ ان کریں۔,Kaam lene ke liye apne number se Login karein.,Ustaad login supporting line
 ustaadLoginInfoBox,Ustaad authentication,Every Ustaad's CNIC is verified. Approval is usually completed within 24 hours after registration.,ہر استاد کا شناختی کارڈ تصدیق ہوتا ہے۔ رجسٹریشن کے بعد 24 گھنٹے میں منظوری۔,Har Ustaad ka CNIC verify hota hai. Registration ke baad 24 ghante mein approval.,Reassurance box on the Ustaad login screen
