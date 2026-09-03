@@ -271,7 +271,7 @@ void main() {
 
       // While the call is open the CTA shows a spinner and reports itself
       // disabled — the first half of the guard.
-      expect(find.text('Verify & Create Account'), findsNothing);
+      expect(find.text('Verify kar ke account banayein'), findsNothing);
       expect(
         tester.widget<ElevatedButton>(find.byType(ElevatedButton).first)
             .onPressed,

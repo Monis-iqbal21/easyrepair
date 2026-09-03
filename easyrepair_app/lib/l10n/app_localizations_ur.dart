@@ -4696,7 +4696,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get ustaadForgotNewPasswordHeading => 'Naya password banayein';
 
   @override
-  String get ustaadConfirmPasswordLabel => 'Confirm Password';
+  String get ustaadConfirmPasswordLabel => 'Confirm password';
 
   @override
   String get ustaadChangePasswordButton => 'Password change karein';
@@ -4711,7 +4711,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get ustaadGoToLoginButton => 'Login par jayein';
 
   @override
-  String get ustaadNewPasswordLabel => 'New Password';
+  String get ustaadNewPasswordLabel => 'New password';
 
   @override
   String get ustaadAgreementGeneralSummary =>
@@ -4755,7 +4755,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get authClientHaveAccount => 'Pehle se account hai?';
 
   @override
-  String get authClientVerifyHeading => 'Verify Mobile Number';
+  String get authClientVerifyHeading => 'Number verify karein';
 
   @override
   String get authClientResendPrompt => 'Code nahi mila?';
@@ -4764,7 +4764,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get authClientResendAction => 'Dobara bhejein';
 
   @override
-  String get authClientVerifyButton => 'Verify & Create Account';
+  String get authClientVerifyButton => 'Verify kar ke account banayein';
 
   @override
   String get authClientReadyHeading => 'Account ready hai';
@@ -4794,7 +4794,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get authClientSendOtpButton => 'Code bhejein';
 
   @override
-  String get authClientGoHome => 'Go to Home';
+  String get authClientGoHome => 'Home par jayein';
 
   @override
   String get commonCancel => 'Cancel';
@@ -4946,7 +4946,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get generalLastName => 'Aakhri Naam';
 
   @override
-  String get generalPhoneNumber => 'Phone Number';
+  String get generalPhoneNumber => 'Phone number';
 
   @override
   String get generalNamePhoneLocked =>
@@ -5565,7 +5565,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get settingsSectionLegal => 'Legal';
 
   @override
-  String get settingsSectionDangerZone => 'Danger Zone';
+  String get settingsSectionDangerZone => 'Danger zone';
 
   @override
   String get settingsPrivacyPolicy => 'Privacy Policy';
@@ -5574,7 +5574,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get settingsTermsConditions => 'Terms & Conditions';
 
   @override
-  String get profilePhotoTitle => 'Profile Photo';
+  String get profilePhotoTitle => 'Profile photo';
 
   @override
   String get commonGallery => 'Gallery';
@@ -5768,7 +5768,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   }
 
   @override
-  String get bookingVoiceNote => 'Voice Note';
+  String get bookingVoiceNote => 'Voice note';
 
   @override
   String get bookingPricing => 'Qeemat';
@@ -5965,7 +5965,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get trackDialerFailed => 'Phone dialer nahi khul saka';
 
   @override
-  String get trackAssignedWorkerCaps => 'ASSIGN KIYA GAYA USTAAD';
+  String get trackAssignedWorkerCaps => 'AAP KA USTAAD';
 
   @override
   String get trackCall => 'Call';
@@ -6009,7 +6009,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get trackStepReviewPending => 'Review baqi';
 
   @override
-  String get trackJobProgress => 'Kaam ki pesh raft';
+  String get trackJobProgress => 'Kaam ka progress';
 
   @override
   String get trackLoadFailedShort => 'Tracking load nahi ho saki';
@@ -6082,7 +6082,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
       'Inspection isi Ustaad ne mukammal kiya.';
 
   @override
-  String get discoveryViewInspectionReport => 'Inspection Report Dekhein';
+  String get discoveryViewInspectionReport => 'Inspection report dekhein';
 
   @override
   String get discoveryHireAgain => 'Dobara Hire Karein';
@@ -6563,7 +6563,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get trackHeadlineUstaadArrived => 'Ustaad Arrived';
 
   @override
-  String get trackHeadlineWorkInProgress => 'Work In Progress';
+  String get trackHeadlineWorkInProgress => 'Kaam chal raha hai';
 
   @override
   String get trackHeadlineHired => 'Hire ho gaye ✓';
@@ -8135,7 +8135,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get settingsAboutTitle => 'HandyGo Ke Baare Mein';
 
   @override
-  String get settingsAppVersionTitle => 'App Version';
+  String get settingsAppVersionTitle => 'App version';
 
   @override
   String get aboutAppDescription =>

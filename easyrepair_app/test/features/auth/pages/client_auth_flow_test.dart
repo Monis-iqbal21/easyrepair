@@ -66,15 +66,15 @@ const _ru = (
   sendOtp: 'Code bhejein',
   haveAccount: 'Pehle se account hai?',
   loginAction: 'Login karein',
-  verifyHeading: 'Verify Mobile Number',
+  verifyHeading: 'Number verify karein',
   resendPrompt: 'Code nahi mila?',
   resend: 'Dobara bhejein',
-  verifyButton: 'Verify & Create Account',
+  verifyButton: 'Verify kar ke account banayein',
   readyHeading: 'Account ready hai',
   readySubtitle: 'Welcome to HandyGo. Ab aap service book kar sakte hain.',
   accountCardLabel: 'AAP KA ACCOUNT',
   customer: 'Customer',
-  goHome: 'Go to Home',
+  goHome: 'Home par jayein',
 );
 
 const _en = (

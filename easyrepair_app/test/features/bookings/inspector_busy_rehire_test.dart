@@ -195,7 +195,7 @@ void main() {
       tester,
     ) async {
       await pumpBiddingPage(tester);
-      expect(find.text('Inspection Report Dekhein'), findsOneWidget);
+      expect(find.text('Inspection report dekhein'), findsOneWidget);
     });
 
     // ── #5/#6 Busy inspector: message shown, list and bids preserved ───────

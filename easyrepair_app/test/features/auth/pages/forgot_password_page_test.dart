@@ -434,8 +434,8 @@ void main() {
       await toPasswordStep(tester);
 
       expect(find.text('Naya password banayein'), findsOneWidget);
-      expect(find.text('New Password'), findsOneWidget);
-      expect(find.text('Confirm Password'), findsOneWidget);
+      expect(find.text('New password'), findsOneWidget);
+      expect(find.text('Confirm password'), findsOneWidget);
       expect(find.text('Password change karein'), findsOneWidget);
     });
 

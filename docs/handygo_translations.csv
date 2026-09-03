@@ -96,7 +96,7 @@ generalInfoTitle,Settings / General info,General,جنرل,General,
 generalAccountSection,Settings / General info,Account Info,اکاؤنٹ کی معلومات,Account ki maloomat,
 generalFirstName,Settings / General info,First Name,پہلا نام,Pehla Naam,
 generalLastName,Settings / General info,Last Name,آخری نام,Aakhri Naam,
-generalPhoneNumber,Settings / General info,Phone Number,فون نمبر,Phone Number,
+generalPhoneNumber,Settings / General info,Phone Number,فون نمبر,Phone number,
 generalNamePhoneLocked,Settings / General info,Name and phone are managed by your account and cannot be changed here.,نام اور فون نمبر آپ کے اکاؤنٹ سے منسلک ہیں اور یہاں سے تبدیل نہیں کیے جا سکتے۔,Naam aur phone number aap ke account se juday hain aur yahan se change nahi ho sakte.,
 generalSecuritySection,Settings / General info,Security,سیکیورٹی,Security,
 generalChangePassword,Settings / General info,Change Password,پاس ورڈ تبدیل کریں,Password Change Karein,
@@ -267,10 +267,10 @@ clientProfileTitle,Client,Profile,پروفائل,Profile,
 clientProfileAvatarLocalOnly,Client,Profile image saved on this device. Cloud sync is not available yet.,پروفائل تصویر اسی ڈیوائس پر محفوظ ہے۔ کلاؤڈ سِنک ابھی دستیاب نہیں۔,Profile picture isi device par save hai. Cloud sync abhi available nahi.,
 settingsSectionAccount,Uncategorised,Account,اکاؤنٹ,Account,
 settingsSectionLegal,Uncategorised,Legal,قانونی,Legal,
-settingsSectionDangerZone,Uncategorised,Danger Zone,خطرناک زون,Danger Zone,
+settingsSectionDangerZone,Uncategorised,Danger Zone,خطرناک زون,Danger zone,
 settingsPrivacyPolicy,Uncategorised,Privacy Policy,پرائیویسی پالیسی,Privacy Policy,
 settingsTermsConditions,Uncategorised,Terms & Conditions,شرائط و ضوابط,Terms & Conditions,
-profilePhotoTitle,Uncategorised,Profile Photo,پروفائل تصویر,Profile Photo,
+profilePhotoTitle,Uncategorised,Profile Photo,پروفائل تصویر,Profile photo,
 commonGallery,Shared,Gallery,گیلری,Gallery,
 commonRemove,Shared,Remove,ہٹائیں,Hatayein,
 deleteAccountConfirmTitle,Uncategorised,Delete account?,اکاؤنٹ ڈیلیٹ کریں؟,Account delete karein?,
@@ -329,7 +329,7 @@ bookingNoAddressProvided,Bookings,No address provided,کوئی پتہ نہیں �
 bookingAttachments,Bookings,Attachments,ویڈیوز اور تصاویر,Attachments,
 bookingPhotosCount,Bookings,Photos ({count}),تصاویر ({count}),Photos ({count}),Placeholders: {count}
 bookingVideosCount,Bookings,Videos ({count}),ویڈیوز ({count}),Videos ({count}),Placeholders: {count}
-bookingVoiceNote,Bookings,Voice Note,وائس نوٹ,Voice Note,
+bookingVoiceNote,Bookings,Voice Note,وائس نوٹ,Voice note,
 bookingPricing,Bookings,Pricing,قیمت,Qeemat,
 bookingEstimatedPrice,Bookings,Estimated Price,تخمینی قیمت,Andazan qeemat,
 bookingInspectionCharges,Bookings,Inspection Charges,معائنہ چارجز,Inspection charges,
@@ -388,7 +388,7 @@ trackWorkerLabel,Uncategorised,Worker,استاد,Ustaad,
 trackHiredAt,Uncategorised,Hired at {price},{price} پر ہائر کیا گیا,{price} par hire kiya gaya,Placeholders: {price}
 trackPhoneUnavailable,Uncategorised,Phone number unavailable,فون نمبر دستیاب نہیں,Phone number available nahi,
 trackDialerFailed,Uncategorised,Could not open phone dialer,فون ڈائلر نہیں کھل سکا,Phone dialer nahi khul saka,
-trackAssignedWorkerCaps,Uncategorised,ASSIGNED WORKER,مقرر کردہ استاد,ASSIGN KIYA GAYA USTAAD,
+trackAssignedWorkerCaps,Uncategorised,ASSIGNED WORKER,مقرر کردہ استاد,AAP KA USTAAD,
 trackCall,Uncategorised,Call,کال,Call,
 trackLocationUnavailable,Uncategorised,Location unavailable,لوکیشن دستیاب نہیں,Location available nahi,
 trackArrivingIn,Uncategorised,"{count, plural, =1{Arriving in ~{count} minute} other{Arriving in ~{count} minutes}}",تقریباً {count} منٹ میں پہنچ رہے ہیں,Taqreeban {count} minute mein pohanch rahe hain,Placeholders: {count} | ICU plural — keep the plural syntax intact
@@ -402,7 +402,7 @@ trackStepQuoteAccepted,Uncategorised,Quote accepted,کوٹ منظور,Quote acce
 trackStepReviewed,Uncategorised,Reviewed,ریویو ہو گیا,Review ho gaya,
 trackStepWorkInProgress,Uncategorised,Work in progress,کام جاری,Kaam jari,
 trackStepReviewPending,Uncategorised,Review pending,ریویو باقی,Review baqi,
-trackJobProgress,Uncategorised,Job Progress,کام کہاں تک پہنچا,Kaam ki pesh raft,
+trackJobProgress,Uncategorised,Job Progress,کام کہاں تک پہنچا,Kaam ka progress,
 trackLoadFailedShort,Uncategorised,Failed to load tracking,ٹریکنگ لوڈ نہیں ہو سکی,Tracking load nahi ho saki,
 discoveryJobLocation,Uncategorised,Job Location,کام کی جگہ,Kaam ki jagah,
 discoveryJobLocationUnavailable,Uncategorised,Job location not available,کام کی جگہ دستیاب نہیں,Kaam ki jagah available nahi,
@@ -426,7 +426,7 @@ discoveryHireFailed,Uncategorised,Failed to hire worker.,استاد ہائر ن�
 discoveryInspectedThisJob,Uncategorised,INSPECTED THIS JOB,اس کام کا معائنہ کیا,IS KAAM KA MUAINA KIYA,
 discoveryTheirQuote,Uncategorised,their quote,ان کا کوٹ,un ka quote,
 discoveryInspectionCompletedByThis,Uncategorised,Inspection completed by this Ustaad.,معائنہ اسی استاد نے مکمل کیا۔,Inspection isi Ustaad ne mukammal kiya.,
-discoveryViewInspectionReport,Uncategorised,View Inspection Report,معائنہ رپورٹ دیکھیں,Muaina Report Dekhein,
+discoveryViewInspectionReport,Uncategorised,View Inspection Report,معائنہ رپورٹ دیکھیں,Inspection report dekhein,
 discoveryHireAgain,Uncategorised,Hire Again,دوبارہ ہائر کریں,Dobara Hire Karein,
 discoveryHireAgainNamed,Uncategorised,Hire {name} again?,{name} کو دوبارہ ہائر کریں؟,{name} ko dobara hire karein?,Placeholders: {name}
 discoveryOriginalQuoteContinues,Uncategorised,They'll continue using their original inspection quote.,وہ اپنے اصل معائنہ کوٹ پر ہی کام جاری رکھیں گے۔,Wo apne asal inspection quote par hi kaam jari rakhenge.,
@@ -534,7 +534,7 @@ chooseWithinRadius,Uncategorised,within {km} km,{km} کلومیٹر کے اند�
 chooseHireConfirmBodyFull,Uncategorised,Hire {name} for this job? You will not be able to choose a different Ustaad afterwards.,کیا {name} کو یہ کام دیں؟ اس کے بعد آپ دوسرا استاد منتخب نہیں کر سکیں گے۔,{name} ko ye kaam dein? Is ke baad aap doosra Ustaad nahi chun sakenge.,Placeholders: {name}
 trackHeadlineUstaadOnTheWay,Uncategorised,Ustaad On The Way,استاد راستے میں,Ustaad On The Way,
 trackHeadlineUstaadArrived,Uncategorised,Ustaad Arrived,استاد پہنچ گئے,Ustaad Arrived,
-trackHeadlineWorkInProgress,Uncategorised,Work In Progress,کام جاری ہے,Work In Progress,
+trackHeadlineWorkInProgress,Uncategorised,Work In Progress,کام جاری ہے,Kaam chal raha hai,
 trackHeadlineHired,Uncategorised,Hired ✓,ہائر ہو گئے ✓,Hire ho gaye ✓,
 trackRatingOutOfFive,Uncategorised,{rating} / 5.0,{rating} / 5.0,{rating} / 5.0,Placeholders: {rating}
 discoveryLoadingBids,Uncategorised,Loading offers...,آفرز لوڈ ہو رہی ہیں...,Offers load ho rahi hain...,
@@ -991,7 +991,7 @@ goToMyJobsAction,Uncategorised,Go to My Jobs,میری جابز پر جائیں,M
 goToChatsAction,Uncategorised,Go to Chats,چیٹس پر جائیں,Chats Par Jayein,Safe-navigation button on the chat-unavailable state
 settingsSupportTitle,Settings / Profile,Support,سپورٹ,Support,Profile/Settings menu row that opens HandyGo Support (chat and/or phone)
 settingsAboutTitle,Settings / Profile,About HandyGo,HandyGo کے بارے میں,HandyGo Ke Baare Mein,Profile/Settings menu row that opens the About HandyGo page and that page's title
-settingsAppVersionTitle,Settings / About page,App Version,ایپ ورژن,App Version,Profile/Settings menu row label showing the running app version
+settingsAppVersionTitle,Settings / About page,App Version,ایپ ورژن,App version,Profile/Settings menu row label showing the running app version
 aboutAppDescription,About HandyGo page,HandyGo connects clients with nearby verified Ustaads for home repair and maintenance services.,HandyGo کلائنٹس کو قریبی تصدیق شدہ اُستادوں سے گھر کی مرمت اور دیکھ بھال کی خدمات سے جوڑتا ہے۔,HandyGo clients ko nearby verified Ustaadon se ghar ki repair aur maintenance ki khidmat ke liye jorta hai.,Short factual description shown on the About HandyGo page
 aboutWebsiteLabel,About HandyGo page,Website,ویب سائٹ,Website,Label above the official HandyGo website link on the About page
 aboutVersionValue,About HandyGo page / Settings,Version {version} ({build}),ورژن {version} ({build}),Version {version} ({build}),Runtime app version/build shown on the About page and Settings row
@@ -1017,11 +1017,11 @@ authClientConfirmPasswordLabel,Client authentication,Confirm password,پاس و�
 authClientConfirmPasswordHint,Client authentication,Enter your password again,پاس ورڈ دوبارہ لکھیں,Password dobara likhein,Client registration confirm-password placeholder
 authClientAddressNotice,Client authentication,We do not need your address yet. We will ask for it when you make your first booking.,ابھی پتہ درکار نہیں۔ پہلی بکنگ کے وقت پوچھیں گے۔,Pata abhi nahi chahiye. Pehli booking par poochenge.,Client registration reassurance box about address
 authClientHaveAccount,Client authentication,Already have an account?,پہلے سے اکاؤنٹ ہے؟,Pehle se account hai?,Client registration footer prompt before the login action
-authClientVerifyHeading,Client authentication,Verify Mobile Number,موبائل نمبر کی تصدیق کریں,Verify Mobile Number,Client registration OTP heading
+authClientVerifyHeading,Client authentication,Verify Mobile Number,موبائل نمبر کی تصدیق کریں,Number verify karein,Client registration OTP heading
 authClientVerifySentTo,Client authentication,A {count}-digit code was sent to +92 {phone}.,{count} ہندسوں کا کوڈ +92 {phone} پر بھیجا گیا۔,{count}-digit code +92 {phone} par bheja gaya.,count is the OTP length the backend issues; phone is the grouped national number
 authClientResendPrompt,Client authentication,Didn't receive the code?,کوڈ نہیں ملا؟,Code nahi mila?,Client registration OTP resend prompt
 authClientResendAction,Client authentication,Resend,دوبارہ بھیجیں,Dobara bhejein,Client registration OTP resend action
-authClientVerifyButton,Client authentication,Verify & Create Account,تصدیق کرکے اکاؤنٹ بنائیں,Verify & Create Account,Client registration OTP primary button
+authClientVerifyButton,Client authentication,Verify & Create Account,تصدیق کرکے اکاؤنٹ بنائیں,Verify kar ke account banayein,Client registration OTP primary button
 authClientReadyHeading,Client authentication,Your account is ready,اکاؤنٹ تیار ہے,Account ready hai,Client registration success heading
 authClientReadySubtitle,Client authentication,Welcome to HandyGo. You can now book a service.,HandyGo میں خوش آمدید۔ اب آپ سروس بک کر سکتے ہیں۔,Welcome to HandyGo. Ab aap service book kar sakte hain.,Client registration success supporting line
 authClientAccountCardLabel,Client authentication,YOUR ACCOUNT,آپ کا اکاؤنٹ,AAP KA ACCOUNT,Label above the new account details on the success screen
@@ -1029,7 +1029,7 @@ authClientRoleCustomer,Client authentication,Customer,کسٹمر,Customer,Role s
 authClientCreateAccountTitle,Client authentication,Create Account,اکاؤنٹ بنائیں,Account banayein,Client registration heading / login footer action
 authClientFullNameLabel,Client authentication,Full name,پورا نام,Poora naam,Client full-name field label
 authClientSendOtpButton,Client authentication,Send OTP,OTP بھیجیں,Code bhejein,Client registration primary button
-authClientGoHome,Client authentication,Go to Home,ہوم پر جائیں,Go to Home,Client registration success primary button
+authClientGoHome,Client authentication,Go to Home,ہوم پر جائیں,Home par jayein,Client registration success primary button
 authClientLoginWithPassword,Client authentication,Login with Password,پاس ورڈ سے لاگ ان کریں,Password se login karein,Client login action that returns the page to password mode
 authClientNoAccountFound,Client authentication,No Client account was found for this number. Create an account.,اس نمبر کا کلائنٹ اکاؤنٹ نہیں ملا۔ اکاؤنٹ بنائیں۔,Is number ka Client account nahi mila. Account banayein.,Client OTP login: no Client account for this number
 ustaadLoginBrandSubtitle,Ustaad authentication,Work with HandyGo,HandyGo کے ساتھ کام کریں,HandyGo par kaam lein,Supporting line beside the Ustaad header
@@ -1086,12 +1086,12 @@ ustaadForgotSubtitle,Ustaad authentication,Enter your registered mobile number.,
 ustaadForgotOtpHeading,Ustaad authentication,Verify Code,کوڈ کی تصدیق کریں,Code verify karein,Ustaad password-reset OTP step heading
 ustaadForgotOtpBody,Ustaad authentication,A code was sent to +92 {phone}.,کوڈ +92 {phone} پر بھیجا گیا۔,+92 {phone} par code bheja gaya.,Ustaad password-reset OTP step supporting line
 ustaadForgotNewPasswordHeading,Ustaad authentication,Create a New Password,نیا پاس ورڈ بنائیں,Naya password banayein,Ustaad password-reset new-password step heading
-ustaadConfirmPasswordLabel,Ustaad authentication,Confirm Password,پاس ورڈ کی تصدیق کریں,Confirm Password,Ustaad password-reset confirm-password field label
+ustaadConfirmPasswordLabel,Ustaad authentication,Confirm Password,پاس ورڈ کی تصدیق کریں,Confirm password,Ustaad password-reset confirm-password field label
 ustaadChangePasswordButton,Ustaad authentication,Change Password,پاس ورڈ تبدیل کریں,Password change karein,Ustaad password-reset primary button
 ustaadResetSuccessTitle,Ustaad authentication,Password changed,پاس ورڈ تبدیل ہو گیا,Password change ho gaya,Ustaad password-reset success heading
 ustaadResetSuccessBody,Ustaad authentication,You can now login with your new password.,اب اپنے نئے پاس ورڈ سے لاگ ان کریں۔,Ab apne naye password se Login karein.,Ustaad password-reset success body
 ustaadGoToLoginButton,Ustaad authentication,Go to Login,لاگ ان پر جائیں,Login par jayein,Returns to the login screen after a successful password reset
-ustaadNewPasswordLabel,Ustaad authentication,New Password,نیا پاس ورڈ,New Password,"Ustaad password-reset new-password field label. The Roman Urdu deliberately keeps the English words, unlike the settings screen."
+ustaadNewPasswordLabel,Ustaad authentication,New Password,نیا پاس ورڈ,New password,"Ustaad password-reset new-password field label. The Roman Urdu deliberately keeps the English words, unlike the settings screen."
 bookingSchedule,Client / Booking Detail summary,Schedule,شیڈول,Schedule,"One combined schedule line (date + time slot, or the urgent window)"
 bookingPrice,Client / Booking Detail summary,Price,قیمت,Qeemat,Neutral price label used when a bidding job has no accepted bid yet
 bookingPaymentTitle,Client / Booking Detail payment,Payment,ادائیگی,Payment,Payment section heading and the payment-status caption
