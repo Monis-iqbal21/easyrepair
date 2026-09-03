@@ -99,6 +99,9 @@ final bookingCurrentLocationResolverProvider =
 
 class BookServicePage extends ConsumerStatefulWidget {
   final String? preselectedService;
+
+  /// Canonical API identity; the service name remains for older entry links.
+  final String? preselectedCategoryId;
   final bool urgentEntry;
 
   /// When non-null, the page operates in edit mode and pre-fills the form from
@@ -108,6 +111,7 @@ class BookServicePage extends ConsumerStatefulWidget {
   const BookServicePage({
     super.key,
     this.preselectedService,
+    this.preselectedCategoryId,
     this.editBookingId,
     this.urgentEntry = false,
   });
@@ -120,6 +124,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     with TickerProviderStateMixin {
   // ── Form state ──────────────────────────────────────────────────────────────
   String? _selectedService;
+  String? _selectedCategoryId;
 
   /// OPTIONAL previous inspection report attached to a BIDDING job — purely
   /// informational context for bidders. Null means "no report attached",
@@ -213,6 +218,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
       duration: const Duration(milliseconds: 700),
     );
     _selectedService = widget.preselectedService;
+    _selectedCategoryId = widget.preselectedCategoryId;
     final initial = BookingWizardInitialState.fresh(
       urgentEntry: widget.urgentEntry && !_isEditMode,
     );
@@ -248,7 +254,9 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
       });
     }
 
-    if (!_isEditMode && widget.preselectedService != null) {
+    if (!_isEditMode &&
+        (widget.preselectedService != null ||
+            widget.preselectedCategoryId != null)) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         _categoriesSubscription = ref.listenManual(
@@ -257,13 +265,11 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
             if (!mounted || _preselectionApplied) return;
             next.whenData((categories) {
               if (_preselectionApplied || !mounted) return;
-              final preselected = widget.preselectedService!;
-              final hasMatch = categories.any(
-                (c) => c.name.toLowerCase() == preselected.toLowerCase(),
-              );
-              if (hasMatch) {
+              final category = _resolveCategory(categories);
+              if (category != null) {
                 setState(() {
-                  _selectedService = preselected;
+                  _selectedService = category.name;
+                  _selectedCategoryId = category.id;
                   _preselectionApplied = true;
                 });
                 _categoriesSubscription?.close();
@@ -1593,6 +1599,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
                         });
                       }
                       _selectedService = cat.name;
+                      _selectedCategoryId = cat.id;
                       // A category change clears any previous lane choice.
                       // Even inspection-only categories require the client to
                       // tap the visible Inspection option explicitly.
@@ -3828,9 +3835,20 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
   ServiceCategoryEntity? _resolveCategory(
     List<ServiceCategoryEntity> categories,
   ) {
+    // An ID must never fall back to a different row with the same display name.
+    if (_selectedCategoryId?.isNotEmpty == true) {
+      for (final category in categories) {
+        if (category.id == _selectedCategoryId) return category;
+      }
+      return null;
+    }
+    // Compatibility for existing name-only links and offline picker stubs.
     if (_selectedService == null) return null;
-    for (final c in categories) {
-      if (c.name.toLowerCase() == _selectedService!.toLowerCase()) return c;
+    for (final category in categories) {
+      if (category.name.trim().toLowerCase() ==
+          _selectedService!.trim().toLowerCase()) {
+        return category;
+      }
     }
     return null;
   }
@@ -3903,35 +3921,24 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
       orElse: () => null,
     );
 
-    // Which lanes a category allows is a property OF THAT CATEGORY, so until
-    // it has actually been resolved there is nothing truthful to render.
-    //
-    // This is the bug that made Appliances Repair show every option: the rule
-    // used to read the restriction off `category?` with a permissive default,
-    // so an unresolvable category (backend list not loaded yet, request
-    // failed, or the category genuinely missing from /categories) silently
-    // degraded to "every lane is allowed" — the least safe possible default.
-    // Guessing is now refused outright.
     if (category == null) {
-      // Still fetching: a brief spinner, which resolves into the real options
-      // the moment the list arrives. Once the list HAS arrived and the
-      // category still is not in it, the spinner would never end — so that
-      // case falls through to an empty section instead, and the backend
-      // rejects the booking on submit as it always would.
       return _sectionCard(
         title: context.l10n.postJobWhatDoYouNeed,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 20),
-          child: Center(
-            child: categoriesAsync.isLoading
-                ? SizedBox(
+        child: categoriesAsync.isLoading
+            ? const Padding(
+                padding: EdgeInsets.symmetric(vertical: 20),
+                child: Center(
+                  child: SizedBox(
                     width: 22,
                     height: 22,
                     child: CircularProgressIndicator(strokeWidth: 2.5),
-                  )
-                : const SizedBox.shrink(),
-          ),
-        ),
+                  ),
+                ),
+              )
+            : _fixedPriceStateMessage(
+                context.l10n.postJobServicesUnavailable,
+                onRetry: () => ref.invalidate(allCategoriesProvider),
+              ),
       );
     }
 
@@ -3950,7 +3957,6 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
     final soleLane = category.soleLane;
     bool rendersCard(BookingLane lane) =>
         soleLane == null || soleLane == lane;
-    final inspectionOnly = category.inspectionOnly;
 
     final laneCards = <Widget>[
       if (rendersCard(BookingLane.standard))
@@ -3962,7 +3968,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
           action: context.l10n.postJobLaneFixedAction,
           minimumHeight: 114,
           // Unchanged legacy behaviour for an inspectionOnly category.
-          enabled: !inspectionOnly,
+          enabled: category.allowsLane(BookingLane.standard),
           body: [
             _laneBodyText(
               context.l10n.postJobLaneFixedBody,
@@ -3980,7 +3986,8 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
           minimumHeight: 164,
           // Unchanged: on an unrestricted category the inspection lane is
           // still offered only where the backend set a fee.
-          enabled: inspectionFee != null,
+          enabled: category.allowsLane(BookingLane.inspection) &&
+              inspectionFee != null,
           body: [
             _laneBodyText(
               context.l10n.postJobLaneInspectionFeeBody(feeLabel),
@@ -4000,7 +4007,7 @@ class _BookServicePageState extends ConsumerState<BookServicePage>
           action: context.l10n.postJobLaneCustomAction,
           minimumHeight: 136,
           // Unchanged legacy behaviour for an inspectionOnly category.
-          enabled: !inspectionOnly,
+          enabled: category.allowsLane(BookingLane.bidding),
           body: [
             _laneBodyText(context.l10n.postJobLaneCustomBody),
             _laneBodyText(context.l10n.postJobLaneCustomRatesBody),

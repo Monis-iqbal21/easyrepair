@@ -26,8 +26,8 @@ import '../../support/l10n_test_app.dart';
 /// presentation, greyed cards and all, so nothing about those rows changes.
 ///
 /// Three regressions are guarded here: the empty lane page (the rule is a
-/// property OF THE CATEGORY, so a category the form cannot resolve renders
-/// nothing rather than guessing), blast radius on unrestricted categories, and
+/// property OF THE CATEGORY, so a missing category offers a retry instead of
+/// guessing), blast radius on unrestricted categories, and
 /// backward compatibility for legacy `inspectionOnly` rows.
 
 const _romanUrdu = AppLocale.romanUrdu;
@@ -88,6 +88,7 @@ Future<void> _pumpLaneStep(
   WidgetTester tester, {
   required String service,
   required List<ServiceCategoryEntity> categories,
+  String? categoryId,
 }) async {
   tester.view.physicalSize = const Size(320, 900);
   tester.view.devicePixelRatio = 1.0;
@@ -100,7 +101,10 @@ Future<void> _pumpLaneStep(
         savedAddressesProvider.overrideWith(_SavedAddressNotifier.new),
       ],
       child: localizedApp(
-        BookServicePage(preselectedService: service),
+        BookServicePage(
+          preselectedService: service,
+          preselectedCategoryId: categoryId,
+        ),
         locale: _romanUrdu,
       ),
     ),
@@ -116,7 +120,47 @@ Future<void> _pumpLaneStep(
 }
 
 void main() {
+  group('stable category identity', () {
+    testWidgets('resolves the Home selection by ID when display copy differs', (
+      tester,
+    ) async {
+      await _pumpLaneStep(
+        tester,
+        service: 'Localized appliance label',
+        categoryId: _appliances.id,
+        categories: [_electrician, _appliances],
+      );
+
+      expect(find.byKey(const ValueKey('booking-lane-bidding')), findsOneWidget);
+      expect(find.byKey(const ValueKey('booking-lane-standard')), findsNothing);
+      expect(find.byKey(const ValueKey('booking-lane-inspection')), findsNothing);
+    });
+  });
+
   group('Appliances Repair — bidding only', () {
+    testWidgets('soleLane keeps Bidding enabled even with a stale legacy flag', (
+      tester,
+    ) async {
+      final category = _category(
+        name: 'Appliances Repair',
+        inspectionFee: 500,
+        inspectionOnly: true,
+        soleLane: BookingLane.bidding,
+      );
+      await _pumpLaneStep(
+        tester,
+        service: category.name,
+        categoryId: category.id,
+        categories: [category],
+      );
+      final bidding = tester.widget<Semantics>(
+        find.byKey(const ValueKey('booking-lane-bidding')),
+      );
+      expect(bidding.properties.enabled, isTrue);
+      expect(find.byKey(const ValueKey('booking-lane-standard')), findsNothing);
+      expect(find.byKey(const ValueKey('booking-lane-inspection')), findsNothing);
+    });
+
     testWidgets('offers the Bidding lane', (tester) async {
       await _pumpLaneStep(
         tester,
@@ -287,8 +331,8 @@ void main() {
   });
 
   group('an unresolvable category never guesses', () {
-    testWidgets('a category missing from the backend list shows no lane cards '
-        'rather than defaulting to all of them', (tester) async {
+    testWidgets('a category missing from the backend list offers a retry '
+        'instead of a blank section or guessed lanes', (tester) async {
       await _pumpLaneStep(
         tester,
         service: 'Appliances Repair',
@@ -300,6 +344,11 @@ void main() {
       expect(find.text(_inspectionLane), findsNothing);
       expect(find.text(_biddingLane), findsNothing);
       expect(find.text('OR'), findsNothing);
+      expect(
+        find.text('Services load nahi ho sakin. Wapas jaa kar dobara koshish karein.'),
+        findsOneWidget,
+      );
+      expect(find.text('Dobara koshish karein'), findsOneWidget);
     });
   });
 

@@ -294,6 +294,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           final urgentEntry = state.uri.queryParameters['urgentEntry'] == '1';
           return BookServicePage(
             preselectedService: service,
+            preselectedCategoryId: state.uri.queryParameters['categoryId'],
             editBookingId: editId,
             urgentEntry: urgentEntry,
           );

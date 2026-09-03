@@ -10,6 +10,8 @@ import '../../../../core/theme/theme_mode_provider.dart';
 import '../../../../core/widgets/handygo_brand_lockup.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../../notifications/presentation/providers/notification_providers.dart';
+import '../../../categories/domain/entities/service_category_entity.dart';
+import '../../../categories/presentation/providers/categories_providers.dart';
 import '../widgets/service_card.dart';
 import '../widgets/service_data.dart';
 
@@ -48,7 +50,10 @@ final currentClientAreaProvider = FutureProvider<String?>((ref) async {
 class ClientHomePage extends ConsumerWidget {
   const ClientHomePage({super.key});
 
-  List<_Service> _services(BuildContext context) => [
+  List<_Service> _services(
+    BuildContext context,
+    List<ServiceCategoryEntity> categories,
+  ) => [
     _Service(context.l10n.serviceAcTechnician, 'AC Technician', '❄️'),
     _Service(context.l10n.serviceElectrician, 'Electrician', '⚡'),
     _Service(context.l10n.servicePlumber, 'Plumber', '🔧'),
@@ -59,15 +64,22 @@ class ClientHomePage extends ConsumerWidget {
     _Service(context.l10n.servicePainter, 'Painter', '🎨'),
     _Service(context.l10n.serviceGardening, 'Gardener', '🌿'),
     _Service(context.l10n.serviceCarWash, 'Car Wash', '🚗'),
-  ];
+  ].map((service) => service.withCategory(categories)).toList();
 
   void _open(
     BuildContext context,
     _Service service, {
     bool urgentEntry = false,
   }) => context.push(
-    '/client/post-job?service=${Uri.encodeComponent(service.backendName)}'
-    '${urgentEntry ? '&urgentEntry=1' : ''}',
+    Uri(
+      path: '/client/post-job',
+      queryParameters: {
+        'service': service.category?.name ?? service.backendName,
+        if (service.category?.id.isNotEmpty == true)
+          'categoryId': service.category!.id,
+        if (urgentEntry) 'urgentEntry': '1',
+      },
+    ).toString(),
   );
 
   Future<void> _urgentPicker(BuildContext context, List<_Service> services) {
@@ -152,7 +164,10 @@ class ClientHomePage extends ConsumerWidget {
     final firstName = rawName == null || rawName.isEmpty
         ? context.l10n.clientHomeGuest
         : rawName;
-    final services = _services(context);
+    final services = _services(
+      context,
+      ref.watch(allCategoriesProvider).valueOrNull ?? const [],
+    );
     final width = MediaQuery.sizeOf(context).width;
     final side = width <= 340 ? 14.0 : 18.0;
 
@@ -499,8 +514,20 @@ class _TrustStrip extends StatelessWidget {
 }
 
 class _Service {
-  const _Service(this.title, this.backendName, this.emoji);
+  const _Service(this.title, this.backendName, this.emoji, {this.category});
   final String title;
   final String backendName;
   final String emoji;
+  final ServiceCategoryEntity? category;
+
+  // The static Home catalog has no IDs. Bind it to the API once at this
+  // boundary, then carry the canonical ID independently of localized copy.
+  _Service withCategory(List<ServiceCategoryEntity> categories) {
+    for (final category in categories) {
+      if (category.name.trim().toLowerCase() == backendName.toLowerCase()) {
+        return _Service(title, backendName, emoji, category: category);
+      }
+    }
+    return this;
+  }
 }

@@ -8,6 +8,7 @@ import 'package:handygo_app/core/widgets/handygo_brand_lockup.dart';
 import 'package:handygo_app/features/auth/domain/entities/user_entity.dart';
 import 'package:handygo_app/features/auth/presentation/providers/auth_providers.dart';
 import 'package:handygo_app/features/client/presentation/pages/client_home_page.dart';
+import 'package:handygo_app/features/categories/presentation/providers/categories_providers.dart';
 import 'package:handygo_app/features/notifications/presentation/providers/notification_providers.dart';
 
 import '../../support/l10n_test_app.dart';
@@ -31,6 +32,7 @@ Future<void> _pumpHome(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        allCategoriesProvider.overrideWith((ref) async => const []),
         authStateProvider.overrideWith(_SignedInClient.new),
         currentClientAreaProvider.overrideWith((ref) async => 'Lahore'),
         unreadNotificationCountProvider.overrideWith((ref) async => 0),
