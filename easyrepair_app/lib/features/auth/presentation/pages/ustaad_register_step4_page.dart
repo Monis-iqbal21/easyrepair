@@ -41,11 +41,14 @@ import '../widgets/ustaad_register_widgets.dart';
 ///  * the three documents come from `getAgreementTemplates` — General, the
 ///    trade-specific one and the Background Verification Consent, each with
 ///    its version, source hash, locale and applicable trade;
-///  * "Parhein" opens [AgreementViewerPage], and only the [AgreementEvidence]
-///    it returns unlocks a checkbox — a box cannot be ticked for a document
-///    that was never rendered;
+///  * "Parhein" opens [AgreementViewerPage] and its [AgreementEvidence]
+///    records the moment the document actually rendered — offered, never
+///    required. Ticking is the Ustaad's own act: a row they did not open is
+///    accepted against the very same template they were shown, so the record
+///    still names the exact documentType/version/sourceHash/locale/trade;
 ///  * evidence is invalidated the moment it stops describing the currently
-///    loaded template, which is what forces a re-read when the trade changes;
+///    loaded template, which is what drops a stale tick when the trade
+///    changes;
 ///  * submission goes through `submitProfileForReview`, which seals the
 ///    acceptance records (acceptance id, timestamps, hashes, the filled PDF)
 ///    exactly as before. A single `submissionAttemptId` is generated per
@@ -94,7 +97,21 @@ class _UstaadRegisterStep4PageState
   bool _isAccepted(AgreementTemplateEntity t) =>
       _evidenceFor(t)?.checkboxAccepted ?? false;
 
-  bool _isViewed(AgreementTemplateEntity t) => _evidenceFor(t) != null;
+  /// Ticking a row does not require having opened it first.
+  ///
+  /// When there is no evidence yet, it is built from the template the Ustaad
+  /// was shown — the same documentType/version/sourceHash/locale/trade the
+  /// backend seals — with the tick itself as the timestamp. Opening the viewer
+  /// first simply means that timestamp is the earlier moment the document was
+  /// rendered. Nothing here ticks a box on the Ustaad's behalf.
+  void _setAccepted(AgreementTemplateEntity template, bool value) {
+    final existing =
+        _evidenceFor(template) ?? template.evidenceViewedAt(DateTime.now());
+    setState(() {
+      _evidence[template.documentType] =
+          existing.copyWith(checkboxAccepted: value);
+    });
+  }
 
   Future<void> _openAgreement(AgreementTemplateEntity template) async {
     final result = await Navigator.of(context).push<AgreementEvidence>(
@@ -103,9 +120,13 @@ class _UstaadRegisterStep4PageState
       ),
     );
     if (!mounted || result == null) return;
-    // Null means the viewer never rendered the document — that must not
-    // unlock the checkbox.
-    setState(() => _evidence[template.documentType] = result);
+    // Null means the viewer never rendered the document, so there is nothing
+    // to record. Any tick already made stands on its own evidence.
+    setState(() {
+      final accepted = _isAccepted(template);
+      _evidence[template.documentType] =
+          result.copyWith(checkboxAccepted: accepted);
+    });
   }
 
   Future<void> _pickCnic({required bool front}) async {
@@ -300,19 +321,9 @@ class _UstaadRegisterStep4PageState
                 for (final template in items) ...[
                   _AgreementCard(
                     template: template,
-                    viewed: _isViewed(template),
                     accepted: _isAccepted(template),
                     onRead: () => _openAgreement(template),
-                    onToggle: (value) {
-                      final evidence = _evidenceFor(template);
-                      // Only a document that was actually rendered can be
-                      // accepted — there is no evidence to tick otherwise.
-                      if (evidence == null) return;
-                      setState(() {
-                        _evidence[template.documentType] =
-                            evidence.copyWith(checkboxAccepted: value);
-                      });
-                    },
+                    onToggle: (value) => _setAccepted(template, value),
                   ),
                   const SizedBox(height: 12),
                 ],
@@ -426,14 +437,12 @@ String _summaryFor(AppLocalizations l10n, String documentType) =>
 class _AgreementCard extends StatelessWidget {
   const _AgreementCard({
     required this.template,
-    required this.viewed,
     required this.accepted,
     required this.onRead,
     required this.onToggle,
   });
 
   final AgreementTemplateEntity template;
-  final bool viewed;
   final bool accepted;
   final VoidCallback onRead;
   final ValueChanged<bool> onToggle;
@@ -452,12 +461,12 @@ class _AgreementCard extends StatelessWidget {
             children: [
               Semantics(
                 checked: accepted,
-                enabled: viewed,
                 child: Checkbox(
                   value: accepted,
-                  // Disabled until the document has actually been rendered —
-                  // this is the read-before-accept rule, not decoration.
-                  onChanged: viewed ? (v) => onToggle(v ?? false) : null,
+                  // Always tickable. Reading the document first is offered
+                  // through "Parhein", never demanded before the Ustaad may
+                  // accept.
+                  onChanged: (v) => onToggle(v ?? false),
                   activeColor: colors.primary,
                   checkColor: colors.onPrimary,
                   side: BorderSide(color: colors.controlBorder, width: 1.5),

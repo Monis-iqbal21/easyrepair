@@ -191,26 +191,38 @@ Future<void> _settle(WidgetTester tester) async {
   await tester.pump(const Duration(milliseconds: 300));
 }
 
-/// Opens each of the three documents and ticks its box. The viewer hands its
-/// evidence back on pop, and only that evidence unlocks a checkbox — the
-/// read-before-accept rule this work did not touch.
-Future<void> _readAndAcceptAll(WidgetTester tester) async {
-  for (var i = 0; i < 3; i++) {
-    final read = find.textContaining('Parhein').at(i);
-    await tester.ensureVisible(read);
-    await _settle(tester);
-    await tester.tap(read);
-    await tester.pumpAndSettle();
-    // The viewer is the single exit point: its own back arrow is what hands
-    // the evidence back. It is a plain IconButton, not a Material BackButton.
-    await tester.tap(find.byIcon(Icons.arrow_back));
-    await tester.pumpAndSettle();
+/// Ticks one agreement box directly, without opening its document first.
+Future<void> _tickAgreement(WidgetTester tester, int index) async {
+  final box = find.byType(Checkbox).at(index);
+  await tester.ensureVisible(box);
+  await _settle(tester);
+  await tester.tap(box);
+  await _settle(tester);
+}
 
-    final box = find.byType(Checkbox).at(i);
-    await tester.ensureVisible(box);
-    await _settle(tester);
-    await tester.tap(box);
-    await _settle(tester);
+/// Opens one document in the viewer and comes back.
+///
+/// The viewer is the single exit point: its own back arrow is what hands the
+/// evidence back. It is a plain IconButton, not a Material BackButton.
+Future<void> _openAndClose(WidgetTester tester, int index) async {
+  final read = find.textContaining('Parhein').at(index);
+  await tester.ensureVisible(read);
+  await _settle(tester);
+  await tester.tap(read);
+  await tester.pumpAndSettle();
+  expect(
+    find.text(_body),
+    findsOneWidget,
+    reason: 'the approved legal body is still readable on request',
+  );
+  await tester.tap(find.byIcon(Icons.arrow_back));
+  await tester.pumpAndSettle();
+}
+
+/// Accepts all three WITHOUT opening any of them — the locked behaviour.
+Future<void> _acceptAll(WidgetTester tester) async {
+  for (var i = 0; i < 3; i++) {
+    await _tickAgreement(tester, i);
   }
 }
 
@@ -231,7 +243,7 @@ void main() {
     await tester.pumpWidget(_app(repo, await _prefs()));
     await _settle(tester);
 
-    await _readAndAcceptAll(tester);
+    await _acceptAll(tester);
 
     final cta = find.widgetWithText(
       ElevatedButton,
@@ -345,24 +357,116 @@ void main() {
     await tester.pumpWidget(_app(repo, await _prefs()));
     await _settle(tester);
 
-    // Every checkbox is disabled until its document has actually been
-    // rendered — the read-before-accept rule, unchanged by this work.
     expect(
       find.byType(Checkbox),
       findsNWidgets(3),
       reason: 'the three documents must actually have loaded, or this test '
           'would pass over an empty list',
     );
+    // Nothing is ticked for the Ustaad: every box starts empty.
     for (final checkbox in tester.widgetList<Checkbox>(find.byType(Checkbox))) {
-      expect(checkbox.onChanged, isNull);
       expect(checkbox.value, isFalse);
     }
+
+    // Two of three accepted — the third still blocks Submit.
+    await _tickAgreement(tester, 0);
+    await _tickAgreement(tester, 1);
 
     final cta = tester.widget<ElevatedButton>(
       find.widgetWithText(ElevatedButton, 'Verification ke liye bhejein'),
     );
-    expect(cta.onPressed, isNull);
+    expect(
+      cta.onPressed,
+      isNull,
+      reason: 'acceptance of every required agreement is still mandatory',
+    );
     expect(repo.submitCalls, 0);
+  });
+
+  testWidgets('on a fresh page every agreement box is enabled and can be '
+      'ticked without opening the document first', (tester) async {
+    tester.view.physicalSize = const Size(390, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    final repo = _FakeWorkerRepository(
+      profile: _profile(
+        cnicFrontUrl: 'https://cdn/f.jpg',
+        cnicBackUrl: 'https://cdn/b.jpg',
+        liveSelfieUrl: 'https://cdn/s.jpg',
+      ),
+    );
+    await tester.pumpWidget(_app(repo, await _prefs()));
+    await _settle(tester);
+
+    expect(find.byType(Checkbox), findsNWidgets(3));
+    for (final checkbox in tester.widgetList<Checkbox>(find.byType(Checkbox))) {
+      expect(
+        checkbox.onChanged,
+        isNotNull,
+        reason: 'nothing was opened, and ticking is still the Ustaad own '
+            'act — reading is offered, never demanded',
+      );
+      expect(checkbox.value, isFalse, reason: 'and nothing is pre-ticked');
+    }
+
+    // A direct tick, no viewer in between.
+    await _tickAgreement(tester, 0);
+    expect(
+      tester.widgetList<Checkbox>(find.byType(Checkbox)).first.value,
+      isTrue,
+    );
+  });
+
+  testWidgets('the document is still openable, and reading it after ticking '
+      'keeps the acceptance and seals the real viewedAt', (tester) async {
+    tester.view.physicalSize = const Size(390, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    final repo = _FakeWorkerRepository(
+      profile: _profile(
+        cnicFrontUrl: 'https://cdn/f.jpg',
+        cnicBackUrl: 'https://cdn/b.jpg',
+        liveSelfieUrl: 'https://cdn/s.jpg',
+      ),
+    );
+    await tester.pumpWidget(_app(repo, await _prefs()));
+    await _settle(tester);
+
+    // Tick first, read afterwards — the viewer must not undo the tick.
+    await _tickAgreement(tester, 0);
+    await _openAndClose(tester, 0);
+    expect(
+      tester.widgetList<Checkbox>(find.byType(Checkbox)).first.value,
+      isTrue,
+      reason: 'opening the document the Ustaad already accepted cannot '
+          'silently drop that acceptance',
+    );
+
+    await _tickAgreement(tester, 1);
+    await _tickAgreement(tester, 2);
+
+    final cta = find.widgetWithText(
+      ElevatedButton,
+      'Verification ke liye bhejein',
+    );
+    await tester.ensureVisible(cta);
+    await _settle(tester);
+    await tester.tap(cta);
+    await tester.pumpAndSettle();
+
+    expect(repo.submitCalls, 1);
+    expect(repo.lastAgreements!.length, 3);
+    // The electronic acceptance record is unchanged in shape: the document's
+    // own identity, a viewedAt the backend can seal, and the explicit tick.
+    for (final evidence in repo.lastAgreements!) {
+      expect(evidence.checkboxAccepted, isTrue);
+      expect(evidence.viewedAt, isNotNull);
+      expect(evidence.version, '1.0');
+      expect(evidence.agreementLocale, 'ur_Latn');
+      expect(evidence.sourceHash, 'hash-${evidence.documentType}');
+    }
   });
 
   testWidgets('the three evidence tiles are selfie, CNIC front and CNIC back, '
