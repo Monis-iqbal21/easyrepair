@@ -4357,7 +4357,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get authRoleClientSubtitle =>
-      'Marammat, safai ya nayi cheez lagwane ke liye Ustaad bulwayein.';
+      'Repair, safai ya nayi cheez lagwane ke liye Ustaad bulwayein.';
 
   @override
   String get authRoleWorkerTitle => 'Main Ustaad hoon';
@@ -5001,7 +5001,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get notificationsEmptySubtitle =>
-      'Kaam ki updates, reviews aur mazeed ki ittila aap ko di jayegi.';
+      'Kaam ki updates aur reviews aap ko bhejte rahenge.';
 
   @override
   String get timeJustNow => 'Abhi abhi';
@@ -5195,7 +5195,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get postJobBookingUpdatedBody =>
-      'Aap ki booking ki tafseelat kamyabi se update ho gayi hain.';
+      'Aap ki booking ki details kamyabi se update ho gayi hain.';
 
   @override
   String get postJobViewBooking => 'Booking dekhein';
@@ -5306,7 +5306,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get postJobDontKnowIssue => 'Masla kya hai, ye pata nahi';
 
   @override
-  String get postJobInspectionFeeTitle => 'Muaina Fee';
+  String get postJobInspectionFeeTitle => 'Inspection fee';
 
   @override
   String get postJobInspectionDetailsPageTitle => 'Masla bataein';
@@ -5368,13 +5368,14 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get postJobTotal => 'Total';
 
   @override
-  String get postJobInspectionFeeLower => 'Muaina fee';
+  String get postJobInspectionFeeLower => 'Inspection fee';
 
   @override
-  String get postJobInspectionFeeLoadFailed => 'Muaina fee load nahi ho saki.';
+  String get postJobInspectionFeeLoadFailed =>
+      'Inspection fee load nahi ho saki.';
 
   @override
-  String get postJobHowInspectionWorks => 'Muaina kaise hota hai';
+  String get postJobHowInspectionWorks => 'Inspection kaise hota hai';
 
   @override
   String get postJobWhatDoYouSee =>
@@ -5397,10 +5398,10 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get postJobStepLaneSelection => 'Qisam Chunein';
 
   @override
-  String get postJobStepDetails => 'Tafseelat';
+  String get postJobStepDetails => 'Details';
 
   @override
-  String get postJobStepTimeSelection => 'Time ka intekhab';
+  String get postJobStepTimeSelection => 'Time chunein';
 
   @override
   String postJobStepIndicator(int current, int total, String title) {
@@ -5420,7 +5421,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get clientHomeYourArea => 'Aap ka ilaqa';
 
   @override
-  String get clientHomeSectionRepairs => 'Marammat';
+  String get clientHomeSectionRepairs => 'Repair';
 
   @override
   String get clientHomeSectionCleaning => 'Safai';
@@ -5709,7 +5710,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get bookingLoadFailed => 'Booking load nahi ho saki.';
 
   @override
-  String get bookingServiceDetails => 'Service ki tafseelat';
+  String get bookingServiceDetails => 'Service ki details';
 
   @override
   String get bookingIssue => 'Masla';
@@ -5736,19 +5737,19 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get bookingCancellationReason => 'Cancel karne ki wajah';
 
   @override
-  String get bookingInspectionCompletedBy => 'Muaina mukammal karne wale';
+  String get bookingInspectionCompletedBy => 'Inspection mukammal karne wale';
 
   @override
   String get bookingWorkBeingCompletedBy => 'Kaam mukammal karne wale';
 
   @override
-  String get bookingInspectionAndRepairBy => 'Muaina aur marammat karne wale';
+  String get bookingInspectionAndRepairBy => 'Inspection aur repair karne wale';
 
   @override
   String get bookingAssignedWorker => 'Assign kiya gaya Ustaad';
 
   @override
-  String get bookingDetailsTitle => 'Booking ki tafseelat';
+  String get bookingDetailsTitle => 'Booking ki details';
 
   @override
   String get bookingNoAddressProvided => 'Koi pata nahi diya gaya';
@@ -5776,7 +5777,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get bookingEstimatedPrice => 'Andazan qeemat';
 
   @override
-  String get bookingInspectionCharges => 'Muaina charges';
+  String get bookingInspectionCharges => 'Inspection charges';
 
   @override
   String get bookingWorkCharges => 'Kaam ke charges';
@@ -5937,13 +5938,13 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get trackQuoteAcceptedRepairInProgress =>
-      'Quote accept — marammat jari hai';
+      'Quote accept — repair jari hai';
 
   @override
   String get trackReportSubmitted => 'Report jama kara di gayi';
 
   @override
-  String get trackInspectionInProgress => 'Muaina jari hai';
+  String get trackInspectionInProgress => 'Inspection jari hai';
 
   @override
   String get trackReviewReportAndDecide =>
@@ -5987,13 +5988,13 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get trackStepUstaadOnTheWay => 'Ustaad raaste mein';
 
   @override
-  String get trackStepInspectionInProgress => 'Muaina jari';
+  String get trackStepInspectionInProgress => 'Inspection jari';
 
   @override
   String get trackStepReportSubmitted => 'Report jama';
 
   @override
-  String get trackStepClosedAfterInspection => 'Muainay ke baad band';
+  String get trackStepClosedAfterInspection => 'Inspection ke baad band';
 
   @override
   String get trackStepQuoteAccepted => 'Quote accept';
@@ -6054,7 +6055,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get discoveryInspectionFeeSeparate =>
-      'Muaina fee alag ada ki jati hai.\nNaye Ustaad ka offer alag charge hoga.';
+      'Inspection fee alag ada ki jati hai.\nNaye Ustaad ka offer alag charge hoga.';
 
   @override
   String get discoveryBidLabourOnlyNote =>
@@ -6078,7 +6079,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get discoveryInspectionCompletedByThis =>
-      'Muaina isi Ustaad ne mukammal kiya.';
+      'Inspection isi Ustaad ne mukammal kiya.';
 
   @override
   String get discoveryViewInspectionReport => 'Inspection Report Dekhein';
@@ -6093,7 +6094,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get discoveryOriginalQuoteContinues =>
-      'Wo apne asal Muaina quote par hi kaam jari rakhenge.';
+      'Wo apne asal inspection quote par hi kaam jari rakhenge.';
 
   @override
   String get discoveryWorkersWillAppear =>
@@ -6134,7 +6135,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
       'Service tabdeel hone ki wajah se attached inspection report hata di gayi.';
 
   @override
-  String get inspectionReportTitle => 'Muaina Report';
+  String get inspectionReportTitle => 'Inspection report';
 
   @override
   String get inspectionReportNotAvailable => 'Report abhi available nahi.';
@@ -6149,40 +6150,40 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get inspectionParts => 'Parts';
 
   @override
-  String get inspectionRepairQuoteTotal => 'Marammat ke quote ka total';
+  String get inspectionRepairQuoteTotal => 'Repair ke quote ka total';
 
   @override
   String get inspectionAcceptQuoteContinue =>
-      'Quote accept karein aur marammat jari rakhein';
+      'Quote accept karein aur repair jari rakhein';
 
   @override
   String get inspectionFindOtherUstaad => 'Doosra Ustaad dhoondein';
 
   @override
-  String get inspectionCloseAfterInspection => 'Muainay ke baad band karein';
+  String get inspectionCloseAfterInspection => 'Inspection ke baad band karein';
 
   @override
   String get inspectionAcceptQuoteConfirmTitle =>
-      'Quote accept kar ke marammat jari rakhein?';
+      'Quote accept kar ke repair jari rakhein?';
 
   @override
-  String get inspectionCloseConfirmTitle => 'Muainay ke baad band karein?';
+  String get inspectionCloseConfirmTitle => 'Inspection ke baad band karein?';
 
   @override
   String get inspectionAcceptQuoteConfirmBody =>
-      'Yehi Ustaad marammat jari rakhenge. Muaina fee maaf hai — aap sirf marammat ka quote den ge.';
+      'Yehi Ustaad repair jari rakhenge. Inspection fee maaf hai — aap sirf repair ka quote den ge.';
 
   @override
   String get inspectionCloseConfirmBody =>
-      'Aap se sirf Muaina fee li jayegi. Kaam mukammal mark ho jayega.';
+      'Aap se sirf inspection fee li jayegi. Kaam mukammal mark ho jayega.';
 
   @override
   String get inspectionClosedAfterInspection =>
-      'Muainay ke baad band kar diya gaya.';
+      'Inspection ke baad band kar diya gaya.';
 
   @override
   String get inspectionQuoteAcceptedRepairInProgress =>
-      'Quote accept — marammat jari hai.';
+      'Quote accept — repair jari hai.';
 
   @override
   String get inspectionActionFailed => 'Kaam nahi hua. Dobara koshish karein.';
@@ -6192,10 +6193,10 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get inspectionFindAnotherConfirmBody =>
-      'Confirm karne par Muaina mukammal ho jayega aur Muaina fee li jayegi. Aap ka kaam dobara live ho jayega taake doosre Ustaad apne rate bhej sakein.';
+      'Confirm karne par inspection mukammal ho jayega aur inspection fee li jayegi. Aap ka kaam dobara live ho jayega taake doosre Ustaad apne rate bhej sakein.';
 
   @override
-  String get inspectionBadge => 'Muaina';
+  String get inspectionBadge => 'Inspection';
 
   @override
   String get chooseHireConfirmTitle => 'Is Ustaad ko hire karein?';
@@ -6216,7 +6217,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String chooseInspectionFeeAmount(String price) {
-    return 'Muaina fee $price';
+    return 'Inspection fee $price';
   }
 
   @override
@@ -6348,7 +6349,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get cardGoesLiveBefore => 'Window se 1 ghanta pehle live hoga';
 
   @override
-  String get cardWorkersNotified => 'Ustaad ko foran ittila di jati hai';
+  String get cardWorkersNotified => 'Ustaad ko foran bata diya jata hai';
 
   @override
   String get cardSearchingWorkers => 'Ustaad dhoonde ja rahe hain...';
@@ -6489,7 +6490,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String trackSubtextContinuingRepair(String name) {
-    return '$name marammat jari rakhe hue hain';
+    return '$name repair jari rakhe hue hain';
   }
 
   @override
@@ -6509,7 +6510,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String trackSubtextHiredForInspection(String name) {
-    return '$name ko is Muainay ke liye hire kiya gaya hai';
+    return '$name ko is inspection ke liye hire kiya gaya hai';
   }
 
   @override
@@ -6532,18 +6533,18 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get urgentWithin4Hours => 'Chaar ghanton ke andar';
 
   @override
-  String get inspectionFeePaid => 'Muaina fee paid';
+  String get inspectionFeePaid => 'Inspection fee paid';
 
   @override
   String inspectionFeePaidAmount(Object amount) {
-    return 'Muaina fee paid: $amount';
+    return 'Inspection fee paid: $amount';
   }
 
   @override
-  String get inspectionFeeWaivedOff => 'Muaina fee waived off';
+  String get inspectionFeeWaivedOff => 'Inspection fee waived off';
 
   @override
-  String get inspectionFeeNotPaid => 'Muaina fee paid nahi';
+  String get inspectionFeeNotPaid => 'Inspection fee paid nahi';
 
   @override
   String chooseWithinRadius(String km) {
@@ -6637,20 +6638,20 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get workerActionCompleteJob => 'Kaam mukammal karein';
 
   @override
-  String get workerActionStartInspection => 'Muaina shuru karein';
+  String get workerActionStartInspection => 'Inspection shuru karein';
 
   @override
   String get workerActionStartWork => 'Kaam shuru karein';
 
   @override
-  String get workerActionFillReport => 'Muaina report bharein';
+  String get workerActionFillReport => 'Inspection report bharein';
 
   @override
   String get workerActionWaitingForClient => 'Client ke faisle ka intezar';
 
   @override
   String get workerSuccessOnTheWay =>
-      'Aap rawana hain — client ko ittila de di gayi.';
+      'Aap rawana hain — client ko bata diya gaya.';
 
   @override
   String get workerSuccessArrived => 'Pohanchne ka nishan laga diya gaya.';
@@ -6662,7 +6663,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get workerSuccessJobCompleted => 'Kaam mukammal mark ho gaya.';
 
   @override
-  String get workerSuccessInspectionStarted => 'Muaina shuru ho gaya.';
+  String get workerSuccessInspectionStarted => 'Inspection shuru ho gaya.';
 
   @override
   String get workerSuccessWorkStarted => 'Kaam shuru ho gaya.';
@@ -6742,7 +6743,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get workerMap => 'Map';
 
   @override
-  String get workerViewDetails => 'Tafseelat dekhein →';
+  String get workerViewDetails => 'Details dekhein →';
 
   @override
   String get workerNoActiveJob => 'Is waqt koi kaam jari nahi';
@@ -6854,7 +6855,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
       'Client ne ye booking cancel kar di';
 
   @override
-  String get workerOnlyInspectionCompleted => 'Sirf Muaina Mukammal Hua';
+  String get workerOnlyInspectionCompleted => 'Sirf inspection mukammal hua';
 
   @override
   String get workerComplete => 'Complete';
@@ -6867,7 +6868,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get workerMarkCompletedBody =>
-      'Is se kaam band ho jayega aur client ko ittila mil jayegi.';
+      'Is se kaam band ho jayega aur client ko pata chal jayega.';
 
   @override
   String get workerNoActiveJobs => 'Koi jari kaam nahi';
@@ -7105,7 +7106,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get inspFormFeeWaivedNote =>
-      'Agar customer repair continue karwata hai to Muaina fee nhi deni hogi.';
+      'Agar customer repair continue karwata hai to inspection fee nhi deni hogi.';
 
   @override
   String get inspHintElectrical =>
@@ -7171,7 +7172,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get workerReportSubmittedWaiting =>
-      'Report bhej di gayi. Client ke quote accept karne ya Muainay ke baad kaam band karne ka intezaar hai.';
+      'Report bhej di gayi. Client ke quote accept karne ya inspection ke baad kaam band karne ka intezaar hai.';
 
   @override
   String get workerClientSection => 'Client';
@@ -7409,14 +7410,14 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get workerDocumentRequired => 'Zaroori hai';
 
   @override
-  String get workerAgreements => 'Muahiday';
+  String get workerAgreements => 'Agreements';
 
   @override
   String get workerConfirmLegalName =>
       'Main tasdeeq karta hoon ke mera qanooni naam mere CNIC ke mutabiq hai.';
 
   @override
-  String get workerViewAgreement => 'Muahida dekhein';
+  String get workerViewAgreement => 'Agreement dekhein';
 
   @override
   String get workerConfirmationRequired => 'Ye tasdeeq zaroori hai.';
@@ -7536,7 +7537,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get errorInvalidRequest =>
-      'Kuch tafseelat theek nahi hain. Inhein check kar ke dobara koshish karein.';
+      'Kuch details theek nahi hain. Inhein check kar ke dobara koshish karein.';
 
   @override
   String get errorSessionExpired =>
@@ -7570,7 +7571,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get errorInspectorBusy =>
-      'Muaina karne wala Ustaad abhi doosre kaam mein masroof hai. Neeche se koi aur Ustaad choose karein.';
+      'Inspection karne wala Ustaad abhi doosre kaam mein masroof hai. Neeche se koi aur Ustaad choose karein.';
 
   @override
   String get errorPhoneNotRegistered => 'Ye number registered nahi hai.';
@@ -7657,8 +7658,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
       'Report jama ho gayi — faisle ka intezar';
 
   @override
-  String get inspectionBadgeQuoteAccepted =>
-      'Quote manzoor — marammat jari hai';
+  String get inspectionBadgeQuoteAccepted => 'Quote manzoor — repair jari hai';
 
   @override
   String get inspectionBadgeFindingAnother =>
@@ -7666,31 +7666,31 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String inspStripClosedFeeOnlyWithAmount(String fee) {
-    return 'Muainay ke baad band — client sirf Muaina fee dega: $fee';
+    return 'Inspection ke baad band — client sirf inspection fee dega: $fee';
   }
 
   @override
   String get inspStripClosedFeeOnly =>
-      'Muainay ke baad band — client sirf Muaina fee dega.';
+      'Inspection ke baad band — client sirf inspection fee dega.';
 
   @override
   String get inspStripRepairCompletedFeeWaived =>
-      'Marammat mukammal — Muaina fee maaf.';
+      'Repair mukammal — inspection fee maaf.';
 
   @override
   String get inspStripQuoteAcceptedFeeWaived =>
-      'Quote manzoor — Muaina fee maaf. Marammat jari hai.';
+      'Quote manzoor — inspection fee maaf. Repair jari hai.';
 
   @override
   String get inspStripReportSubmitted =>
-      'Muaina report jama ho gayi — marammat jari rakhne ke liye quote dekhein ya Muainay ke baad band karein.';
+      'Inspection report jama ho gayi — repair jari rakhne ke liye quote dekhein ya inspection ke baad band karein.';
 
   @override
   String get inspStripUstaadHired => 'Ustaad hire ho gaya';
 
   @override
   String get inspStripBookedChooseUstaad =>
-      'Muaina book ho gaya — Ustaad chunein';
+      'Inspection book ho gaya — Ustaad chunein';
 
   @override
   String chooseChipCancelRate(int rate) {
@@ -7744,11 +7744,11 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get postJobNearbyNotifiedNow =>
-      'Qareebi Ustaadon ko foran ittila di jati hai.';
+      'Qareebi Ustaadon ko foran bata diya jata hai.';
 
   @override
   String get postJobInspectionNotAvailable =>
-      'Is service ke liye Muaina available nahi hai.';
+      'Is service ke liye inspection available nahi hai.';
 
   @override
   String get postJobInspectionHeroStep1 => 'Ustaad aa kar khud check karega';
@@ -7759,18 +7759,18 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get postJobInspectionHeroStep3 =>
-      'Pasand aaye to kaam karwa lein, warna sirf Muaina fee dein.';
+      'Pasand aaye to kaam karwa lein, warna sirf inspection fee dein.';
 
   @override
   String get postJobStandardTotalFinal =>
       'Ye rate final hai. Darwazay par nahi badlega.';
 
   @override
-  String get postJobHowInspectionStep1 => 'Muaina fee fixed hai.';
+  String get postJobHowInspectionStep1 => 'Inspection fee fixed hai.';
 
   @override
   String get postJobHowInspectionStep2 =>
-      'Ustaad aata hai, masla maloom karta hai, aur app mein marammat ka fixed quote deta hai.';
+      'Ustaad aata hai, masla maloom karta hai, aur app mein repair ka fixed quote deta hai.';
 
   @override
   String get postJobHowInspectionStep3 =>
@@ -7847,19 +7847,19 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
       'Maslan paint ukhar raha hai, deewar par seelan...';
 
   @override
-  String get agreementViewerTitle => 'Muahida';
+  String get agreementViewerTitle => 'Agreement';
 
   @override
   String get agreementLoadFailed =>
-      'Muahida load nahi ho saka. Dobara koshish karein.';
+      'Agreement load nahi ho saka. Dobara koshish karein.';
 
   @override
   String get agreementUnavailableForTrade =>
-      'Aap ke muntakhab kaam ke liye abhi koi manzoor shuda muahida mojood nahi hai. Bara-e-karam HandyGo support se rabta karein.';
+      'Aap ke muntakhab kaam ke liye abhi koi manzoor shuda agreement mojood nahi hai. Bara-e-karam HandyGo support se rabta karein.';
 
   @override
   String agreementLanguageChip(String language) {
-    return 'Muahide ki zubaan: $language';
+    return 'Agreement ki zabaan: $language';
   }
 
   @override
@@ -7869,7 +7869,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get agreementLanguageNotice =>
-      'Yeh manzoor shuda legal muahida filhaal sirf Roman Urdu mein mojood hai.';
+      'Yeh manzoor shuda legal agreement filhaal sirf Roman Urdu mein mojood hai.';
 
   @override
   String get agreementLanguageRomanUrdu => 'Roman Urdu';
@@ -7882,25 +7882,25 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get agreementAcceptCheckbox =>
-      'Main ne yeh muahida parh liya hai aur ise qabool karta hoon.';
+      'Main ne yeh agreement parh liya hai aur ise qabool karta hoon.';
 
   @override
   String get agreementViewBeforeAccepting =>
-      'Qabool karne se pehle muahida khol kar parhein.';
+      'Qabool karne se pehle agreement khol kar parhein.';
 
   @override
-  String get agreementAcceptRequired => 'Yeh muahida qabool karna lazmi hai.';
+  String get agreementAcceptRequired => 'Yeh agreement qabool karna lazmi hai.';
 
   @override
   String get agreementTradeChangedReopen =>
-      'Aap ka main kaam tabdeel ho gaya hai. Trade wala muahida dobara khol kar qabool karein.';
+      'Aap ka main kaam tabdeel ho gaya hai. Trade wala agreement dobara khol kar qabool karein.';
 
   @override
-  String get agreementsLoadFailed => 'Muahide load nahi ho sake.';
+  String get agreementsLoadFailed => 'Agreements load nahi ho sake.';
 
   @override
   String get agreementsAllThreeRequired =>
-      'Submit karne se pehle teenon muahide khol kar qabool karein.';
+      'Submit karne se pehle teenon agreements khol kar qabool karein.';
 
   @override
   String get workerFatherName => 'Walid ka naam';
@@ -7925,11 +7925,11 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get workerEmergencyContactHint => 'Naam aur phone number';
 
   @override
-  String get workerAcceptedAgreementsTitle => 'Mere Muahide';
+  String get workerAcceptedAgreementsTitle => 'Mere agreements';
 
   @override
   String get workerAcceptedAgreementsEmpty =>
-      'Aap ne abhi tak koi muahida qabool nahi kiya.';
+      'Aap ne abhi tak koi agreement qabool nahi kiya.';
 
   @override
   String agreementAcceptedOn(String date) {
@@ -7945,16 +7945,16 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get agreementDownload => 'Download';
 
   @override
-  String get agreementDownloadInProgress => 'Muahida download ho raha hai...';
+  String get agreementDownloadInProgress => 'Agreement download ho raha hai...';
 
   @override
   String agreementDownloadSaved(String path) {
-    return 'Muahida save ho gaya: $path';
+    return 'Agreement save ho gaya: $path';
   }
 
   @override
   String get agreementDownloadFailed =>
-      'Muahida download nahi ho saka. Dobara koshish karein.';
+      'Agreement download nahi ho saka. Dobara koshish karein.';
 
   @override
   String get customerAgreementTitle =>
@@ -7983,11 +7983,11 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get customerAgreementHistoryEmptyTitle =>
-      'Abhi koi muahida manzoor nahi kiya';
+      'Abhi koi agreement manzoor nahi kiya';
 
   @override
   String get customerAgreementHistoryEmptyHelper =>
-      'Aap ke manzoor kiye hue customer muahiday yahan nazar aayenge.';
+      'Aap ke manzoor kiye hue customer agreements yahan nazar aayenge.';
 
   @override
   String get clientStateLoading => 'Load ho raha hai…';
@@ -8011,14 +8011,14 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
       'Inspection reports dastyab nahi';
 
   @override
-  String get workerSubmittedDetails => 'Jama karai gayi tafseelat';
+  String get workerSubmittedDetails => 'Jama karai gayi details';
 
   @override
-  String get workerViewSubmittedDetails => 'Jama karai gayi tafseelat dekhein';
+  String get workerViewSubmittedDetails => 'Jama karai gayi details dekhein';
 
   @override
   String get workerDetailsReadOnlyNotice =>
-      'Aap ki profile manzoor ho chuki hai. Yeh tafseelat lock hain aur tabdeel nahi ki ja sakti.';
+      'Aap ki profile manzoor ho chuki hai. Yeh details lock hain aur tabdeel nahi ki ja sakti.';
 
   @override
   String get workerVerificationStatus => 'Tasdeeq ki haalat';
@@ -8139,7 +8139,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get aboutAppDescription =>
-      'HandyGo clients ko nearby verified Ustaadon se ghar ki marammat aur maintenance ki khidmat ke liye jorta hai.';
+      'HandyGo clients ko nearby verified Ustaadon se ghar ki repair aur maintenance ki khidmat ke liye jorta hai.';
 
   @override
   String get aboutWebsiteLabel => 'Website';
@@ -8637,7 +8637,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
       'Jaise hi aap is kaam ke liye Ustaad hire karenge, kaam shuru ho jayega.';
 
   @override
-  String get ustaadIdentityTitle => 'Shanakhti tafseelat';
+  String get ustaadIdentityTitle => 'Shanakhti details';
 
   @override
   String get ustaadLiveSelfieSubtitle =>

@@ -26,7 +26,7 @@ const _romanUrdu = (
   subtitle: 'Aik chunein',
   clientTitle: 'Ghar ka kaam karwana hai',
   clientSubtitle:
-      'Marammat, safai ya nayi cheez lagwane ke liye Ustaad bulwayein.',
+      'Repair, safai ya nayi cheez lagwane ke liye Ustaad bulwayein.',
   workerTitle: 'Main Ustaad hoon',
   workerSubtitle: 'Kaam dhoondne ke liye account banayein.',
 );
