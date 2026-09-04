@@ -635,7 +635,7 @@ void main() {
     await tester.tap(find.byTooltip('Profile dekhein'));
     await tester.pumpAndSettle();
     expect(find.text('Koi review mojood nahi'), findsOneWidget);
-    expect(find.text('CNIC Verified Ustaad'), findsOneWidget);
+    expect(find.text('CNIC verified Ustaad'), findsOneWidget);
   });
 
   testWidgets('the sheet is translated in Urdu', (tester) async {

@@ -659,7 +659,13 @@ void main() {
       r.phoneCheckResult = ClientPhoneStatus.client;
       await tester.enterText(find.byType(TextFormField).first, _validPhone);
       await tester.pump();
-      await _tap(tester, find.text(_ru.otpLogin));
+      // The CTA is localised, so the label to tap depends on [locale]. Tapping
+      // the Roman Urdu one unconditionally only ever worked because the Roman
+      // Urdu string *was* the untranslated English "Login with OTP" — the
+      // exact leftover this wording pass removed.
+      final otpLoginLabel =
+          locale == AppLocale.english ? _en.otpLogin : _ru.otpLogin;
+      await _tap(tester, find.text(otpLoginLabel));
       return r;
     }
 

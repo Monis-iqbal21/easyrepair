@@ -189,10 +189,10 @@ void _expectOnlyBidding(WidgetTester tester) {
   final bidding = find.byKey(const ValueKey('booking-lane-bidding'));
   expect(bidding, findsOneWidget);
   expect(tester.widget<Semantics>(bidding).properties.enabled, isTrue);
-  expect(find.text('Custom Kaam'), findsOneWidget);
+  expect(find.text('Custom kaam'), findsOneWidget);
   expect(find.byKey(const ValueKey('booking-lane-standard')), findsNothing);
   expect(find.byKey(const ValueKey('booking-lane-inspection')), findsNothing);
-  expect(find.text('Fixed-price services'), findsNothing);
+  expect(find.text('Fixed price'), findsNothing);
   expect(find.text('Inspection'), findsNothing);
 }
 

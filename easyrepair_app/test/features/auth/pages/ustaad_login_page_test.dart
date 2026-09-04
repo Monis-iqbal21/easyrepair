@@ -330,7 +330,7 @@ void main() {
 
       expect(find.text('Ustaad'), findsOneWidget);
       expect(find.text('HandyGo par kaam lein'), findsOneWidget);
-      expect(find.text('Ustaad Login'), findsOneWidget);
+      expect(find.text('Ustaad login'), findsOneWidget);
       expect(
         find.text('Kaam lene ke liye apne number se Login karein.'),
         findsOneWidget,
