@@ -7446,7 +7446,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String workerMainSkillWithName(String skill) {
-    return 'Buniyadi hunar: $skill';
+    return 'Main skill: $skill';
   }
 
   @override
