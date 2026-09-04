@@ -47,6 +47,7 @@ class _Harness extends ConsumerWidget {
           body: Column(
             children: [
               Text(context.l10n.languageRowLabel),
+              Text(context.l10n.languageOnboardingTitle),
               Text(
                 'dir:${Directionality.of(context) == TextDirection.rtl ? 'rtl' : 'ltr'}',
               ),
@@ -101,9 +102,9 @@ void main() {
     ) async {
       await _pump(tester);
 
-      expect(find.text('Zaban'), findsOneWidget);
-      expect(find.text('Language'), findsNothing);
-      expect(find.text('زبان'), findsNothing);
+      expect(find.text('Zabaan chunein'), findsOneWidget);
+      expect(find.text('Choose Language'), findsNothing);
+      expect(find.text('زبان منتخب کریں'), findsNothing);
       expect(_direction(tester), 'dir:ltr');
     });
 
@@ -112,7 +113,7 @@ void main() {
     ) async {
       await _pump(tester, initialPrefs: {kLocalePrefsKey: 'fr_CA'});
 
-      expect(find.text('Zaban'), findsOneWidget);
+      expect(find.text('Zabaan chunein'), findsOneWidget);
     });
 
     testWidgets('reinstall / cleared app data (empty storage) is Roman Urdu '
@@ -123,7 +124,7 @@ void main() {
       // with nothing in it, regardless of what a previous install had saved.
       final container = await _pump(tester);
       await _select(tester, container, AppLocale.english);
-      expect(find.text('Language'), findsOneWidget);
+      expect(find.text('Choose Language'), findsOneWidget);
 
       SharedPreferences.setMockInitialValues(const {});
       final freshPrefs = await SharedPreferences.getInstance();
@@ -139,7 +140,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Zaban'), findsOneWidget);
+      expect(find.text('Zabaan chunein'), findsOneWidget);
     });
   });
 
@@ -150,27 +151,27 @@ void main() {
       final container = await _pump(tester);
 
       // Default: Roman Urdu.
-      expect(find.text('Zaban'), findsOneWidget);
+      expect(find.text('Zabaan chunein'), findsOneWidget);
       expect(_direction(tester), 'dir:ltr');
 
       // → English
       await _select(tester, container, AppLocale.english);
-      expect(find.text('Language'), findsOneWidget);
-      expect(find.text('Zaban'), findsNothing);
+      expect(find.text('Choose Language'), findsOneWidget);
+      expect(find.text('Zabaan chunein'), findsNothing);
       expect(_direction(tester), 'dir:ltr');
 
       // → Urdu: the script changes and the layout does NOT. HandyGo is
       // never mirrored, so Urdu translates the words and leaves the direction
       // alone.
       await _select(tester, container, AppLocale.urdu);
-      expect(find.text('زبان'), findsOneWidget);
-      expect(find.text('Language'), findsNothing);
+      expect(find.text('زبان منتخب کریں'), findsOneWidget);
+      expect(find.text('Choose Language'), findsNothing);
       expect(_direction(tester), 'dir:ltr');
 
       // → back to Roman Urdu: Latin script, still LTR.
       await _select(tester, container, AppLocale.romanUrdu);
-      expect(find.text('Zaban'), findsOneWidget);
-      expect(find.text('زبان'), findsNothing);
+      expect(find.text('Zabaan chunein'), findsOneWidget);
+      expect(find.text('زبان منتخب کریں'), findsNothing);
       expect(_direction(tester), 'dir:ltr');
     });
 
@@ -178,11 +179,11 @@ void main() {
       final container = await _pump(tester, initialPrefs: {
         kLocalePrefsKey: 'ur',
       });
-      expect(find.text('زبان'), findsOneWidget);
+      expect(find.text('زبان منتخب کریں'), findsOneWidget);
       expect(_direction(tester), 'dir:ltr');
 
       await _select(tester, container, AppLocale.romanUrdu);
-      expect(find.text('Zaban'), findsOneWidget);
+      expect(find.text('Zabaan chunein'), findsOneWidget);
       expect(_direction(tester), 'dir:ltr');
     });
   });
@@ -218,7 +219,7 @@ void main() {
       // the translation is still Urdu, only the layout is unchanged.
       await _pump(tester, initialPrefs: {kLocalePrefsKey: 'ur'});
 
-      expect(find.text('زبان'), findsOneWidget);
+      expect(find.text('زبان منتخب کریں'), findsOneWidget);
       expect(_direction(tester), 'dir:ltr');
     });
 
@@ -300,7 +301,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('زبان'), findsOneWidget);
+      expect(find.text('زبان منتخب کریں'), findsOneWidget);
       expect(_direction(tester), 'dir:ltr');
     });
 
@@ -322,7 +323,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Language'), findsOneWidget);
+      expect(find.text('Choose Language'), findsOneWidget);
       expect(_direction(tester), 'dir:ltr');
     });
 

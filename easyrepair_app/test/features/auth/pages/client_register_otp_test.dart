@@ -247,7 +247,7 @@ void main() {
       _elapseResendCooldown();
       // The page repaints on its own 1s ticker, not on the provider.
       await tester.pump(const Duration(seconds: 2));
-      await tester.tap(find.text('Resend'));
+      await tester.tap(find.text('Dobara bhejein'));
       await _settle(tester);
 
       expect(repo.requests, hasLength(1));
@@ -271,7 +271,7 @@ void main() {
 
       // While the call is open the CTA shows a spinner and reports itself
       // disabled — the first half of the guard.
-      expect(find.text('Verify & Create Account'), findsNothing);
+      expect(find.text('Verify kar ke account banayein'), findsNothing);
       expect(
         tester.widget<ElevatedButton>(find.byType(ElevatedButton).first)
             .onPressed,
@@ -339,7 +339,7 @@ void main() {
 
       _elapseResendCooldown();
       await tester.pump(const Duration(seconds: 2));
-      await tester.tap(find.text('Resend'));
+      await tester.tap(find.text('Dobara bhejein'));
       await _settle(tester);
 
       expect(

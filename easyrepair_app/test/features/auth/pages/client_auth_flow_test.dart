@@ -36,45 +36,45 @@ import 'package:handygo_app/features/auth/presentation/widgets/otp_input_section
 // Deliberately not read back from AppLocalizations: reading the same source
 // the pages read would pass whatever the wording became.
 const _ru = (
-  loginHeading: 'Welcome Back',
-  loginSubtitle: 'Mobile number aur password se Login karein.',
-  phoneLabel: 'Mobile Number',
+  loginHeading: 'Khush aamdeed',
+  loginSubtitle: 'Apna number aur password daalein.',
+  phoneLabel: 'Mobile number',
   passwordLabel: 'Password',
-  show: 'Show',
-  forgot: 'Forgot Password?',
+  show: 'Dikhayein',
+  forgot: 'Password bhool gaye?',
   login: 'Login',
-  or: 'OR',
-  otpLogin: 'Login with OTP',
-  otpHelp: 'OTP aapke registered mobile number par bheja jayega.',
-  loginWithPassword: 'Login with Password',
+  or: 'ya',
+  otpLogin: 'Code se login karein',
+  otpHelp: 'Code aap ke number par SMS aa jayega.',
+  loginWithPassword: 'Password se login karein',
   noAccountFound:
-      'Is number ka Client account nahi mila. Create Account karein.',
+      'Is number ka Client account nahi mila. Account banayein.',
   expiresIn: 'Code {t} mein expire hoga',
   expired: 'Code expire ho gaya hai. Naya code mangwayein.',
-  newHere: 'New here?',
-  createAccount: 'Create Account',
+  newHere: 'Naye hain?',
+  createAccount: 'Account banayein',
   registerSubtitle:
-      'Sirf aik dafa. Phir mobile number aur password se Login karein.',
-  fullNameLabel: 'Full name',
+      'Sirf aik dafa. Aage se number aur password kaafi.',
+  fullNameLabel: 'Poora naam',
   fullNameHint: 'Aap ka poora naam',
   mobileLabel: 'Mobile number',
-  createPasswordLabel: 'Create password',
+  createPasswordLabel: 'Password banayein',
   createPasswordHint: 'Kam az kam 8 harf',
-  confirmPasswordLabel: 'Confirm password',
+  confirmPasswordLabel: 'Password dobara',
   confirmPasswordHint: 'Password dobara likhein',
-  infoBox: 'Address abhi nahi chahiye. Pehli booking ke waqt poochenge.',
-  sendOtp: 'Send OTP',
+  infoBox: 'Pata abhi nahi chahiye. Pehli booking par poochenge.',
+  sendOtp: 'Code bhejein',
   haveAccount: 'Pehle se account hai?',
   loginAction: 'Login karein',
-  verifyHeading: 'Verify Mobile Number',
+  verifyHeading: 'Number verify karein',
   resendPrompt: 'Code nahi mila?',
-  resend: 'Resend',
-  verifyButton: 'Verify & Create Account',
+  resend: 'Dobara bhejein',
+  verifyButton: 'Verify kar ke account banayein',
   readyHeading: 'Account ready hai',
   readySubtitle: 'Welcome to HandyGo. Ab aap service book kar sakte hain.',
   accountCardLabel: 'AAP KA ACCOUNT',
   customer: 'Customer',
-  goHome: 'Go to Home',
+  goHome: 'Home par jayein',
 );
 
 const _en = (
@@ -659,7 +659,13 @@ void main() {
       r.phoneCheckResult = ClientPhoneStatus.client;
       await tester.enterText(find.byType(TextFormField).first, _validPhone);
       await tester.pump();
-      await _tap(tester, find.text(_ru.otpLogin));
+      // The CTA is localised, so the label to tap depends on [locale]. Tapping
+      // the Roman Urdu one unconditionally only ever worked because the Roman
+      // Urdu string *was* the untranslated English "Login with OTP" — the
+      // exact leftover this wording pass removed.
+      final otpLoginLabel =
+          locale == AppLocale.english ? _en.otpLogin : _ru.otpLogin;
+      await _tap(tester, find.text(otpLoginLabel));
       return r;
     }
 

@@ -103,7 +103,7 @@ void main() {
     ) async {
       await _pumpSheet(tester, hasAssignedWorker: true);
 
-      expect(find.text('Booking Cancel Karne Ki Wajah'), findsOneWidget);
+      expect(find.text('Booking cancel karne ki wajah'), findsOneWidget);
       expect(find.text('Booking cancel karein'), findsOneWidget);
       expect(find.text('Wapas'), findsOneWidget);
     });
@@ -370,7 +370,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Still open, still showing the chosen reason selected, and retryable.
-      expect(find.text('Booking Cancel Karne Ki Wajah'), findsOneWidget);
+      expect(find.text('Booking cancel karne ki wajah'), findsOneWidget);
       expect(find.byIcon(Icons.radio_button_checked), findsOneWidget);
       expect(_enabled(tester, _submitBtn), isTrue);
     });
@@ -383,7 +383,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(captured, isEmpty);
-      expect(find.text('Booking Cancel Karne Ki Wajah'), findsNothing);
+      expect(find.text('Booking cancel karne ki wajah'), findsNothing);
     });
   });
 

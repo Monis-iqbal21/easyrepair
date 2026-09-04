@@ -50,7 +50,7 @@ class _FakeBookingRepository implements BookingRepository {
 
   void releaseProfile() => gate?.complete();
 
-  /// Every (bookingId, workerProfileId) pair `Chunain` assigned.
+  /// Every (bookingId, workerProfileId) pair `Chunein` assigned.
   final List<(String, String)> assigned = [];
 
   @override
@@ -324,9 +324,9 @@ void main() {
       // Review TEXT and the phone number belong to the sheet, not the card.
       expect(find.text('+923001234567'), findsNothing);
 
-      // Both actions, with Chunain as the primary CTA — the same product
+      // Both actions, with Chunein as the primary CTA — the same product
       // word in English as in Roman Urdu.
-      expect(find.text('Chunain'), findsOneWidget);
+      expect(find.text('Chunein'), findsOneWidget);
 
       // Card-level facts that came from the list payload.
       expect(find.text('CNIC verified'), findsOneWidget);
@@ -517,20 +517,20 @@ void main() {
     expect(find.text('+923001234567'), findsOneWidget);
   });
 
-  // ── Chunain → the existing, lane-specific selection path ──────────────────
+  // ── Chunein → the existing, lane-specific selection path ──────────────────
 
   for (final lane in [BookingLane.standard, BookingLane.inspection]) {
-    testWidgets('$lane Chunain assigns through the existing hire flow', (
+    testWidgets('$lane Chunein assigns through the existing hire flow', (
       tester,
     ) async {
       final fakes = await _pumpPage(tester, lane: lane);
 
-      await tester.tap(find.text('Chunain'));
+      await tester.tap(find.text('Chunein'));
       await tester.pumpAndSettle();
 
       // Same confirmation gate as before the redesign.
       expect(find.textContaining('Rashid Ali'), findsWidgets);
-      await tester.tap(find.widgetWithText(ElevatedButton, 'Chunain').last);
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Chunein').last);
       await tester.pumpAndSettle();
 
       expect(fakes.bookings.assigned, [('booking-1', 'worker-1')]);
@@ -615,13 +615,13 @@ void main() {
 
   // ── Localisation ─────────────────────────────────────────────────────────
 
-  testWidgets('the CTA reads Chunain in Roman Urdu', (tester) async {
+  testWidgets('the CTA reads Chunein in Roman Urdu', (tester) async {
     await _pumpPage(
       tester,
       lane: BookingLane.standard,
       locale: AppLocale.romanUrdu,
     );
-    expect(find.text('Chunain'), findsOneWidget);
+    expect(find.text('Chunein'), findsOneWidget);
     expect(find.textContaining('Qareeb wale pehle'), findsOneWidget);
   });
 
@@ -635,7 +635,7 @@ void main() {
     await tester.tap(find.byTooltip('Profile dekhein'));
     await tester.pumpAndSettle();
     expect(find.text('Koi review mojood nahi'), findsOneWidget);
-    expect(find.text('CNIC Verified Ustaad'), findsOneWidget);
+    expect(find.text('CNIC verified Ustaad'), findsOneWidget);
   });
 
   testWidgets('the sheet is translated in Urdu', (tester) async {

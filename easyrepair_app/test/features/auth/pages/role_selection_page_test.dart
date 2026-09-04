@@ -23,11 +23,12 @@ import 'package:handygo_app/features/auth/presentation/pages/role_selection_page
 // the same source the page reads would pass no matter what the wording became.
 const _romanUrdu = (
   heading: 'Aap kya karna chahte hain?',
-  subtitle: 'Apna option select karein',
+  subtitle: 'Aik chunein',
   clientTitle: 'Ghar ka kaam karwana hai',
-  clientSubtitle: 'Repair, service ya installation ke liye Ustaad book karein.',
+  clientSubtitle:
+      'Repair, safai ya nayi cheez lagwane ke liye Ustaad bulwayein.',
   workerTitle: 'Main Ustaad hoon',
-  workerSubtitle: 'Kaam lene ke liye register karein.',
+  workerSubtitle: 'Kaam dhoondne ke liye account banayein.',
 );
 
 const _english = (

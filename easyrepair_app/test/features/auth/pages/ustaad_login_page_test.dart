@@ -238,7 +238,7 @@ void main() {
       await tester.pumpWidget(_wrap(_FakeAuthRepository()));
 
       expect(find.text('OTP bhejein'), findsNothing);
-      expect(find.text('Login with OTP'), findsNothing);
+      expect(find.text('Code se login karein'), findsNothing);
       expect(find.text('Code dobara bhejein'), findsNothing);
       // And no name/username either — login is authentication only.
       expect(find.text('Poora Naam · CNIC ke mutabiq'), findsNothing);
@@ -330,13 +330,13 @@ void main() {
 
       expect(find.text('Ustaad'), findsOneWidget);
       expect(find.text('HandyGo par kaam lein'), findsOneWidget);
-      expect(find.text('Ustaad Login'), findsOneWidget);
+      expect(find.text('Ustaad login'), findsOneWidget);
       expect(
         find.text('Kaam lene ke liye apne number se Login karein.'),
         findsOneWidget,
       );
-      expect(find.text('Mobile Number'), findsOneWidget);
-      expect(find.text('Forgot Password?'), findsOneWidget);
+      expect(find.text('Mobile number'), findsOneWidget);
+      expect(find.text('Password bhool gaye?'), findsOneWidget);
       expect(
         find.text('Har Ustaad ka CNIC verify hota hai. Registration ke baad '
             '24 ghante mein approval.'),
@@ -394,7 +394,7 @@ void main() {
           tester.widget<EditableText>(find.byType(EditableText).last);
       expect(field().obscureText, isTrue);
 
-      await tester.tap(find.text('Show'));
+      await tester.tap(find.text('Dikhayein'));
       await tester.pump();
 
       expect(field().obscureText, isFalse);
@@ -404,7 +404,7 @@ void main() {
     testWidgets('Forgot Password opens the Ustaad reset flow', (tester) async {
       await tester.pumpWidget(_wrap(_FakeAuthRepository()));
 
-      await tester.tap(find.text('Forgot Password?'));
+      await tester.tap(find.text('Password bhool gaye?'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
 

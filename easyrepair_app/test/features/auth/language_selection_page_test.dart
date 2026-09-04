@@ -124,12 +124,12 @@ void main() {
       // Default locale is Roman Urdu, so the localized copy is what shows.
       expect(find.text('Zabaan chunein'), findsOneWidget);
       expect(
-        find.text('Aap kis zabaan mein application use karna chahte hain?'),
+        find.text('App kis zabaan mein chalayein?'),
         findsOneWidget,
       );
-      expect(find.text('Asaan alfaaz, samajhne mein aasan'), findsOneWidget);
-      expect(find.text('Poori application English mein'), findsOneWidget);
-      expect(find.text('Aage Barhein'), findsOneWidget);
+      expect(find.text('Aasan alfaaz mein'), findsOneWidget);
+      expect(find.text('Sab kuch English mein'), findsOneWidget);
+      expect(find.text('Aage barhein'), findsOneWidget);
     });
 
     testWidgets('an English user sees the same page in English', (tester) async {
