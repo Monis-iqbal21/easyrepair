@@ -4491,7 +4491,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get authButtonContinueWithPassword => 'Password se Continue';
 
   @override
-  String get authButtonUstaadLogin => 'Ustaad Login';
+  String get authButtonUstaadLogin => 'Ustaad login';
 
   @override
   String get authErrorGeneric => 'Kuch ghalat ho gaya.';
@@ -4566,7 +4566,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get ustaadFullNameHint => 'Maslan: Kamran Sheikh';
 
   @override
-  String get ustaadCnicLabel => 'CNIC Number';
+  String get ustaadCnicLabel => 'CNIC number';
 
   @override
   String get ustaadCreatePasswordLabel => 'Password banayein';
@@ -6085,7 +6085,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get discoveryViewInspectionReport => 'Inspection report dekhein';
 
   @override
-  String get discoveryHireAgain => 'Dobara Hire Karein';
+  String get discoveryHireAgain => 'Dobara hire karein';
 
   @override
   String discoveryHireAgainNamed(String name) {
@@ -6269,7 +6269,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get chooseCnicVerified => 'CNIC verified';
 
   @override
-  String get chooseCnicVerifiedUstaad => 'CNIC Verified Ustaad';
+  String get chooseCnicVerifiedUstaad => 'CNIC verified Ustaad';
 
   @override
   String chooseExperienceYears(int years) {
@@ -6557,10 +6557,10 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   }
 
   @override
-  String get trackHeadlineUstaadOnTheWay => 'Ustaad On The Way';
+  String get trackHeadlineUstaadOnTheWay => 'Ustaad on the way';
 
   @override
-  String get trackHeadlineUstaadArrived => 'Ustaad Arrived';
+  String get trackHeadlineUstaadArrived => 'Ustaad arrived';
 
   @override
   String get trackHeadlineWorkInProgress => 'Kaam chal raha hai';
@@ -6720,7 +6720,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get workerGoOfflineConfirmYes => 'Haan, offline karein';
 
   @override
-  String get workerFindNewWork => 'Nayi Shikayat';
+  String get workerFindNewWork => 'Naya kaam dhoondein';
 
   @override
   String get workerViewNewJobs => 'Dekhein';
@@ -6730,8 +6730,8 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count nayi',
-      one: '1 nayi',
+      other: '$count naye',
+      one: '1 naya',
     );
     return '$_temp0';
   }
@@ -6750,7 +6750,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get workerStayOnlineHint =>
-      'Online rahein, nazdeek ka kaam dhondne ke liye.';
+      'Online rahein, nazdeek ka kaam dhoondne ke liye.';
 
   @override
   String get workerReady => 'Tayyar';
@@ -6759,10 +6759,10 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get workerPerformance => 'Performance';
 
   @override
-  String get workerJobsDone => 'Jobs Done';
+  String get workerJobsDone => 'Jobs done';
 
   @override
-  String get workerCancelRate => 'Cancel Rate';
+  String get workerCancelRate => 'Cancel rate';
 
   @override
   String workerPercentValue(String value) {
@@ -6808,10 +6808,10 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get workerDashboardLoadFailed => 'Dashboard load nahi ho saka';
 
   @override
-  String get workerNewJobsTitle => 'Naye Kaam';
+  String get workerNewJobsTitle => 'Naye kaam';
 
   @override
-  String get workerNewJobsSubtitle => 'Aapke hunar ke hisaab se kaam';
+  String get workerNewJobsSubtitle => 'Aap ke hunar ke hisaab se kaam';
 
   @override
   String get workerCompleteProfileForNewJobs =>
@@ -6830,7 +6830,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
       'Client aap ko seedha hire kar sakta hai. Koi offer bhejne ki zaroorat nahi.';
 
   @override
-  String get workerListedJob => 'Listed Job';
+  String get workerListedJob => 'Listed job';
 
   @override
   String get workerOfferSent => 'Offer bhej di';
@@ -6906,10 +6906,10 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get workerFilterCancelled => 'Cancel';
 
   @override
-  String get workerFilterAllWork => 'Naye Kaam';
+  String get workerFilterAllWork => 'Naye kaam';
 
   @override
-  String get workerFilterMyOffers => 'Meri Offers';
+  String get workerFilterMyOffers => 'Meri offers';
 
   @override
   String get workerFilterNoOfferSent => 'Offer nahi bheji';
@@ -6921,7 +6921,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get bidChatWithClient => 'Client se chat karein';
 
   @override
-  String get bidLiveBids => 'Live Offers';
+  String get bidLiveBids => 'Live offers';
 
   @override
   String get bidAreaNotAvailable => 'Ilaqa available nahi';
@@ -6963,7 +6963,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get bidCanUpdateNow => 'Aap abhi apni offer update kar sakte hain.';
 
   @override
-  String get bidAmountLabel => 'Offer Amount (PKR) *';
+  String get bidAmountLabel => 'Offer amount (PKR) *';
 
   @override
   String get bidAmountHint => 'Maslan 2500';
@@ -6985,7 +6985,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get earningBidding => 'Offers';
 
   @override
-  String get earningHistoryTitle => 'Earning History';
+  String get earningHistoryTitle => 'Earning history';
 
   @override
   String get earningNoneYet => 'Abhi koi kamai nahi';
@@ -6995,7 +6995,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
       'Mukammal kaam yahan aap ki rozana kamai ke sath nazar aayenge.';
 
   @override
-  String get reviewsMyReviews => 'Mere Reviews';
+  String get reviewsMyReviews => 'Mere reviews';
 
   @override
   String reviewsCount(int count) {
@@ -7055,7 +7055,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get inspFormWriteOrRecord =>
-      'Barah-e-karam report likhein ya voice note record karein.';
+      'Report likhein ya voice note record karein.';
 
   @override
   String get inspFormPartsRequired => 'Parts chahiye?';
@@ -7102,7 +7102,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get inspFormRemovePart => 'Part hatayein';
 
   @override
-  String get inspFormTotalAmount => 'Kam ki puri raqam';
+  String get inspFormTotalAmount => 'Kaam ki total amount';
 
   @override
   String get inspFormFeeWaivedNote =>
@@ -7161,7 +7161,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get jobStatusInProgress => 'Kaam Jaari';
 
   @override
-  String get workerJobDetailsTitle => 'Kaam Ki Tafseel';
+  String get workerJobDetailsTitle => 'Kaam ki detail';
 
   @override
   String get workerJobLoadFailed => 'Kaam load nahi ho saka.';
@@ -7212,7 +7212,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get workerCancelJobBody =>
-      'Baraye meherbani client ko batayein ke aap kyun cancel kar rahe hain.';
+      'Client ko batayein ke aap kyun cancel kar rahe hain.';
 
   @override
   String get workerCancelOwnReasonHint => 'Apni wajah likhein (zaroori)';
@@ -7329,7 +7329,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get workerCompleteHighlightedFields =>
-      'Baraye meherbani neeche nishan zad khane mukammal karein.';
+      'Neeche nishan zad khane mukammal karein.';
 
   @override
   String get workerProfileSaveFailed =>
@@ -7346,13 +7346,13 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get workerProfileLoadFailed => 'Profile load nahi ho saki.';
 
   @override
-  String get workerFullLegalName => 'Mukammal qanooni naam';
+  String get workerFullLegalName => 'Mukammal legal naam';
 
   @override
   String get workerLegalNameHint => 'Jaisa aap ke CNIC par likha hai';
 
   @override
-  String get workerLegalNameRequired => 'Mukammal qanooni naam zaroori hai.';
+  String get workerLegalNameRequired => 'Mukammal legal naam zaroori hai.';
 
   @override
   String get workerCnicNumber => 'CNIC number';
@@ -7361,7 +7361,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get workerCnicInvalid => 'CNIC is tarah likhein: 12345-1234567-1';
 
   @override
-  String get workerMainSkill => 'Buniyadi hunar';
+  String get workerMainSkill => 'Main skill';
 
   @override
   String get workerMainSkillNotSelected => 'Muntakhab nahi kiya gaya';
@@ -7370,8 +7370,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get workerChangeSkill => 'Tabdeel karein';
 
   @override
-  String get workerMainSkillRequired =>
-      'Baraye meherbani apna buniyadi hunar muntakhab karein.';
+  String get workerMainSkillRequired => 'Apna main skill muntakhab karein.';
 
   @override
   String get workerExperienceYears => 'Tajurba (saalon mein)';
@@ -7395,7 +7394,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
       'Rihaishi address zaroori hai.';
 
   @override
-  String get workerIdentityDocuments => 'Shanakhti dastawezat';
+  String get workerIdentityDocuments => 'Shanakhti documents';
 
   @override
   String get workerCnicFront => 'CNIC ka agla rukh';
@@ -7414,7 +7413,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get workerConfirmLegalName =>
-      'Main tasdeeq karta hoon ke mera qanooni naam mere CNIC ke mutabiq hai.';
+      'Main tasdeeq karta hoon ke mera legal naam mere CNIC ke mutabiq hai.';
 
   @override
   String get workerViewAgreement => 'Agreement dekhein';
@@ -7452,7 +7451,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get workerNoMainSkillYet =>
-      'Abhi koi buniyadi hunar muntakhab nahi kiya gaya';
+      'Abhi koi main skill muntakhab nahi kiya gaya';
 
   @override
   String get workerProfileApproval => 'Profile ki manzoori';
@@ -7461,11 +7460,11 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get inspHintFallback => 'Maslan batayein aap ko kya mila';
 
   @override
-  String get bidAmountRequired => 'Baraye meherbani offer ki raqam likhein.';
+  String get bidAmountRequired => 'Offer ki amount likhein.';
 
   @override
   String get bidAmountRange =>
-      'Offer ki raqam 100 se 500,000 ke darmiyan honi chahiye.';
+      'Offer ki amount 100 se 500,000 ke darmiyan honi chahiye.';
 
   @override
   String get bidSubmitted => 'Offer bhej di gayi!';
@@ -7474,7 +7473,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get bidSubmitFailed => 'Offer nahi bheji ja saki.';
 
   @override
-  String get workerViewJobDetails => 'Tafseel dekhein';
+  String get workerViewJobDetails => 'Detail dekhein';
 
   @override
   String get workerSendOffer => 'Offer bhejein';
@@ -7488,7 +7487,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get workerOnboardingChangesRequiredBody =>
-      'Aap ki profile mein tabdeeli darkar hai — tafseel dekhein.';
+      'Aap ki profile mein tabdeeli darkar hai — detail dekhein.';
 
   @override
   String get workerOnboardingRejectedBody =>
@@ -7498,7 +7497,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get workerProfileIncomplete => 'Profile namukammal';
 
   @override
-  String get inspFormLabourCostRequired => 'Mazdoori ki laagat *';
+  String get inspFormLabourCostRequired => 'Labour ki laagat *';
 
   @override
   String get inspFormNotesOptional => 'Notes (optional)';
@@ -7855,7 +7854,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
 
   @override
   String get agreementUnavailableForTrade =>
-      'Aap ke muntakhab kaam ke liye abhi koi manzoor shuda agreement mojood nahi hai. Bara-e-karam HandyGo support se rabta karein.';
+      'Aap ke muntakhab kaam ke liye abhi koi manzoor shuda agreement mojood nahi hai. HandyGo support se rabta karein.';
 
   @override
   String agreementLanguageChip(String language) {
@@ -8024,7 +8023,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get workerVerificationStatus => 'Tasdeeq ki haalat';
 
   @override
-  String get workerMainTrade => 'Markazi hunar';
+  String get workerMainTrade => 'Main kaam';
 
   @override
   String get workerSuspendedMessage =>
@@ -8034,10 +8033,10 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get workerSuspendedContactSupport => 'Support se Rabta Karein';
 
   @override
-  String get earningGrossEarnings => 'Mazdoori';
+  String get earningGrossEarnings => 'Labour';
 
   @override
-  String get earningCommissionLabel => 'HandyGo Commission (18%)';
+  String get earningCommissionLabel => 'HandyGo commission (18%)';
 
   @override
   String get earningUstaadEarnings => 'Munafa';
@@ -8123,7 +8122,7 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
   String get goToMyBookingsAction => 'My Bookings Par Jayein';
 
   @override
-  String get goToMyJobsAction => 'My Jobs Par Jayein';
+  String get goToMyJobsAction => 'My jobs par jayein';
 
   @override
   String get goToChatsAction => 'Chats Par Jayein';
@@ -8652,41 +8651,41 @@ class AppLocalizationsUrLatn extends AppLocalizationsUr {
       'Barae meherbani masla kam az kam 10 harf mein bayan karein.';
 
   @override
-  String get workerPaymentPartsLabel => 'Purza jaat ki raqam';
+  String get workerPaymentPartsLabel => 'Parts ki amount';
 
   @override
-  String get workerPaymentLabourLabel => 'Mazdoori wasool';
+  String get workerPaymentLabourLabel => 'Labour wasool';
 
   @override
   String get workerPaymentAwaitingTitle => 'Adaigi abhi darj nahi hui';
 
   @override
   String get workerPaymentAwaitingBody =>
-      'Raqam darj hotay hi aap ko maloom ho jaye ga kitni raqam wasool hui.';
+      'Amount darj hote hi pata chal jayega kitna wasool hua.';
 
   @override
   String get workerReportPaymentAction => 'Kam paisa mila?';
 
   @override
-  String get workerReportPaymentTitle => 'Aap ko asal mein kitni raqam mili?';
+  String get workerReportPaymentTitle => 'Aap ko asal mein kitni amount mili?';
 
   @override
   String get workerReportPaymentHelper =>
       'Jo cash customer ne diya wo likhein. Baqi hisaab HandyGo khud kare ga.';
 
   @override
-  String get workerReportPaymentFieldLabel => 'Wasool shuda raqam';
+  String get workerReportPaymentFieldLabel => 'Wasool shuda amount';
 
   @override
   String get workerReportPaymentInvalidError =>
-      'Sifar ya us se zyada poore rupay ki raqam likhein.';
+      'Zero ya us se zyada poore rupay likhein.';
 
   @override
   String get workerReportPaymentSubmit => 'Adaigi darj karein';
 
   @override
   String get workerReportPaymentSuccess =>
-      'Adaigi darj ho gayi. Baqi raqam ke liye HandyGo rabta kare ga.';
+      'Adaigi darj ho gayi. Baqi amount ke liye HandyGo rabta kare ga.';
 
   @override
   String get workerReportPaymentFailed =>

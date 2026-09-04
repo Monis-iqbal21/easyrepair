@@ -178,7 +178,7 @@ void main() {
     // ── #2 Client sees the pinned inspector card with their quote ──────────
     testWidgets(
       'shows the pinned inspector, their existing quote and the '
-      '"Dobara Hire Karein" button',
+      '"Dobara hire karein" button',
       (tester) async {
         await pumpBiddingPage(tester);
 
@@ -186,7 +186,7 @@ void main() {
         expect(find.text('Ali Khan'), findsOneWidget);
         // The client (and only the client) sees the inspector's repair quote.
         expect(find.text('un ka quote'), findsOneWidget);
-        expect(find.text('Dobara Hire Karein'), findsOneWidget);
+        expect(find.text('Dobara hire karein'), findsOneWidget);
       },
     );
 
@@ -205,7 +205,7 @@ void main() {
       (tester) async {
         await pumpBiddingPage(tester);
 
-        await tester.tap(find.text('Dobara Hire Karein'));
+        await tester.tap(find.text('Dobara hire karein'));
         await tester.pumpAndSettle();
         await tester.tap(find.widgetWithText(FilledButton, 'Hire karein'));
         await tester.pumpAndSettle();
@@ -218,7 +218,7 @@ void main() {
         // Still on the bidding list — not navigated away, nothing hired, and
         // the rehire button is usable again rather than stuck loading.
         expect(find.byType(WorkerDiscoveryMapPage), findsOneWidget);
-        expect(find.text('Dobara Hire Karein'), findsOneWidget);
+        expect(find.text('Dobara hire karein'), findsOneWidget);
         expect(find.text('Hire kiya ja raha hai…'), findsNothing);
 
         // The competing bid is still in the list, ready to hire instead.
@@ -243,7 +243,7 @@ void main() {
           ],
         );
 
-        await tester.tap(find.text('Dobara Hire Karein'));
+        await tester.tap(find.text('Dobara hire karein'));
         await tester.pumpAndSettle();
         await tester.tap(find.widgetWithText(FilledButton, 'Hire karein'));
         await tester.pumpAndSettle();
@@ -254,7 +254,7 @@ void main() {
         // the client is never trapped by the failed attempt. The same
         // `isHiring` flag drives both the label and onPressed, so the idle
         // label being back means the button is tappable again.
-        expect(find.text('Dobara Hire Karein'), findsOneWidget);
+        expect(find.text('Dobara hire karein'), findsOneWidget);
         expect(find.text('Hire kiya ja raha hai…'), findsNothing);
 
         // Both competing bids survive the failed rehire untouched and stay

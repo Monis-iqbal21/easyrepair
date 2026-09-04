@@ -50,7 +50,7 @@ authButtonCreateAccount,Authentication,Create Account,اکاؤنٹ بنائیں,
 authButtonForgotPassword,Authentication,Forgot password?,پاس ورڈ بھول گئے؟,Password Bhool Gaye?,
 authButtonContinueWithOtp,Authentication,Continue with OTP,OTP سے آگے بڑھیں,OTP se Continue,
 authButtonContinueWithPassword,Authentication,Continue with password,پاس ورڈ سے آگے بڑھیں,Password se Continue,
-authButtonUstaadLogin,Authentication,Ustaad Login,استاد لاگ اِن,Ustaad Login,
+authButtonUstaadLogin,Authentication,Ustaad Login,استاد لاگ اِن,Ustaad login,
 authErrorGeneric,Authentication,Something went wrong.,کچھ غلط ہو گیا۔,Kuch ghalat ho gaya.,
 authErrorOtpSendFailed,Authentication,"The OTP could not be sent right now. Continue with your password, or try again shortly.",OTP فی الحال نہیں بھیجا جا سکا۔ پاس ورڈ سے آگے بڑھیں یا تھوڑی دیر بعد دوبارہ کوشش کریں۔,Code filhal nahi bheja ja saka. Password se aage barhein ya thori dair baad koshish karein.,
 commonCancel,Shared,Cancel,منسوخ کریں,Cancel,
@@ -427,7 +427,7 @@ discoveryInspectedThisJob,Uncategorised,INSPECTED THIS JOB,اس کام کا مع
 discoveryTheirQuote,Uncategorised,their quote,ان کا کوٹ,un ka quote,
 discoveryInspectionCompletedByThis,Uncategorised,Inspection completed by this Ustaad.,معائنہ اسی استاد نے مکمل کیا۔,Inspection isi Ustaad ne mukammal kiya.,
 discoveryViewInspectionReport,Uncategorised,View Inspection Report,معائنہ رپورٹ دیکھیں,Inspection report dekhein,
-discoveryHireAgain,Uncategorised,Hire Again,دوبارہ ہائر کریں,Dobara Hire Karein,
+discoveryHireAgain,Uncategorised,Hire Again,دوبارہ ہائر کریں,Dobara hire karein,
 discoveryHireAgainNamed,Uncategorised,Hire {name} again?,{name} کو دوبارہ ہائر کریں؟,{name} ko dobara hire karein?,Placeholders: {name}
 discoveryOriginalQuoteContinues,Uncategorised,They'll continue using their original inspection quote.,وہ اپنے اصل معائنہ کوٹ پر ہی کام جاری رکھیں گے۔,Wo apne asal inspection quote par hi kaam jari rakhenge.,
 discoveryWorkersWillAppear,Uncategorised,"Workers who apply will appear here.
@@ -532,8 +532,8 @@ inspectionFeePaid,Inspection flow,Inspection fee paid,معائنہ فیس ادا
 inspectionFeeNotPaid,Inspection flow,Inspection fee not paid,معائنہ فیس ادا نہیں ہوئی,Inspection fee paid nahi,
 chooseWithinRadius,Uncategorised,within {km} km,{km} کلومیٹر کے اندر,{km} km ke andar,Placeholders: {km}
 chooseHireConfirmBodyFull,Uncategorised,Hire {name} for this job? You will not be able to choose a different Ustaad afterwards.,کیا {name} کو یہ کام دیں؟ اس کے بعد آپ دوسرا استاد منتخب نہیں کر سکیں گے۔,{name} ko ye kaam dein? Is ke baad aap doosra Ustaad nahi chun sakenge.,Placeholders: {name}
-trackHeadlineUstaadOnTheWay,Uncategorised,Ustaad On The Way,استاد راستے میں,Ustaad On The Way,
-trackHeadlineUstaadArrived,Uncategorised,Ustaad Arrived,استاد پہنچ گئے,Ustaad Arrived,
+trackHeadlineUstaadOnTheWay,Uncategorised,Ustaad On The Way,استاد راستے میں,Ustaad on the way,
+trackHeadlineUstaadArrived,Uncategorised,Ustaad Arrived,استاد پہنچ گئے,Ustaad arrived,
 trackHeadlineWorkInProgress,Uncategorised,Work In Progress,کام جاری ہے,Kaam chal raha hai,
 trackHeadlineHired,Uncategorised,Hired ✓,ہائر ہو گئے ✓,Hire ho gaye ✓,
 trackRatingOutOfFive,Uncategorised,{rating} / 5.0,{rating} / 5.0,{rating} / 5.0,Placeholders: {rating}
@@ -573,24 +573,24 @@ workerConnecting,Ustaad,Connecting...,کنیکٹ ہو رہا ہے...,Connect ho 
 workerGoingOffline,Ustaad,Going offline...,آف لائن ہو رہے ہیں...,Offline ho rahe hain...,
 workerGoOffline,Ustaad,Go Offline,آف لائن ہو جائیں,Offline ho jayein,
 workerGoOnline,Ustaad,Go Online,آن لائن ہو جائیں,Online ho jayein,
-workerTodaysEarnings,Ustaad,Today's Earnings,آج کی کمائی,Aaj ki Kamai,
+workerTodaysEarnings,Ustaad,Today's earnings,آج کی کمائی,Kamai,
 workerRating,Ustaad,Rating,ریٹنگ,Rating,
 workerActive,Ustaad,Active,فعال,Active,
 workerGoOfflineConfirmTitle,Ustaad,Go Offline?,آف لائن ہو جائیں؟,Offline ho jayein?,
 workerGoOfflineConfirmBody,Ustaad,You will stop appearing to nearby clients.,آپ قریبی کلائنٹس کو نظر آنا بند ہو جائیں گے۔,Aap qareebi clients ko nazar aana band ho jayenge.,
 workerGoOfflineConfirmYes,Ustaad,"Yes, Go Offline",ہاں، آف لائن کریں,"Haan, offline karein",
-workerFindNewWork,Ustaad,Find New Work,نیا کام ڈھونڈیں,Naya Kaam Dhondain,
+workerFindNewWork,Ustaad,Find new work,نیا کام ڈھونڈیں,Naya kaam dhoondein,
 workerViewNewJobs,Ustaad,View New Jobs,نئے کام دیکھیں,Naye kaam dekhein,
-workerNewComplaintsCount,Ustaad,"{count, plural, =1{1 new} other{{count} new}}","{count, plural, =1{1 نئی} other{{count} نئی}}","{count, plural, =1{1 nayi} other{{count} nayi}}",Home "New Complaints" tile subtitle when unread new jobs exist; same count as the Naye Kaam tab badge
+workerNewComplaintsCount,Ustaad,"{count, plural, =1{1 new} other{{count} new}}","{count, plural, =1{1 نئی} other{{count} نئی}}","{count, plural, =1{1 naya} other{{count} naye}}","Home ""New Complaints"" tile subtitle when unread new jobs exist; same count as the Naye Kaam tab badge"
 workerActiveJobCaps,Ustaad,ACTIVE JOB,جاری کام,JARI KAAM,
 workerMap,Ustaad,Map,نقشہ,Map,
 workerViewDetails,Ustaad,View details →,تفصیلات دیکھیں ←,Details dekhein →,
 workerNoActiveJob,Ustaad,No active job right now,اس وقت کوئی کام جاری نہیں,Is waqt koi kaam jari nahi,
-workerStayOnlineHint,Ustaad,Stay online to find work nearby.,قریبی کام تلاش کرنے کے لیے آن لائن رہیں۔,"Online rahein, nazdeek ka kaam dhondne ke liye.",
+workerStayOnlineHint,Ustaad,Stay online to find work nearby.,قریبی کام تلاش کرنے کے لیے آن لائن رہیں۔,"Online rahein, nazdeek ka kaam dhoondne ke liye.",
 workerReady,Ustaad,Ready,تیار,Tayyar,
 workerPerformance,Ustaad,Performance,کارکردگی,Performance,
-workerJobsDone,Ustaad,Jobs Done,مکمل کام,Jobs Done,
-workerCancelRate,Ustaad,Cancel Rate,منسوخی کی شرح,Cancel Rate,
+workerJobsDone,Ustaad,Jobs Done,مکمل کام,Jobs done,
+workerCancelRate,Ustaad,Cancel Rate,منسوخی کی شرح,Cancel rate,
 workerPercentValue,Ustaad,{value}%,{value}%,{value}%,Placeholders: {value}
 workerResponse,Ustaad,Response,جواب,Response,
 workerReviews,Ustaad,Reviews,ریویوز,Reviews,
@@ -603,13 +603,13 @@ workerCategoriesLoadFailed,Ustaad,Failed to load categories: {error},کیٹیگ�
 workerSkillsSaveFailed,Ustaad,Failed to save skills. Please try again.,مہارتیں محفوظ نہیں ہو سکیں۔ دوبارہ کوشش کریں۔,Skills save nahi ho sakin. Dobara koshish karein.,
 workerSaveAndGoOnline,Ustaad,Save & Go Online,محفوظ کریں اور آن لائن ہوں,Save karein aur online hon,
 workerDashboardLoadFailed,Ustaad,Failed to load dashboard,ڈیش بورڈ لوڈ نہیں ہو سکا,Dashboard load nahi ho saka,
-workerNewJobsTitle,Ustaad,New Jobs,نئے کام,Naye Kaam,
-workerNewJobsSubtitle,Ustaad,Work matching your skills,آپ کی مہارت کے مطابق کام,Aapke hunar ke hisaab se kaam,
+workerNewJobsTitle,Ustaad,New Jobs,نئے کام,Naye kaam,
+workerNewJobsSubtitle,Ustaad,Work matching your skills,آپ کی مہارت کے مطابق کام,Aap ke hunar ke hisaab se kaam,
 workerCompleteProfileForNewJobs,Ustaad,Complete your profile. Once it is approved you will start seeing new jobs.,اپنی پروفائل مکمل کریں۔ منظوری کے بعد آپ کو نئے کام نظر آنے لگیں گے۔,Apni profile complete karain. Approval ke baad aapko naye kaam nazar ayenge.,
 workerNewJobsLoadFailed,Ustaad,Failed to load new jobs.,نئے کام لوڈ نہیں ہو سکے۔,Naye kaam load nahi ho sake.,
 workerOfferCount,Ustaad,"{count, plural, =1{{count} offer} other{{count} offers}}",{count} آفرز,{count} offers,Placeholders: {count} | ICU plural — keep the plural syntax intact
 workerDirectHireNote,Ustaad,The client can hire you directly. No offer needed.,کلائنٹ آپ کو براہِ راست ہائر کر سکتا ہے۔ آفر بھیجنے کی ضرورت نہیں۔,Client aap ko seedha hire kar sakta hai. Koi offer bhejne ki zaroorat nahi.,
-workerListedJob,Ustaad,Listed Job,درج شدہ کام,Listed Job,
+workerListedJob,Ustaad,Listed Job,درج شدہ کام,Listed job,
 workerOfferSent,Ustaad,Offer sent,آفر بھیج دی,Offer bhej di,
 workerNoNewJobs,Ustaad,No new jobs right now,اس وقت کوئی نیا کام نہیں,Is waqt koi naya kaam nahi,
 workerNoNewJobsHint,Ustaad,New job requests matching your skills will appear here. Pull down to refresh.,آپ کی مہارت کے مطابق نئے کام یہاں نظر آئیں گے۔ ریفریش کرنے کے لیے نیچے کھینچیں۔,Aap ki skill ke mutabiq naye kaam yahan nazar aayenge. Refresh ke liye neeche kheenchein.,
@@ -632,12 +632,12 @@ workerCancelledJobsHere,Ustaad,Cancelled jobs will show up here,منسوخ کا�
 workerAppliedJobsHere,Ustaad,Jobs you've placed an offer on will show up here,جن کاموں پر آپ نے آفر بھیجی ہے وہ یہاں نظر آئیں گے,Jin kaamon par aapne offer bheji hai woh yahan nazar aayenge,
 workerAcceptToGetStarted,Ustaad,Accept a booking request to get started,شروع کرنے کے لیے کوئی بکنگ قبول کریں,Shuru karne ke liye koi booking accept karein,
 workerFilterCancelled,Ustaad,Cancelled,منسوخ,Cancel,
-workerFilterAllWork,Ustaad,All Work,سارا کام,Sab Kaam,
-workerFilterMyOffers,Ustaad,My Offers,میری آفرز,Meri Offers,
+workerFilterAllWork,Ustaad,All Work,سارا کام,Naye kaam,
+workerFilterMyOffers,Ustaad,My Offers,میری آفرز,Meri offers,
 workerFilterNoOfferSent,Ustaad,No offer sent,آفر نہیں بھیجی,Offer nahi bheji,
 bidPlaceABid,Bidding,Send an Offer,آفر بھیجیں,Offer bhejein,
 bidChatWithClient,Bidding,Chat with Client,کلائنٹ سے چیٹ کریں,Client se chat karein,
-bidLiveBids,Bidding,Live Offers,لائیو آفرز,Live Offers,
+bidLiveBids,Bidding,Live Offers,لائیو آفرز,Live offers,
 bidAreaNotAvailable,Bidding,Area not available,علاقہ دستیاب نہیں,Ilaqa available nahi,
 bidExactAddressAfterAccept,Bidding,The exact address is shared once the client accepts your offer.,کلائنٹ کے آپ کی آفر قبول کرنے پر مکمل پتہ بھیج دیا جاتا ہے۔,Client ke aap ki offer accept karne par poora pata bhej diya jata hai.,
 bidStatusAccepted,Bidding,Accepted,منظور,Accept,
@@ -650,16 +650,16 @@ bidPlaceYourBid,Bidding,Send Your Offer,اپنی آفر بھیجیں,Apni offer 
 bidUpdateYourBid,Bidding,Update Your Offer,اپنی آفر اپ ڈیٹ کریں,Apni offer update karein,
 bidCanUpdateIn,Bidding,You can update your offer in {seconds}s.,آپ {seconds} سیکنڈ بعد آفر اپ ڈیٹ کر سکتے ہیں۔,Aap {seconds}s baad offer update kar sakte hain.,Placeholders: {seconds}
 bidCanUpdateNow,Bidding,You can update your offer now.,آپ ابھی اپنی آفر اپ ڈیٹ کر سکتے ہیں۔,Aap abhi apni offer update kar sakte hain.,
-bidAmountLabel,Bidding,Offer Amount (PKR) *,آفر کی رقم (PKR) *,Offer Amount (PKR) *,
+bidAmountLabel,Bidding,Offer Amount (PKR) *,آفر کی رقم (PKR) *,Offer amount (PKR) *,
 bidAmountHint,Bidding,e.g. 2500,مثلاً 2500,Maslan 2500,
 bidLabelWithCountdown,Bidding,{label} ({seconds}s),{label} ({seconds}s),{label} ({seconds}s),"Placeholders: {label}, {seconds}"
 bidJobCount,Bidding,"{count, plural, =1{{count} job} other{{count} jobs}}",{count} کام,{count} jobs,Placeholders: {count} | ICU plural — keep the plural syntax intact
 bidBeFirstToBid,Bidding,Be the first to send an offer on this job,اس کام پر سب سے پہلے آفر بھیجیں,Is kaam par sab se pehle offer bhejein,
 earningBidding,Earnings,Offers,آفرز,Offers,
-earningHistoryTitle,Earnings,Earning History,کمائی کی تفصیل,Earning History,
+earningHistoryTitle,Earnings,Earning History,کمائی کی تفصیل,Earning history,
 earningNoneYet,Earnings,No earnings yet,ابھی کوئی کمائی نہیں,Abhi koi kamai nahi,
 earningNoneHint,Earnings,Completed jobs will show up here with your daily earnings.,مکمل کام یہاں آپ کی روزانہ کمائی کے ساتھ نظر آئیں گے۔,Mukammal kaam yahan aap ki rozana kamai ke sath nazar aayenge.,
-reviewsMyReviews,Reviews & ratings,My Reviews,میرے ریویوز,Mere Reviews,
+reviewsMyReviews,Reviews & ratings,My Reviews,میرے ریویوز,Mere reviews,
 reviewsCount,Reviews & ratings,"{count, plural, =1{{count} review} other{{count} reviews}}",{count} ریویوز,{count} reviews,Placeholders: {count} | ICU plural — keep the plural syntax intact
 reviewsSubtitle,Reviews & ratings,Reviews from clients for jobs you completed,آپ کے مکمل کیے گئے کاموں پر کلائنٹس کے ریویوز,Aap ke mukammal kaamon par clients ke reviews,
 reviewsAvg,Reviews & ratings,Avg,اوسط,Avg,
@@ -679,7 +679,7 @@ inspFormWhatWasIssueRequired,Uncategorised,What was the issue? *,مسئلہ کی
 inspFormRecommendedRepair,Uncategorised,Recommended Repair,بہتر طریقہ,Behtar tareeqa,
 inspFormRecommendedRepairRequired,Uncategorised,Recommended Repair *,بہتر طریقہ *,Behtar Tareeqa *,
 inspFormWhatWorkNeeded,Uncategorised,What work will be needed,کیا کام کرنا ہوگا,Kya kaam karna hoga,
-inspFormWriteOrRecord,Uncategorised,Please write the report or record a voice note.,براہِ کرم رپورٹ لکھیں یا وائس نوٹ ریکارڈ کریں۔,Barah-e-karam report likhein ya voice note record karein.,
+inspFormWriteOrRecord,Uncategorised,Please write the report or record a voice note.,براہِ کرم رپورٹ لکھیں یا وائس نوٹ ریکارڈ کریں۔,Report likhein ya voice note record karein.,
 inspFormPartsRequired,Uncategorised,Parts required?,پرزے درکار ہیں؟,Parts chahiye?,
 inspFormAddPart,Uncategorised,Add part,پرزہ شامل کریں,Part shamil karein,
 inspFormUstaadNotes,Uncategorised,Ustaad notes,استاد کے نوٹس,Ustaad ke notes,
@@ -693,7 +693,7 @@ inspFormStartRecording,Uncategorised,Start recording,ریکارڈنگ شروع �
 inspFormPartNameHint,Uncategorised,e.g. the part or material used,مثلاً استعمال ہونے والا پرزہ یا سامان,Maslan istemal hone wala purza ya saman,
 inspFormWarrantyHint,Uncategorised,e.g. 7 days,مثلاً 7 دن,Maslan 7 din,
 inspFormRemovePart,Uncategorised,Remove part,پرزہ ہٹائیں,Part hatayein,
-inspFormTotalAmount,Uncategorised,Total amount for the work,کام کی پوری رقم,Kam ki puri raqam,
+inspFormTotalAmount,Uncategorised,Total amount for the work,کام کی پوری رقم,Kaam ki total amount,
 inspFormFeeWaivedNote,Uncategorised,"If the customer continues with the repair, the inspection fee will not be charged.",اگر کسٹمر مرمت جاری رکھواتا ہے تو معائنہ فیس نہیں لی جائے گی۔,Agar customer repair continue karwata hai to inspection fee nhi deni hogi.,
 inspHintElectrical,Uncategorised,"e.g. switch is broken, wire is shorted...",مثلاً سوئچ خراب ہے، تار شارٹ ہے...,"Misal: switch kharab hai, wire short hai...",
 inspHintPlumbing,Uncategorised,"e.g. pipe is leaking, drain is blocked...",مثلاً پائپ لیک ہے، ڈرین بلاک ہے...,"Misal: pipe leak hai, drain block hai...",
@@ -711,7 +711,7 @@ bookingStatusExpired,Bookings / Status labels,Expired,ختم,Khatam,
 jobStatusEnRoute,Worker jobs / Status labels,En Route,راستے میں,Raaste Mein,
 jobStatusInProgress,Worker jobs / Status labels,In Progress,کام جاری,Kaam Jaari,
 l10nFallbackProbe,Localization self-test,English fallback works,,,Intentionally untranslated: proves the English fallback | Intentionally left untranslated in app_ur.arb and app_ur_Latn.arb. Proves a missing key falls back to English rather than rendering blank or Urdu script on a Roman Urdu screen. Never shown in the UI; asserted by arb_parity_test.dart.
-workerJobDetailsTitle,Ustaad,Job Details,کام کی تفصیل,Kaam Ki Tafseel,
+workerJobDetailsTitle,Ustaad,Job Details,کام کی تفصیل,Kaam ki detail,
 workerJobLoadFailed,Ustaad,Failed to load job.,کام لوڈ نہیں ہو سکا۔,Kaam load nahi ho saka.,
 workerStandardDirectHireNote,Ustaad,This is a Standard job. The client can hire you directly — you do not need to send an offer.,یہ ایک اسٹینڈرڈ کام ہے۔ کلائنٹ آپ کو براہِ راست ہائر کر سکتا ہے — آفر بھیجنے کی ضرورت نہیں۔,Yeh ek Standard kaam hai. Client aap ko seedha hire kar sakta hai — offer bhejne ki zaroorat nahi.,
 workerReportSubmittedWaiting,Ustaad,Report submitted. Waiting for the client to accept the quote or close after inspection.,رپورٹ بھیج دی گئی۔ کلائنٹ کے کوٹ قبول کرنے یا معائنے کے بعد کام بند کرنے کا انتظار ہے۔,Report bhej di gayi. Client ke quote accept karne ya inspection ke baad kaam band karne ka intezaar hai.,
@@ -727,7 +727,7 @@ workerEstimatedLabel,Ustaad,Estimated,تخمینہ,Takhmeena,
 workerFeeStatusLabel,Ustaad,Status,اسٹیٹس,Status,
 workerCancelJob,Ustaad,Cancel Job,کام منسوخ کریں,Kaam cancel karein,
 workerCancelJobTitle,Ustaad,Cancel this job?,یہ کام منسوخ کریں؟,Ye kaam cancel karein?,
-workerCancelJobBody,Ustaad,Please tell the client why you are cancelling.,براہِ کرم کلائنٹ کو بتائیں کہ آپ کیوں منسوخ کر رہے ہیں۔,Baraye meherbani client ko batayein ke aap kyun cancel kar rahe hain.,
+workerCancelJobBody,Ustaad,Please tell the client why you are cancelling.,براہِ کرم کلائنٹ کو بتائیں کہ آپ کیوں منسوخ کر رہے ہیں۔,Client ko batayein ke aap kyun cancel kar rahe hain.,
 workerCancelOwnReasonHint,Ustaad,Write your own reason (required),اپنی وجہ لکھیں (لازمی),Apni wajah likhein (zaroori),
 workerKeepJob,Ustaad,Keep Job,کام رکھیں,Kaam rakhein,
 workerYesCancel,Ustaad,"Yes, cancel",جی ہاں، منسوخ کریں,"Ji haan, cancel karein",
@@ -761,33 +761,33 @@ workerDirections,Ustaad,Directions,راستہ,Raasta,
 workerOpenInMaps,Ustaad,Open in Maps,میپس میں کھولیں,Maps mein kholein,
 workerDirectionsActive,Ustaad,Directions active,راستہ چل رہا ہے,Raasta chal raha hai,
 workerUploadFailed,Ustaad,Upload failed. Please try again.,اپ لوڈ نہیں ہو سکا۔ دوبارہ کوشش کریں۔,Upload nahi ho saka. Dobara koshish karein.,
-workerCompleteHighlightedFields,Ustaad,Please complete the highlighted fields below.,براہِ کرم نیچے نشان زد خانے مکمل کریں۔,Baraye meherbani neeche nishan zad khane mukammal karein.,
+workerCompleteHighlightedFields,Ustaad,Please complete the highlighted fields below.,براہِ کرم نیچے نشان زد خانے مکمل کریں۔,Neeche nishan zad khane mukammal karein.,
 workerProfileSaveFailed,Ustaad,Failed to save profile. Please try again.,پروفائل محفوظ نہیں ہو سکی۔ دوبارہ کوشش کریں۔,Profile save nahi ho saki. Dobara koshish karein.,
 workerProfileSubmitted,Ustaad,Profile submitted for approval.,پروفائل منظوری کے لیے بھیج دی گئی۔,Profile manzoori ke liye bhej di gayi.,
 workerCompleteAllRequired,Ustaad,Please complete all required fields before submitting.,بھیجنے سے پہلے تمام ضروری خانے مکمل کریں۔,Bhejne se pehle tamam zaroori khane mukammal karein.,
 workerProfileLoadFailed,Ustaad,Failed to load profile.,پروفائل لوڈ نہیں ہو سکی۔,Profile load nahi ho saki.,
-workerFullLegalName,Ustaad,Full Legal Name,مکمل قانونی نام,Mukammal qanooni naam,
+workerFullLegalName,Ustaad,Full Legal Name,مکمل قانونی نام,Mukammal legal naam,
 workerLegalNameHint,Ustaad,As written on your CNIC,جیسا آپ کے شناختی کارڈ پر لکھا ہے,Jaisa aap ke CNIC par likha hai,
-workerLegalNameRequired,Ustaad,Full legal name is required.,مکمل قانونی نام ضروری ہے۔,Mukammal qanooni naam zaroori hai.,
+workerLegalNameRequired,Ustaad,Full legal name is required.,مکمل قانونی نام ضروری ہے۔,Mukammal legal naam zaroori hai.,
 workerCnicNumber,Ustaad,CNIC Number,شناختی کارڈ نمبر,CNIC number,
 workerCnicInvalid,Ustaad,Enter CNIC like 12345-1234567-1,شناختی کارڈ اس طرح لکھیں: 12345-1234567-1,CNIC is tarah likhein: 12345-1234567-1,
-workerMainSkill,Ustaad,Main Skill,بنیادی ہنر,Buniyadi hunar,
+workerMainSkill,Ustaad,Main Skill,بنیادی ہنر,Main skill,
 workerMainSkillNotSelected,Ustaad,Not selected,منتخب نہیں کیا گیا,Muntakhab nahi kiya gaya,
 workerChangeSkill,Ustaad,Change,تبدیل کریں,Tabdeel karein,
-workerMainSkillRequired,Ustaad,Please select your main skill.,براہِ کرم اپنا بنیادی ہنر منتخب کریں۔,Baraye meherbani apna buniyadi hunar muntakhab karein.,
+workerMainSkillRequired,Ustaad,Please select your main skill.,براہِ کرم اپنا بنیادی ہنر منتخب کریں۔,Apna main skill muntakhab karein.,
 workerExperienceYears,Ustaad,Experience in Years,تجربہ (سالوں میں),Tajurba (saalon mein),
 workerExperienceHint,Ustaad,e.g. 3,مثلاً 3,misal ke taur par 3,
 workerExperienceInvalid,Ustaad,Enter a valid number of years (0 or more).,سالوں کی درست تعداد لکھیں (0 یا اس سے زیادہ)۔,Saalon ki durust tadaad likhein (0 ya us se ziyada).,
 workerResidentialAddress,Ustaad,Residential Address,رہائشی پتہ,Rihaishi address,
 workerResidentialAddressHint,Ustaad,"House #, street, area, city",مکان نمبر، گلی، علاقہ، شہر,"Makan number, gali, ilaqa, sheher",
 workerResidentialAddressRequired,Ustaad,Residential address is required.,رہائشی پتہ ضروری ہے۔,Rihaishi address zaroori hai.,
-workerIdentityDocuments,Ustaad,Identity Documents,شناختی کاغذات,Shanakhti dastawezat,
+workerIdentityDocuments,Ustaad,Identity Documents,شناختی کاغذات,Shanakhti documents,
 workerCnicFront,Ustaad,CNIC Front,شناختی کارڈ کا اگلا رخ,CNIC ka agla rukh,
 workerCnicBack,Ustaad,CNIC Back,شناختی کارڈ کا پچھلا رخ,CNIC ka pichla rukh,
 workerLiveSelfie,Ustaad,Live Selfie,لائیو سیلفی,Live selfie,
 workerDocumentRequired,Ustaad,Required,ضروری ہے,Zaroori hai,
 workerAgreements,Ustaad,Agreements,معاہدے,Agreements,
-workerConfirmLegalName,Ustaad,I confirm my legal name matches my CNIC.,میں تصدیق کرتا ہوں کہ میرا قانونی نام میرے شناختی کارڈ کے مطابق ہے۔,Main tasdeeq karta hoon ke mera qanooni naam mere CNIC ke mutabiq hai.,
+workerConfirmLegalName,Ustaad,I confirm my legal name matches my CNIC.,میں تصدیق کرتا ہوں کہ میرا قانونی نام میرے شناختی کارڈ کے مطابق ہے۔,Main tasdeeq karta hoon ke mera legal naam mere CNIC ke mutabiq hai.,
 workerViewAgreement,Ustaad,View Agreement,معاہدہ دیکھیں,Agreement dekhein,
 workerConfirmationRequired,Ustaad,This confirmation is required.,یہ تصدیق ضروری ہے۔,Ye tasdeeq zaroori hai.,
 workerSubmitForApproval,Ustaad,Submit for Approval,منظوری کے لیے بھیجیں,Manzoori ke liye bhejein,
@@ -797,22 +797,22 @@ workerOnboardingChangesRequired,Ustaad,Changes Required,تبدیلیاں درک�
 workerOnboardingApproved,Ustaad,Approved,منظور شدہ,Manzoor shuda,
 workerOnboardingDraft,Ustaad,Draft,مسودہ,Draft,
 workerRoleBadge,Ustaad,Ustaad,استاد,Ustaad,
-workerMainSkillWithName,Ustaad,Main Skill: {skill},بنیادی ہنر: {skill},Buniyadi hunar: {skill},Placeholders: {skill} | {skill} is the backend category name and is never translated.
-workerNoMainSkillYet,Ustaad,No main skill selected yet,ابھی کوئی بنیادی ہنر منتخب نہیں کیا گیا,Abhi koi buniyadi hunar muntakhab nahi kiya gaya,
+workerMainSkillWithName,Ustaad,Main Skill: {skill},بنیادی ہنر: {skill},Main skill: {skill},Placeholders: {skill} | {skill} is the backend category name and is never translated.
+workerNoMainSkillYet,Ustaad,No main skill selected yet,ابھی کوئی بنیادی ہنر منتخب نہیں کیا گیا,Abhi koi main skill muntakhab nahi kiya gaya,
 workerProfileApproval,Ustaad,Profile Approval,پروفائل کی منظوری,Profile ki manzoori,
 inspHintFallback,Uncategorised,e.g. describe what you found,مثلاً بتائیں آپ کو کیا ملا,Maslan batayein aap ko kya mila,Issue-example hint shown when the booking's service category has no hint of its own.
-bidAmountRequired,Bidding,Please enter an offer amount.,براہِ کرم آفر کی رقم لکھیں۔,Baraye meherbani offer ki raqam likhein.,
-bidAmountRange,Bidding,"Offer amount must be between 100 and 500,000.","آفر کی رقم 100 سے 500,000 کے درمیان ہونی چاہیے۔","Offer ki raqam 100 se 500,000 ke darmiyan honi chahiye.",
+bidAmountRequired,Bidding,Please enter an offer amount.,براہِ کرم آفر کی رقم لکھیں۔,Offer ki amount likhein.,
+bidAmountRange,Bidding,"Offer amount must be between 100 and 500,000.","آفر کی رقم 100 سے 500,000 کے درمیان ہونی چاہیے۔","Offer ki amount 100 se 500,000 ke darmiyan honi chahiye.",
 bidSubmitted,Bidding,Offer submitted!,آفر بھیج دی گئی!,Offer bhej di gayi!,
 bidSubmitFailed,Bidding,Failed to submit offer.,آفر نہیں بھیجی جا سکی۔,Offer nahi bheji ja saki.,
-workerViewJobDetails,Ustaad,View Details,تفصیل دیکھیں,Tafseel dekhein,
+workerViewJobDetails,Ustaad,View Details,تفصیل دیکھیں,Detail dekhein,
 workerSendOffer,Ustaad,Send Offer,آفر بھیجیں,Offer bhejein,
 workerChangeOffer,Ustaad,Change Offer,آفر بدلیں,Offer badlein,
 workerOnboardingSubmittedBody,Ustaad,Your profile is with the admin for review.,آپ کی پروفائل ایڈمن کے جائزے میں ہے۔,Aap ki profile admin ke jaizey mein hai.,
-workerOnboardingChangesRequiredBody,Ustaad,Your profile needs changes — see the details.,آپ کی پروفائل میں تبدیلی درکار ہے — تفصیل دیکھیں۔,Aap ki profile mein tabdeeli darkar hai — tafseel dekhein.,
+workerOnboardingChangesRequiredBody,Ustaad,Your profile needs changes — see the details.,آپ کی پروفائل میں تبدیلی درکار ہے — تفصیل دیکھیں۔,Aap ki profile mein tabdeeli darkar hai — detail dekhein.,
 workerOnboardingRejectedBody,Ustaad,Your profile was rejected — see the reason.,آپ کی پروفائل مسترد ہو گئی — وجہ دیکھیں۔,Aap ki profile mustarad ho gayi — wajah dekhein.,
 workerProfileIncomplete,Ustaad,Profile Incomplete,پروفائل نامکمل,Profile namukammal,
-inspFormLabourCostRequired,Uncategorised,Labour cost *,مزدوری کی لاگت *,Mazdoori ki laagat *,
+inspFormLabourCostRequired,Uncategorised,Labour cost *,مزدوری کی لاگت *,Labour ki laagat *,
 inspFormNotesOptional,Uncategorised,Notes (optional),نوٹس (اختیاری),Notes (ikhtiyari),
 inspFormPartName,Uncategorised,Part name,پرزے کا نام,Purze ka naam,
 inspFormQty,Uncategorised,Qty,تعداد,Tadaad,
@@ -919,7 +919,7 @@ inspPartHintPainting,Uncategorised,"e.g. primer, putty, emulsion",مثلاً پ�
 inspHintPainting,Uncategorised,"e.g. paint is peeling, damp patch on the wall...",مثلاً پینٹ اکھڑ رہا ہے، دیوار پر سیلن...,"Maslan paint ukhar raha hai, deewar par seelan...",Issue example for Painter bookings
 agreementViewerTitle,Uncategorised,Agreement,معاہدہ,Agreement,
 agreementLoadFailed,Uncategorised,Could not load the agreement. Please try again.,معاہدہ لوڈ نہیں ہو سکا۔ براہِ کرم دوبارہ کوشش کریں۔,Agreement load nahi ho saka. Dobara koshish karein.,
-agreementUnavailableForTrade,Uncategorised,No approved agreement is available for your selected trade yet. Please contact HandyGo support.,آپ کے منتخب کام کے لیے ابھی کوئی منظور شدہ معاہدہ دستیاب نہیں۔ براہِ کرم HandyGo سپورٹ سے رابطہ کریں۔,Aap ke muntakhab kaam ke liye abhi koi manzoor shuda agreement mojood nahi hai. Bara-e-karam HandyGo support se rabta karein.,
+agreementUnavailableForTrade,Uncategorised,No approved agreement is available for your selected trade yet. Please contact HandyGo support.,آپ کے منتخب کام کے لیے ابھی کوئی منظور شدہ معاہدہ دستیاب نہیں۔ براہِ کرم HandyGo سپورٹ سے رابطہ کریں۔,Aap ke muntakhab kaam ke liye abhi koi manzoor shuda agreement mojood nahi hai. HandyGo support se rabta karein.,
 agreementLanguageChip,Uncategorised,Agreement Language: {language},معاہدے کی زبان: {language},Agreement ki zabaan: {language},"Placeholders: {language} | {language} is a localized language name, e.g. Roman Urdu."
 agreementTradeChip,Uncategorised,Trade: {trade},کام: {trade},Kaam: {trade},"Placeholders: {trade} | {trade} is a localized trade name, e.g. Electrician."
 agreementLanguageNotice,Uncategorised,This approved legal agreement is currently available in Roman Urdu.,یہ منظور شدہ قانونی معاہدہ فی الحال صرف رومن اردو میں دستیاب ہے۔,Yeh manzoor shuda legal agreement filhaal sirf Roman Urdu mein mojood hai.,
@@ -958,11 +958,11 @@ workerSubmittedDetails,Ustaad,Submitted Details,جمع کرائی گئی تفص�
 workerViewSubmittedDetails,Ustaad,View Submitted Details,جمع کرائی گئی تفصیلات دیکھیں,Jama karai gayi details dekhein,
 workerDetailsReadOnlyNotice,Ustaad,Your profile is approved. These details are locked and cannot be changed.,آپ کی پروفائل منظور ہو چکی ہے۔ یہ تفصیلات مقفل ہیں اور تبدیل نہیں کی جا سکتیں۔,Aap ki profile manzoor ho chuki hai. Yeh details lock hain aur tabdeel nahi ki ja sakti.,
 workerVerificationStatus,Ustaad,Verification Status,تصدیق کی حالت,Tasdeeq ki haalat,
-workerMainTrade,Ustaad,Main Trade,مرکزی ہنر,Markazi hunar,
+workerMainTrade,Ustaad,Main Trade,مرکزی ہنر,Main kaam,
 workerSuspendedMessage,Ustaad,Your HandyGo account has been suspended. Please contact Support for more information.,آپ کا HandyGo اکاؤنٹ معطل کر دیا گیا ہے۔ مزید معلومات کے لیے سپورٹ سے رابطہ کریں۔,Aapka HandyGo account suspend kar diya gaya hai. Mazeed maloomat ke liye Support se rabta karein.,Full-screen lock shown to a WorkerStatus.SUSPENDED Ustaad — the only content on that screen
 workerSuspendedContactSupport,Ustaad,Contact Support,سپورٹ سے رابطہ کریں,Support se Rabta Karein,Button on the suspended-account screen that dials HandyGo Support
-earningGrossEarnings,Earnings,Gross Earnings,کل کمائی,Total Kamai,Label for the pre-commission total on Worker Earning History
-earningCommissionLabel,Earnings,HandyGo Commission (18%),HandyGo کمیشن (18%),HandyGo Commission (18%),Label for HandyGo's 18% platform commission line
+earningGrossEarnings,Earnings,Gross Earnings,کل کمائی,Labour,Label for the pre-commission total on Worker Earning History
+earningCommissionLabel,Earnings,HandyGo Commission (18%),HandyGo کمیشن (18%),HandyGo commission (18%),Label for HandyGo's 18% platform commission line
 earningUstaadEarnings,Earnings,Ustaad Earnings,اُستاد کی کمائی,Ustaad Ki Kamai,"Label for Gross - Commission, the amount the Ustaad actually keeps"
 earningCommissionStatusLabel,Earnings,Commission Status,کمیشن اسٹیٹس,Commission Status,Label above the Pending/Paid chip on each earning history job
 earningStatusPaid,Earnings,Paid,ادا شدہ,Paid,Commission settled by admin for this job
@@ -987,7 +987,7 @@ resourceBookingUnavailable,Uncategorised,This booking is no longer available.,ی
 resourceJobUnavailable,Uncategorised,This job is no longer assigned to you.,یہ جاب اب آپ کو اسائن نہیں ہے۔,Ye job ab aapko assigned nahi hai.,Shown on the worker job detail screen when the job is no longer assigned to this worker (404/403 from the API)
 resourceConversationUnavailable,Uncategorised,This conversation is no longer available.,یہ چیٹ اب دستیاب نہیں ہے۔,Ye chat ab available nahi hai.,"Shown on the chat detail screen when the conversation has been deleted, or is otherwise no longer accessible to this account (404/403 from the API)"
 goToMyBookingsAction,Uncategorised,Go to My Bookings,میری بکنگز پر جائیں,My Bookings Par Jayein,Safe-navigation button on the client's booking-unavailable state
-goToMyJobsAction,Uncategorised,Go to My Jobs,میری جابز پر جائیں,My Jobs Par Jayein,Safe-navigation button on the worker's job-unavailable state
+goToMyJobsAction,Uncategorised,Go to My Jobs,میری جابز پر جائیں,My jobs par jayein,Safe-navigation button on the worker's job-unavailable state
 goToChatsAction,Uncategorised,Go to Chats,چیٹس پر جائیں,Chats Par Jayein,Safe-navigation button on the chat-unavailable state
 settingsSupportTitle,Settings / Profile,Support,سپورٹ,Support,Profile/Settings menu row that opens HandyGo Support (chat and/or phone)
 settingsAboutTitle,Settings / Profile,About HandyGo,HandyGo کے بارے میں,HandyGo Ke Baare Mein,Profile/Settings menu row that opens the About HandyGo page and that page's title
@@ -1042,7 +1042,7 @@ ustaadStepIndicator,Ustaad authentication,Step {current} / {total},مرحلہ {c
 ustaadStep1Heading,Ustaad authentication,Enter your details,اپنی تفصیلات دیں,Apni details dein,Ustaad registration step 1 heading
 ustaadFullNameLabel,Ustaad authentication,Full Name · As shown on CNIC,پورا نام · شناختی کارڈ کے مطابق,Poora Naam · CNIC ke mutabiq,Ustaad registration full-name label
 ustaadFullNameHint,Ustaad authentication,For example: Kamran Sheikh,مثلاً: کامران شیخ,Maslan: Kamran Sheikh,Ustaad registration full-name placeholder
-ustaadCnicLabel,Ustaad authentication,CNIC Number,شناختی کارڈ نمبر,CNIC Number,Ustaad registration CNIC label
+ustaadCnicLabel,Ustaad authentication,CNIC Number,شناختی کارڈ نمبر,CNIC number,Ustaad registration CNIC label
 ustaadCreatePasswordLabel,Ustaad authentication,Create Password,پاس ورڈ بنائیں,Password banayein,Ustaad registration password label
 ustaadSendOtpButton,Ustaad authentication,Send OTP,OTP بھیجیں,OTP bhejein,Ustaad registration step 1 primary button
 ustaadVerificationHeader,Ustaad authentication,Verification,تصدیق,Verification,Header on the Ustaad OTP and CNIC steps
@@ -1116,15 +1116,15 @@ timelineWaitingForUstaadTitle,Client / Booking Detail timeline,Waiting for an Us
 timelineWaitingForUstaadBody,Client / Booking Detail timeline,Work starts once you hire an Ustaad for this job.,جیسے ہی آپ اس کام کے لیے استاد ہائر کریں گے، کام شروع ہو جائے گا۔,"Jaise hi aap is kaam ke liye Ustaad hire karenge, kaam shuru ho jayega.",Explains that the timeline starts once an Ustaad is hired
 reportDetailsHelper,Client / Report a problem,A short description helps our team act on your report.,مختصر تفصیل سے ہماری ٹیم آپ کی شکایت پر جلد کارروائی کر سکتی ہے۔,Thori si detail se hamari team aap ki shikayat par jald action le sakti hai.,Helper under the required description field on the report form
 reportDetailsRequiredError,Client / Report a problem,Please describe the problem in at least 10 characters.,براہِ کرم مسئلہ کم از کم 10 حروف میں بیان کریں۔,Barae meherbani masla kam az kam 10 harf mein bayan karein.,Shown when the description is missing or shorter than 10 characters
-workerPaymentPartsLabel,Ustaad / Job detail - Payment,Parts recovered,پرزہ جات کی رقم,Purza jaat ki raqam,Row label for the parts money recovered from the customer
-workerPaymentLabourLabel,Ustaad / Job detail - Payment,Labour received,مزدوری موصول,Mazdoori wasool,Row label for the labour money actually received
+workerPaymentPartsLabel,Ustaad / Job detail - Payment,Parts recovered,پرزہ جات کی رقم,Parts ki amount,Row label for the parts money recovered from the customer
+workerPaymentLabourLabel,Ustaad / Job detail - Payment,Labour received,مزدوری موصول,Labour wasool,Row label for the labour money actually received
 workerPaymentAwaitingTitle,Ustaad / Job detail - Payment,Payment not recorded yet,ادائیگی ابھی درج نہیں ہوئی,Adaigi abhi darj nahi hui,Shown on a completed job before any payment has been recorded
-workerPaymentAwaitingBody,Ustaad / Job detail - Payment,Once the cash is recorded you will see exactly what came in.,رقم درج ہوتے ہی آپ کو معلوم ہو جائے گا کہ کتنی رقم موصول ہوئی۔,Raqam darj hotay hi aap ko maloom ho jaye ga kitni raqam wasool hui.,Body under workerPaymentAwaitingTitle
+workerPaymentAwaitingBody,Ustaad / Job detail - Payment,Once the cash is recorded you will see exactly what came in.,رقم درج ہوتے ہی آپ کو معلوم ہو جائے گا کہ کتنی رقم موصول ہوئی۔,Amount darj hote hi pata chal jayega kitna wasool hua.,Body under workerPaymentAwaitingTitle
 workerReportPaymentAction,Ustaad / Job detail - Payment,Kam paisa mila?,کم پیسہ ملا؟,Kam paisa mila?,"Button that opens the ""customer paid less"" sheet. Roman Urdu phrase kept in all three languages"
-workerReportPaymentTitle,Ustaad / Report received payment,How much did you actually receive?,آپ کو اصل میں کتنی رقم ملی؟,Aap ko asal mein kitni raqam mili?,Heading of the sheet where the Ustaad enters the cash actually received
+workerReportPaymentTitle,Ustaad / Report received payment,How much did you actually receive?,آپ کو اصل میں کتنی رقم ملی؟,Aap ko asal mein kitni amount mili?,Heading of the sheet where the Ustaad enters the cash actually received
 workerReportPaymentHelper,Ustaad / Report received payment,Enter the cash the customer handed you. HandyGo works out the rest.,جو نقد رقم گاہک نے دی وہ لکھیں۔ باقی حساب HandyGo خود کرے گا۔,Jo cash customer ne diya wo likhein. Baqi hisaab HandyGo khud kare ga.,Helper text under the sheet heading. Keep the HandyGo brand untranslated
-workerReportPaymentFieldLabel,Ustaad / Report received payment,Amount received,موصول شدہ رقم,Wasool shuda raqam,Label of the amount field
-workerReportPaymentInvalidError,Ustaad / Report received payment,Enter a whole rupee amount of 0 or more.,صفر یا اس سے زیادہ مکمل روپے کی رقم لکھیں۔,Sifar ya us se zyada poore rupay ki raqam likhein.,Shown when the entered amount is blank or not a whole rupee amount
+workerReportPaymentFieldLabel,Ustaad / Report received payment,Amount received,موصول شدہ رقم,Wasool shuda amount,Label of the amount field
+workerReportPaymentInvalidError,Ustaad / Report received payment,Enter a whole rupee amount of 0 or more.,صفر یا اس سے زیادہ مکمل روپے کی رقم لکھیں۔,Zero ya us se zyada poore rupay likhein.,Shown when the entered amount is blank or not a whole rupee amount
 workerReportPaymentSubmit,Ustaad / Report received payment,Record payment,ادائیگی درج کریں,Adaigi darj karein,Submit button of the sheet
-workerReportPaymentSuccess,Ustaad / Report received payment,Payment recorded. HandyGo will follow up on anything still owed.,ادائیگی درج ہو گئی۔ باقی رقم کے لیے HandyGo رابطہ کرے گا۔,Adaigi darj ho gayi. Baqi raqam ke liye HandyGo rabta kare ga.,Snack bar after the payment is recorded. Keep the HandyGo brand untranslated
+workerReportPaymentSuccess,Ustaad / Report received payment,Payment recorded. HandyGo will follow up on anything still owed.,ادائیگی درج ہو گئی۔ باقی رقم کے لیے HandyGo رابطہ کرے گا۔,Adaigi darj ho gayi. Baqi amount ke liye HandyGo rabta kare ga.,Snack bar after the payment is recorded. Keep the HandyGo brand untranslated
 workerReportPaymentFailed,Ustaad / Report received payment,Could not record the payment. Please try again.,ادائیگی درج نہیں ہو سکی۔ دوبارہ کوشش کریں۔,Adaigi darj nahi ho saki. Dobara koshish karein.,Snack bar when recording the payment fails

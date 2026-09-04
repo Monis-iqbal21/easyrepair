@@ -2395,7 +2395,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get workerTodaysEarnings => 'Kamai';
+  String get workerTodaysEarnings => 'Today\'s earnings';
 
   @override
   String get workerRating => 'Rating';
@@ -2414,7 +2414,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workerGoOfflineConfirmYes => 'Yes, Go Offline';
 
   @override
-  String get workerFindNewWork => 'New Complaints';
+  String get workerFindNewWork => 'Find new work';
 
   @override
   String get workerViewNewJobs => 'Dekhein';

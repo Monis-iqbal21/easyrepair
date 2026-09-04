@@ -4326,7 +4326,7 @@ abstract class AppLocalizations {
   /// No description provided for @workerTodaysEarnings.
   ///
   /// In en, this message translates to:
-  /// **'Kamai'**
+  /// **'Today\'s earnings'**
   String get workerTodaysEarnings;
 
   /// No description provided for @workerRating.
@@ -4362,7 +4362,7 @@ abstract class AppLocalizations {
   /// No description provided for @workerFindNewWork.
   ///
   /// In en, this message translates to:
-  /// **'New Complaints'**
+  /// **'Find new work'**
   String get workerFindNewWork;
 
   /// No description provided for @workerViewNewJobs.

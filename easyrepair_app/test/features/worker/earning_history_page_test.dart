@@ -142,7 +142,7 @@ void main() {
     tester,
   ) async {
     await _pump(tester, locale: AppLocale.romanUrdu);
-    expect(find.text('Mazdoori'), findsWidgets);
+    expect(find.text('Labour'), findsWidgets);
     expect(find.text('HandyGo Commission (18%)'), findsWidgets);
     expect(find.text('Munafa'), findsWidgets);
   });

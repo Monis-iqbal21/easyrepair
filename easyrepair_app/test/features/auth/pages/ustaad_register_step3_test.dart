@@ -412,13 +412,13 @@ void main() {
       expect(find.text('Tareekh-e-paidaish lazmi hai.'), findsOneWidget);
       expect(find.text('Ye tasdeeq zaroori hai.'), findsOneWidget);
       expect(
-        find.text('Baraye meherbani apna buniyadi hunar muntakhab karein.'),
+        find.text('Apna main skill muntakhab karein.'),
         findsOneWidget,
       );
       // The photo and each address line get the shared "Zaroori hai".
       expect(find.text('Zaroori hai'), findsWidgets);
       expect(
-        find.text('Baraye meherbani neeche nishan zad khane mukammal karein.'),
+        find.text('Neeche nishan zad khane mukammal karein.'),
         findsOneWidget,
         reason: 'and the snackbar points at them',
       );
